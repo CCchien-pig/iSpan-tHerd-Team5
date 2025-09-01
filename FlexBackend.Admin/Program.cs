@@ -22,15 +22,11 @@ namespace FlexBackend.Admin
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            builder.Services.AddControllersWithViews();
+			var mvc = builder.Services
+	            .AddControllersWithViews()
+	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 
-            // 關鍵：把 RCL 的已編譯 Razor 視圖「手動」加入 MVC 的 Application Parts
-            builder.Services.Configure<ApplicationPartManager>(apm =>
-            {
-                apm.ApplicationParts.Add(new CompiledRazorAssemblyPart(typeof(UiKitRclMarker).Assembly));
-            });
-
-            var app = builder.Build();
+			var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
