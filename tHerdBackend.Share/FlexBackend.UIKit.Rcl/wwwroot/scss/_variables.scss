@@ -19,6 +19,7 @@ $black: #000 !default;
 $blue: #4e73df !default;
 $indigo: #6610f2 !default;
 $purple: #6f42c1 !default;
+$purple2: #A349A4 !default;
 $pink: #e83e8c !default;
 $red: #e74a3b !default;
 $orange: #fd7e14 !default;
@@ -26,6 +27,19 @@ $yellow: #f6c23e !default;
 $green: #1cc88a !default;
 $teal: #20c9a6 !default;
 $cyan: #36b9cc !default;
+
+$theme-colors: ( 
+    "primary": $primary, 
+    "secondary": $secondary, 
+    "success": $success, 
+    "danger": $danger, 
+    "warning": $warning, 
+    "info": $info, 
+    "light": $light, 
+    "dark": $dark, 
+    "purple": $purple, 
+    "purple2": $purple2
+);
 
 // Custom Colors
 $brand-google: #ea4335 !default;

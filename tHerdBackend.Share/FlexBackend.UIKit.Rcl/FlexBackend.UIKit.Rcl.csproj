@@ -5,8 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <RazorCompileOnBuild>true</RazorCompileOnBuild>       <!-- 新增 -->
-    <RazorCompileOnPublish>true</RazorCompileOnPublish>   <!-- 新增 -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +14,6 @@
   <ItemGroup>
     <Folder Include="Areas\" />
     <Folder Include="Views\Shared\" />
-    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>
