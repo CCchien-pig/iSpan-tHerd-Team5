@@ -19,7 +19,9 @@
     <link rel="stylesheet" href="/css/site.css" />
 
     <!-- SB Admin 2 / Bootstrap 4 (CDN 版本，最省事) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-sb-admin-2/4.1.4/css/sb-admin-2.min.css" rel="stylesheet" />
+    <!--link href="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-sb-admin-2/4.1.4/css/sb-admin-2.min.css" rel="stylesheet" /-->
+    <link rel="stylesheet" href="~/css/sb-admin-2.min.css" asp-append-version="true" />
+
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -27,8 +29,8 @@
     <!-- Page Wrapper -->
     <div id="wrapper">
 
-        <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+        <!-- Sidebar bg-gradient-primary -->
+        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="" asp-controller="Home" asp-action="Index">

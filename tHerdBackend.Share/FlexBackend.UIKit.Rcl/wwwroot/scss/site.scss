@@ -1,9 +1,0 @@
-﻿/*@import "variables";
-@import "utilities/background";
-@import "utilities/text";
-@import "buttons";*/
-
-/* --- site.scss --- */
-.bg-purple2 { background-color: #9b59b6 !important; }  // 先硬加，確保看得到
-@import "variables";
-@import "utilities/background";   // 之後由這裡自動產生 .bg-*

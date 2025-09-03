@@ -1,4 +1,4 @@
-// Override Bootstrap default variables here
+﻿// Override Bootstrap default variables here
 // Do not edit any of the files in /vendor/bootstrap/scss/!
 
 // Color Variables
@@ -28,18 +28,15 @@ $green: #1cc88a !default;
 $teal: #20c9a6 !default;
 $cyan: #36b9cc !default;
 
-$theme-colors: ( 
-    "primary": $primary, 
-    "secondary": $secondary, 
-    "success": $success, 
-    "danger": $danger, 
-    "warning": $warning, 
-    "info": $info, 
-    "light": $light, 
-    "dark": $dark, 
-    "purple": $purple, 
-    "purple2": $purple2
-);
+// 這裡一定要定義 Bootstrap 會用到的主題色變數
+$primary: $blue !default;
+$secondary: $gray-600 !default;
+$success: $green !default;
+$danger: $red !default;
+$warning: $yellow !default;
+$info: $cyan !default;
+$light: $gray-100 !default;
+$dark: $gray-800 !default;
 
 // Custom Colors
 $brand-google: #ea4335 !default;
