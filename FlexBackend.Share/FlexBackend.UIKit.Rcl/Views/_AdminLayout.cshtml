@@ -21,6 +21,9 @@
     <!-- SB Admin 2 / Bootstrap 4 (CDN 版本，最省事) -->
     <!--link href="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-sb-admin-2/4.1.4/css/sb-admin-2.min.css" rel="stylesheet" /-->
     <link rel="stylesheet" href="~/css/sb-admin-2.min.css" asp-append-version="true" />
+    <link rel="stylesheet"
+      href="~/_content/FlexBackend.UIKit.Rcl/css/sb-admin-2.css"
+      asp-append-version="true" />
 
 
     @await RenderSectionAsync("Styles", required: false)
@@ -30,7 +33,7 @@
     <div id="wrapper">
 
         <!-- Sidebar bg-gradient-primary -->
-        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion" id="accordionSidebar">
+        <ul class="navbar-nav bg-gradient-purple sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="" asp-controller="Home" asp-action="Index">
