@@ -11,11 +11,15 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.19" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.Products.Rcl\FlexBackend.Products.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Service\FlexBackend.Core\FlexBackend.Core.csproj" />
+    <ProjectReference Include="..\FlexBackend.Service\FlexBackend.Infra\FlexBackend.Infra.csproj" />
     <ProjectReference Include="..\FlexBackend.Share\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
 
