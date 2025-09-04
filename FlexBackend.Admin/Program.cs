@@ -1,9 +1,8 @@
 ﻿using FlexBackend.Admin.Data;
 using FlexBackend.UIKit.Rcl;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
+using FlexBackend.Infra;
 
 namespace FlexBackend.Admin
 {
@@ -22,7 +21,11 @@ namespace FlexBackend.Admin
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-			var mvc = builder.Services
+            // 註冊 DbContext
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            var mvc = builder.Services
 	            .AddControllersWithViews()
 	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 
