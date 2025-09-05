@@ -22,10 +22,10 @@ namespace FlexBackend.Admin
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
             // 註冊 DbContext
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddDbContext<tHerdDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("THerdDB")));
 
-            var mvc = builder.Services
+			var mvc = builder.Services
 	            .AddControllersWithViews()
 	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 

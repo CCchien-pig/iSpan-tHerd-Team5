@@ -37,10 +37,10 @@
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="" asp-controller="Home" asp-action="Index">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-store"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">tHerd Management platform</div>
+                <div class="sidebar-brand-text mx-3">tHerd<br />後台管理系統</div>
             </a>
 
             <hr class="sidebar-divider my-0" />
@@ -53,6 +53,10 @@
                 </a>
             </li>
 
+            <hr class="sidebar-divider" />
+
+            <div class="sidebar-heading">商城系統</div>
+
             <!-- Nav Item - Products -->
             <li class="nav-item">
                 <a class="nav-link" asp-area="Products" asp-controller="Home" asp-action="Index">
@@ -61,9 +65,21 @@
                 </a>
             </li>
 
-            <hr class="sidebar-divider" />
-
-            <div class="sidebar-heading">Interface</div>
+            <!-- Components -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#ProductMenu" aria-expanded="false" aria-controls="ProductMenu">
+                    <i class="fas fa-fw fa-box"></i>
+                    <span>商品</span>
+                </a>
+                <div id="ProductMenu" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" asp-area="Products" asp-controller="Products" asp-action="Index">
+                            <span>商品基本資料</span>
+                        </a>
+                        <a class="collapse-item" asp-area="" asp-controller="Ui" asp-action="Cards">Cards</a>
+                    </div>
+                </div>
+            </li>
 
             <!-- Components -->
             <li class="nav-item">
