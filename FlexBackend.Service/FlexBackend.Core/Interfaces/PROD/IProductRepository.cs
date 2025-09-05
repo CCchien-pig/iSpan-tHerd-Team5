@@ -1,11 +1,11 @@
-﻿using FlexBackend.Core.Entities;
+﻿using FlexBackend.Core.Models.PROD;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FlexBackend.Core.Interfaces
+namespace FlexBackend.Core.Interfaces.Products
 {
     public interface IProductRepository
     {

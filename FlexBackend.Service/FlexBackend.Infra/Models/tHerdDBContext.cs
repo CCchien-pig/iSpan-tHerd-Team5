@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.Core.Models;
 
-public partial class tHerdDBContext : DbContext
+public partial class THerdDBContext : DbContext
 {
-    public tHerdDBContext(DbContextOptions<tHerdDBContext> options)
+    public THerdDBContext(DbContextOptions<THerdDBContext> options)
         : base(options)
     {
     }

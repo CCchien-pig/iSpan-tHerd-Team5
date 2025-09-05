@@ -3,6 +3,7 @@ using FlexBackend.UIKit.Rcl;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FlexBackend.Infra;
+using FlexBackend.Core.Models;
 
 namespace FlexBackend.Admin
 {
@@ -21,11 +22,15 @@ namespace FlexBackend.Admin
             builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            // 註冊 DbContext
-            builder.Services.AddDbContext<tHerdDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("THerdDB")));
 
-			var mvc = builder.Services
+            var connStr = builder.Configuration.GetConnectionString("THerdDB")!;
+
+            // 註冊 DbContext
+            builder.Services.AddDbContext<THerdDBContext>(options => options.UseSqlServer(connStr));
+
+            builder.Services.AddFlexInfra(connStr);
+
+            var mvc = builder.Services
 	            .AddControllersWithViews()
 	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 
