@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FlexBackend.Core.Entities
+namespace FlexBackend.Core.Models.PROD
 {
     public class Product
     {
