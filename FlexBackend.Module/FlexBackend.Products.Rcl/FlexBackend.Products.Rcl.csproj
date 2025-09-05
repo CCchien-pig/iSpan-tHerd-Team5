@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Areas\Products\ViewModels\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

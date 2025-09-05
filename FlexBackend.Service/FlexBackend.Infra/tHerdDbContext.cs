@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.Infra
 {
-    public class AppDbContext : DbContext
+    public class tHerdDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        public tHerdDbContext(DbContextOptions<tHerdDbContext> options) : base(options) { }
 
         public DbSet<Product> Products { get; set; }
     }

@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Share", "FlexBa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.UIKit.Rcl", "FlexBackend.Share\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj", "{9BD79439-A975-54A4-F44E-F0189EEB7933}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Modules", "FlexBackend.Modules", "{AC6600C1-66BD-476A-B446-4F083E478B9E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Module", "FlexBackend.Module", "{AC6600C1-66BD-476A-B446-4F083E478B9E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Products.Rcl", "FlexBackend.Module\FlexBackend.Products.Rcl\FlexBackend.Products.Rcl.csproj", "{CB5140DD-50B3-409F-8C3B-259932FC4717}"
 EndProject
