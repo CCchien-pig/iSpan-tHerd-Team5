@@ -1,0 +1,96 @@
+﻿@using System.Text.Json
+@model FlexBackend.UIKit.Rcl.Views.Shared.Components.DataTable.DataTableViewModel
+
+@{
+    // 防呆：比對 thead headers 與 columns 數量
+    using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(Model.ColumnsJson) ? "[]" : Model.ColumnsJson);
+    var colCount = doc.RootElement.ValueKind == JsonValueKind.Array ? doc.RootElement.GetArrayLength() : 0;
+    var headerCount = Model.Headers?.Count() ?? 0;
+}
+
+@if (colCount != headerCount)
+{
+    <div class="alert alert-danger">
+        <strong>DataTable 設定錯誤：</strong> thead 欄位數 (@headerCount) 與 columns 數 (@colCount) 不一致。
+    </div>
+}
+else
+{
+    <table id="@Model.TableId" class="display nowrap" style="width:100%">
+        <thead>
+            <tr>
+                @foreach (var h in Model.Headers)
+                {
+                    <th>@h</th>
+                }
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        (function(){
+            if (!window.jQuery || !$.fn.DataTable) {
+                console.error('jQuery 或 DataTables 未載入');
+                return;
+            }
+            if (!window.AppTables || !AppTables.initAdaptive) {
+                console.error('AppTables.initAdaptive 未載入（請引入 ~/js/site.datatables.js 或 _content/...）');
+                return;
+            }
+
+            var opts = {
+                table: '#@Model.TableId',
+                columns: @Html.Raw(Model.ColumnsJson),
+                frozenLeft: @Model.FrozenLeft,
+                frozenRight: @Model.FrozenRight,
+                headerOffsetSelector: '@Model.HeaderOffsetSelector',
+                minHeight: @Model.MinHeight,
+                gap: @Model.Gap,
+                pageLength: @Model.PageLength,
+                lengthMenu: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LengthMenu))
+            };
+
+            @* 本地資料或 Ajax 二擇一 *@
+            @if (!string.IsNullOrWhiteSpace(Model.DataJson))
+            {
+                    @:opts.data = @Html.Raw(Model.DataJson);
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.AjaxUrl))
+            {
+                    <text>
+                    opts.ajax = { url: '@Model.AjaxUrl', type: 'GET', dataSrc: '@Model.AjaxDataSrc' };
+                    </text>
+            }
+
+            @* 子列 formatter（全域函式名） *@
+            @if (!string.IsNullOrWhiteSpace(Model.ChildFormatterFn))
+            {
+                    <text>
+                    if (typeof window['@Model.ChildFormatterFn'] === 'function') {
+                        opts.childFormatter = window['@Model.ChildFormatterFn'];
+                    } else {
+                        console.warn('Child formatter 函數 @Model.ChildFormatterFn 不存在');
+                    }
+                    </text>
+            }
+
+            @* 內建繁中語系（可關閉） *@
+            @if (Model.UseDefaultLanguage)
+            {
+                    <text>
+                    opts.language = {
+                        processing:"處理中...", loadingRecords:"載入中...",
+                        lengthMenu:"每頁顯示 _MENU_ 筆", zeroRecords:"沒有符合的資料",
+                        info:"第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆", infoEmpty:"第 0 ~ 0 筆，共 0 筆",
+                        infoFiltered:"(從 _MAX_ 筆資料中篩選)", search:"搜尋：",
+                        paginate:{ first:"第一頁", last:"最後一頁", next:"下一頁", previous:"上一頁" },
+                        aria:{ sortAscending:": 升冪排列", sortDescending:": 降冪排列" }
+                    };
+                    </text>
+            }
+
+            AppTables.initAdaptive(opts);
+        })();
+    </script>
+}

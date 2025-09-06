@@ -5,11 +5,11 @@ VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Admin", "FlexBackend.Admin\FlexBackend.Admin.csproj", "{F3E81178-2C30-429F-B697-A9A8F2561B3F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Share", "FlexBackend.Share", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.StyleMain", "FlexBackend.StyleMain", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.UIKit.Rcl", "FlexBackend.Share\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj", "{9BD79439-A975-54A4-F44E-F0189EEB7933}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Service", "FlexBackend.Service", "{9FF153ED-5BD2-4161-A7BC-0758E5993E6F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Share", "FlexBackend.Share", "{9FF153ED-5BD2-4161-A7BC-0758E5993E6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Core", "FlexBackend.Service\FlexBackend.Core\FlexBackend.Core.csproj", "{4213FF92-33AA-4A66-8AC6-5485B503C4EA}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FlexBackend.Module", "FlexBackend.Module", "{B8CF0AB5-AB76-451A-9A5B-5B06E59DC85A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Products.Rcl", "FlexBackend.Module\FlexBackend.Products.Rcl\FlexBackend.Products.Rcl.csproj", "{7109D621-A8BD-37CB-C7C9-99A8DE9D11AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Users.Rcl", "FlexBackend.Users.Rcl\FlexBackend.Users.Rcl.csproj", "{B2E4291D-E742-450D-9939-C7ABC6689AC3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{7109D621-A8BD-37CB-C7C9-99A8DE9D11AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7109D621-A8BD-37CB-C7C9-99A8DE9D11AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7109D621-A8BD-37CB-C7C9-99A8DE9D11AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2E4291D-E742-450D-9939-C7ABC6689AC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2E4291D-E742-450D-9939-C7ABC6689AC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2E4291D-E742-450D-9939-C7ABC6689AC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2E4291D-E742-450D-9939-C7ABC6689AC3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -54,6 +60,7 @@ Global
 		{4213FF92-33AA-4A66-8AC6-5485B503C4EA} = {9FF153ED-5BD2-4161-A7BC-0758E5993E6F}
 		{E6D88C53-9B0E-44D0-A39C-F56EC9F43330} = {9FF153ED-5BD2-4161-A7BC-0758E5993E6F}
 		{7109D621-A8BD-37CB-C7C9-99A8DE9D11AE} = {B8CF0AB5-AB76-451A-9A5B-5B06E59DC85A}
+		{B2E4291D-E742-450D-9939-C7ABC6689AC3} = {B8CF0AB5-AB76-451A-9A5B-5B06E59DC85A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBAB1EE1-8942-4641-99D6-AFC92F0F1E14}
