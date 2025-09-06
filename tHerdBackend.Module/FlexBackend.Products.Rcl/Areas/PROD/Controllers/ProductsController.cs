@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FlexBackend.Products.Rcl.Areas.Products.Controllers
 {
-	[Area("Products")]
+	[Area("PROD")]
 	public class ProductsController : Controller
     {
         private readonly ISysProgramConfigRepository _repo;
@@ -17,7 +17,6 @@ namespace FlexBackend.Products.Rcl.Areas.Products.Controllers
 
         public IActionResult Index()
         {
-            var products = _repo.GetAll();
             return View();
         }
     }

@@ -11,25 +11,13 @@ namespace FlexBackend.Infra.Repository.SYS
         private readonly ISqlConnectionFactory _factory;
         public SysProgramConfigRepository(ISqlConnectionFactory factory) => _factory = factory;
 
-        public IEnumerable<SysProgramConfig> GetAll()
-        {
-            using var db = _factory.Create();
-            return db.Query<SysProgramConfig>("SELECT * FROM SYS_ProgramConfig");
-        }
-
-        public Task<IEnumerable<SysProgramConfig>> GetByModuleAsync(string moduleId)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<IEnumerable<MenuModuleDto>> GetSidebarAsync(bool onlyActive = true)
         {
             using var db = _factory.Create();
 
 
             // 1) 讀出所有功能（排序後）
-            var sql = @"
-                SELECT pc.ModuleId, pc.ProgId, pc.ProgName, pc.Icon, pc.Area, pc.Controller, pc.ActionName, pc.OrderSeq,
+            var sql = @"SELECT pc.ModuleId, pc.ProgId, pc.ProgName, pc.Icon, pc.Area, pc.Controller, pc.ActionName, pc.OrderSeq,
                 sc.CodeDesc AS ModuleName
                 FROM SYS_ProgramConfig pc
                 LEFT JOIN SYS_Code sc

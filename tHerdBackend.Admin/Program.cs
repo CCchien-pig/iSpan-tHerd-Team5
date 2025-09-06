@@ -1,9 +1,10 @@
 ﻿using FlexBackend.Admin.Data;
+using FlexBackend.Core.Models;
+using FlexBackend.Infra;
 using FlexBackend.UIKit.Rcl;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using FlexBackend.Infra;
-using FlexBackend.Core.Models;
 
 namespace FlexBackend.Admin
 {
@@ -56,13 +57,16 @@ namespace FlexBackend.Admin
             app.UseAuthorization();
 
             app.MapControllerRoute(
-                name: "areas",
-                pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+            name: "areas",
+            pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
 
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
             app.MapRazorPages();
+
+            // 如果找不到任何路由，就導向 NotFound 頁面
+            app.MapFallback(() => Results.Redirect("/404"));
 
             app.Run();
         }
