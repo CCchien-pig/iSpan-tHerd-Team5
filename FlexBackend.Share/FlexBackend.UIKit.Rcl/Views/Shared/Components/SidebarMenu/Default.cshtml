@@ -1,0 +1,44 @@
+﻿@using FlexBackend.Core.DTOs.SYS
+@model IEnumerable<MenuModuleDto>
+@{
+    var curArea = (string?)ViewData["CurrentArea"] ?? string.Empty;
+    var curController = (string?)ViewData["CurrentController"] ?? string.Empty;
+    var curAction = (string?)ViewData["CurrentAction"] ?? string.Empty;
+}
+
+
+@foreach (var module in Model)
+{
+    var menuId = $"menu-{module.ModuleId}";
+    var isOpen = module.Items.Any(i =>
+    string.Equals(i.Area ?? string.Empty, curArea, StringComparison.OrdinalIgnoreCase)
+    && string.Equals(i.Controller ?? string.Empty, curController, StringComparison.OrdinalIgnoreCase));
+
+
+    <li class="nav-item">
+        <a class="nav-link @(isOpen ? string.Empty : "collapsed")" href="#"
+           data-toggle="collapse" data-target="#@menuId"
+           aria-expanded="@(isOpen.ToString().ToLower())" aria-controls="@menuId">
+            <i class="@module.Icon"></i>
+            <span>@(string.IsNullOrWhiteSpace(module.ModuleName) ? module.ModuleId : module.ModuleName)</span>
+        </a>
+        <div id="@menuId" class="collapse @(isOpen ? "show" : string.Empty)" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                @foreach (var item in module.Items.OrderBy(i => i.OrderSeq).ThenBy(i => i.ProgId))
+                {
+                    var isActive = string.Equals(item.Area ?? string.Empty, curArea, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(item.Controller ?? string.Empty, curController, StringComparison.OrdinalIgnoreCase)
+                    && (string.IsNullOrEmpty(item.ActionName) || string.Equals(item.ActionName, curAction, StringComparison.OrdinalIgnoreCase));
+                    <a class="collapse-item @(isActive ? "active" : string.Empty)"
+                       asp-area="@item.Area" asp-controller="@item.Controller" asp-action="@item.ActionName">
+                        @if (!string.IsNullOrWhiteSpace(item.Icon))
+                        {
+                            <i class="@item.Icon mr-1"></i>
+                        }
+                        <span>@item.ProgName</span>
+                    </a>
+                }
+            </div>
+        </div>
+    </li>
+}

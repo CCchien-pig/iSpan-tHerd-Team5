@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="bundleconfig.json" />
     <Content Remove="compilerconfig.json" />
   </ItemGroup>
 
@@ -17,11 +18,16 @@
 
   <ItemGroup>
     <Folder Include="Areas\" />
-    <Folder Include="Views\Shared\" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="bundleconfig.json" />
     <None Include="compilerconfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\FlexBackend.Service\FlexBackend.Core\FlexBackend.Core.csproj" />
+    <ProjectReference Include="..\..\FlexBackend.Service\FlexBackend.Infra\FlexBackend.Infra.csproj" />
   </ItemGroup>
 
 </Project>
