@@ -1,4 +1,5 @@
-﻿using FlexBackend.Core.Models;
+﻿using FlexBackend.Core.DTOs.SYS;
+using FlexBackend.Core.Models;
 
 namespace FlexBackend.Core.Interfaces.SYS
 {
@@ -6,5 +7,6 @@ namespace FlexBackend.Core.Interfaces.SYS
     {
         IEnumerable<SysProgramConfig> GetAll();
         Task<IEnumerable<SysProgramConfig>> GetByModuleAsync(string moduleId);
+        Task<IEnumerable<MenuModuleDto>> GetSidebarAsync(bool onlyActive = true);
     }
 }
