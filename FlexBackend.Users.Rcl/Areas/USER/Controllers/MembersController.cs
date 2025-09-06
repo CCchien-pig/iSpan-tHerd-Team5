@@ -3,14 +3,14 @@ using FlexBackend.Core.Interfaces.SYS;
 using FlexBackend.Infra.Repository;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
+namespace FlexBackend.Users.Rcl.Areas.USER.Controllers
 {
-	[Area("PROD")]
-	public class ProductsController : Controller
+	[Area("USER")]
+	public class MembersController : Controller
     {
         private readonly ISysProgramConfigRepository _repo;
 
-        public ProductsController(ISysProgramConfigRepository repo)
+        public MembersController(ISysProgramConfigRepository repo)
         {
             _repo = repo;
         }

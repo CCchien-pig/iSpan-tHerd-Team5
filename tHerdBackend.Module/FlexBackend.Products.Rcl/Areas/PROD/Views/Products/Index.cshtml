@@ -1,7 +1,215 @@
 ﻿@{
     ViewData["Title"] = "Products Index";
-    Layout = "/Views/_AdminLayout.cshtml"; // 共用 Admin.Web 的版型
 }
 
-<h1>商品模組 (Products Module)</h1>
-<p>這是從 RCL 載入的畫面。</p>
+@section PageTitle {
+    商品管理
+}
+
+@section Styles {
+    <style>
+        #dataTable tbody tr:nth-child(even) {
+            background-color: #F2F2F2;
+        }
+
+        #dataTable tbody tr:hover {
+            background-color: #f3e8ff;
+        }
+
+        /* 自訂表頭為紫色 */
+        thead {
+            background-color: #652D77; /* 深紫色，可改成你喜歡的色碼 */
+            color: #fff; /* 白色字比較清楚 */
+        }
+    </style>
+}
+
+<!-- DataTales -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 text-purple2">清單查詢</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered display" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Office</th>
+                        <th>Age</th>
+                        <th>Start date</th>
+                        <th>Salary</th>
+                    </tr>
+                </thead>
+                @* <tfoot>
+                    <tr>
+                        <th>小計</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </tfoot> *@
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var $table = $('#dataTable');
+
+            // 定義要顯示的子資料內容
+            function format(row) {
+              return `
+                <div style="padding:10px">
+                  <div><b>Email：</b>${row.Email}</div>
+                  <div><b>備註：</b>${row.Notes}</div>
+                </div>
+              `;
+            }
+
+          var employees = [
+              {
+                Name: "Tiger Nixon",
+                Position: "System Architect",
+                Office: "Edinburgh",
+                Age: 61,
+                StartDate: "2011/04/25",
+                Salary: "$320,800",
+                Email: "tiger.nixon@example.com",
+                Notes: "喜歡打高爾夫，兼職顧問"
+              },
+              {
+                Name: "Garrett Winters",
+                Position: "Accountant",
+                Office: "Tokyo",
+                Age: 63,
+                StartDate: "2011/07/25",
+                Salary: "$170,750",
+                Email: "garrett.winters@example.com",
+                Notes: "主要負責審計，會日文"
+              }
+            ];
+
+            function calcAvailableHeight() {
+              var footerH = $('footer').outerHeight() || 0;
+              var tableTop = $table.offset().top || 0;
+              var winH = $(window).height();
+              var gap = 20; // 邊界緩衝
+              return Math.max(240, winH - footerH - tableTop - gap);
+            }
+
+             function resizeDataTable() {
+              var h = calcAvailableHeight() - 150;
+              // 用 CSS 方式調整滾動容器高度，最穩定
+              var $scrollBody = $(table.table().container()).find('.dataTables_scrollBody');
+              $scrollBody.css({ height: h + 'px', 'max-height': h + 'px' });
+
+              // 調整欄寬並重繪，避免位移
+              table.columns.adjust();
+              table.draw(false);
+            }
+
+            var initH = calcAvailableHeight();
+            var topbarH = $('.navbar, .topbar').outerHeight() || 0;
+
+          var table = $table.DataTable({
+            paging: true, // 啟用分頁 (預設就是 true)
+            pageLength: 10, // 每頁 5 筆
+            lengthMenu: [5, 10, 25, 50], // 可選每頁顯示筆數
+            searching: true, // 啟用搜尋
+            ordering: true, // 啟用排序
+
+            // 捲動／凍結
+            scrollY: initH + 'px', // 表格高度 (px)
+            scrollX: true, // 啟用水平捲軸
+            scrollCollapse: true,
+            fixedHeader: {            // 若有固定頂部導航列時，用 offset 防止蓋住表頭
+              header: true,
+              headerOffset: topbarH
+            },
+            fixedColumns: {
+                leftColumns: 1, // 凍結左邊第一欄
+                rightColumns: 1 // 如果要凍結右邊也可以加這個
+            },
+            language: {
+              processing: "處理中...",
+              loadingRecords: "載入中...",
+              lengthMenu: "每頁顯示 _MENU_ 筆",
+              zeroRecords: "沒有符合的資料",
+              info: "第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆",
+              infoEmpty: "第 0 ~ 0 筆，共 0 筆",
+              infoFiltered: "(從 _MAX_ 筆資料中篩選)",
+              search: "搜尋：",
+              paginate: {
+                first: "第一頁",
+                last: "最後一頁",
+                next: "下一頁",
+                previous: "上一頁"
+              },
+              aria: {
+                "sortAscending": ": 升冪排列",
+                "sortDescending": ": 降冪排列"
+              }
+            },
+            data: employees,
+            columns: [
+              {
+                className: 'dt-control',
+                orderable: false,
+                data: null,
+                defaultContent: ''
+              },
+              { data: 'Name' },
+              { data: 'Position' },
+              { data: 'Office' },
+              { data: 'Age' },
+              { data: 'StartDate' },
+              { data: 'Salary' }
+            ]
+          });
+
+            // 點擊展開/收合
+            // $('#dataTable tbody').on('click', 'td.dt-control', function () {
+            //     var tr = $(this).closest('tr');
+            //     var row = table.row(tr);
+
+            //     if (row.child.isShown()) {
+            //         // 已展開 → 收合
+            //         row.child.hide();
+            //         tr.removeClass('shown');
+            //     } else {
+            //         // 展開 → 顯示 format() 的子資料
+            //         row.child(format(row.data())).show();
+            //         tr.addClass('shown');
+            //     }
+            // });
+            
+            // 點擊展開/收合
+            $('#dataTable tbody').on('click', 'td.dt-control', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                if (row.child.isShown()) {
+                  row.child.hide();
+                  tr.removeClass('shown');
+                } else {
+                  row.child(format(row.data())).show();
+                  tr.addClass('shown');
+                }
+              });
+
+        // 初始化後跑一次
+        resizeDataTable();
+
+        // 視窗大小改變時自動調整
+        $(window).on('resize', resizeDataTable);
+        });
+    </script>
+}

@@ -1,0 +1,53 @@
+﻿@using System.Text.Json
+@using FlexBackend.UIKit.Rcl.Views.Shared.Components.DataTable
+@{
+    ViewData["Title"] = "Users Index";
+}
+
+@section PageTitle {
+    會員管理
+}
+
+@{
+    // 假資料（你也可以在 Controller 產好 JSON 丟進來）
+    var employees = new[] {
+        new { Name="Tiger Nixon", Position="System Architect", Office="Edinburgh", Age=61, StartDate="2011/04/25", Salary="$320,800", Email="tiger.nixon@example.com", Notes="喜歡打高爾夫，兼職顧問" },
+        new { Name="Garrett Winters", Position="Accountant", Office="Tokyo", Age=63, StartDate="2011/07/25", Salary="$170,750", Email="garrett.winters@example.com", Notes="主要負責審計，會日文" },
+    };
+
+    var headers = new[] { "", "姓名", "職位", "辦公室", "年齡", "入職日", "薪水" };
+
+    var columns = new object[] {
+        new { className="dt-control", orderable=false, data=(string?)null, defaultContent="" },
+        new { data="Name" },
+        new { data="Position" },
+        new { data="Office" },
+        new { data="Age" },
+        new { data="StartDate" },
+        new { data="Salary" }
+    };
+
+    var vm = new DataTableViewModel
+    {
+        TableId = "employeesTable",
+        Headers = headers,
+        ColumnsJson = JsonSerializer.Serialize(columns),
+        DataJson = JsonSerializer.Serialize(employees),
+        FrozenLeft = 1,
+        FrozenRight = 1,
+        ChildFormatterFn = "employeeChildFormatter" // 下面會定義
+    };
+}
+
+<!-- 全域子列 formatter（JS） -->
+<script>
+    function employeeChildFormatter(row){
+      return `
+        <div style="padding:10px">
+          <div><b>Email：</b>${row.Email ?? '—'}</div>
+          <div><b>備註：</b>${row.Notes ?? '—'}</div>
+        </div>`;
+    }
+</script>
+
+@await Component.InvokeAsync("DataTable", vm)
