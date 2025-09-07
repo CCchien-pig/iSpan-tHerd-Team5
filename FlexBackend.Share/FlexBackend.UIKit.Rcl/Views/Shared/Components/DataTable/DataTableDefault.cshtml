@@ -1,0 +1,189 @@
+﻿@using System.Text.Json
+@model FlexBackend.UIKit.Rcl.Views.Shared.Components.DataTable.DataTableViewModel
+
+@{
+    using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(Model.ColumnsJson) ? "[]" : Model.ColumnsJson);
+    var colCount = doc.RootElement.ValueKind == JsonValueKind.Array ? doc.RootElement.GetArrayLength() : 0;
+    var headerCount = Model.Headers?.Count() ?? 0;
+}
+
+@if (colCount != headerCount)
+{
+    <div class="alert alert-danger">
+        <strong>DataTable 設定錯誤：</strong> thead 欄位數 (@headerCount) 與 columns 數 (@colCount) 不一致。
+    </div>
+}
+else
+{
+    <style>
+        [data-th-dt] tbody tr:nth-child(even) {
+            background-color: #F2F2F2;
+        }
+
+        [data-th-dt] tbody tr:hover {
+            background-color: #f3e8ff;
+        }
+
+        [data-th-dt] thead {
+            background-color: #652D77;
+            color: #fff;
+        }
+
+        [data-th-dt] td.dt-control {
+            cursor: pointer;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center;
+        }
+
+        @* 展開時，箭頭改方向 *@
+        [data-th-dt] tr.shown td.dt-control {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>') no-repeat center;
+        }
+
+        @* 重點：打到複製的表頭（scrollHead / fixedHeader / fixedColumns *@
+        div.dataTables_scrollHead thead th,
+        div.dataTables_scrollHead thead td,
+        div.fixedHeader table.dataTable thead th,
+        div.fixedHeader table.dataTable thead td,
+        div.DTFC_LeftHeadWrapper thead th,
+        div.DTFC_LeftHeadWrapper thead td,
+        div.DTFC_RightHeadWrapper thead th,
+        div.DTFC_RightHeadWrapper thead td {
+            background-color: #652D77 !important;
+            color: #fff !important;
+        }
+    </style>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 text-purple2">清單查詢</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table data-th-dt data-theme="purple"
+                       class="table table-bordered display nowrap" id="@Model.TableId" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            @if (Model.Headers is not null)
+                            {
+                                foreach (var h in Model.Headers)
+                                {
+                                    <th>@h</th>
+                                }
+                            }
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      // 等待 jQuery & DataTables 皆可用，避免載入時序問題
+      (function waitForDeps(){
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
+          return setTimeout(waitForDeps, 50);
+        }
+
+        // 這裡開始才初始化，並把 jQuery 映射為 $ 使用
+        (function ($) { // 改成接 $，內部全部用 $
+          var tableId = "@Model.TableId";               // 用 ViewModel 的 TableId，不要硬編 EmployeesTable
+          var $table  = $("#" + tableId);
+
+          // 語系 / 欄位 / 資料
+          var language = @Html.Raw(Model.LanguageJson);
+            var columns = @Html.Raw(Model.ColumnsJson ?? "[]");
+            @if (!Model.EnableChildRow)
+            {
+                  @:columns = columns.filter(function(c,i){ return i !== 0; });
+            }
+          var hasData  = @((Model.DataJson is not null).ToString().ToLower());
+            var data = @Html.Raw(Model.DataJson ?? "[]");
+
+          var topbarH = $('.navbar, .topbar').outerHeight() || 0;
+
+          function calcAvailableHeight() {
+            var footerH = $('footer').outerHeight() || 0;
+            var tableTop = $table.offset() ? $table.offset().top : 0;
+            var winH = $(window).height();
+            var gap = 20;
+            return Math.max(240, winH - footerH - tableTop - gap);
+          }
+
+          var childFields = @Html.Raw(JsonSerializer.Serialize(Model.ChildFields ?? Enumerable.Empty<string>()));
+          var childLabels = @Html.Raw(JsonSerializer.Serialize(Model.ChildFieldLabels ?? new Dictionary<string,string>()));
+
+          function formatChild(row) {
+            if (!childFields || childFields.length === 0) return "";
+            var html = '<div style="padding:10px">';
+            for (var i=0;i<childFields.length;i++){
+              var key = childFields[i];
+              var label = childLabels[key] || (key + "：");
+              var val = (row && row[key] != null) ? row[key] : "";
+              html += '<div><b>' + label + '</b>' + val + '</div>';
+            }
+            html += '</div>';
+            return html;
+          }
+
+          var initH = calcAvailableHeight();
+
+          var dt = $table.DataTable({
+            paging: true,
+            pageLength: @Model.PageLength,
+            lengthMenu: @Html.Raw(JsonSerializer.Serialize(Model.LengthMenu)),
+            searching: true,
+            ordering: true,
+            scrollY: initH + 'px',
+            scrollX: true,
+            scrollCollapse: true,
+            fixedHeader: { header: true, headerOffset: topbarH },
+            fixedColumns: { leftColumns: @Model.FixedLeftColumns, rightColumns: @Model.FixedRightColumns },
+            language: language,
+            @if (Model.EnableChildRow)
+            {
+                @: columns: columns,
+            }
+            else
+            {
+                @: columns: columns.filter(function(c,i){ return i !== 0; }),
+            }
+            data: data
+          });
+
+          function resizeDataTable(){
+            var h = calcAvailableHeight() - 100;
+            var $scrollBody = $(dt.table().container()).find('.dataTables_scrollBody');
+            $scrollBody.css({ height: h + 'px', 'max-height': h + 'px' });
+            dt.columns.adjust();
+            dt.draw(false);
+          }
+
+          @if (Model.EnableChildRow)
+          {
+            <text>
+            $('#' + tableId + ' tbody').on('click', 'td.dt-control', function () {
+              var tr = $(this).closest('tr');
+              var row = dt.row(tr);
+              if (row.child.isShown()) { row.child.hide(); tr.removeClass('shown'); }
+              else { row.child(formatChild(row.data())).show(); tr.addClass('shown'); }
+            });
+            </text>
+          }
+
+          resizeDataTable();
+
+        // SB Admin 2 常見的切換按鈕
+        $('#sidebarToggle, #sidebarToggleTop').on('click', function () {
+          // 等 CSS 動畫結束再調整（避免量到過渡中的寬度）
+            setTimeout(resizeDataTable, 200); // 依你的 transition-duration 微調
+        });
+
+        // 更保險：監聽側欄寬度 transition 完成
+          $('.sidebar').on('transitionend webkitTransitionEnd', resizeDataTable);
+
+          $(window).on('resize', resizeDataTable);
+        })(jQuery);
+      })();
+    </script>
+}

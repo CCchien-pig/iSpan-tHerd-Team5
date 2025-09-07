@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\FlexBackend.Service\FlexBackend.Core\FlexBackend.Core.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Service\FlexBackend.Infra\FlexBackend.Infra.csproj" />
+    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
 
 

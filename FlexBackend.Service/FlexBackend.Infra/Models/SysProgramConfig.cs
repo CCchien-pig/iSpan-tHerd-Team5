@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Core.Models;
+namespace FlexBackend.Infra.Models;
 
 /// <summary>
 /// 角色擁有的模組權限

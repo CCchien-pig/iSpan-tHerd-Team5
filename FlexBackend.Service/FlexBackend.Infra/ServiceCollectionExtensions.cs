@@ -1,5 +1,7 @@
-﻿using FlexBackend.Core.Interfaces.SYS;
+﻿using FlexBackend.Core.Interfaces.Products;
+using FlexBackend.Core.Interfaces.SYS;
 using FlexBackend.Infra.DBSetting;
+using FlexBackend.Infra.Repository.PROD;
 using FlexBackend.Infra.Repository.SYS;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,6 +18,7 @@ namespace FlexBackend.Infra
 
             // 把介面對應到實作
             services.AddScoped<ISysProgramConfigRepository, SysProgramConfigRepository>();
+            services.AddScoped<IProdProductRepository, ProdProductRepository>();
 
             return services;
         }

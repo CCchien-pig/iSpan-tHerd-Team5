@@ -2,44 +2,40 @@
 {
     public class DataTableViewModel
     {
-        // HTML table 的 id（必填）
+        /// 唯一表格 Id（必要）
         public string TableId { get; set; } = "dataTable";
 
-        // 表頭文字（數量必須與 ColumnsJson 對齊；若有子列控制欄，第一格留空字串 ""）
-        public IEnumerable<string> Headers { get; set; } = Array.Empty<string>();
+        /// thead 顯示用標題（含第一欄子列控制空白欄位可傳空字串）
+        public IEnumerable<string>? Headers { get; set; }
 
-        // DataTables columns 的 JSON（直接序列化後丟進來）
-        // 例：
-        // [
-        //   { "className":"dt-control","orderable":false,"data":null,"defaultContent":"" },
-        //   { "data":"Name" }, { "data":"Position" }, ...
-        // ]
-        public string ColumnsJson { get; set; } = "[]";
+        /// DataTables columns 設定（JSON 字串，直接丟進 JS）
+        public string? ColumnsJson { get; set; }
 
-        // 二擇一：本地資料 JSON（array）或 Ajax
-        public string? DataJson { get; set; }   // 例：[{ "Name":"Tiger", ... }, ...]
-        public string? AjaxUrl { get; set; }    // 例："/api/employees"
-        public string AjaxDataSrc { get; set; } = ""; // 若 API 回 { data:[...] } 就填 "data"
+        /// 靜態資料（後端塞進來）→ 若你要用 AJAX，就不要給 DataJson，改在頁面上自己初始化 ajax
+        public string? DataJson { get; set; }
 
-        // 凍結欄位
-        public int FrozenLeft { get; set; } = 0;
-        public int FrozenRight { get; set; } = 0;
+        /// 是否顯示第一欄展開控制（dt-control）
+        public bool EnableChildRow { get; set; } = true;
 
-        // FixedHeader 參考的 selector（navbar/topbar）
-        public string HeaderOffsetSelector { get; set; } = ".navbar, .topbar";
+        /// 子列要顯示哪些欄位（例如 Email、Notes）
+        public IEnumerable<string>? ChildFields { get; set; }
 
-        // 子列 formatter（前端的全域 JS 函數名稱；例如 "employeeChildFormatter"）
-        public string? ChildFormatterFn { get; set; }
+        /// 子列欄位顯示名稱（顯示「Email：」「備註：」）
+        public Dictionary<string, string>? ChildFieldLabels { get; set; }
 
-        // 高度微調
-        public int MinHeight { get; set; } = 240;
-        public int Gap { get; set; } = 20;
+        /// 介面文字（語系）
+        public string LanguageJson { get; set; } =
+            "{ \"processing\":\"處理中...\",\"loadingRecords\":\"載入中...\",\"lengthMenu\":\"每頁顯示 _MENU_ 筆\",\"zeroRecords\":\"沒有符合的資料\",\"info\":\"第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆\",\"infoEmpty\":\"第 0 ~ 0 筆，共 0 筆\",\"infoFiltered\":\"(從 _MAX_ 筆資料中篩選)\",\"search\":\"搜尋：\",\"paginate\":{\"first\":\"第一頁\",\"last\":\"最後一頁\",\"next\":\"下一頁\",\"previous\":\"上一頁\"},\"aria\":{\"sortAscending\":\": 升冪排列\",\"sortDescending\":\": 降冪排列\"}}";
 
-        // DataTables 語系是否顯示（預設使用內建繁中）
-        public bool UseDefaultLanguage { get; set; } = true;
-
-        // 分頁選項
+        /// 每頁筆數與選單
         public int PageLength { get; set; } = 10;
         public IEnumerable<int> LengthMenu { get; set; } = new[] { 5, 10, 25, 50 };
+
+        /// 凍結欄設定
+        public int FixedLeftColumns { get; set; } = 1;
+        public int FixedRightColumns { get; set; } = 0;
+
+        /// 顏色主題（目前提供 purple）
+        public string Theme { get; set; } = "purple";
     }
 }
