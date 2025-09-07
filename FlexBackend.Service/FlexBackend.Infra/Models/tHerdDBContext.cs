@@ -2,9 +2,10 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using FlexBackend.Core.DTOs.PROD;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlexBackend.Core.Models;
+namespace FlexBackend.Infra.Models;
 
 public partial class THerdDBContext : DbContext
 {
@@ -13,13 +14,65 @@ public partial class THerdDBContext : DbContext
     {
     }
 
+    public virtual DbSet<ProdProduct> ProdProducts { get; set; }
+
     public virtual DbSet<SysProgramConfig> SysProgramConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ProdProduct>(entity =>
+        {
+            entity.HasKey(e => e.ProductId).HasName("PK__PROD_Pro__B40CC6CD0A237959");
+
+            entity.ToTable("PROD_Product", tb => tb.HasComment("商品基本資料"));
+
+            entity.HasIndex(e => e.BrandId, "IX_PROD_Product_BrandId");
+
+            entity.HasIndex(e => e.CreatedDate, "IX_PROD_Product_CreatedDate");
+
+            entity.HasIndex(e => e.IsPublished, "IX_PROD_Product_IsPublished");
+
+            entity.HasIndex(e => e.SupplierId, "IX_PROD_Product_SupplierId");
+
+            entity.HasIndex(e => e.ProductName, "UQ_PROD_Product_ProductName").IsUnique();
+
+            entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.BrandId).HasComment("品牌ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.FullDesc).HasComment("商品完整描述，用於詳細頁");
+            entity.Property(e => e.IsPublished).HasComment("是否上架（0=否，1=是）");
+            entity.Property(e => e.ProductName)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasComment("商品名稱");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SeoId).HasComment("Seo設定");
+            entity.Property(e => e.ShortDesc)
+                .HasMaxLength(1000)
+                .HasComment("商品簡短描述，常用於列表展示");
+            entity.Property(e => e.SupplierId).HasComment("供應商ID(FK)");
+            entity.Property(e => e.VolumeCubicMeter)
+                .HasDefaultValue(0m)
+                .HasComment("體積")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.VolumeUnit)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("")
+                .HasComment("體積單位");
+            entity.Property(e => e.Weight)
+                .HasDefaultValue(0m)
+                .HasComment("重量（公斤）")
+                .HasColumnType("decimal(10, 2)");
+        });
+
         modelBuilder.Entity<SysProgramConfig>(entity =>
         {
-            entity.HasKey(e => e.ProgramConfigId).HasName("PK__SYS_Prog__3E6165A289EDCC42");
+            entity.HasKey(e => e.ProgramConfigId).HasName("PK__SYS_Prog__3E6165A22D833168");
 
             entity.ToTable("SYS_ProgramConfig", tb =>
                 {
@@ -44,7 +97,7 @@ public partial class THerdDBContext : DbContext
                 .HasComment("建立時間 (UTC)");
             entity.Property(e => e.Creator).HasComment("建檔人員");
             entity.Property(e => e.Icon)
-                .HasMaxLength(50)
+                .HasMaxLength(100)
                 .IsUnicode(false);
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)

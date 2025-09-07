@@ -1,7 +1,6 @@
 ﻿using Dapper;
 using FlexBackend.Core.DTOs.SYS;
 using FlexBackend.Core.Interfaces.SYS;
-using FlexBackend.Core.Models;
 using FlexBackend.Infra.DBSetting;
 
 namespace FlexBackend.Infra.Repository.SYS
@@ -70,7 +69,6 @@ namespace FlexBackend.Infra.Repository.SYS
                     if (!string.IsNullOrWhiteSpace(firstIcon)) m.Icon = firstIcon!;
                 }
             }
-
 
             return modules.Values;
         }

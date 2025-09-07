@@ -1,6 +1,6 @@
-﻿using FlexBackend.Core.Interfaces;
+﻿using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Core.Interfaces.SYS;
-using FlexBackend.Infra.Repository;
+using FlexBackend.Infra.Repository.PROD;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
@@ -8,16 +8,17 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 	[Area("PROD")]
 	public class ProductsController : Controller
     {
-        private readonly ISysProgramConfigRepository _repo;
+        private readonly IProdProductRepository _repo;
 
-        public ProductsController(ISysProgramConfigRepository repo)
+        public ProductsController(IProdProductRepository repo)
         {
             _repo = repo;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            var products = await _repo.GetAllAsync();
+            return View(products);
         }
     }
 }

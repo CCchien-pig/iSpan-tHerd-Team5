@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
-namespace FlexBackend.UIKit.Rcl.ViewComponents
+namespace FlexBackend.UIKit.Rcl.ViewComponents.SidebarMenu
 {
     public class SidebarMenuViewComponent : ViewComponent
     {
@@ -21,11 +21,9 @@ namespace FlexBackend.UIKit.Rcl.ViewComponents
             var controller = (string?)RouteData.Values["controller"] ?? HttpContext.GetRouteValue("controller")?.ToString();
             var action = (string?)RouteData.Values["action"] ?? HttpContext.GetRouteValue("action")?.ToString();
 
-
             ViewData["CurrentArea"] = area;
             ViewData["CurrentController"] = controller;
             ViewData["CurrentAction"] = action;
-
 
             return View(modules);
         }

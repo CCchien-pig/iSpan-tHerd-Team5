@@ -1,16 +1,5 @@
-﻿using FlexBackend.Core.Models;
-
-namespace FlexBackend.Core.DTOs.SYS
+﻿namespace FlexBackend.Core.DTOs.SYS
 {
-    /// <summary>
-    /// 菜單 - 程式設定
-    /// </summary>
-    public class SysProgramConfigDto : SysProgramConfig
-    {
-        // 模組名稱
-        public string ModuleName { get; set; }
-    }
-
     /// <summary>
     /// 菜單主檔
     /// </summary>

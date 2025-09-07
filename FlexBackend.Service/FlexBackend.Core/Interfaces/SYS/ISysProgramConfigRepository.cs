@@ -1,5 +1,4 @@
 ﻿using FlexBackend.Core.DTOs.SYS;
-using FlexBackend.Core.Models;
 
 namespace FlexBackend.Core.Interfaces.SYS
 {

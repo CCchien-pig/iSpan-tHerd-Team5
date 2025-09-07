@@ -1,8 +1,7 @@
 ﻿using FlexBackend.Admin.Data;
-using FlexBackend.Core.Models;
 using FlexBackend.Infra;
+using FlexBackend.Infra.Models;
 using FlexBackend.UIKit.Rcl;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

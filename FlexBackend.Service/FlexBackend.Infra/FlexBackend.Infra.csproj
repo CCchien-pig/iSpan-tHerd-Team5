@@ -8,15 +8,14 @@
 
   <ItemGroup>
     <Compile Remove="Dapper\**" />
+    <Compile Remove="EF\**" />
     <Compile Remove="Repositories\**" />
     <EmbeddedResource Remove="Dapper\**" />
+    <EmbeddedResource Remove="EF\**" />
     <EmbeddedResource Remove="Repositories\**" />
     <None Remove="Dapper\**" />
+    <None Remove="EF\**" />
     <None Remove="Repositories\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="EF\" />
   </ItemGroup>
 
   <ItemGroup>
