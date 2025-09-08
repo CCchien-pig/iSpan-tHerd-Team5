@@ -1,6 +1,6 @@
 ﻿using FlexBackend.Admin.Data;
+using FlexBackend.Composition;
 using FlexBackend.Infra;
-using FlexBackend.Infra.Models;
 using FlexBackend.UIKit.Rcl;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -25,10 +25,11 @@ namespace FlexBackend.Admin
 
             var connStr = builder.Configuration.GetConnectionString("THerdDB")!;
 
-            // 註冊 DbContext
-            builder.Services.AddDbContext<THerdDBContext>(options => options.UseSqlServer(connStr));
-
+            // 註冊資料存取 (Infrastructure: Dapper + EF Core)
             builder.Services.AddFlexInfra(connStr);
+
+            // 註冊方案級服務 (Composition: 各模組的 Service + Repository)
+            builder.Services.AddFlexBackend(builder.Configuration);
 
             var mvc = builder.Services
 	            .AddControllersWithViews()

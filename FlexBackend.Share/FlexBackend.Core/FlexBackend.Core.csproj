@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Services\**" />
+    <EmbeddedResource Remove="Services\**" />
+    <None Remove="Services\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Domain\MKT\" />
+    <Folder Include="Domain\CS\" />
+    <Folder Include="Domain\CNT\" />
+    <Folder Include="Domain\ORD\" />
+    <Folder Include="Domain\SYS\" />
+    <Folder Include="Domain\SUP\" />
+    <Folder Include="Domain\USER\" />
+    <Folder Include="Domain\PROD\" />
+    <Folder Include="DTOs\CNT\" />
+    <Folder Include="DTOs\CS\" />
+    <Folder Include="DTOs\MKT\" />
+    <Folder Include="DTOs\ORD\" />
+    <Folder Include="DTOs\SUP\" />
+    <Folder Include="DTOs\USER\" />
+    <Folder Include="Exceptions\" />
+    <Folder Include="Interfaces\CNT\" />
+    <Folder Include="Interfaces\CS\" />
+    <Folder Include="Interfaces\MKT\" />
+    <Folder Include="Interfaces\ORD\" />
+    <Folder Include="Interfaces\SUP\" />
+    <Folder Include="Interfaces\USER\" />
+    <Folder Include="ValueObjects\CNT\" />
+    <Folder Include="ValueObjects\CS\" />
+    <Folder Include="ValueObjects\MKT\" />
+    <Folder Include="ValueObjects\ORD\" />
+    <Folder Include="ValueObjects\PROD\" />
+    <Folder Include="ValueObjects\SUP\" />
+    <Folder Include="ValueObjects\SYS\" />
+    <Folder Include="ValueObjects\USER\" />
+  </ItemGroup>
+
+</Project>
