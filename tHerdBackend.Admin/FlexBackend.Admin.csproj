@@ -17,11 +17,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.Products.Rcl\FlexBackend.Products.Rcl.csproj" />
-    <ProjectReference Include="..\FlexBackend.Service\FlexBackend.Core\FlexBackend.Core.csproj" />
-    <ProjectReference Include="..\FlexBackend.Service\FlexBackend.Infra\FlexBackend.Infra.csproj" />
-    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
-    <ProjectReference Include="..\FlexBackend.Users.Rcl\FlexBackend.Users.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.CNT.Rcl\FlexBackend.CNT.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.CS.Rcl\FlexBackend.CS.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.MKT.Rcl\FlexBackend.MKT.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.ORD.Rcl\FlexBackend.ORD.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.PROD.Rcl\FlexBackend.PROD.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.SUP.Rcl\FlexBackend.SUP.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.Users.Rcl\FlexBackend.USER.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Composition\FlexBackend.Composition.csproj" />
+    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
+    <ProjectReference Include="..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties wwwroot_4lib_4bootstrap_4dist_4css_4bootstrap-grid_1css_1map__JsonSchema="" /></VisualStudio></ProjectExtensions>

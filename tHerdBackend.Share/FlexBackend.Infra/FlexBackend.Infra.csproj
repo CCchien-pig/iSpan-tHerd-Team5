@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Dapper\**" />
+    <Compile Remove="EF\**" />
+    <Compile Remove="Repositories\**" />
+    <EmbeddedResource Remove="Dapper\**" />
+    <EmbeddedResource Remove="EF\**" />
+    <EmbeddedResource Remove="Repositories\**" />
+    <None Remove="Dapper\**" />
+    <None Remove="EF\**" />
+    <None Remove="Repositories\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.19" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.19" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlexBackend.Core\FlexBackend.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\CNT\" />
+    <Folder Include="Models\CS\" />
+    <Folder Include="Models\MKT\" />
+    <Folder Include="Models\ORD\" />
+    <Folder Include="Models\SUP\" />
+    <Folder Include="Models\USER\" />
+    <Folder Include="Repository\CNT\" />
+    <Folder Include="Repository\CS\" />
+    <Folder Include="Repository\MKT\" />
+    <Folder Include="Repository\ORD\" />
+    <Folder Include="Repository\SUP\" />
+    <Folder Include="Repository\USER\" />
+  </ItemGroup>
+
+</Project>
