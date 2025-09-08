@@ -27,7 +27,6 @@
     <Folder Include="DTOs\ORD\" />
     <Folder Include="DTOs\SUP\" />
     <Folder Include="DTOs\USER\" />
-    <Folder Include="Exceptions\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\MKT\" />
@@ -42,6 +41,10 @@
     <Folder Include="ValueObjects\SUP\" />
     <Folder Include="ValueObjects\SYS\" />
     <Folder Include="ValueObjects\USER\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
   </ItemGroup>
 
 </Project>
