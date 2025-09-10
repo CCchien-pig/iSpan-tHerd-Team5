@@ -25,7 +25,7 @@ namespace FlexBackend.Infra.Repository.PROD
         {
             using var db = _factory.Create();
 
-            string sql = @"SELECT ProductId, SupplierId,
+            string sql = @"SELECT ProductId, 
                       BrandId, SeoId, ProductName, ShortDesc,
                       FullDesc, IsPublished, Weight,
                       VolumeCubicMeter, VolumeUnit,
