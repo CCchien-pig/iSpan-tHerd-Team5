@@ -35,8 +35,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Services", "Fle
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Composition", "FlexBackend.Share\FlexBackend.Composition\FlexBackend.Composition.csproj", "{5607354A-AB9E-4B99-B7E8-A9131146D906}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NewUser", "NewUser", "{05D5E989-3A16-4F55-A632-0CA6E14B774A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
