@@ -33,12 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\CNT\" />
-    <Folder Include="Models\CS\" />
-    <Folder Include="Models\MKT\" />
-    <Folder Include="Models\ORD\" />
-    <Folder Include="Models\SUP\" />
-    <Folder Include="Models\USER\" />
+    <Folder Include="Models\" />
     <Folder Include="Repository\CNT\" />
     <Folder Include="Repository\CS\" />
     <Folder Include="Repository\MKT\" />
