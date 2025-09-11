@@ -1,0 +1,374 @@
+﻿{
+   "CodeGenerationMode": 4,
+   "ContextClassName": "therd_store_dbContext",
+   "ContextNamespace": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": false,
+   "MinimumProductVersion": "2.6.1080",
+   "ModelNamespace": null,
+   "OutputContextPath": null,
+   "OutputPath": "Models",
+   "PreserveCasingWithRegex": true,
+   "ProjectRootNamespace": "FlexBackend.CNT.Rcl",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 2,
+   "SelectedToBeGenerated": 0,
+   "T4TemplatePath": null,
+   "Tables": [
+      {
+         "Name": "[dbo].[CNT_Media]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_Page]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_PageBlock]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_PageTag]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_PageType]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_Purchase]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_Schedule]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_ShareClick]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CNT_Tag]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_AutoReplyRule]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_ChatMessage]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_ChatSession]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_Faq]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_FaqCategory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_FaqFeedback]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_FaqKeyword]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_Ticket]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_Ad]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_AdLog]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_AdPlacementMap]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_Campaign]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_Coupon]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_CouponRule]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MKT_Placement]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_EcpayReturnNotification]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_Invoice]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_Order]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_OrderAdjustment]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_OrderItem]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_OrderItemAdjustment]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_Payment]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_PaymentConfig]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_ReturnItem]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_ReturnRequest]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_Shipping]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_ShoppingCart]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ORD_ShoppingCartItem]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_Attribute]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_AttributeOption]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_Bundle]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_Ingredient]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_Product]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductAnswer]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductAttribute]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductFavorite]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductImage]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductIngredient]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductLike]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductQuestion]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductReview]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductReviewImage]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductSku]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductType]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_ProductTypeConfig]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_SkuSpecificationValue]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_SpecificationConfig]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PROD_SpecificationOption]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_Brand]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_BrandAccordionContent]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_BrandArticle]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_BrandFavorite]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_Logistics]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_LogisticsRate]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_StockBatch]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_StockHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_Supplier]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SYS_AssetFile]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SYS_Code]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SYS_ProgramConfig]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SYS_SeoMeta]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SYS_SeoMetaAsset]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_AdminRole]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_BlockHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_CouponWallet]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_CreditCardInfo]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_GtmManager]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_LoginLog]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_MemberPaymentMethod]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_MemberRank]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_Notification]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_NotificationHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_RoleModule]",
+         "ObjectType": 0
+      }
+   ],
+   "UiHint": null,
+   "UncountableWords": null,
+   "UseAsyncStoredProcedureCalls": true,
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": false,
+   "UseDatabaseNamesForRoutines": true,
+   "UseDateOnlyTimeOnly": true,
+   "UseDbContextSplitting": false,
+   "UseDecimalDataAnnotationForSprocResult": true,
+   "UseFluentApiOnly": true,
+   "UseHandleBars": false,
+   "UseHierarchyId": false,
+   "UseInflector": false,
+   "UseInternalAccessModifiersForSprocsAndFunctions": false,
+   "UseLegacyPluralizer": false,
+   "UseManyToManyEntity": false,
+   "UseNoDefaultConstructor": false,
+   "UseNoNavigations": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UsePrefixNavigationNaming": false,
+   "UseSchemaFolders": false,
+   "UseSchemaNamespaces": false,
+   "UseSpatial": false,
+   "UseT4": false,
+   "UseT4Split": false
+}
