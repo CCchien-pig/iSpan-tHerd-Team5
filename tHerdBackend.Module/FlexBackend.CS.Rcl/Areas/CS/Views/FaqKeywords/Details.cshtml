@@ -1,0 +1,36 @@
+﻿@model FlexBackend.Infra.Models.CsFaqKeyword
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>CsFaqKeyword</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Keyword)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Keyword)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.CreatedDate)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.CreatedDate)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Faq)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Faq.AnswerHtml)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model?.KeywordId">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>
