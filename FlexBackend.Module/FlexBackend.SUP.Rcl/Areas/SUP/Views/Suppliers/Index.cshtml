@@ -1,17 +1,7 @@
 ﻿@* Suppliers Index *@
 @* 可搜 供應商名/聯絡人名/電話/Email *@
 
-@section Styles {
-    @* DataTables套件 *@
-    @* <link href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" rel="stylesheet" />
-    <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" /> *@
-
-    @* font-awesome套件 *@
-    @* <link href="~/font-awesome/css/all.min.css" rel="stylesheet" /> *@
-
-    @* 自訂樣式
-    <link href="~/css/supstylesheet.css" rel="stylesheet" /> *@
-
+@section Styles {  
     <!-- Area 專用 CSS -->
     <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
     <style>
@@ -67,6 +57,7 @@
             var detailsUrl = '@Url.Action("Details", "Suppliers", new { area = "SUP" })';
             var deleteUrl = '@Url.Action("DeleteAjax", "Suppliers", new { area = "SUP" })';
             var toggleActiveUrl = '@Url.Action("ToggleActive", "Suppliers", new { area = "SUP" })';
+            var stockBatchUrl = '@Url.Action("Index", "StockBatches", new { area = "SUP" })';
 
 
             // 初始化 DataTable
@@ -324,7 +315,7 @@
             // ======= 點[庫存]跳轉 =======
             $('#supplierTable').on('click', '.inventory-btn', function() {
                 var id = $(this).data('id');
-                window.location.href = `/Inventory/Index?supplierId=${id}`;
+                window.location.href = stockBatchUrl + `?supplierId=${id}`;
             });
         });
     </script>

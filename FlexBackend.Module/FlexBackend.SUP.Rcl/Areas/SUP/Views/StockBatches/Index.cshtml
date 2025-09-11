@@ -1,15 +1,6 @@
 ﻿@* SupStockBatches Index *@
-@* 可搜 SKU/商品名稱/品牌名稱/批號 *@
-@* SKU     |     商品名稱     |     品牌名稱    |      批號       |       效期       |       庫存量    |      上下架狀態(檢視)      |       操作 *@
-@* 操作欄有 [庫存變動] [檢視紀錄] *@
 
 @section Styles {
-    @* DataTables套件 *@
-    <link href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" rel="stylesheet" />
-    <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" />
-
-    @* font-awesome套件 *@
-    <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
 
     @* 自訂樣式 *@
     <link href="~/css/supstylesheet.css" rel="stylesheet" />
@@ -58,16 +49,6 @@
 </div>
 
 @section Scripts {
-
-    @* SweetAlert2 *@
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    @{
-        await Html.RenderPartialAsync("ScriptsPartial/_ValidationScriptsPartial");  // 引用 jQuery 驗證
-        await Html.RenderPartialAsync("ScriptsPartial/_DataTablesScriptsPartial");  // 引用 DataTables
-        await Html.RenderPartialAsync("ScriptsPartial/_FontAwesomeScriptsPartial"); // 引用 font-awesome
-    }
-
     <script>
         $(document).ready(function() {
 
