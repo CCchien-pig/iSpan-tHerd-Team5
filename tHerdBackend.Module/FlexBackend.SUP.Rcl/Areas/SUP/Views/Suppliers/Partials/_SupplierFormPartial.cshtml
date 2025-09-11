@@ -1,0 +1,79 @@
+﻿@using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
+@* _SupplierFormPartial.cshtml 共用表單欄位*@
+
+@model ContactViewModel
+
+@{
+    // 根據 ViewBag.FormAction 決定表單提交 URL
+    var formAction = ViewBag.FormAction == "Edit" ?
+        Url.Action("Edit", "Suppliers", new { id = Model.SupplierId, area = "SUP" })
+        : Url.Action("Create", "Suppliers", new { area = "SUP" });
+}
+
+<form id="supplierForm" action="@formAction" method="post">
+
+    @Html.AntiForgeryToken()
+
+    @* 放隱藏欄位，Edit 的時候才能帶回 SupplierId *@
+    @if (ViewBag.FormAction == "Edit")
+    {
+        <input type="hidden" asp-for="SupplierId" />
+    }
+
+    <div class="container-fluid">
+        <div class="form-floating mb-2">
+            <input asp-for="SupplierName" class="form-control" placeholder="" />
+            <label asp-for="SupplierName" class="form-label">@Html.DisplayNameFor(m => m.SupplierName)</label>
+            <span asp-validation-for="SupplierName" class="text-danger mt-1 d-block ms-2 "></span>
+        </div>
+
+        <div class="form-floating mb-2">
+            <input asp-for="ContactName" class="form-control" placeholder="" />
+            <label asp-for="ContactName" class="form-label">@Html.DisplayNameFor(m => m.ContactName)</label>
+            <span asp-validation-for="ContactName" class="text-danger mt-1 d-block ms-2"></span>
+        </div>
+
+        <div class="form-floating mb-2">
+            <input type="text" asp-for="Phone" class="form-control" placeholder=" " />
+            <label asp-for="Phone" class="form-label">@Html.DisplayNameFor(m => m.Phone)</label>
+            <span asp-validation-for="Phone" class="text-danger mt-1 d-block ms-2"></span>
+        </div>
+
+        <div class="form-floating mb-2">
+            <input asp-for="Email" class="form-control" placeholder="" />
+            <label asp-for="Email" class="form-label">@Html.DisplayNameFor(m => m.Email)</label>
+            <span asp-validation-for="Email" class="text-danger mt-1 d-block ms-2"></span>
+        </div>
+
+        <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
+            <label class="form-label mb-0 me-3 flex-shrink-0" for="IsActive">啟用狀態</label>
+
+            <!-- hidden values -->
+            <input type="hidden" id="SupplierId" name="SupplierId" value="@Model.SupplierId" />
+            @* <input type="hidden" id="SupplierName" name="SupplierName" value="@Model.SupplierName" /> *@
+
+            <div class="form-check form-switch ms-3 mb-0">
+                <input type="hidden" name="IsActive" value="false" />
+                <input class="form-check-input" type="checkbox"
+                       id="IsActive" name="IsActive"
+                       value="true"
+                       @(Model.IsActive ? "checked" : "")>
+            </div>
+        </div>
+        <p id="statusMsg" class="text-success my-2"></p>
+
+        <div class="modal-footer justify-content-center">
+            <button type="button" class="btn btn-secondary me-3" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-success">儲存</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @* 重新解析 jQuery Validation *@
+    <script>
+        $(function () {
+            $.validator.unobtrusive.parse('#supplierForm');
+        });
+    </script>
+}
