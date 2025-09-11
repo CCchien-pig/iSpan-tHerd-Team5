@@ -30,6 +30,21 @@
     @* 不准放自訂 *@
     <link rel="stylesheet" href="~/css/site.css">
 
+    <style>
+        /* 保持側邊欄固定，但還能響應 RWD */
+        .sidebar {
+            position: sticky;
+            top: 0;            /* 從視窗頂端開始固定 */
+            height: 100vh;     /* 占滿整個視窗高度 */
+        }
+
+
+        /* 為了避免內容壓縮，要調整主內容區塊 */
+        #content-wrapper {
+            margin-left: 0px; /* 要跟 sidebar 寬度一致 */
+        }
+    </style>
+
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body id="page-top" class="m-0">
@@ -37,7 +52,7 @@
     <div id="wrapper">
 
         <!-- Sidebar bg-gradient-primary -->
-        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion fixed-top" id="accordionSidebar">
+        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion sidebar2" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="CS" asp-controller="Dashboard" asp-action="Index">
@@ -116,7 +131,7 @@
 
 
                 <!-- Begin Page Content -->
-                <div class="container-fluid" style="padding-left: 260px">
+                <div class="container-fluid">
                     <h1 class="h4 mb-3 text-gray-800">
                         @if (IsSectionDefined("PageTitle"))
                         {
