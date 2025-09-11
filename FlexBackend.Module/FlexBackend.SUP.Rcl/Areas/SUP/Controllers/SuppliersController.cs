@@ -1,5 +1,4 @@
 ﻿using FlexBackend.Infra.Models;
-using FlexBackend.Infra.Models.SUP;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +9,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 	[Area("SUP")]
 	public class SuppliersController : Controller
 	{
-		private readonly THerdDBContext _context;
+		private readonly tHerdDBContext _context;
 
-		public SuppliersController(THerdDBContext context)
+		public SuppliersController(tHerdDBContext context)
 		{
 			_context = context;
 		}
