@@ -16,7 +16,7 @@ namespace FlexBackend.Infra
             services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(connectionString));
 
             // EF Core
-            services.AddDbContext<THerdDBContext>(options => options.UseSqlServer(connectionString));
+            services.AddDbContext<tHerdDBContext>(options => options.UseSqlServer(connectionString));
 
             return services;
         }
