@@ -43,7 +43,7 @@ public partial class SupStockHistory
     /// <summary>
     /// 異動時間
     /// </summary>
-    public DateTime RevisedDate { get; set; }
+    public DateTime? RevisedDate { get; set; }
 
     /// <summary>
     /// 異動前數量

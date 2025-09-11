@@ -60,5 +60,7 @@ public partial class SupSupplier
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    public virtual ICollection<ProdProduct> ProdProducts { get; set; } = new List<ProdProduct>();
+
     public virtual ICollection<SupBrand> SupBrands { get; set; } = new List<SupBrand>();
 }

@@ -75,12 +75,6 @@ public partial class ProdProductSku
     /// </summary>
     public bool IsAllowBackorder { get; set; }
 
-    public int ShelfLifeDays { get; set; }
-
-    public DateTime StartDate { get; set; }
-
-    public DateTime? EndDate { get; set; }
-
     /// <summary>
     /// 是否啟用
     /// </summary>
