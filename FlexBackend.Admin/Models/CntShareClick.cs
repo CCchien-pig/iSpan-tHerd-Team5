@@ -1,0 +1,42 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace FlexBackend.Admin.Models;
+
+/// <summary>
+/// 分享點擊紀錄
+/// </summary>
+public partial class CntShareClick
+{
+    /// <summary>
+    /// 分享點擊 ID
+    /// </summary>
+    public int ShareClickId { get; set; }
+
+    /// <summary>
+    /// 文章 ID
+    /// </summary>
+    public int PageId { get; set; }
+
+    /// <summary>
+    /// IP 紀錄
+    /// </summary>
+    public string? Ipaddress { get; set; }
+
+    /// <summary>
+    /// 訪客識別
+    /// </summary>
+    public string? VisitorToken { get; set; }
+
+    /// <summary>
+    /// 會員 ID
+    /// </summary>
+    public int? UserNumberId { get; set; }
+
+    /// <summary>
+    /// 點擊時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; }
+
+    public virtual CntPage Page { get; set; } = null!;
+}

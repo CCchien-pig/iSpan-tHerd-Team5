@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <Content Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <EmbeddedResource Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <None Remove="Areas\CNT\Controllers\NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

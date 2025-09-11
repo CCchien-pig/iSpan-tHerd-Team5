@@ -1,0 +1,32 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace FlexBackend.Admin.Models;
+
+/// <summary>
+/// 媒體資源
+/// </summary>
+public partial class CntMedium
+{
+    /// <summary>
+    /// 媒體 ID
+    /// </summary>
+    public int MediaId { get; set; }
+
+    /// <summary>
+    /// 對應區塊 ID
+    /// </summary>
+    public int PageBlockId { get; set; }
+
+    /// <summary>
+    /// 檔案 ID
+    /// </summary>
+    public int? FileId { get; set; }
+
+    /// <summary>
+    /// 上傳時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; }
+
+    public virtual CntPageBlock PageBlock { get; set; } = null!;
+}
