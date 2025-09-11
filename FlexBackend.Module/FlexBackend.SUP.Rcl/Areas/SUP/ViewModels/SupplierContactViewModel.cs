@@ -2,7 +2,7 @@
 
 namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 {
-	public class ContactViewModel
+	public class SupplierContactViewModel
 	{
 		public int SupplierId { get; set; }
 
