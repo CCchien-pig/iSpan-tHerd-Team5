@@ -16,14 +16,14 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_context = context;
 		}
 
-		// GET: Suppliers/Index
+		// GET: SUP/Suppliers/Index
 		[HttpGet]
 		public IActionResult Index()
 		{
 			return View();
 		}
 
-		// POST: Suppliers/IndexJson
+		// POST: SUP/Suppliers/IndexJson
 		[HttpPost]
 		public async Task<IActionResult> IndexJson()
 		{
@@ -90,7 +90,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			});
 		}
 
-		// GET: Suppliers/Create
+		// GET: SUP/Suppliers/Create
 		[HttpGet]
 		public IActionResult Create()
 		{
@@ -102,7 +102,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return PartialView("~/Areas/SUP/Views/Suppliers/Partials/_SupplierFormPartial.cshtml", viewModel);
 		}
 
-		// POST: Suppliers/Create
+		// POST: SUP/Suppliers/Create
 		// To protect from overposting attacks, enable the specific properties you want to bind to.
 		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 		[HttpPost]
@@ -135,7 +135,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		}
 
-		// GET: Suppliers/Edit/5
+		// GET: SUP/Suppliers/Edit/5
 		[HttpGet]
 		public async Task<IActionResult> Edit(int? id)
 		{
@@ -161,7 +161,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		}
 
-		// POST: Suppliers/Edit/5
+		// POST: SUP/Suppliers/Edit/5
 		// To protect from overposting attacks, enable the specific properties you want to bind to.
 		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 		[HttpPost]
@@ -226,7 +226,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 		// 切換啟用狀態 Action 
-		// POST: Suppliers/ToggleActive/5
+		// POST: SUP/Suppliers/ToggleActive/5
 		[HttpPost]
 		public async Task<IActionResult> ToggleActive(int id, bool isActive)
 		{
@@ -256,7 +256,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-		//GET: Suppliers/Details/5
+		//GET: SUP/Suppliers/Details/5
 		[HttpGet]
 		public async Task<IActionResult> Details(int? id)
 		{
@@ -286,7 +286,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return PartialView("~/Areas/SUP/Views/Suppliers/Partials/_SupplierInfoPartial.cshtml", model);
 		}
 
-		// POST: Suppliers/DeleteAjax/5
+		// POST: SUP/Suppliers/DeleteAjax/5
 		[HttpPost]
 		public async Task<IActionResult> DeleteAjax(int id)
 		{
