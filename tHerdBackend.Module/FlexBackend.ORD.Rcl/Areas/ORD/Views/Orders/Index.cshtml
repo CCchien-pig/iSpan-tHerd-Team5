@@ -1,1 +1,65 @@
-﻿index
+﻿@model IEnumerable<OrderListVM>
+
+@{
+    ViewData["Title"] = "訂單列表";
+    var q = (string)ViewBag.Query ?? "";
+    bool showHidden = (bool)(ViewBag.ShowHidden ?? false);
+
+    var payMap = ViewBag.PaymentStatusMap as IDictionary<string, string>; // 04
+    var shipMap = ViewBag.ShippingStatusMap as IDictionary<int, string>;    // 05
+    var ordMap = ViewBag.OrderStatusMap as IDictionary<int, string>;    // 07
+}
+<h2 class="mb-3">@ViewData["Title"]</h2>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input name="q" value="@q" class="form-control" placeholder="訂單號/姓名/電話" />
+    </div>
+    <div class="col-auto form-check align-self-center">
+        <input type="checkbox" class="form-check-input" id="showHidden" name="showHidden" value="true" @(showHidden ? "checked" : "") />
+        <label class="form-check-label" for="showHidden">包含已軟刪</label>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary">搜尋</button></div>
+</form>
+
+@if (!(Model?.Any() ?? false))
+{
+    <div class="alert alert-light border">沒有資料</div>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>訂單號</th>
+                <th>會員</th>
+                <th>付款</th>
+                <th>配送</th>
+                <th class="text-end">應付</th>
+                <th>建立</th>
+                <th class="text-end">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var x in Model)
+            {
+                var pay = (payMap != null && payMap.TryGetValue(x.PaymentStatus, out var pd)) ? pd : x.PaymentStatus;
+                var ship = (shipMap != null && shipMap.TryGetValue(x.ShippingStatusId, out var sd)) ? sd : x.ShippingStatusId.ToString();
+
+                <tr class="@(x.IsVisibleToMember ? "" : "table-secondary")">
+                    <td>@x.OrderNo</td>
+                    <td>@x.UserNumberId</td>
+                    <td>@pay</td>
+                    <td>@ship</td>
+                    <td class="text-end">@x.Total.ToString("N0")</td>
+                    <td>@x.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="text-end">
+                        <a asp-action="Details" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-secondary">明細</a>
+                        <a asp-action="Edit" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-primary">編輯</a>
+                        <a asp-action="Delete" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-danger">刪除</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
