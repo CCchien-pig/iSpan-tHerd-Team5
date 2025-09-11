@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Folder Include="Areas\PROD\ViewModels\" />
+    <Folder Include="Areas\PROD\Views\Products\NewFolder\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
