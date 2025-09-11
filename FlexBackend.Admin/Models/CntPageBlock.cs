@@ -1,0 +1,54 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace FlexBackend.Admin.Models;
+
+/// <summary>
+/// 頁面區塊
+/// </summary>
+public partial class CntPageBlock
+{
+    /// <summary>
+    /// 區塊 ID
+    /// </summary>
+    public int PageBlockId { get; set; }
+
+    /// <summary>
+    /// 頁面 ID
+    /// </summary>
+    public int PageId { get; set; }
+
+    /// <summary>
+    /// 區塊類型
+    /// </summary>
+    public string BlockType { get; set; } = null!;
+
+    /// <summary>
+    /// 附文本內容
+    /// </summary>
+    public string? Content { get; set; }
+
+    /// <summary>
+    /// 區塊順序
+    /// </summary>
+    public int OrderSeq { get; set; }
+
+    /// <summary>
+    /// 區塊圖片
+    /// </summary>
+    public int? ImgId { get; set; }
+
+    /// <summary>
+    /// 建立時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; }
+
+    /// <summary>
+    /// 更新時間
+    /// </summary>
+    public DateTime? RevisedDate { get; set; }
+
+    public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
+
+    public virtual CntPage Page { get; set; } = null!;
+}
