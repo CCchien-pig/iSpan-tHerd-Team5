@@ -2,6 +2,7 @@
 using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Infra.DBSetting;
+using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
@@ -36,7 +37,7 @@ namespace FlexBackend.Infra.Repository.PROD
             return db.Query<ProdProductDto>(sql);
         }
 
-        public Task<ProdProductDto?> GetByIdAsync(int id, CancellationToken ct = default)
+		public Task<ProdProductDto?> GetByIdAsync(int id, CancellationToken ct = default)
         {
             throw new NotImplementedException();
         }
