@@ -8,16 +8,16 @@ namespace FlexBackend.PROD.Rcl.Areas.PROD.Controllers
 	public class ProductstempController : Controller
 	{
 
-		private readonly IProductService _repo;
+		private readonly tHerdDBContext _repo;
 
-		public ProductstempController(IProductService repo)
+		public ProductstempController(tHerdDBContext repo)
 		{
 			_repo = repo;
 		}
 
-		public async Task<IActionResult> Index_ex_datatable()
+        public async Task<IActionResult> Index_ex_datatable()
 		{
-			var products = await _repo.GetAllAsync();
+			var products = _repo.ProdProducts.ToList();
 			return View(products);
 		}
 	}
