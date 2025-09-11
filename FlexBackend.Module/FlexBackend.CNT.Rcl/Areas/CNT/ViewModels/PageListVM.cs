@@ -15,20 +15,11 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public DateTime CreatedDate { get; set; } // 對應 CreatedDate
 
 		// ★ 額外方便輸出的屬性 (避免 View 看到數字)
-		public string StatusText
-		{
-			get
-			{
-				return Status switch
-				{
-					"0" => "草稿",
-					"1" => "已發佈",
-					"2" => "下架/封存",
-					"9" => "已刪除",
-					_ => "未知狀態"
-				};
-			}
-		}
-
+		public string StatusText =>
+					   Status == "1" ? "已發佈" :
+					   Status == "0" ? "草稿" :
+					   Status == "2" ? "封存" :
+					   Status == "9" ? "刪除" :
+					   Status == "_" ? "未知狀態" : "錯誤";
 	}
 }

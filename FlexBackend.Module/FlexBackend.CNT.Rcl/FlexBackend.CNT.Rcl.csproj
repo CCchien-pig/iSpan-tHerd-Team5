@@ -24,6 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="X.PagedList" Version="10.5.9" />
+    <PackageReference Include="X.PagedList.Mvc.Core" Version="10.5.9" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
     <ProjectReference Include="..\..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
