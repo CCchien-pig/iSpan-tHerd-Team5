@@ -25,7 +25,6 @@
     <Folder Include="DTOs\CS\" />
     <Folder Include="DTOs\MKT\" />
     <Folder Include="DTOs\ORD\" />
-    <Folder Include="DTOs\SUP\" />
     <Folder Include="DTOs\USER\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />

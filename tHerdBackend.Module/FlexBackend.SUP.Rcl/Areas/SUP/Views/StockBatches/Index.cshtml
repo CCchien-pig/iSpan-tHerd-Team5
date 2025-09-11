@@ -1,0 +1,287 @@
+﻿@* SupStockBatches Index *@
+@* 可搜 SKU/商品名稱/品牌名稱/批號 *@
+@* SKU     |     商品名稱     |     品牌名稱    |      批號       |       效期       |       庫存量    |      上下架狀態(檢視)      |       操作 *@
+@* 操作欄有 [庫存變動] [檢視紀錄] *@
+
+@section Styles {
+    @* DataTables套件 *@
+    <link href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" rel="stylesheet" />
+    <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" />
+
+    @* font-awesome套件 *@
+    <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
+
+    @* 自訂樣式 *@
+    <link href="~/css/supstylesheet.css" rel="stylesheet" />
+
+    <style>
+    </style>
+}
+
+@* 渲染 DataTable *@
+<div class="stockBatch-card">
+    <h5>庫存資料</h5>
+    <table id="stockBatchTable" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th></th> <!-- 空白欄位給展開按鈕 -->
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- 新增/修改庫存 Modal -->
+<div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="stockBatchModalTitle" class="modal-title">庫存</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div id="stockBatchModalContent" class="modal-body p-4">
+                <!-- 透過 AJAX 載入 _StockBatchFormPartial.cshtml -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    @* SweetAlert2 *@
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @{
+        await Html.RenderPartialAsync("ScriptsPartial/_ValidationScriptsPartial");  // 引用 jQuery 驗證
+        await Html.RenderPartialAsync("ScriptsPartial/_DataTablesScriptsPartial");  // 引用 DataTables
+        await Html.RenderPartialAsync("ScriptsPartial/_FontAwesomeScriptsPartial"); // 引用 font-awesome
+    }
+
+    <script>
+        $(document).ready(function() {
+
+            // 初始化 DataTable
+            var table = $('#stockBatchTable').DataTable({
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: '/SupStockBatches/IndexJson',
+                    type: 'POST',
+                    dataSrc: 'data'
+                },
+                columns: [
+                    {
+                        // 展開商品小詳情
+                        className: 'details-control text-center',
+                        orderable: false,
+                        data: null,
+                        defaultContent: '<button class="btn btn-sm btn-outline-primary toggle-details"><i class="fas fa-plus"></i></button>',
+                        width: "40px"
+                    },
+                    { data: 'SkuId', title: 'SKU ID' },
+                    { data: 'BrandName', title: '品牌名稱' },   // [SUP_Brand][BrandName]
+                    { data: 'ProductName', title: '商品名稱'},    // [PROD_Product][ProductName]
+                    { data: 'BatchNumber', title: '批號'},
+                    { data: 'ExpireDate', title: '有效日期'},
+                    { data: 'Qty', title: '當前庫存量'},
+                    { data: 'IsSellable', title: '是否可銷售'},  // 僅供檢視，[PROD_Product][IsPublished]是否上架（0=否，1=是）
+                    {
+                        data: 'stockBatchId',
+                        title: '操作',
+                        orderable: false,   // 禁止排序
+                        render: function(data) {
+                            return `
+                                <button class="btn btn-sm edit-btn" data-id="${data}"><i class="fa-regular fa-rotate"></i>庫存變動</button>
+                                <button class="btn btn-sm inventory-btn" data-id="${data}"><i class="fa-solid fa-clock-rotate-left"></i> 檢視紀錄</button>                                
+                            `;
+                        }
+                    }
+                ],
+                "order": [[1, 'asc']],
+                // fixedHeader: true,
+                scrollY: "500px",     // 表格顯示區域的高度
+                scrollCollapse: true, // 垂直滾動條，當資料少於高度時收合
+                colReorder: true,
+                columnDefs: [
+                    { targets: '_all', type: 'string' } // 所有欄位都設成文字
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',   // i18n
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'   // 自訂載入圖示，大小fa-3x
+                }
+            });
+
+            // 面板展開收回
+            $('#stockBatchTable tbody').on('click', 'button.toggle-details', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+                var icon = $(this).find('i');
+
+                if (row.child.isShown()) {
+                    // 收合
+                    row.child.hide();
+                    tr.removeClass('shown');
+                    icon.removeClass('fa-minus').addClass('fa-plus');
+                } else {
+                    // 展開
+                    row.child(format(row.data())).show();
+                    tr.addClass('shown');
+                    icon.removeClass('fa-plus').addClass('fa-minus');
+                }
+            });
+
+            // TODO: 展開商品小詳規
+            // format 函數用來產生展開面板內容
+            function format(d) {
+                var html = '<div class="spec-details">Loading...</div>';
+                $.get(`/Products/GetSpecs/${d.SkuId}`, function(res){
+                    var specsHtml = '<ul>';
+                    res.forEach(s => {
+                        specsHtml += `<li>${s.GroupName}：${s.OptionName}</li>`;
+                    });
+                    specsHtml += '</ul>';
+                    $(`.spec-details`, row.child()).html(specsHtml);
+                });
+                return html;
+            }
+
+
+            // ======= 新增庫存 =======
+            // 發送 GET 請求到 /SupStockBatches/Create
+            $("#create").click(function() {
+                $.get('@Url.Action("Create", "SupStockBatches")', function(html) {
+                    // 動態設定 Modal 標題
+                    $("#stockBatchModalTitle").text("新增庫存");
+                    // 將 Partial 載入 Modal
+                    $('#stockBatchModalContent').html(html);
+                    // 重新解析 jQuery Unobtrusive Validation
+                    $.validator.unobtrusive.parse('#stockBatchModalContent');
+                    $('#stockBatchModal').modal('show');
+                });
+            });
+
+            // ======= 編輯庫存 =======
+            $('#stockBatchTable').on('click', '.edit-btn', function () {
+                var id = $(this).data('id');
+
+                // 用 AJAX 把 Partial View 載入到 Modal 裡
+                $.get(`/SupStockBatches/Edit/${id}`, function (html) {
+                    $("#stockBatchModalTitle").text("庫存量異動"); // 動態設定 Modal 標題
+                    $('#stockBatchModalContent').html(html);  // 把表單塞進去
+                    $.validator.unobtrusive.parse('#stockBatchModalContent');
+                    $('#stockBatchModal').modal('show'); // 顯示 Modal
+                });
+            });
+
+            // ======= 提交表單 (庫存量加/減) =======
+            $('#stockBatchModalContent').on('submit', '#stockBatchForm', function(e) {
+                e.preventDefault();
+                var form = $(this);
+
+                $.post(form.attr('action'), form.serialize())
+                .done(function(res) {
+                    // 判斷回傳結果是否為 JSON
+                    var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
+                    var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
+
+                    if(data){
+                        if(data.success){
+                            $('#stockBatchModal').modal('hide');
+                            let actionText = '';
+
+                            switch(data.type){
+                                case 'Purchase': actionText = '採購入庫'; break;
+                                case 'Sale': actionText = '銷售出庫'; break;
+                                case 'Return': actionText = '退貨入庫'; break;
+                                case 'Expire': actionText = '到期報廢'; break;
+                                case 'Adjust':
+                                    actionText = data.adjustType === 'plus' ? '手動調整入庫(+)' : '手動調整出庫(-)';
+                                    break;
+                            }
+
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: `${data.productName}（批號：${data.batchNumber}）${actionText}成功 ${data.qty > 0 ? '+' : ''}${data.qty}`,
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+
+                            table.ajax.reload(null, false);
+                        }
+                    }
+                })
+                .fail(function(){
+                    Swal.fire('操作失敗', '', 'error');
+                });
+            });
+                        
+
+            // ======= 查看詳情i =======
+            // $('#stockBatchTable').on('click', '.details-btn', function() {
+            //     var id = $(this).data('id');
+
+                // GET 詳細資料 Partial View
+                    // $.get('@Url.Action("Details", "SupStockBatches")/' + id, function(html) {
+                    // $('#stockBatchModalTitle').text("庫存詳細資料");
+                    // $('#stockBatchModalContent').html(html);  // 塞進 Modal
+                    // $('#stockBatchModal').modal('show');      // 顯示 Modal
+                // });
+            // });
+
+            // ======= 刪除庫存 =======
+            $('#stockBatchTable').on('click', '.delete-btn', function() {
+                var id = $(this).data('id');
+                var rowData = table.row($(this).closest('tr')).data();
+                var stockBatchName = rowData.stockBatchName;
+                // TODO:刪除參數
+
+                Swal.fire({
+                    title: `確定要刪除庫存批號："${stockBatchName}"，<br>"${BrandName}"的"${ProductName}"嗎？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',   // 確認 → 紅色
+                    cancelButtonColor: '#3085d6', // 取消 → 藍色
+                    confirmButtonText: '刪除',
+                    cancelButtonText: '取消'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/SupStockBatches/DeleteAjax/${id}`,
+                            type: 'POST',
+                            success: function(res) {
+                                if (res.success) {
+                                    Swal.fire('刪除成功', '', 'success');
+                                    table.ajax.reload(null, false);
+                                } else {
+                                    Swal.fire('刪除失敗', res.message || '', 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('刪除失敗', '', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // TODO: index切到庫存異動紀錄表頁
+            // ======= 點[檢視紀錄]跳轉 =======
+            $('#stockBatchTable').on('click', '.inventory-btn', function() {
+                var id = $(this).data('id');
+                window.location.href = `/Inventory/Index?stockBatchId=${id}`;
+            });
+        });
+    </script>
+}
