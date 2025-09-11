@@ -1,0 +1,34 @@
+﻿ @* Index.cshtml   → 文章列表 *@
+
+
+@model IEnumerable<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
+
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>標題</th>
+            <th>狀態</th>
+            <th>建立日期</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var page in Model)
+    {
+        <tr>
+            <td>page.PageId</td>
+            <td>page.Title</td>
+            <td>
+                <span class="badge 
+                    @(page.Status == "1" ? "bg-success" : 
+                      page.Status == "0" ? "bg-secondary" :
+                      page.Status == "2" ? "bg-warning text-dark" :
+                      "bg-danger")">
+                    page.StatusText
+                </span>
+            </td>
+            <td>page.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+        </tr>
+    }
+    </tbody>
+</table>

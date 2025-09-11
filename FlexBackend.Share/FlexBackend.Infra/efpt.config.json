@@ -176,10 +176,6 @@
          "ObjectType": 0
       },
       {
-         "Name": "[dbo].[PROD_BundleItem]",
-         "ObjectType": 0
-      },
-      {
          "Name": "[dbo].[PROD_Ingredient]",
          "ObjectType": 0
       },
@@ -301,6 +297,10 @@
       },
       {
          "Name": "[dbo].[SYS_SeoMetaAsset]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[USER_AdminRole]",
          "ObjectType": 0
       },
       {
