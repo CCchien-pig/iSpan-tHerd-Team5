@@ -95,7 +95,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public IActionResult Create()
 		{
 			// 空物件給 Partial View 使用
-			var viewModel = new ContactViewModel();
+			var viewModel = new SupplierContactViewModel();
 
 			ViewBag.FormAction = "Create"; // 告訴 Partial View 這是 Create 動作
 			//return PartialView("Partials/_SupplierFormPartial", viewModel); // 回傳 Partial View
@@ -107,7 +107,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Create([Bind("SupplierName,ContactName,Phone,Email,IsActive")] ContactViewModel supplierVm)
+		public async Task<IActionResult> Create([Bind("SupplierName,ContactName,Phone,Email,IsActive")] SupplierContactViewModel supplierVm)
 		{
 			if (ModelState.IsValid)
 			{
@@ -145,7 +145,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (supEntity == null) { return NotFound(); }
 
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
-			var viewModel = new ContactViewModel
+			var viewModel = new SupplierContactViewModel
 			{
 				SupplierId = supEntity.SupplierId,
 				SupplierName = supEntity.SupplierName,
@@ -166,7 +166,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, ContactViewModel model)
+		public async Task<IActionResult> Edit(int id, SupplierContactViewModel model)
 		{
 			if (id != model.SupplierId) return NotFound();
 
@@ -267,7 +267,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (supEntity == null) { return NotFound(); }
 
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
-			var model = new ContactViewModel
+			var model = new SupplierContactViewModel
 			{
 				SupplierId = supEntity.SupplierId,
 				SupplierName = supEntity.SupplierName,
