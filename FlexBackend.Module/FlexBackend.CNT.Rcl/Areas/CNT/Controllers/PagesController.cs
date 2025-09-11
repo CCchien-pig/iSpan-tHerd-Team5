@@ -2,6 +2,10 @@
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using X.PagedList;
+using X.PagedList.Extensions;
+
+
 
 namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 {
@@ -14,20 +18,23 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			_db = db;
 		}
 		// GET: PageController
-		public IActionResult Index()
+		public IActionResult Index(int? page)
 		{
-			var pages = _db.CntPages
-				.OrderByDescending(p => p.CreatedDate)
-				.Select(p => new PageListVM
-				{
-					PageId = p.PageId,
-					Title = p.Title,
-					Status = p.Status,
-					CreatedDate = p.CreatedDate
-				})
-				.ToList();
+			int pageNumber = page ?? 1;   // 預設第 1 頁
+			int pageSize = 6;            // 每頁顯示 6 筆
 
-			return View(pages);
+			var pages = _db.CntPages
+			   .OrderByDescending(p => p.CreatedDate)
+			   .Select(p => new PageListVM
+			   {
+				   PageId = p.PageId,
+				   Title = p.Title,
+				   Status = p.Status,        // 只傳 Status
+				   CreatedDate = p.CreatedDate
+			   });
+
+
+			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
 
 
