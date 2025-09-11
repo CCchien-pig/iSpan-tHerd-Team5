@@ -1,39 +1,40 @@
-﻿<head>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" rel="stylesheet" />
-</head>
-<div class="text-center mt-3">
-    <form class="btn-group shadow bg-body-tertiary rounded d-inline-flex" role="group" aria-label="Basic outlined example">
-        <button type="button" class="btn btn-outline-primary" id="btnEvent">新增活動</button>
-        <button type="button" class="btn btn-outline-primary" id="btnConpon">新增優惠券</button>
-        <button type="button" class="btn btn-outline-primary" id="btnAd">新增廣告</button>
-    </form>
+﻿@{
+    ViewData["Title"] = "活動列表";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+
+<div class="container my-4">
+    <h2>@ViewData["Title"]</h2>
+
+    <!-- 新增活動按鈕 -->
+    <a href="@Url.Action("CreateCampaign", "Campaigns", new { area = "MKT" })" class="btn btn-primary mb-3">新增活動</a>
+
+    <!-- 活動列表/日曆 -->
+    <div id="calendar"></div>
 </div>
 
-<div id="calendar" class="my-5"></div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
-@section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        if (!calendarEl) {
+            console.error("找不到 calendar 元素！");
+            return;
+        }
 
-    <script>
-        $(document).ready(function() {
-            $('#calendar').fullCalendar(
-                { header: { left: 'prev,next today',
-                center: 'title',
-                right: 'month,agendaWeek,agendaDay' },
-                defaultView: 'month',
-                editable: true,
-                events: [
-                    { title: '範例活動',
-                    start: '2025-09-03',
-                    color:"#CAABD8"} ],
-                    dayClick: function(date, jsEvent, view) {
-                       window.location.href = '@Url.Action("creatCampaign", "Campaigns", new { area = "MKT" })';}
-                });
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: [
+                // 這裡可改成 Ajax 從後端抓取活動
+                { id: 1, title: "測試活動A", start: "2025-09-10", color: "#CAABD8" },
+                { id: 2, title: "測試活動B", start: "2025-09-10", color: "#FFA07A" }
+            ]
         });
-        $("#btnEvent").on("click",function(){
-            window.location.href = '@Url.Action("creatCampaign", "Campaigns", new { area = "MKT" })';
-        });
-    </script>
-}
+
+        calendar.render();
+    });
+</script>

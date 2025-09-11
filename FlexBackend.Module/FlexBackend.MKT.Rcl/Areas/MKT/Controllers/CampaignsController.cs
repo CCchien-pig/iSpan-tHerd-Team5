@@ -1,6 +1,5 @@
 ﻿using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 {
@@ -14,47 +13,31 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context = context;
         }
 
-        // GET: Campaigns/Index
-        [HttpGet]
+        // GET: Index
         public IActionResult Index()
         {
             return View();
         }
 
-        // GET: Campaigns/CreatCampaign
-        [HttpGet]
-        public IActionResult CreatCampaign()
+        // GET: 新增活動頁面
+        public IActionResult CreateCampaign()
         {
             return View();
         }
 
-        // POST: Campaigns/CreatCampaign
+        // POST: 新增活動
         [HttpPost]
-        public IActionResult CreatCampaign([FromBody] MktCampaign model)
+        public IActionResult CreateCampaign([FromBody] MktCampaign model)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                                  .Select(e => e.ErrorMessage)
-                                                  .ToList();
-                    return Json(new { success = false, message = string.Join(", ", errors) });
-                }
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
 
-                // 將前端多選 ProductType 字串直接存入資料庫
-                model.CreatedDate = DateTime.Now;
+            model.CreatedDate = DateTime.Now;
+            _context.MktCampaigns.Add(model);
+            _context.SaveChanges();
 
-                _context.MktCampaigns.Add(model);
-                _context.SaveChanges();
-
-                return Json(new { success = true });
-            }
-            catch (DbUpdateException dbEx)
-            {
-                // 回傳 inner exception 訊息方便 debug
-                return Json(new { success = false, message = dbEx.InnerException?.Message ?? dbEx.Message });
-            }
+            return Json(new { success = true });
         }
     }
+
 }
