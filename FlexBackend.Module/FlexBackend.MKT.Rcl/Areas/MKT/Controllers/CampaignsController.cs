@@ -2,36 +2,38 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-
-namespace therdPractice01.Controllers
+namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 {
-    public class MKTCampaignController : Controller
+    [Area("MKT")]
+    public class CampaignsController : Controller
     {
-        private readonly THerdDBContext _context;
+        private readonly tHerdDBContext _context;
 
-        public MKTCampaignController (THerdDBContext context)
+        public CampaignsController(tHerdDBContext context)
         {
             _context = context;
         }
 
+        // GET: Campaigns/Index
         [HttpGet]
-        public IActionResult Test()
+        public IActionResult Index()
         {
             return View();
         }
 
+        // GET: Campaigns/CreatCampaign
         [HttpGet]
-        public IActionResult TestEvent() 
-        { 
+        public IActionResult CreatCampaign()
+        {
             return View();
         }
 
+        // POST: Campaigns/CreatCampaign
         [HttpPost]
-        public IActionResult TestAddActive(MktCampaign model)
+        public IActionResult CreatCampaign([FromBody] MktCampaign model)
         {
             try
             {
-                // 驗證 ModelState
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors)
@@ -40,31 +42,19 @@ namespace therdPractice01.Controllers
                     return Json(new { success = false, message = string.Join(", ", errors) });
                 }
 
+                // 將前端多選 ProductType 字串直接存入資料庫
                 model.CreatedDate = DateTime.Now;
+
                 _context.MktCampaigns.Add(model);
                 _context.SaveChanges();
 
-                // 成功回傳 JSON
                 return Json(new { success = true });
             }
-            catch (Exception ex)
+            catch (DbUpdateException dbEx)
             {
-                return Json(new { success = false, message = ex.Message });
+                // 回傳 inner exception 訊息方便 debug
+                return Json(new { success = false, message = dbEx.InnerException?.Message ?? dbEx.Message });
             }
         }
-
-
-        [HttpGet]
-        public IActionResult TestCoupon()
-        {
-            return View();
-        }
-
-        [HttpGet]
-        public IActionResult TestAd()
-        {
-            return View();
-        }
-
     }
 }

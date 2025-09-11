@@ -1,0 +1,39 @@
+﻿<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" rel="stylesheet" />
+</head>
+<div class="text-center mt-3">
+    <form class="btn-group shadow bg-body-tertiary rounded d-inline-flex" role="group" aria-label="Basic outlined example">
+        <button type="button" class="btn btn-outline-primary" id="btnEvent">新增活動</button>
+        <button type="button" class="btn btn-outline-primary" id="btnConpon">新增優惠券</button>
+        <button type="button" class="btn btn-outline-primary" id="btnAd">新增廣告</button>
+    </form>
+</div>
+
+<div id="calendar" class="my-5"></div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#calendar').fullCalendar(
+                { header: { left: 'prev,next today',
+                center: 'title',
+                right: 'month,agendaWeek,agendaDay' },
+                defaultView: 'month',
+                editable: true,
+                events: [
+                    { title: '範例活動',
+                    start: '2025-09-03',
+                    color:"#CAABD8"} ],
+                    dayClick: function(date, jsEvent, view) {
+                       window.location.href = '@Url.Action("creatCampaign", "Campaigns", new { area = "MKT" })';}
+                });
+        });
+        $("#btnEvent").on("click",function(){
+            window.location.href = '@Url.Action("creatCampaign", "Campaigns", new { area = "MKT" })';
+        });
+    </script>
+}
