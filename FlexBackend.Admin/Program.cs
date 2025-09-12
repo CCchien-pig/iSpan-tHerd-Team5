@@ -48,7 +48,8 @@ namespace FlexBackend.Admin
 
 			// Identity options configuration
 
-			builder.Services.Configure<IdentityOptions>(options => {
+			builder.Services.Configure<IdentityOptions>(options =>
+			{
 				options.Password.RequireDigit = true;
 				options.Password.RequireLowercase = true;
 				options.Password.RequireNonAlphanumeric = true;
@@ -64,7 +65,8 @@ namespace FlexBackend.Admin
 				options.User.RequireUniqueEmail = true;
 				options.SignIn.RequireConfirmedEmail = true;
 			});
-			builder.Services.ConfigureApplicationCookie(options => {
+			builder.Services.ConfigureApplicationCookie(options =>
+			{
 				options.Cookie.HttpOnly = true;
 				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 				options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
@@ -80,18 +82,18 @@ namespace FlexBackend.Admin
 			//Create a scope to run the initialization
 			using (var scope = app.Services.CreateScope())
 			{
-				var serviceProvider = scope.ServiceProvider;
-				try
-				{
-					// Call your static method to seed the data
-					await RoleInitializer.SeedRolesAsync(serviceProvider);
-					await UserInitializer.SeedUsersAsync(serviceProvider);
-				}
-				catch (Exception ex)
-				{
-					var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-					logger.LogError(ex, "An error occurred while seeding the database.");
-				}
+				var sp = scope.ServiceProvider;
+
+				// ★ 先確保 schema 已到位
+				var db = sp.GetRequiredService<ApplicationDbContext>();
+				await db.Database.MigrateAsync();
+
+				// 可視化：印出實際使用的 DB 名稱，避免套到錯庫
+				var logger = sp.GetRequiredService<ILogger<Program>>();
+				logger.LogInformation("Seeding against DB: {DbName}", db.Database.GetDbConnection().Database);
+
+				await RoleInitializer.SeedRolesAsync(sp);
+				await UserInitializer.SeedUsersAsync(sp);
 			}
 
 			// Configure the HTTP request pipeline.
@@ -111,7 +113,9 @@ namespace FlexBackend.Admin
 
             app.UseRouting();
 
-            app.UseAuthorization();
+			app.UseAuthentication();
+
+			app.UseAuthorization();
 
             app.MapControllerRoute(
             name: "areas",

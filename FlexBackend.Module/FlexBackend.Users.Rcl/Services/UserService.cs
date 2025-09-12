@@ -18,27 +18,27 @@ namespace FlexBackend.USER.Rcl.Services
 		// 負責建立新使用者並自動產生推薦碼
 		public async Task<IdentityResult> RegisterUserAsync(string email, string password, string firstName, string lastName,string gender)
 		{
-			int nextId;
+			//int nextId;
 
 			// 確保使用 DbContext 的 Connection
-			var connection = _context.Database.GetDbConnection();
+			//var connection = _context.Database.GetDbConnection();
 
-			try
-			{
-				if (connection.State != System.Data.ConnectionState.Open)
-					await connection.OpenAsync();
+			//try
+			//{
+			//	if (connection.State != System.Data.ConnectionState.Open)
+			//		await connection.OpenAsync();
 
-				using (var cmd = connection.CreateCommand())
-				{
-					cmd.CommandText = "SELECT NEXT VALUE FOR dbo.UserNumberSequence";
-					var numIdresult = await cmd.ExecuteScalarAsync();
-					nextId = Convert.ToInt32(numIdresult);
-				}
-			}
-			finally
-			{
-				// 不要關閉 connection，交給 EF Core 管理
-			}
+			//	using (var cmd = connection.CreateCommand())
+			//	{
+			//		cmd.CommandText = "SELECT NEXT VALUE FOR dbo.UserNumberSequence";
+			//		var numIdresult = await cmd.ExecuteScalarAsync();
+			//		nextId = Convert.ToInt32(numIdresult);
+			//	}
+			//}
+			//finally
+			//{
+			//	// 不要關閉 connection，交給 EF Core 管理
+			//}
 
 			var newUser = new ApplicationUser
 			{
@@ -47,7 +47,7 @@ namespace FlexBackend.USER.Rcl.Services
 				FirstName = firstName,
 				LastName = lastName,
 				Gender = gender,
-				UserNumberId = nextId+1000
+				//UserNumberId = nextId+1000
 			};
 
 			// 在儲存前，呼叫方法來產生並賦值 ReferralCode
@@ -66,7 +66,7 @@ namespace FlexBackend.USER.Rcl.Services
 		}
 
 		// 產生推薦碼的私有方法
-		private string GenerateReferralCode()
+		public string GenerateReferralCode()
 		{
 			// 這裡可以實現你想要的任何邏輯
 			// 範例：使用 GUID 的前八碼作為唯一識別碼
