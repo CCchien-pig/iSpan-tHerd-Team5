@@ -13,6 +13,8 @@ public partial class tHerdDBContext : DbContext
     {
     }
 
+    public virtual DbSet<CntMedium> CntMedia { get; set; }
+
     public virtual DbSet<CntPage> CntPages { get; set; }
 
     public virtual DbSet<CntPageBlock> CntPageBlocks { get; set; }
@@ -175,9 +177,9 @@ public partial class tHerdDBContext : DbContext
     {
         modelBuilder.Entity<CntMedium>(entity =>
         {
-            entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF7C367C96");
+            entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF3998BBEF");
 
-            entity.ToTable("CNT_Media", tb => tb.HasComment("媒體資源"));
+            entity.ToTable("CNT_Medium", tb => tb.HasComment("媒體資源"));
 
             entity.Property(e => e.MediaId).HasComment("媒體 ID");
             entity.Property(e => e.CreatedDate)
@@ -195,7 +197,7 @@ public partial class tHerdDBContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CNT_Media_PageBlockId");
         });
-        
+
         modelBuilder.Entity<CntPage>(entity =>
         {
             entity.HasKey(e => e.PageId).HasName("PK__CNT_Page__C565B1045B96AB36");
@@ -247,6 +249,7 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<CntPageBlock>(entity =>
         {
             entity.HasKey(e => e.PageBlockId).HasName("PK__CNT_Page__E339E470860162B7");
+
             entity.ToTable("CNT_PageBlock", tb => tb.HasComment("頁面區塊"));
 
             entity.Property(e => e.PageBlockId).HasComment("區塊 ID");
@@ -772,6 +775,7 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<MktCampaign>(entity =>
         {
             entity.HasKey(e => e.CampaignId).HasName("PK__MKT_Camp__3F5E8A9937EF340D");
+
             entity.ToTable("MKT_Campaign", tb => tb.HasComment("行銷活動基本資訊"));
 
             entity.Property(e => e.CampaignId).HasComment("活動Id");
@@ -1369,6 +1373,7 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<OrdPaymentConfig>(entity =>
         {
             entity.HasKey(e => e.PaymentConfigId).HasName("PK__ORD_Paym__5D2F1BAE697D1167");
+
             entity.ToTable("ORD_PaymentConfig", tb => tb.HasComment("付款方式設定"));
 
             entity.HasIndex(e => e.PaymentName, "IX_ORD_PaymentConfig_PaymentName");
@@ -1395,6 +1400,7 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<OrdReturnItem>(entity =>
         {
             entity.HasKey(e => e.RmaItemId).HasName("PK__ORD_Retu__FCC4AF150D3CC982");
+
             entity.ToTable("ORD_ReturnItem", tb =>
                 {
                     tb.HasComment("退貨明細");
@@ -2965,6 +2971,7 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<UserMemberPaymentMethod>(entity =>
         {
             entity.HasKey(e => e.PaymentMethodId).HasName("PK__USER_Mem__DC31C1D3EFC47E7F");
+
             entity.ToTable("USER_MemberPaymentMethod", tb => tb.HasComment("會員付款方式"));
 
             entity.HasIndex(e => e.IsDefault, "IX_USER_MemberPaymentMethod_IsDefault");
