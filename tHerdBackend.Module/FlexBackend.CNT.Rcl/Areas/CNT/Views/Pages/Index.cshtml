@@ -5,7 +5,6 @@
 
 @model X.PagedList.IPagedList<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
 
-
 <div class="card shadow-sm border-0">
     <div class="card-header bg-primary text-white fw-bold">
         📑 文章列表
@@ -18,45 +17,63 @@
                     <th>📄 標題</th>
                     <th>📌 狀態</th>
                     <th>⏰ 建立日期</th>
+                    <th>⏰ 最後修改日期</th>
+                    <th>⚡ 動作</th>
                 </tr>
             </thead>
             <tbody>
-            @foreach (var page in Model)
-            {
-                <tr>
-                    <td>page.PageId</td>
-                    <td>page.Title</td>
-                    <td>
-                        <span class="badge rounded-pill px-3 py-2
-                            @(page.Status == "1" ? "bg-success" : 
-                              page.Status == "0" ? "bg-secondary" :
-                              page.Status == "2" ? "bg-warning text-dark" :
-                              "bg-danger")">
-                            page.StatusText
-                        </span>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.PageId</td>
+                        <td>@item.Title</td>
+                        <td>
+                            <span class="badge rounded-pill px-3 py-2
+                                            @(item.Status == "1" ? "bg-success" :
+                                            item.Status == "0" ? "bg-secondary" :
+                                            item.Status == "2" ? "bg-warning text-dark" :
+                                            "bg-danger")">
+                                            @item.StatusText
+                            </span>
+                        </td>
+                        <td>@item.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            @(item.RevisedDate.HasValue
+                            ? item.RevisedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                            : Html.Raw("<span class=\"text-muted\">—</span>"))
                     </td>
-                    <td>page.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a asp-action="Edit" asp-area="CNT" asp-controller="Pages" asp-route-id="@item.PageId" class="btn btn-sm btn-warning text-dark">✏️ 編輯</a>
+                            <a asp-action="Details" asp-area="CNT" asp-controller="Pages" asp-route-id="@item.PageId" class="btn btn-sm btn-info text-white">👁 檢視</a>
+                            <a asp-action="Delete" asp-area="CNT" asp-controller="Pages" asp-route-id="@item.PageId" class="btn btn-sm btn-danger"
+                               onclick="return confirm('確定要刪除這篇文章嗎？');">🗑 刪除</a>
+                        </div>
+                    </td>
                 </tr>
-            }
+                                }
             </tbody>
         </table>
     </div>
     <div class="card-footer">
-        <div class="d-flex justify-content-center">
-            @Html.PagedListPager(
-            Model,
-            page => Url.Action("Index", new { page }),
-                        new PagedListRenderOptions
-                        {
-                            DisplayLinkToFirstPage = PagedListDisplayMode.Always,
-                            DisplayLinkToLastPage = PagedListDisplayMode.Always,
-                            DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
-                            DisplayLinkToNextPage = PagedListDisplayMode.Always,
-                            UlElementClasses = new[] { "pagination" },
-                            LiElementClasses = new[] { "page-item" },
-                            PageClasses = new[] { "page-link" }
-                        }
-                        )
+        <div class="d-flex justify-content-between">
+            <a asp-action="RecycleBin" class="btn btn-outline-secondary">🗑 查看回收桶</a>
+            <div class="d-flex justify-content-center flex-grow-1">
+                @Html.PagedListPager(
+                    Model,
+                    page => Url.Action("Index", new { page }),
+                    new PagedListRenderOptions
+                    {
+                        DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+                        DisplayLinkToLastPage = PagedListDisplayMode.Always,
+                        DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+                        DisplayLinkToNextPage = PagedListDisplayMode.Always,
+                        UlElementClasses = new[] { "pagination" },
+                        LiElementClasses = new[] { "page-item" },
+                        PageClasses = new[] { "page-link" }
+                    }
+                )
+            </div>
         </div>
     </div>
 </div>

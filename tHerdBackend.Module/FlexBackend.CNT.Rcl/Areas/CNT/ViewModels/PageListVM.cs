@@ -13,6 +13,8 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public string Title { get; set; }     // 對應 Title
 		public string Status { get; set; }       // 對應 Status (通常 0=草稿,1=已發佈...)
 		public DateTime CreatedDate { get; set; } // 對應 CreatedDate
+		public DateTime? RevisedDate { get; set; } // 對應 RevisedDate (可為 null)
+
 
 		// ★ 額外方便輸出的屬性 (避免 View 看到數字)
 		public string StatusText =>

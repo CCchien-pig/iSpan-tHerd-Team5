@@ -1,0 +1,36 @@
+﻿@model IEnumerable<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-dark text-white fw-bold">
+        🗑️ 回收站
+    </div>
+    <div class="card-body">
+        <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
+            <thead class="table-dark text-center">
+                <tr>
+                    <th>#️⃣ ID</th>
+                    <th>📄 標題</th>
+                    <th>⏰ 刪除時間</th>
+                    <th>⚙️ 動作</th>
+                </tr>
+            </thead>
+            <tbody class="text-center">
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.PageId</td>
+                        <td class="text-left">@item.Title</td>
+                        <td>@(item.RevisedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                        <td>
+                            <a asp-area="CNT" asp-controller="Pages" asp-action="Restore" asp-route-id="@item.PageId" class="btn btn-sm btn-outline-success me-1">♻️ 還原</a>
+                            <a asp-area="CNT" asp-controller="Pages" asp-action="HardDelete" asp-route-id="@item.PageId" class="btn btn-sm btn-outline-danger">💀 永久刪除</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex justify-content-end">
+        <a asp-area="CNT" asp-controller="Pages" asp-action="Index" class="btn btn-secondary card-footer" >⬅️ 返回文章列表</a>
+    </div>
+</div>
