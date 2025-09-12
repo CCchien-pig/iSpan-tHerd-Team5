@@ -9,37 +9,51 @@
     <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
         📑 文章管理
         
-         @* 🔍 查詢表單 *@
+       
+    </div>
+    <div class="card-body">       
+        
+        @* 🔍 查詢表單 *@
         <form asp-action="Index" method="get" class="mb-2">
-            <div class="input-group input-group-sm">
+            <div class="d-flex justify-content-between align-items-center">
 
-                <!-- 每頁筆數 (最小) -->
-                <span class="input-group-text">每頁筆數</span>
-                <select name="pageSize" class="form-select form-select-sm "
-                        style="max-width:75px;"
-                        asp-items="ViewBag.PageSizeList"
-                        onchange="this.form.submit()"></select>
+                <!-- 左邊：功能按鈕 -->
+                <div class="d-flex align-items-center">
+                    <a asp-action="Create"
+                       class="btn btn-outline-secondary btn-lg  me-2">
+                        ➕ 發表文章
+                    </a>
+                    <a asp-action="RecycleBin"
+                       class="btn btn-outline-secondary btn-lg text-danger fw-bold ">
+                        🗑️ ［大型工業垃圾］桶
+                    </a>
+                </div>
 
-                <!-- 狀態下拉 (中等大小) -->
-                <select name="status" class="form-select form-select-sm " style=" max-width:120px;" asp-items="ViewBag.StatusList"></select>
+                <!-- 右邊：查詢條件 -->
+                <div class="input-group input-group-sm" style="max-width:640px;">
+                    <span class="input-group-text">每頁筆數</span>
+                    <select name="pageSize" class="form-select form-select-sm"
+                            style="max-width:80px;"
+                            asp-items="ViewBag.PageSizeList"
+                            onchange="this.form.submit()"></select>
 
-                <!-- 關鍵字輸入 (最大，自動撐開) -->
-                <input type="text" name="keyword" value="@ViewBag.Keyword"
-                       class="form-control form-control-sm flex-grow-1"
-                       placeholder="輸入ID或標題..." />
+                    <select name="status" class="form-select form-select-sm"
+                            style="max-width:120px;"
+                            asp-items="ViewBag.StatusList"></select>
 
-                <!-- 查詢按鈕 -->
-                <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
+                    <input type="text" name="keyword" value="@ViewBag.Keyword"
+                           class="form-control form-control-sm"
+                           style="max-width:240px;"
+                           placeholder="輸入ID或標題..." />
+
+                    <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
+                </div>
+
             </div>
         </form>
-        @* 功能按鈕 *@
-        <div class="d-flex gap-3">
-            <a asp-action="Create" class="btn btn-light btn-sm">➕ 發表文章</a>
-            <a asp-action="RecycleBin" class="btn btn-light text-danger btn-sm" style="font-family:bold">🗑️ ［大型工業垃圾］桶</a>
-        </div>
-    </div>
-    <div class="card-body">
-         
+
+
+        
         <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
             <thead class="table-dark">
                 <tr>

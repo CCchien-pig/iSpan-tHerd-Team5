@@ -141,8 +141,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			return View(tag);
 		}
 
-
-
 		// GET: CNT/Tags/Delete/5
 		public IActionResult Delete(int id)
 		{
@@ -171,7 +169,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			var tag = _db.CntTags.Find(id);
 			if (tag == null) return NotFound();
 
-			// 檢查有沒有綁定文章
 			bool hasBound = _db.CntPageTags.Any(pt => pt.TagId == id);
 			if (hasBound)
 			{
@@ -188,7 +185,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				ModelState.AddModelError("", "無法刪除：此標籤仍被文章使用");
 				return View("Delete", vm);
 			}
-
 
 			_db.CntTags.Remove(tag);
 			_db.SaveChanges();
