@@ -65,7 +65,7 @@ namespace FlexBackend.USER.Rcl.Services
 					EmailConfirmed = true,
 					LastName = LastNames[rand.Next(LastNames.Length)],
 					FirstName = FirstNames[rand.Next(FirstNames.Length)],
-					Gender = "男",
+					Gender = "女",
 					IsActive = true,
 				};
 				if (await userManager.FindByEmailAsync(moduleAdminUser.Email) == null)
