@@ -1,0 +1,209 @@
+﻿@{
+    ViewData["Title"] = "優惠券管理";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+
+<div class="container my-4">
+    <h2>@ViewData["Title"]</h2>
+    <button id="CreateCoupon" class="btn btn-secondary mb-3">新增優惠券</button>
+    <div id="calendar"></div>
+</div>
+
+<!-- Modal Partial -->
+@Html.Partial("~/Areas/MKT/Views/Partial/_CreateCouponModal.cshtml")
+@Html.Partial("~/Areas/MKT/Views/Partial/_EditCouponModal.cshtml")
+
+<!-- 必須先引入 jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SweetAlert -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- FullCalendar -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        var calendarEl = document.getElementById("calendar");
+
+        // 初始化 FullCalendar
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: "dayGridMonth",
+            displayEventTime: false,
+            headerToolbar: {
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay"
+            },
+            events: function(fetchInfo, successCallback, failureCallback) {
+                fetch('@Url.Action("GetEvents", "Coupons", new { area = "MKT" })')
+                    .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+                    .then(data => successCallback(data))
+                    .catch(err => {
+                        console.error("Fetch events failed:", err);
+                        successCallback([]);
+                    });
+            },
+            eventClick: function(info){
+                var couponId = info.event.id;
+                fetch('@Url.Action("GetCouponById", "Coupons", new { area = "MKT", id = 0 })'.replace('0', couponId))
+                    .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+                    .then(data => {
+                        $("#editCouponId").val(data.couponId);
+                        $("#editCampaignId").val(data.campaignId);
+                        $("#editRuleId").val(data.ruleId);
+                        $("#editCouponName").val(data.couponName);
+                        $("#editCouponCode").val(data.couponCode);
+                        $("#editStatus").val(data.status);
+                        $("#editStartDate").val(data.startDate?.replace("Z","") || "");
+                        $("#editEndDate").val(data.endDate?.replace("Z","") || "");
+                        $("#editDiscountAmount").val(data.discountAmount);
+                        $("#editDiscountPercent").val(data.discountPercent);
+                        $("#editTotQty").val(data.totQty);
+                        $("#editUserLimit").val(data.userLimit);
+                        $("#editValidHours").val(data.validHours);
+                        $("input[name='editIsActive'][value='" + data.isActive + "']").prop("checked", true);
+                        $("#editCreater").val(data.creater);
+                        $("#editCreatedDate").val(data.createdDate);
+                        $("#editCouponModal").modal("show");
+                    })
+                    .catch(err => console.error("Fetch coupon by ID failed:", err));
+            }
+        });
+
+        calendar.render();
+
+        // =================== 新增 ===================
+        $("#CreateCoupon").click(function(){
+            $("#createCouponModal").modal("show");
+        });
+
+        $("#createCouponSubmitBtn").click(function(e){
+            e.preventDefault();
+            var form = $("#createCouponForm");
+            var data = {
+                campaignId: form.find("input[name='CampaignId']").val(),
+                ruleId: form.find("input[name='RuleId']").val(),
+                couponName: form.find("input[name='CouponName']").val(),
+                couponCode: form.find("input[name='CouponCode']").val(),
+                status: form.find("select[name='Status']").val(),
+                startDate: form.find("input[name='StartDate']").val(),
+                endDate: form.find("input[name='EndDate']").val() || null,
+                discountAmount: form.find("input[name='DiscountAmount']").val(),
+                discountPercent: form.find("input[name='DiscountPercent']").val(),
+                totQty: form.find("input[name='TotQty']").val(),
+                userLimit: form.find("input[name='UserLimit']").val(),
+                validHours: form.find("input[name='ValidHours']").val(),
+                isActive: form.find("input[name='IsActive']:checked").val() === "true",
+                creater: form.find("input[name='Creater']").val()
+            };
+
+            $.ajax({
+                url: '@Url.Action("CreateCoupon", "Coupons", new { area = "MKT" })',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res){
+                    if(res.success){
+                        Swal.fire("成功","優惠券已新增！","success").then(()=>{
+                            calendar.refetchEvents();
+                            $("#createCouponModal").modal("hide");
+                            form[0].reset();
+                        });
+                    } else {
+                        Swal.fire("錯誤","新增失敗：" + res.message,"error");
+                    }
+                },
+                error: function(err){
+                    console.error("CreateCoupon failed:", err);
+                    Swal.fire("錯誤","新增失敗，請檢查控制台","error");
+                }
+            });
+        });
+
+        // =================== 編輯 ===================
+        $("#saveCouponBtn").click(function(e){
+            e.preventDefault();
+            var form = $("#editCouponForm");
+            var data = {
+                couponId: form.find("#editCouponId").val(),
+                campaignId: form.find("#editCampaignId").val(),
+                ruleId: form.find("#editRuleId").val(),
+                couponName: form.find("#editCouponName").val(),
+                couponCode: form.find("#editCouponCode").val(),
+                status: form.find("#editStatus").val(),
+                startDate: form.find("#editStartDate").val(),
+                endDate: form.find("#editEndDate").val() || null,
+                discountAmount: form.find("#editDiscountAmount").val(),
+                discountPercent: form.find("#editDiscountPercent").val(),
+                totQty: form.find("#editTotQty").val(),
+                userLimit: form.find("#editUserLimit").val(),
+                validHours: form.find("#editValidHours").val(),
+                isActive: form.find("input[name='editIsActive']:checked").val() === "true",
+                creater: form.find("#editCreater").val()
+            };
+
+            $.ajax({
+                url: '@Url.Action("UpdateCoupon", "Coupons", new { area = "MKT" })',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res){
+                    if(res.success){
+                        Swal.fire("成功","優惠券已更新！","success").then(()=>{
+                            calendar.refetchEvents();
+                            $("#editCouponModal").modal("hide");
+                        });
+                    } else {
+                        Swal.fire("錯誤","更新失敗：" + res.message,"error");
+                    }
+                },
+                error: function(err){
+                    console.error("UpdateCoupon failed:", err);
+                    Swal.fire("錯誤","更新失敗，請檢查控制台","error");
+                }
+            });
+        });
+
+        // =================== 刪除 ===================
+        $("#deleteCouponBtn").click(function(e){
+            e.preventDefault();
+            var couponId = $("#editCouponId").val();
+            if(!couponId) return;
+
+            Swal.fire({
+                title: '確定刪除優惠券？',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '刪除',
+                cancelButtonText: '取消'
+            }).then(result=>{
+                if(result.isConfirmed){
+                    $.ajax({
+                        url: '@Url.Action("DeleteCoupon", "Coupons", new { area = "MKT", id = 0 })'.replace('0', couponId),
+                        type: 'POST',
+                        success: function(res){
+                            if(res.success){
+                                Swal.fire('已刪除','優惠券已刪除','success').then(()=>{
+                                    $("#editCouponModal").modal("hide");
+                                    calendar.refetchEvents();
+                                });
+                            } else {
+                                Swal.fire('錯誤','刪除失敗：' + res.message,'error');
+                            }
+                        },
+                        error: function(err){
+                            console.error("DeleteCoupon failed:", err);
+                            Swal.fire('錯誤','刪除失敗，請檢查控制台','error');
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
