@@ -1,31 +1,41 @@
 ﻿@model IEnumerable<FlexBackend.Infra.Models.CsFaq>
-@{
-    ViewData["Title"] = "FAQ 管理台";
-}
 
 @section Styles {
-    <!-- DataTables × Bootstrap 5 -->
-    <link href="//cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-    <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
-    <!-- Font Awesome（沿用你的風格） -->
+    <!-- DataTables × Bootstrap 5 皮膚 -->
+    <link href="[//cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css](https://cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css)" rel="stylesheet" />
+    <link href="[//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap5.min.css](https://cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap5.min.css)" rel="stylesheet" />
+    <!-- Font Awesome -->
     <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
+
     <style>
-        .btn-seg .btn {
-            min-width: 8rem;
+        /* 讓整體更緊湊清爽 */
+        #faqTable {
+            width: 100%;
         }
 
-        .tab-pane {
-            padding-top: .75rem;
+        .table thead th {
+            vertical-align: middle;
         }
 
         .table-sm > :not(caption) > * > * {
             padding: .5rem .6rem;
         }
+        /* 更小內距 */
 
+        /* 兩行省略 + hover 顯示完整 title */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 更輕的分隔線 */
         .table-clean > :not(caption) > * > * {
             border-bottom-color: #eee;
         }
 
+        /* 行動按鈕（圖示圓鈕） */
         .btn-icon {
             width: 2rem;
             height: 2rem;
@@ -36,113 +46,343 @@
             border-radius: .5rem;
         }
 
+        /* 開關與文字的對齊 */
         .switch-wrap {
             gap: .4rem;
         }
 
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+            .switch-wrap .form-check-input {
+                cursor: pointer;
+            }
+
+            .switch-wrap .form-check-label {
+                font-size: .875rem;
+                color: #6c757d;
+            }
     </style>
+
 }
 
-<h1 class="h4 mb-3">@ViewData["Title"]</h1>
+@{
+    ViewData["Title"] = "FAQ內容管理";
+}
 
-<!-- 三顆切換鈕 -->
-<!-- 切換按鈕 -->
-<div class="btn-group btn-seg mb-3" role="tablist" aria-label="切換">
-    <button type="button" class="btn btn-primary active" data-bs-toggle="tab" data-bs-target="#pane-faq" aria-selected="true">FAQ 主表</button>
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-cat" aria-selected="false">FAQ 分類</button>
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-kw" aria-selected="false">FAQ 關鍵字</button>
-</div>
+<h1>@ViewData["Title"]</h1>
 
-<!-- Tab 內容 -->
-<div class="tab-content">
-    <div class="tab-pane fade show active" id="pane-faq" role="tabpanel">
-        <h4>FAQ 主表內容</h4>
-        <p>這裡放 FAQ 主表的功能模組</p>
-        @* 可以用 PartialView 或 DataTable *@
+<p class="d-flex gap-2">
+    <a asp-action="Create" class="btn btn-success">
+        <i class="fa-solid fa-plus"></i> 新增Faq
+    </a>
+    <button type="button" id="btnDeleteSelected" class="btn btn-outline-danger" disabled>
+        <i class="fa-regular fa-trash-can"></i> 刪除所選
+    </button>
+</p>
+<form id="antiForgeryForm" method="post">
+    @Html.AntiForgeryToken()
+</form>
+
+<!-- FAQ 資料表 -->
+<table id="faqTable" class="table table-sm table-hover table-clean align-middle">
+    <thead>
+        <tr>
+            <th style="width:36px;" class="text-center">
+                <input type="checkbox" id="chkAll" />
+            </th>
+            <th>@Html.DisplayNameFor(model => model.Title)</th>
+            <th>@Html.DisplayNameFor(model => model.AnswerHtml)</th>
+            <th>@Html.DisplayNameFor(model => model.OrderSeq)</th>
+            <th>@Html.DisplayNameFor(model => model.LastPublishedTime)</th>
+            <th>@Html.DisplayNameFor(model => model.IsActive)</th>
+            <th>@Html.DisplayNameFor(model => model.CreatedDate)</th>
+            <th>@Html.DisplayNameFor(model => model.RevisedDate)</th>
+            <th>@Html.DisplayNameFor(model => model.Category)</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td class="text-center">
+                    <input type="checkbox" class="js-row-check" value="@item.FaqId" />
+                </td>
+                <td>@item.Title</td>
+
+                <!-- 讓 JS 做兩行省略 + title 顯示全文 -->
+                <td class="answer-cell">@Html.Raw(item.AnswerHtml)</td>
+                <td>@item.OrderSeq</td>
+                <td>@(item.LastPublishedTime?.ToString("yyyy/MM/dd HH:mm"))</td>
+
+                <td class="text-center">
+                    @{
+                        var toggleId = $"toggle-{item.FaqId}";
+                    }
+                    <div class="form-check form-switch m-0 d-inline-flex align-items-center switch-wrap">
+                        <input id="@toggleId"
+                               class="form-check-input js-toggle-active"
+                               type="checkbox"
+                               data-id="@item.FaqId"
+                               @(item.IsActive ? "checked" : "")
+                               aria-label="切換啟用狀態" />
+                        <label class="form-check-label" for="@toggleId">
+                            @(item.IsActive ? "啟用" : "停用")
+                        </label>
+                    </div>
+                </td>
+
+                <td>@item.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+                <td>@(item.RevisedDate?.ToString("yyyy/MM/dd HH:mm"))</td>
+                <td>@item.Category?.CategoryName</td>
+
+                <td class="text-nowrap">
+                    <div class="btn-group" role="group" aria-label="Actions">
+                        <a asp-action="Edit" asp-route-id="@item.FaqId"
+                           class="btn btn-outline-primary btn-icon" data-bs-toggle="tooltip" title="編輯">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <a asp-action="Details" asp-route-id="@item.FaqId"
+                           class="btn btn-outline-secondary btn-icon" data-bs-toggle="tooltip" title="檢視">
+                            <i class="fa-regular fa-eye"></i>
+                        </a>
+                        <button type="button"
+                                class="btn btn-outline-danger btn-icon js-delete-btn"
+                                data-id="@item.FaqId" data-title="@item.Title"
+                                data-bs-toggle="tooltip" title="刪除">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+
+</table>
+
+@{
+    // 如果有 Area，記得帶上；沒有就移除 new { area = "CS" }
+    var deleteUrl = Url.Action("DeleteAjax", "Faqs", new { area = "CS" });
+}
+<!-- 刪除確認 Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">確認刪除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+            </div>
+            <div class="modal-body">
+                你確定要刪除：<strong id="delItemTitle">（項目標題）</strong>？
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDelete">
+                    <i class="fa-regular fa-trash-can"></i> 確認刪除
+                </button>
+            </div>
+        </div>
     </div>
-
-    <div class="tab-pane fade" id="pane-cat" role="tabpanel">
-        <h4>FAQ 分類內容</h4>
-        <p>這裡放 FAQ 分類管理功能模組</p>
-        @* 呼叫 /CS/FaqCategories/Index *@
-    </div>
-
-    <div class="tab-pane fade" id="pane-kw" role="tabpanel">
-        <h4>FAQ 關鍵字內容</h4>
-        <p>這裡放 FAQ 關鍵字管理功能模組</p>
-        @* 呼叫 /CS/FaqKeywords/Index *@
-    </div>
-</div>
-
-
-
-<!-- Anti-forgery：所有 AJAX 會用到 -->
-<form id="antiForgeryForm" method="post">@Html.AntiForgeryToken()</form>
-
-<!-- 三個分頁：第一次顯示時才 AJAX 載入 Partial -->
-<div class="tab-content">
-    <div class="tab-pane fade show active" id="pane-faq"
-         data-url="@Url.Action("IndexPartial", "Faqs", new { area = "CS" })"></div>
-
-    <div class="tab-pane fade" id="pane-cat"
-         data-url="@Url.Action("IndexPartial", "FaqCategories", new { area = "CS" })"></div>
-
-    <div class="tab-pane fade" id="pane-kw"
-         data-url="@Url.Action("IndexPartial", "FaqKeywords", new { area = "CS" })"></div>
 </div>
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- DataTables × Bootstrap 5 -->
     <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
     <script src="//cdn.datatables.net/2.3.3/js/dataTables.bootstrap5.min.js"></script>
     <script src="//cdn.datatables.net/fixedheader/4.0.3/js/dataTables.fixedHeader.min.js"></script>
 
     <script>
-        (function(){
-          const antiToken = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
+        $(function () {
+            const antiToken = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
 
-          // 載入分頁對應的 Partial（僅一次）
-          const loadPane = (selector) => {
-              const $pane = $(selector);
-              if ($pane.data('loaded')) return;
-              const url = $pane.data('url');
-              $pane.load(url, function(){
-                  $pane.data('loaded', true);
-                  const fnName = $pane.find('[data-init]').data('init'); // e.g. initFaqTable
-                  if (typeof window[fnName] === 'function') window[fnName](antiToken);
-              });
-          };
+            // DataTables：注意因為多了「選取」欄，索引整體 +1
+            const table = new DataTable('#faqTable', {
+                fixedHeader: true,
+                layout: {
+                    topStart: 'pageLength',
+                    topEnd: 'search',
+                    bottomStart: 'info',
+                    bottomEnd: 'paging'
+                },
+                paging: true,
+                searching: true,
+                ordering: true,
+                responsive: true,
+                language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json" },
+                columnDefs: [
+                    // 0: 選取欄（不排序、不搜尋、置中）
+                    { targets: 0, orderable: false, searchable: false, className: "text-center" },
+                    {
+                        // 2: AnswerHtml → 轉純文字 + 兩行省略
+                        targets: 2,
+                        render: function (data, type) {
+                            const html = $('<div>').html(data || '');
+                            const text = html.text().trim();
+                            if (type !== 'display') return text;
+                            const safeTitle = text.replace(/"/g, '&quot;');
+                            const short = text.length > 60 ? text.slice(0, 60) + '…' : text;
+                            return `<div class="line-clamp-2" title="${safeTitle}">${short}</div>`;
+                        }
+                    },
+                    // 6: IsActive 開關欄
+                    { targets: 6, orderable: false, searchable: false, className: "text-center" },
+                    // 最後一欄：操作
+                    { targets: -1, orderable: false, searchable: false, className: "text-nowrap" }
+                ]
+            });
 
-          // 預設載 FAQ 主表
-          loadPane('#pane-faq');
+            // Tooltip
+            const initTooltips = () => {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                    const t = bootstrap.Tooltip.getInstance(el);
+                    if (t) t.dispose();
+                    new bootstrap.Tooltip(el);
+                });
+            };
+            initTooltips();
+            table.on('draw', initTooltips);
 
-          // 切換才載入其它 Partial
-          document.querySelectorAll('[data-bs-toggle="tab"]').forEach(btn=>{
-              btn.addEventListener('shown.bs.tab', (e)=>{
-                  const pane = e.target.getAttribute('data-bs-target');
-                  loadPane(pane);
-                  // 切換鈕樣式
-                  document.querySelectorAll('.btn-seg .btn')
-                    .forEach(b=>b.classList.replace('btn-primary','btn-outline-primary'));
-                  e.target.classList.replace('btn-outline-primary','btn-primary');
-              });
-          });
+            // ===== IsActive 切換 =====
+            $('#faqTable').on('change', '.js-toggle-active', function () {
+                const $chk = $(this);
+                const id = $chk.data('id');
+                const isActive = $chk.is(':checked');
+                $chk.prop('disabled', true);
 
-          // 提供給各 partial 初始化 tooltip
-          window.__initTooltips = () => {
-              document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=>{
-                  const t = bootstrap.Tooltip.getInstance(el); if (t) t.dispose();
-                  new bootstrap.Tooltip(el);
-              });
-          };
-        })();
+                $.ajax({
+                    url: '/CS/Faqs/ToggleActive',
+                    type: 'POST',
+                    headers: { 'RequestVerificationToken': antiToken },
+                    data: { id, isActive },
+                    success: function (res) {
+                        if (!res || res.ok !== true) {
+                            $chk.prop('checked', !isActive);
+                            Swal.fire({ title:'切換失敗', icon:'error' });
+                        } else {
+                            const $label = $chk.closest('.form-switch')
+                                               .find('label[for="' + $chk.attr('id') + '"]');
+                            $label.text(isActive ? '啟用' : '停用');
+                        }
+                    },
+                    error: function () {
+                        $chk.prop('checked', !isActive);
+                        Swal.fire({ title:'連線失敗', icon:'error' });
+                    },
+                    complete: function () { $chk.prop('disabled', false); }
+                });
+            });
+
+            // ===== 單筆刪除（SweetAlert2 + 小動畫）=====
+            $('#faqTable').on('click', '.js-delete-btn', function () {
+                const $btn = $(this);
+                const id = $btn.data('id');
+                const title = $btn.data('title');
+                const safeTitle = $('<div>').text(title || ('#' + id)).html();
+
+                Swal.fire({
+                    title: '確定要刪除嗎？',
+                    html: `你將刪除 <b>${safeTitle}</b>。此動作無法復原！`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true,
+                    focusCancel: true,
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+                    $btn.prop('disabled', true);
+
+                    $.ajax({
+                        url: '@(Url.Action("DeleteAjax", "Faqs", new { area = "CS" }))',
+                        type: 'POST',
+                        headers: { 'RequestVerificationToken': antiToken },
+                        data: { id },
+                        success: function (res) {
+                            if (res && res.ok === true) {
+                                const $tr = $btn.closest('tr');
+                                $tr.addClass('table-danger');
+                                $tr.fadeOut(180, function () {
+                                    table.row($tr).remove().draw(false);
+                                    Swal.fire({ title: '已刪除', icon: 'success', timer: 1200, showConfirmButton: false });
+                                });
+                            } else {
+                                Swal.fire({ title: '刪除失敗', text: res?.message ?? '請稍後再試', icon: 'error' });
+                            }
+                        },
+                        error: function () { Swal.fire({ title: '連線失敗', icon: 'error' }); },
+                        complete: function () { $btn.prop('disabled', false); }
+                    });
+                });
+            });
+
+            // ===== 多選：全選、行選、刪除所選 =====
+            const $chkAll = $('#chkAll');
+            const $btnDeleteSelected = $('#btnDeleteSelected');
+
+            // 列上的勾選 → 更新全選狀態/按鈕可用性
+            const refreshBulkUI = () => {
+                const total = $('#faqTable .js-row-check').length;
+                const checked = $('#faqTable .js-row-check:checked').length;
+                $chkAll.prop('checked', total > 0 && checked === total)
+                       .prop('indeterminate', checked > 0 && checked < total);
+                $btnDeleteSelected.prop('disabled', checked === 0);
+            };
+
+            // 全選
+            $('#faqTable thead').on('change', '#chkAll', function () {
+                const checked = $(this).is(':checked');
+                $('#faqTable .js-row-check').prop('checked', checked);
+                refreshBulkUI();
+            });
+
+            // 單列選取（用事件委派，翻頁也有效）
+            $('#faqTable').on('change', '.js-row-check', refreshBulkUI);
+            table.on('draw', refreshBulkUI);
+
+            // 多選刪除
+            $btnDeleteSelected.on('click', function () {
+                const ids = $('#faqTable .js-row-check:checked').map(function(){ return $(this).val(); }).get();
+                if (ids.length === 0) return;
+
+                Swal.fire({
+                    title: '批次刪除',
+                    html: `將刪除 <b>${ids.length}</b> 筆資料，確定？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((r) => {
+                    if (!r.isConfirmed) return;
+
+                    $btnDeleteSelected.prop('disabled', true);
+
+                    $.ajax({
+                        url: '@(Url.Action("DeleteManyAjax", "Faqs", new { area = "CS" }))',
+                        type: 'POST',
+                        headers: { 'RequestVerificationToken': antiToken },
+                        traditional: true, // 重要：用 ids=1&ids=2 的方式送
+                        data: { ids: ids },
+                        success: function (res) {
+                            if (res && res.ok === true) {
+                                // 動畫移除每一列
+                                $('#faqTable .js-row-check:checked').each(function(){
+                                    const $tr = $(this).closest('tr').addClass('table-danger');
+                                    $tr.fadeOut(150, function(){ table.row($tr).remove().draw(false); });
+                                });
+                                Swal.fire({ title:'已刪除', icon:'success', timer:1200, showConfirmButton:false });
+                            } else {
+                                Swal.fire({ title:'刪除失敗', text: res?.message ?? '請稍後再試', icon:'error' });
+                            }
+                        },
+                        error: function(){ Swal.fire({ title:'連線失敗', icon:'error' }); },
+                        complete: function(){ refreshBulkUI(); }
+                    });
+                });
+            });
+        });
     </script>
+
 }
