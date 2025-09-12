@@ -22,14 +22,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 文章列表 (Index)
 		// ================================
-		public IActionResult Index(int? page, string keyword, string status)
+		public IActionResult Index(int? page, string keyword, string status, int pageSize = 8)
 		{
 			int pageNumber = page ?? 1;
-			int pageSize = 8;
 
 			var query = _db.CntPages.Where(p => p.Status != "9");
 
-			// 關鍵字搜尋 (ID 或 標題)
+			// 關鍵字搜尋
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				if (int.TryParse(keyword, out int idValue))
@@ -55,20 +54,28 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					RevisedDate = p.RevisedDate
 				});
 
+			// 給 ViewBag
 			ViewBag.Keyword = keyword;
 			ViewBag.Status = status;
 
-			// 狀態下拉清單（SelectList，會自動處理 selected）
+			// 狀態下拉
 			ViewBag.StatusList = new SelectList(new[]
-					{
-						new { Value = "", Text = "全部狀態" },
-						new { Value = "0", Text = "草稿" },
-						new { Value = "1", Text = "已發布" },
-						new { Value = "2", Text = "下架/封存" }					
-					}, "Value", "Text", status);
+			{
+		new { Value = "", Text = "全部狀態" },
+		new { Value = "0", Text = "草稿" },
+		new { Value = "1", Text = "已發布" },
+		new { Value = "2", Text = "下架/封存" }
+	}, "Value", "Text", status);
+
+			// ✅ 每頁筆數下拉
+			ViewBag.PageSizeList = new SelectList(
+				new[] { 5, 8, 20 },
+				pageSize   // 預設選中值
+			);
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
+
 
 
 
@@ -195,15 +202,14 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 回收桶列表 (RecycleBin)
 		// ================================
-		public IActionResult RecycleBin(int? page, string keyword)
+		public IActionResult RecycleBin(int? page, string keyword, int pageSize = 8)
 		{
-			int pageNumber = Math.Max(page ?? 1, 1); // ✅ 避免 page=0
-			int pageSize = 6;
+			int pageNumber = Math.Max(page ?? 1, 1);
 
 			var query = _db.CntPages
 				.Where(p => p.Status == "9"); // 只抓回收桶文章
 
-			// ★ 關鍵字搜尋 (ID 或 標題)
+			// 關鍵字搜尋
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				keyword = keyword.Trim();
@@ -225,6 +231,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				});
 
 			ViewBag.Keyword = keyword;
+
+			// ✅ 每頁筆數下拉 (回收桶也要)
+			ViewBag.PageSizeList = new SelectList(
+				new[] { 5, 8, 20 },
+				pageSize
+			);
 
 			return View(deletedPages.ToPagedList(pageNumber, pageSize));
 		}
