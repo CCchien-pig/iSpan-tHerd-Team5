@@ -1,0 +1,76 @@
+﻿@* 新增活動 Modal *@
+<div class="modal fade" id="createCampaignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="createCampaignForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">新增活動</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>標題</label>
+                        <input type="text" name="CampaignName" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動類型</label>
+                        <select name="CampaignType" class="form-select">
+                            <option value="cmd">滿額折扣</option>
+                            <option value="csd">全館折扣</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動描述</label>
+                        <input type="text" name="CampaignDescription" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>適用商品類型</label><br />
+                        <input type="checkbox" name="ProductType" value="eyes" />眼睛保健
+                        <input type="checkbox" name="ProductType" value="skin" />皮膚護理
+                        <input type="checkbox" name="ProductType" value="hair" />頭髮護理
+                        <input type="checkbox" name="ProductType" value="face" />臉部護理
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動開始日期</label>
+                        <input type="date" name="StartDate" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動結束日期</label>
+                        <input type="date" name="EndDate" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>是否啟用</label><br />
+                        <input type="radio" name="IsActive" value="true" checked />啟用
+                        <input type="radio" name="IsActive" value="false" />未啟用
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動狀態</label>
+                        <select name="Status" class="form-select">
+                            <option value="cActive">Active</option>
+                            <option value="cInactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>建檔人員</label>
+                        <input type="number" name="Creator" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>活動圖片Id</label>
+                        <input type="number" name="ImgId" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="createSubmitBtn" class="btn btn-primary">確認新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
