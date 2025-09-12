@@ -1,5 +1,8 @@
 ﻿using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel;
 
 namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 {
@@ -13,19 +16,21 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context = context;
         }
 
-        // GET: Index
+        // GET: MKT/Campaigns/Index
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
-        // GET: 新增活動頁面
+        // GET: MKT/Campaigns/CreateCampaign(新增活動頁面)
+        [HttpGet]
         public IActionResult CreateCampaign()
         {
             return View();
         }
 
-        // POST: 新增活動
+        // POST: MKT/Campaigns/CreateCampaign(新增活動)
         [HttpPost]
         public IActionResult CreateCampaign([FromBody] MktCampaign model)
         {
@@ -35,9 +40,85 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             model.CreatedDate = DateTime.Now;
             _context.MktCampaigns.Add(model);
             _context.SaveChanges();
-
             return Json(new { success = true });
         }
+
+        //GET: MKT/Campaigns/GetEvents(抓資料表的活動顯示在fullcalendar)
+        [HttpGet]
+        public async Task<IActionResult> GetEvents()
+        {
+            var campaigns = await _context.MktCampaigns
+                .AsNoTracking()
+                .ToListAsync(); // 先取出資料到記憶體
+
+            var events = campaigns.Select(c => new
+            {
+                id = c.CampaignId,
+                title = c.CampaignName,
+                start = c.StartDate,
+                end = c.EndDate.HasValue ? c.EndDate : null,
+                color = RandomColor()
+            }).ToList();
+
+            return Ok(events); // 回傳 JSON 給 FullCalendar
+        }
+
+        //GET: MKT/Campaigns/GetEventById()
+        [HttpGet]
+        public async Task<IActionResult> GetEventById(int id)
+        {
+            var campaign = await _context.MktCampaigns
+                .AsNoTracking()
+                .Where(c => c.CampaignId == id)
+                .Select(c => new
+                {
+                    id = c.CampaignId,
+                    title = c.CampaignName,
+                    type = c.CampaignType,
+                    description = c.CampaignDescription,
+                    productType = c.ProductType,
+                    status = c.Status,
+                    startDate = c.StartDate,
+                    endDate = c.EndDate,
+                    ingId = c.ImgId,
+                    isActive = c.IsActive,
+                    creator = c.Creator,
+                    createDate = c.CreatedDate,
+                    reviser = c.Reviser,
+                    revisedDate = c.RevisedDate
+                })
+                .FirstOrDefaultAsync();
+
+            if (campaign == null)
+                return NotFound();
+
+            return Ok(campaign);
+        }
+
+        [HttpPost]
+        public IActionResult DeleteCampaign(int id)
+        {
+            var campaign = _context.MktCampaigns.Find(id);
+            if (campaign == null)
+                return Json(new { success = false, message = "找不到活動" });
+
+            _context.MktCampaigns.Remove(campaign);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+
+        //fullcalendar活動顯示隨機顏色
+        private static Random rancolor = new Random();
+        private string RandomColor()
+        {
+            int r = rancolor.Next(0, 256);
+            int g = rancolor.Next(0, 256);
+            int b = rancolor.Next(0, 256);
+
+            return $"#{r:X2}{g:X2}{b:X2}";
+        }
+
     }
 
 }
