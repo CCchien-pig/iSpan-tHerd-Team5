@@ -1,1 +1,50 @@
-﻿@* Details.cshtml → 查看文章 *@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM
+
+@{
+    ViewData["Title"] = "文章詳情";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-info text-white fw-bold">
+        📄 文章詳情
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.PageId</dd>
+
+            <dt class="col-sm-3">標題</dt>
+            <dd class="col-sm-9">@Model.Title</dd>
+
+            <dt class="col-sm-3">狀態</dt>
+            <dd class="col-sm-9">
+                <span class="badge rounded-pill px-3 py-2
+                    @(Model.Status == "1" ? "bg-success" :
+                                            Model.Status == "0" ? "bg-secondary" :
+                                            Model.Status == "2" ? "bg-warning text-dark" :
+                                            "bg-danger")">
+                    @Model.Status
+                </span>
+            </dd>
+
+            <dt class="col-sm-3">建立時間</dt>
+            <dd class="col-sm-9">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</dd>
+
+            <dt class="col-sm-3">最後修改</dt>
+            <dd class="col-sm-9">
+                @if (Model.RevisedDate.HasValue)
+                {
+                    @Model.RevisedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                }
+                else
+                {
+                    <span class="text-muted">—</span>
+                }
+            </dd>
+        </dl>
+    </div>
+    <div class="card-footer">
+        <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-warning btn-sm">✏️ 編輯</a>
+        <a asp-action="Index" class="btn btn-secondary btn-sm">🔙 返回列表</a>
+    </div>
+</div>
