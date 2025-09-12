@@ -5,9 +5,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
     public class CreateOrderVM
     {
         [Required] public int UserNumberId { get; set; }
-        [Required] public int OrderStatusId { get; set; }
+        [Required] public string OrderStatusId { get; set; }
         [Required] public string PaymentStatus { get; set; } = "unpaid"; // unpaid/paid/refunded...
-        [Required] public int ShippingStatusId { get; set; }
+        [Required] public string ShippingStatusId { get; set; }
 
         [Range(0, double.MaxValue)] public decimal Subtotal { get; set; }
 

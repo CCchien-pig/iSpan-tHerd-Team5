@@ -22,6 +22,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		public bool ShowHidden { get; set; }
 
 		// 頁數計算方便用
-		public int TotalPages => (int)Math.Ceiling((decimal)TotalItems / PageSize);
+		public int TotalPages => (int)Math.Ceiling((double)TotalItems / PageSize);
 	}
 }
