@@ -50,19 +50,26 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						{
 							sb.StockBatchId,
 							sku.SkuCode,
-							BatchNumber = sb.BatchNumber,
-							ExpireDate = sb.ExpireDate,
+							sb.BatchNumber,
+							sb.ExpireDate,
 							sb.Qty,
-							SafetyStockQty = sku.SafetyStockQty,
-							ReorderPoint = sku.ReorderPoint,
+							sku.SafetyStockQty,
+							sku.ReorderPoint,
 							sb.IsSellable,
-							ProductName = p.ProductName,
-							BrandName = b.BrandName,
-							BrandCode = b.BrandCode,
-							Specifications = sku.SpecificationOptions
-											   .OrderBy(o => o.OrderSeq)
-											   .Select(o => o.OptionName)
-											   .ToList()
+
+							// 展開要的
+							sb.Sku.Product.ProductName,
+							sb.Sku.Product.Brand.BrandName,
+							sb.Sku.Product.Brand.BrandCode,
+
+							// 規格群組 + 規格選項
+							Specifications = sb.Sku.SpecificationOptions
+								.OrderBy(o => o.OrderSeq)
+								.Select(o => new {
+									o.SpecificationConfig.GroupName,  // 群組名稱
+									o.OptionName                      // 選項名稱
+								})
+								.ToArray()
 						};
 
 
@@ -99,17 +106,25 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				.Take(length)
 				.ToListAsync();
 
-			// 封裝操作欄位
+			// 傳給前端
 			var result = data.Select(d => new
 			{
+				d.StockBatchId,
 				d.SkuCode,
-				BatchNumber = $"{d.BrandCode}{d.BatchNumber}", // 若需要在前端組合批號也可以
-				ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
+				d.BatchNumber,
+				d.ExpireDate,
 				d.Qty,
 				d.SafetyStockQty,
 				d.ReorderPoint,
-				Operations = $"<a href='/StockBatches/Edit/{d.StockBatchId}' class='btn btn-sm btn-warning'>庫存異動</a>" +
-							 $" <a href='/StockHistory/Index/{d.StockBatchId}' class='btn btn-sm btn-info'>異動紀錄</a>"
+
+				// 展開列需要的
+				d.BrandName,
+				d.ProductName,
+				// 字串版規格，用斜線分隔
+				//Specifications = string.Join(" / ", d.Specifications),
+				// 陣列版規格
+				Specifications = d.Specifications,
+
 			});
 
 			return Json(new
@@ -194,15 +209,30 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				if (!isValidMovementType)
 					return BadRequest($"無效的異動類型: {vm.MovementType}");
 
-				int newQty = vm.Qty;
+				int beforeQty = stockBatch.Qty; // 真實庫存
+				int newQty = beforeQty;
+
 				switch (vm.MovementType)
 				{
 					case "Purchase": newQty += vm.ChangeQty; break;
-					case "Sale": newQty -= vm.ChangeQty; break;
+					case "Sale":
+						if (vm.ChangeQty > beforeQty)
+							return BadRequest("銷售出庫量不能大於現有庫存");
+						newQty -= vm.ChangeQty;
+						break;
 					case "Return": newQty += vm.ChangeQty; break;
 					case "Expire": newQty -= vm.ChangeQty; break;
 					case "Adjust": newQty += vm.IsAdd ? vm.ChangeQty : -vm.ChangeQty; break;
 				}
+
+				// 檢查最大庫存
+				if (sku.MaxStockQty > 0 && newQty > sku.MaxStockQty)
+				{
+					return BadRequest($"調整後庫存 {newQty} 超過最大庫存量 {sku.MaxStockQty}");
+				}
+
+				stockBatch.Qty = newQty;
+
 
 				// 更新批次庫存
 				stockBatch.Qty = newQty;
@@ -215,7 +245,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					StockBatchId = stockBatch.StockBatchId,
 					ChangeType = vm.MovementType,
 					ChangeQty = vm.ChangeQty,
-					BeforeQty = vm.Qty,
+					BeforeQty = stockBatch.Qty,
 					AfterQty = newQty,
 					Reviser = vm.UserId ?? 0,
 					RevisedDate = DateTime.Now,
@@ -236,69 +266,100 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				brandCode = "XX"; // 若無品牌簡碼，預設 XX
 
 			// 日期字串
-			var datePart = DateTime.Now.ToString("yyyyMMdd");
+
+			var today = DateTime.Today;
+			var datePart = today.ToString("yyyyMMdd");
 
 			// 計算當天所有批次的流水號 +1（不分品牌）
-			int seq = _context.SupStockBatches.Count(sb => sb.CreatedDate.Date == DateTime.Today) + 1;
+			int seq = _context.SupStockBatches
+						.Where(sb => sb.CreatedDate >= today && sb.CreatedDate < today.AddDays(1))
+						.Count() + 1;
 
 			return $"{brandCode}{datePart}-{seq:000}";
 		}
 
-		#region 新增時取得列表:
+		#region 新增庫存表單用 API
+
 		// 取得品牌列表
 		[HttpGet]
 		public async Task<IActionResult> GetBrands()
 		{
 			var brands = await _context.SupBrands
-				.Select(b => new { b.BrandId, b.BrandName })
+				.Where(b => b.IsActive)
+				.Select(b => new
+				{
+					b.BrandId,
+					b.BrandName
+				})
 				.ToListAsync();
 			return Ok(brands);
 		}
+
 		// 取得商品列表 (依品牌)
 		[HttpGet]
 		public async Task<IActionResult> GetProductsByBrand(int brandId)
 		{
 			var products = await _context.ProdProducts
-				.Where(p => p.BrandId == brandId)
-				.Select(p => new { p.ProductId, p.ProductName })
+				.Where(p => p.BrandId == brandId && p.IsPublished)
+				.Select(p => new
+				{
+					p.ProductId,
+					p.ProductName
+				})
 				.ToListAsync();
 			return Ok(products);
 		}
+
 		// 取得 SKU 列表 (依產品)
 		[HttpGet]
 		public async Task<IActionResult> GetSkusByProduct(int productId)
 		{
 			var skus = await _context.ProdProductSkus
-				.Where(sku => sku.ProductId == productId)
-				.Select(sku => new { sku.SkuId, sku.SkuCode, sku.StockQty, sku.ReorderPoint, sku.SafetyStockQty })
+				.Where(sku => sku.ProductId == productId && sku.IsActive)
+				.Select(sku => new
+				{
+					sku.SkuId,
+					sku.SkuCode,
+					sku.StockQty,         // 目前庫存量
+					sku.ReorderPoint,     // 再訂購點
+					sku.SafetyStockQty,   // 安全庫存量
+					sku.MaxStockQty       // 最大庫存量
+				})
 				.ToListAsync();
 			return Ok(skus);
 		}
-		// 取得 SKU 詳細資訊
+
+		// 取得 SKU 詳細資訊 (選完 SKU 後自動帶入底下欄位)
 		[HttpGet]
 		public async Task<IActionResult> GetSkuInfo(int skuId)
 		{
 			var skuInfo = await _context.ProdProductSkus
-				.Where(sku => sku.SkuId == skuId)
+				.Where(sku => sku.SkuId == skuId && sku.IsActive)
 				.Select(sku => new
 				{
 					sku.SkuId,
 					sku.SkuCode,
 					sku.StockQty,
 					sku.ReorderPoint,
-					sku.SafetyStockQty
+					sku.SafetyStockQty,
+					sku.MaxStockQty
 				})
 				.FirstOrDefaultAsync();
 
+			if (skuInfo == null)
+				return NotFound("找不到 SKU");
+
 			return Ok(skuInfo);
 		}
+
 		// 取得異動類型
 		[HttpGet]
 		public async Task<IActionResult> GetMovementTypes()
 		{
 			var codes = await _context.SysCodes
 				.Where(c => c.ModuleId == "SUP" && c.CodeId == "01" && c.IsActive)
-				.Select(c => new {
+				.Select(c => new
+				{
 					Value = c.CodeNo,    // Purchase/Sale/Return/Expire/Adjust
 					Text = c.CodeDesc    // 採購入庫/銷售出庫/退貨入庫/到期報廢/手動調整
 				})
@@ -306,30 +367,79 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			return Ok(codes);
 		}
+
 		#endregion
+
+
+		// GET: StockBatches/Edit/5
+		[HttpGet]
+		public async Task<IActionResult> Edit(int? id)
+		{
+			if (id == null) return NotFound();
+
+			var supStockBatch = await _context.SupStockBatches
+				.Include(sb => sb.Sku)
+					.ThenInclude(s => s.Product)
+						.ThenInclude(p => p.Brand)
+				.FirstOrDefaultAsync(sb => sb.StockBatchId == id);
+
+			if (supStockBatch == null) return NotFound();
+
+			var sku = supStockBatch.Sku;
+			var product = sku?.Product;
+			var brand = product?.Brand;
+
+			// 計算有效日期（只做顯示）
+			DateTime? expireDate = null;
+			if (supStockBatch.ManufactureDate.HasValue && sku?.ShelfLifeDays > 0)
+			{
+				expireDate = supStockBatch.ManufactureDate.Value.AddDays(sku.ShelfLifeDays);
+			}
+
+			var viewModel = new StockBatchContactViewModel
+			{
+				StockBatchId = supStockBatch.StockBatchId,
+				SkuId = supStockBatch.SkuId,
+				SkuCode = sku?.SkuCode,
+				ProductName = product?.ProductName,
+				BrandName = brand?.BrandName,
+				BatchNumber = supStockBatch.BatchNumber,
+				IsSellable = supStockBatch.IsSellable,
+				ManufactureDate = supStockBatch.ManufactureDate,
+				ExpireDate = expireDate,
+				Qty = supStockBatch.Qty,
+				//SafetyStockQty = sku?.SafetyStockQty ?? 0,
+				//ReorderPoint = sku?.ReorderPoint ?? 0,
+				//MaxStockQty = sku?.MaxStockQty ?? 0,
+				Creator = supStockBatch.Creator,
+				CreatedDate = supStockBatch.CreatedDate,
+				Reviser = supStockBatch.Reviser,
+				RevisedDate = supStockBatch.RevisedDate
+			};
+
+			ViewBag.FormAction = "Edit";
+			return PartialView("Partials/_StockBatchFormPartial", viewModel);
+		}
+
 
 		// 儲存庫存異動
 		[HttpPost]
 		public async Task<IActionResult> SaveStockMovement(SupStockMovementDto dto)
 		{
-			if (dto == null)
-				return BadRequest("資料無效");
+			if (dto == null) return BadRequest("資料無效");
+			if (dto.ChangeQty <= 0) return BadRequest("變動數量必須大於 0");
 
-			if (dto.ChangeQty <= 0)
-				return BadRequest("變動數量必須大於 0");
-
-			// 驗證 MovementType 是否存在於 SYS_Code (SUP 模組 / 01 = 庫存異動類型)
 			bool isValidMovementType = await _context.SysCodes
-				.AnyAsync(c => c.ModuleId == "SUP"
-							&& c.CodeId == "01"
-							&& c.CodeNo == dto.MovementType);
-
+				.AnyAsync(c => c.ModuleId == "SUP" && c.CodeId == "01" && c.CodeNo == dto.MovementType);
 			if (!isValidMovementType)
-			{
 				return BadRequest($"無效的 MovementType: {dto.MovementType}");
-			}
 
-			// 計算庫存變動
+			var batch = await _context.SupStockBatches
+				.Include(sb => sb.Sku)
+				.FirstOrDefaultAsync(sb => sb.StockBatchId == dto.StockBatchId);
+
+			if (batch == null) return NotFound($"找不到庫存批次: {dto.StockBatchId}");
+
 			int newQty = dto.CurrentQty;
 			switch (dto.MovementType)
 			{
@@ -338,24 +448,24 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				case "Return": newQty += dto.ChangeQty; break;
 				case "Expire": newQty -= dto.ChangeQty; break;
 				case "Adjust": newQty += dto.IsAdd ? dto.ChangeQty : -dto.ChangeQty; break;
-				default:
-					return BadRequest($"未支援的 MovementType: {dto.MovementType}");
+				default: return BadRequest($"未支援的 MovementType: {dto.MovementType}");
 			}
 
-			// 更新 SupStockBatches
-			var batch = await _context.SupStockBatches.FindAsync(dto.StockBatchId);
-			if (batch == null)
-				return NotFound($"找不到庫存批次: {dto.StockBatchId}");
+			// 後端驗證
+			if (newQty < 0) return BadRequest("異動後庫存不能小於 0");
+			if (batch.Sku.MaxStockQty > 0 && newQty > batch.Sku.MaxStockQty)
+				return BadRequest($"異動後庫存不能超過最大庫存量 {batch.Sku.MaxStockQty}");
 
+			// 更新批次
 			batch.Qty = newQty;
-			batch.IsSellable = dto.IsSellable; // 批次可售狀態
+			batch.IsSellable = dto.IsSellable;
 			await _context.SaveChangesAsync();
 
 			// 記錄異動歷史
 			_context.SupStockHistories.Add(new SupStockHistory
 			{
-				StockBatchId = dto.StockBatchId,   // 對應庫存批次
-				ChangeType = dto.MovementType,     // CodeNo (Purchase / Sale / Return / Expire / Adjust)
+				StockBatchId = batch.StockBatchId,
+				ChangeType = dto.MovementType,
 				ChangeQty = dto.ChangeQty,
 				BeforeQty = dto.CurrentQty,
 				AfterQty = newQty,
@@ -368,59 +478,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			return Ok(new { success = true, newQty });
 		}
-
-		// GET: StockBatches/Edit/5
-		[HttpGet]
-		public async Task<IActionResult> Edit(int? id)
-		{
-			if (id == null)
-				return NotFound();
-
-			// Entity Framework 的 Eager Loading（預先載入）：在查詢主資料時，同時把關聯資料一次抓出來，不需要之後再去資料庫查。
-			// 取得指定批次，並 include ProductSku → Product → Brand
-			var supStockBatch = await _context.SupStockBatches
-				.Include(sb => sb.Sku)                  // 預先抓 SKU
-					.ThenInclude(s => s.Product)        // SKU 對應的 Product 也一起抓
-						.ThenInclude(p => p.Brand)      // Product 對應的 Brand 也抓，最後救能在 supStockBatch.Sku.Product.Brand 直接使用品牌名稱或品牌代碼
-				.FirstOrDefaultAsync(sb => sb.StockBatchId == id);
-
-			if (supStockBatch == null) return NotFound();
-
-			var sku = supStockBatch.Sku;
-			var product = sku?.Product;
-			var brand = product?.Brand;
-
-			// 計算有效日期（只做顯示，不修改資料庫）
-			DateTime? expireDate = null;
-			if (supStockBatch.ManufactureDate.HasValue && sku?.ShelfLifeDays > 0)
-			{
-				expireDate = supStockBatch.ManufactureDate.Value.AddDays(sku.ShelfLifeDays);
-			}
-
-			await _context.SaveChangesAsync();
-
-			var viewModel = new StockBatchContactViewModel
-			{
-				StockBatchId = supStockBatch.StockBatchId,
-				SkuId = supStockBatch.SkuId,
-				SkuCode = sku?.SkuCode,               // 顯示 SKU 代碼
-				ProductName = product?.ProductName,   // 唯讀
-				BrandName = brand?.BrandName,         // 唯讀
-				BatchNumber = supStockBatch.BatchNumber,
-				IsSellable = supStockBatch.IsSellable,
-				ManufactureDate = supStockBatch.ManufactureDate,
-				ExpireDate = expireDate,
-				Qty = supStockBatch.Qty,
-				Creator = supStockBatch.Creator,
-				CreatedDate = supStockBatch.CreatedDate,
-				Reviser = supStockBatch.Reviser,
-				RevisedDate = supStockBatch.RevisedDate
-			};
-
-			ViewBag.FormAction = "Edit";
-			return PartialView("Partials/_StockBatchFormPartial", viewModel);
-		}
-
 
 
 		// POST: StockBatches/Edit/5
@@ -516,73 +573,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-		// GET: StockBatches/Details/5
-		[HttpGet]
-		//public async Task<IActionResult> Details(int? id)
-		//{
-		//	if (id == null) return NotFound();
-
-		//	// SUP_StockHistory → StockBatchId → SupStockBatch → Sku → Product → Brand
-		//	var supStockBatch = await _context.SupStockBatches
-		//		.Include(sb => sb.Sku)
-		//			.ThenInclude(s => s.Product)
-		//				.ThenInclude(p => p.Brand)
-		//		.Include(sb => sb.SupStockHistories)
-		//		.FirstOrDefaultAsync(sb => sb.StockBatchId == id);
-
-		//	if (supStockBatch == null) return NotFound();
-
-
-		//	// 先抓 SKU
-		//	var sku = await _context.ProdProductSkus
-		//		.FirstOrDefaultAsync(s => s.SkuId == stockBatch.SkuId);
-
-		//	if (sku == null)
-		//	{
-		//		throw new Exception($"找不到對應的 SKU: {stockBatch.SkuId}");
-		//	}
-
-		//	// 建立異動紀錄
-		//	var history = new SupStockHistory
-		//	{
-		//		StockBatchId = stockBatch.StockBatchId,
-		//		OrderItemId = orderItemId,
-		//		ChangeType = changeType,
-		//		ChangeQty = changeQty,
-		//		Reviser = reviser,
-		//		RevisedDate = DateTime.Now,
-		//		BeforeQty = beforeQty,
-		//		AfterQty = afterQty,
-		//		Remark = remark,
-
-		//		// 從 ProdProductSku 抓數據
-		//		ReorderPoint = sku.ReorderPoint,
-		//		SafetyStock = sku.SafetyStockQty,
-		//		MaxStock = sku.MaxStockQty
-		//	};
-
-		//	_context.SupStockHistories.Add(history);
-		//	await _context.SaveChangesAsync();
-
-
-		//	return View("Details", model); // 或者回傳 Partial
-		//}
-
-
-
-		// POST: StockBatches/DeleteAjax/5
-		[HttpPost]
-		//public async Task<IActionResult> DeleteAjax(int id)
-  //      {
-  //          var supStockBatch = await _context.SupStockBatches.FindAsync(id);
-  //          if (supStockBatch != null)
-  //          {
-  //              _context.SupStockBatches.Remove(supStockBatch);
-		//		await _context.SaveChangesAsync();
-		//		return Json(new { success = true });
-		//	}
-		//	return Json(new { success = false, message = "找不到該供應商" });
-		//}
 
 		private bool SupStockBatchExists(int id)
         {

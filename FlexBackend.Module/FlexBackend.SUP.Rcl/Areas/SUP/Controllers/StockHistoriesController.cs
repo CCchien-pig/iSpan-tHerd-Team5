@@ -243,7 +243,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> RecordStockChangeForOrder(int orderItemId, string movementType, int changeQty, int userId, string remark = "")
 		{
 			// 1. 取得訂單明細，包含 SKU 與 Product
-			var orderItem = await _context.ORD_OrderItems
+			var orderItem = await _context.OrdOrderItems
 				.Include(oi => oi.Sku)
 				.ThenInclude(s => s.Product)
 				.FirstOrDefaultAsync(oi => oi.OrderItemId == orderItemId);
@@ -321,7 +321,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> UpdateStockAndRecordHistory(int orderItemId, string movementType, int changeQty, int userId, string remark = "")
 		{
 			// 1. 取得訂單明細及 SKU 與 Product
-			var orderItem = await _context.ORD_OrderItems
+			var orderItem = await _context.OrdOrderItems
 				.Include(oi => oi.Sku)
 					.ThenInclude(s => s.Product)
 				.FirstOrDefaultAsync(oi => oi.OrderItemId == orderItemId);
