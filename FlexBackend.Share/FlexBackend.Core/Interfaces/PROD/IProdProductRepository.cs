@@ -20,7 +20,8 @@ namespace FlexBackend.Core.Interfaces.Products
         public int? BrandId { get; set; }
         public int? SupplierId { get; set; }
         public int Page { get; set; } = 1;         // 1-based
-        public int PageSize { get; set; } = 20;
+        public int PageIndex { get; set; } = 1;     // 第幾頁（1-based）
+        public int PageSize { get; set; } = 10;    // 每頁筆數（預設 10，自己調整）
         public string? OrderBy { get; set; }       // e.g. "CreatedDate desc"
     }
 
