@@ -2,6 +2,8 @@
 using FlexBackend.Infra; // 你的 DbContext
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
+using X.PagedList;
+using X.PagedList.Extensions; // 分頁套件
 
 namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 {
@@ -15,10 +17,9 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		}
 
 		// GET: CNT/Tags
-		public IActionResult Index()
+		public IActionResult Index(string keyword, int? page, int pageSize = 10)
 		{
-			var tags = _db.CntTags
-				.OrderBy(t => t.TagId)
+			var query = _db.CntTags
 				.Select(t => new TagListVM
 				{
 					TagId = t.TagId,
@@ -26,11 +27,25 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					IsActive = t.IsActive,
 					Revisor = t.Revisor,
 					RevisedDate = t.RevisedDate
-				})
-				.ToList();
+				});
 
-			return View(tags);
+			if (!string.IsNullOrEmpty(keyword))
+			{
+				query = query.Where(t => t.TagName.Contains(keyword));
+			}
+
+			int pageNumber = page ?? 1;
+
+			var pagedList = query
+				.OrderByDescending(t => t.TagId)
+				.ToPagedList(pageNumber, pageSize);
+
+			ViewBag.Keyword = keyword;
+			ViewBag.PageSize = pageSize;
+
+			return View(pagedList);
 		}
+
 
 		// GET: CNT/Tags/Create
 		public IActionResult Create()
@@ -164,12 +179,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// POST: CNT/Tags/DeleteConfirmed/5
 		[HttpPost, ActionName("DeleteConfirmed")]
 		[ValidateAntiForgeryToken]
-		public IActionResult DeleteConfirmed(int id)
+		public IActionResult DeleteConfirmed(int tagId)
 		{
-			var tag = _db.CntTags.Find(id);
+			var tag = _db.CntTags.Find(tagId);
 			if (tag == null) return NotFound();
 
-			bool hasBound = _db.CntPageTags.Any(pt => pt.TagId == id);
+			bool hasBound = _db.CntPageTags.Any(pt => pt.TagId == tagId);
 			if (hasBound)
 			{
 				var vm = new TagDeleteVM
@@ -178,7 +193,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					TagName = tag.TagName,
 					IsActive = tag.IsActive,
 					BoundPages = _db.CntPageTags
-									.Where(pt => pt.TagId == id)
+									.Where(pt => pt.TagId == tagId)
 									.Select(pt => pt.Page.Title)
 									.ToList()
 				};
