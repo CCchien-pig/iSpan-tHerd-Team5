@@ -30,6 +30,21 @@
     @* 不准放自訂 *@
     <link rel="stylesheet" href="~/css/site.css">
 
+    <style>
+        /* 保持側邊欄固定，但還能響應 RWD */
+        .sidebar {
+            position: sticky;
+            top: 0;            /* 從視窗頂端開始固定 */
+            height: 100vh;     /* 占滿整個視窗高度 */
+        }
+
+
+        /* 為了避免內容壓縮，要調整主內容區塊 */
+        #content-wrapper {
+            margin-left: 0px; /* 要跟 sidebar 寬度一致 */
+        }
+    </style>
+
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body id="page-top" class="m-0">
@@ -37,10 +52,10 @@
     <div id="wrapper">
 
         <!-- Sidebar bg-gradient-primary -->
-        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion" id="accordionSidebar">
+        <ul class="navbar-nav bg-gradient-purple2 sidebar sidebar-dark accordion sidebar2" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="" asp-controller="Home" asp-action="Index">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" asp-area="CS" asp-controller="Dashboard" asp-action="Index">
                 <div class="sidebar-brand-icon">
                     <i class="fas fa-store"></i>
                 </div>
@@ -52,7 +67,7 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                <a class="nav-link" asp-area="CS" asp-controller="Dashboard" asp-action="Index">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
@@ -84,6 +99,33 @@
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars text-purple2"></i>
                     </button>
+                    <ul class="navbar-nav ml-auto">
+
+                        <div class="topbar-divider d-none d-sm-block"></div>
+
+                        <!-- Nav Item - User Information -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Douglas McGee</span>
+                                <img class="img-profile rounded-circle"
+                                    src="img/undraw_profile.svg">
+                            </a>
+                            <!-- Dropdown - User Information -->
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    個人資料
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    登出
+                                </a>
+                            </div>
+                        </li>
+                    </ul>
                 </nav>
                 <!-- End of Topbar -->
 
@@ -139,14 +181,14 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="logoutLabel">Ready to Leave?</h5>
+                    <h5 class="modal-title" id="logoutLabel">確定要登出嗎？</h5>
                     <button class="close" type="button" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
                 </div>
-                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-body">如果你已經準備好結束目前的工作階段，請點擊下方的「登出」。</div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">取消</button>
                     <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
-                        <button type="submit" class="btn btn-primary">Logout</button>
+                        <button type="submit" class="btn btn-primary">登出</button>
                     </form>
                 </div>
             </div>

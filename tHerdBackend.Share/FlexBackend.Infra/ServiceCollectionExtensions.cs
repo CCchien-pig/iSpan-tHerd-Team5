@@ -1,5 +1,6 @@
 ﻿using FlexBackend.Infra.DBSetting;
 using FlexBackend.Infra.Models;
+using ISpan.eMiniHR.DataAccess.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,8 @@ namespace FlexBackend.Infra
 
             // EF Core
             services.AddDbContext<tHerdDBContext>(options => options.UseSqlServer(connectionString));
+
+            MapsterConfig.Register();
 
             return services;
         }
