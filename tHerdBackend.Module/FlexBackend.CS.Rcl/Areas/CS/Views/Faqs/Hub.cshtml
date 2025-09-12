@@ -1,13 +1,11 @@
-﻿@model IEnumerable<FlexBackend.Infra.Models.CsFaq>
-@{
+﻿@{
     ViewData["Title"] = "FAQ 管理台";
 }
 
 @section Styles {
-    <!-- DataTables × Bootstrap 5 -->
+    <!-- 保持你原本的風格：DataTables × Bootstrap5 + FontAwesome -->
     <link href="//cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
     <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
-    <!-- Font Awesome（沿用你的風格） -->
     <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
     <style>
         .btn-seg .btn {
@@ -51,41 +49,17 @@
 
 <h1 class="h4 mb-3">@ViewData["Title"]</h1>
 
-<!-- 三顆切換鈕 -->
-<!-- 切換按鈕 -->
-<div class="btn-group btn-seg mb-3" role="tablist" aria-label="切換">
-    <button type="button" class="btn btn-primary active" data-bs-toggle="tab" data-bs-target="#pane-faq" aria-selected="true">FAQ 主表</button>
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-cat" aria-selected="false">FAQ 分類</button>
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-kw" aria-selected="false">FAQ 關鍵字</button>
+<!-- 切換鈕 -->
+<div class="btn-group btn-seg mb-3" role="group" aria-label="切換">
+    <button class="btn btn-primary" data-bs-toggle="tab" data-bs-target="#pane-faq">FAQ 主表</button>
+    <button class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-cat">FAQ 分類</button>
+    <button class="btn btn-outline-primary" data-bs-toggle="tab" data-bs-target="#pane-kw">FAQ 關鍵字</button>
 </div>
 
-<!-- Tab 內容 -->
-<div class="tab-content">
-    <div class="tab-pane fade show active" id="pane-faq" role="tabpanel">
-        <h4>FAQ 主表內容</h4>
-        <p>這裡放 FAQ 主表的功能模組</p>
-        @* 可以用 PartialView 或 DataTable *@
-    </div>
-
-    <div class="tab-pane fade" id="pane-cat" role="tabpanel">
-        <h4>FAQ 分類內容</h4>
-        <p>這裡放 FAQ 分類管理功能模組</p>
-        @* 呼叫 /CS/FaqCategories/Index *@
-    </div>
-
-    <div class="tab-pane fade" id="pane-kw" role="tabpanel">
-        <h4>FAQ 關鍵字內容</h4>
-        <p>這裡放 FAQ 關鍵字管理功能模組</p>
-        @* 呼叫 /CS/FaqKeywords/Index *@
-    </div>
-</div>
-
-
-
-<!-- Anti-forgery：所有 AJAX 會用到 -->
+<!-- Anti-forgery：供所有 AJAX 使用 -->
 <form id="antiForgeryForm" method="post">@Html.AntiForgeryToken()</form>
 
-<!-- 三個分頁：第一次顯示時才 AJAX 載入 Partial -->
+<!-- 內容分頁：第一次切換時才 AJAX 載入 -->
 <div class="tab-content">
     <div class="tab-pane fade show active" id="pane-faq"
          data-url="@Url.Action("IndexPartial", "Faqs", new { area = "CS" })"></div>
@@ -109,34 +83,35 @@
         (function(){
           const antiToken = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
 
-          // 載入分頁對應的 Partial（僅一次）
+          // 載入指定 pane 的 Partial（只載一次）
           const loadPane = (selector) => {
               const $pane = $(selector);
               if ($pane.data('loaded')) return;
               const url = $pane.data('url');
               $pane.load(url, function(){
                   $pane.data('loaded', true);
-                  const fnName = $pane.find('[data-init]').data('init'); // e.g. initFaqTable
+                  // 每個 partial 會在根節點放 data-init 屬性告訴要呼叫哪個初始化函數
+                  const $init = $pane.find('[data-init]');
+                  const fnName = $init.data('init');
                   if (typeof window[fnName] === 'function') window[fnName](antiToken);
               });
           };
 
-          // 預設載 FAQ 主表
+          // 進頁先載 FAQ 主表
           loadPane('#pane-faq');
 
-          // 切換才載入其它 Partial
+          // 切換分頁時載入
           document.querySelectorAll('[data-bs-toggle="tab"]').forEach(btn=>{
               btn.addEventListener('shown.bs.tab', (e)=>{
                   const pane = e.target.getAttribute('data-bs-target');
                   loadPane(pane);
-                  // 切換鈕樣式
-                  document.querySelectorAll('.btn-seg .btn')
-                    .forEach(b=>b.classList.replace('btn-primary','btn-outline-primary'));
+                  // 同步切換鈕樣式
+                  document.querySelectorAll('.btn-seg .btn').forEach(b=>b.classList.replace('btn-primary','btn-outline-primary'));
                   e.target.classList.replace('btn-outline-primary','btn-primary');
               });
           });
 
-          // 提供給各 partial 初始化 tooltip
+          // 提供給 partial 重建 tooltip
           window.__initTooltips = () => {
               document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el=>{
                   const t = bootstrap.Tooltip.getInstance(el); if (t) t.dispose();
