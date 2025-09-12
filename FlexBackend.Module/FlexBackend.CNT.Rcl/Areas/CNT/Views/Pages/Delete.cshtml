@@ -24,9 +24,9 @@
         <form asp-action="Delete" method="post">
             <input type="hidden" asp-for="PageId" />
 
-            <div class="d-flex justify-content-between mt-3">
-                <a asp-action="Index" class="btn btn-outline-secondary">🔙 返回列表</a>
-                <button type="submit" class="btn btn-danger">🗑 確認刪除</button>
+            <div class="d-flex gap-3 mt-3">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+                <button type="submit" class="btn btn-outline-danger btn-lg">🗑 確認刪除</button>
             </div>
         </form>
     </div>

@@ -43,8 +43,9 @@
             </dd>
         </dl>
     </div>
-    <div class="card-footer">
-        <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-warning btn-sm">✏️ 編輯</a>
-        <a asp-action="Index" class="btn btn-secondary btn-sm">🔙 返回列表</a>
+    <div class="card-footer d-flex gap-3">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+        <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
     </div>
+
 </div>

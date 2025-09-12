@@ -1,10 +1,27 @@
-﻿@model IEnumerable<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
+﻿@model X.PagedList.IPagedList<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
+@using X.PagedList
+@using X.PagedList.Mvc.Core
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-dark text-white fw-bold">
-        🗑️ 回收站
+    <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+        🗑️ ［大型工業垃圾］桶
+
+        <!-- 🔍 搜尋表單 -->
+        <form asp-action="RecycleBin" method="get" class="d-flex">
+            <div class="input-group input-group-sm">
+                <input type="text" name="keyword" value="@ViewBag.Keyword"
+                       class="form-control form-control-sm"
+                       placeholder="輸入ID或標題..." />
+                <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
+            </div>
+        </form>
     </div>
+
     <div class="card-body">
+        <div class="mb-2 text-muted">
+            目前找到 <strong>@ViewBag.Count</strong> 筆已刪除的文章
+        </div>
+
         <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
             <thead class="table-dark text-center">
                 <tr>
@@ -19,18 +36,40 @@
                 {
                     <tr>
                         <td>@item.PageId</td>
-                        <td class="text-left">@item.Title</td>
+                        <td class="text-start">@item.Title</td>
                         <td>@(item.RevisedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
                         <td>
-                            <a asp-area="CNT" asp-controller="Pages" asp-action="Restore" asp-route-id="@item.PageId" class="btn btn-sm btn-outline-success me-1">♻️ 還原</a>
-                            <a asp-area="CNT" asp-controller="Pages" asp-action="HardDelete" asp-route-id="@item.PageId" class="btn btn-sm btn-outline-danger">💀 永久刪除</a>
+                            <a asp-area="CNT" asp-controller="Pages" asp-action="Restore" asp-route-id="@item.PageId"
+                               class="btn btn-sm btn-outline-success me-1 btn-lg"
+                               onclick="return confirm('確定要還原這篇文章嗎？');">♻️ 還原</a>
+
+                            <a asp-area="CNT" asp-controller="Pages" asp-action="Destroy" asp-route-id="@item.PageId"
+                               class="btn btn-sm btn-outline-danger btn-lg"
+                               onclick="return confirm('⚠️ 確定要永久刪除這篇文章嗎？此動作無法還原！');">💀 永久刪除</a>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-    <div class="card-footer d-flex justify-content-end">
-        <a asp-area="CNT" asp-controller="Pages" asp-action="Index" class="btn btn-secondary card-footer">🔙 返回文章列表</a>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        @Html.PagedListPager(
+        Model,
+        page => Url.Action("RecycleBin", new { page, keyword = ViewBag.Keyword }),
+                new PagedListRenderOptions
+                {
+                    DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+                    DisplayLinkToLastPage = PagedListDisplayMode.Always,
+                    DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+                    DisplayLinkToNextPage = PagedListDisplayMode.Always,
+                    UlElementClasses = new[] { "pagination" },
+                    LiElementClasses = new[] { "page-item" },
+                    PageClasses = new[] { "page-link" }
+                }
+                )
+
+        <a asp-area="CNT" asp-controller="Pages" asp-action="Index"
+           class="btn btn-outline-secondary btn-lg ms-2" style="border-radius:8px">🔙 返回文章列表</a>
     </div>
 </div>
