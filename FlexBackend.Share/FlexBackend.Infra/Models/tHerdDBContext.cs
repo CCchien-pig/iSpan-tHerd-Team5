@@ -13,8 +13,6 @@ public partial class tHerdDBContext : DbContext
     {
     }
 
-    public virtual DbSet<CntMedium> CntMedia { get; set; }
-
     public virtual DbSet<CntPage> CntPages { get; set; }
 
     public virtual DbSet<CntPageBlock> CntPageBlocks { get; set; }
@@ -175,32 +173,9 @@ public partial class tHerdDBContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<CntMedium>(entity =>
-        {
-            entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CFABF9DB23");
-
-            entity.ToTable("CNT_Media", tb => tb.HasComment("媒體資源"));
-
-            entity.Property(e => e.MediaId).HasComment("媒體 ID");
-            entity.Property(e => e.CreatedDate)
-                .HasDefaultValueSql("(sysdatetime())")
-                .HasComment("上傳時間");
-            entity.Property(e => e.FileId).HasComment("檔案 ID");
-            entity.Property(e => e.PageBlockId).HasComment("對應區塊 ID");
-
-            entity.HasOne(d => d.File).WithMany(p => p.CntMedia)
-                .HasForeignKey(d => d.FileId)
-                .HasConstraintName("FK_CNT_Media_FileId");
-
-            entity.HasOne(d => d.PageBlock).WithMany(p => p.CntMedia)
-                .HasForeignKey(d => d.PageBlockId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CNT_Media_PageBlockId");
-        });
-
         modelBuilder.Entity<CntPage>(entity =>
         {
-            entity.HasKey(e => e.PageId).HasName("PK__CNT_Page__C565B104A6BA8F18");
+            entity.HasKey(e => e.PageId).HasName("PK__CNT_Page__C565B1045B96AB36");
 
             entity.ToTable("CNT_Page", tb => tb.HasComment("頁面"));
 
@@ -248,7 +223,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntPageBlock>(entity =>
         {
-            entity.HasKey(e => e.PageBlockId).HasName("PK__CNT_Page__E339E4708637DA8A");
+            entity.HasKey(e => e.PageBlockId).HasName("PK__CNT_Page__E339E470860162B7");
 
             entity.ToTable("CNT_PageBlock", tb => tb.HasComment("頁面區塊"));
 
@@ -301,7 +276,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntPageType>(entity =>
         {
-            entity.HasKey(e => e.PageTypeId).HasName("PK__CNT_Page__33FA9A455508FD87");
+            entity.HasKey(e => e.PageTypeId).HasName("PK__CNT_Page__33FA9A458E9470A4");
 
             entity.ToTable("CNT_PageType", tb => tb.HasComment("頁面分類"));
 
@@ -316,7 +291,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntPurchase>(entity =>
         {
-            entity.HasKey(e => e.PurchaseId).HasName("PK__CNT_Purc__6B0A6BBEE2B4136A");
+            entity.HasKey(e => e.PurchaseId).HasName("PK__CNT_Purc__6B0A6BBED3721F64");
 
             entity.ToTable("CNT_Purchase", tb => tb.HasComment("文章/課程購買紀錄"));
 
@@ -348,7 +323,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntSchedule>(entity =>
         {
-            entity.HasKey(e => e.ScheduleId).HasName("PK__CNT_Sche__9C8A5B49706B29EF");
+            entity.HasKey(e => e.ScheduleId).HasName("PK__CNT_Sche__9C8A5B497B397938");
 
             entity.ToTable("CNT_Schedule", tb => tb.HasComment("頁面排程"));
 
@@ -380,13 +355,15 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntShareClick>(entity =>
         {
-            entity.HasKey(e => e.ShareClickId).HasName("PK__CNT_Shar__46D82BFCE9F463EE");
+            entity.HasKey(e => e.ShareClickId).HasName("PK__CNT_Shar__46D82BFC7AC56D53");
 
             entity.ToTable("CNT_ShareClick", tb => tb.HasComment("分享點擊紀錄"));
 
             entity.HasIndex(e => e.CreatedDate, "IX_CNT_ShareClick_CreatedDate");
 
             entity.HasIndex(e => e.PageId, "IX_CNT_ShareClick_PageId");
+
+            entity.HasIndex(e => new { e.PageId, e.CreatedDate }, "IX_CNT_ShareClick_PageId_CreatedDate");
 
             entity.HasIndex(e => e.VisitorToken, "IX_CNT_ShareClick_VisitorToken");
 
@@ -412,7 +389,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CntTag>(entity =>
         {
-            entity.HasKey(e => e.TagId).HasName("PK__CNT_Tag__657CF9AC88068E91");
+            entity.HasKey(e => e.TagId).HasName("PK__CNT_Tag__657CF9AC79BC1D5A");
 
             entity.ToTable("CNT_Tag", tb => tb.HasComment("標籤"));
 
@@ -436,7 +413,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsAutoReplyRule>(entity =>
         {
-            entity.HasKey(e => e.RuleId).HasName("PK__CS_AutoR__110458E2786B4864");
+            entity.HasKey(e => e.RuleId).HasName("PK__CS_AutoR__110458E230302CA5");
 
             entity.ToTable("CS_AutoReplyRule", tb => tb.HasComment("自動回覆規則"));
 
@@ -476,7 +453,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsChatMessage>(entity =>
         {
-            entity.HasKey(e => e.MessageId).HasName("PK__CS_ChatM__C87C0C9C53001B3C");
+            entity.HasKey(e => e.MessageId).HasName("PK__CS_ChatM__C87C0C9C8E145F56");
 
             entity.ToTable("CS_ChatMessage", tb => tb.HasComment("前台聊天式自助客服—訊息"));
 
@@ -513,7 +490,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsChatSession>(entity =>
         {
-            entity.HasKey(e => e.SessionId).HasName("PK__CS_ChatS__C9F49290C5C2F1B9");
+            entity.HasKey(e => e.SessionId).HasName("PK__CS_ChatS__C9F492901340D1A4");
 
             entity.ToTable("CS_ChatSession", tb => tb.HasComment("前台聊天式自助客服—會話"));
 
@@ -540,13 +517,11 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsFaq>(entity =>
         {
-            entity.HasKey(e => e.FaqId).HasName("PK__CS_Faq__9C741C43F719F884");
+            entity.HasKey(e => e.FaqId).HasName("PK__CS_Faq__9C741C43DB2A4611");
 
             entity.ToTable("CS_Faq", tb => tb.HasComment("FAQ 主內容"));
 
             entity.HasIndex(e => e.CategoryId, "IX_CS_Faq_CategoryId");
-
-            entity.HasIndex(e => e.Status, "IX_CS_Faq_Status");
 
             entity.HasIndex(e => new { e.CategoryId, e.OrderSeq }, "UQ_CS_Faq_Category_OrderSeq").IsUnique();
 
@@ -564,9 +539,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.LastPublishedTime).HasComment("最近發布時間（可空）");
             entity.Property(e => e.OrderSeq).HasComment("前台顯示排序");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
-            entity.Property(e => e.Status)
-                .HasDefaultValue(1)
-                .HasComment("0=停用、1=啟用");
             entity.Property(e => e.Title)
                 .IsRequired()
                 .HasMaxLength(300)
@@ -580,7 +552,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsFaqCategory>(entity =>
         {
-            entity.HasKey(e => e.CategoryId).HasName("PK__CS_FaqCa__19093A0B9C3E0523");
+            entity.HasKey(e => e.CategoryId).HasName("PK__CS_FaqCa__19093A0B638FFC05");
 
             entity.ToTable("CS_FaqCategory", tb => tb.HasComment("FAQ 分類"));
 
@@ -610,7 +582,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsFaqFeedback>(entity =>
         {
-            entity.HasKey(e => e.FeedbackId).HasName("PK__CS_FaqFe__6A4BEDD6171F057F");
+            entity.HasKey(e => e.FeedbackId).HasName("PK__CS_FaqFe__6A4BEDD6D9E21C57");
 
             entity.ToTable("CS_FaqFeedback", tb => tb.HasComment("FAQ 成效回饋"));
 
@@ -638,7 +610,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsFaqKeyword>(entity =>
         {
-            entity.HasKey(e => e.KeywordId).HasName("PK__CS_FaqKe__37C13521A9D022BA");
+            entity.HasKey(e => e.KeywordId).HasName("PK__CS_FaqKe__37C135211C456357");
 
             entity.ToTable("CS_FaqKeyword", tb => tb.HasComment("FAQ 搜尋關鍵字"));
 
@@ -664,7 +636,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<CsTicket>(entity =>
         {
-            entity.HasKey(e => e.TicketId).HasName("PK__CS_Ticke__712CC607D1314FBA");
+            entity.HasKey(e => e.TicketId).HasName("PK__CS_Ticke__712CC607C452D4A7");
 
             entity.ToTable("CS_Ticket", tb => tb.HasComment("工單主表"));
 
@@ -691,7 +663,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktAd>(entity =>
         {
-            entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AE63A27A8E");
+            entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
 
             entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
 
@@ -726,7 +698,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktAdLog>(entity =>
         {
-            entity.HasKey(e => e.LogId).HasName("PK__MKT_AdLo__5E5486483A6A73FC");
+            entity.HasKey(e => e.LogId).HasName("PK__MKT_AdLo__5E5486481AAFE775");
 
             entity.ToTable("MKT_AdLog", tb => tb.HasComment("廣告紀錄"));
 
@@ -754,7 +726,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktAdPlacementMap>(entity =>
         {
-            entity.HasKey(e => e.MapId).HasName("PK__MKT_AdPl__3265E21B067D9DD6");
+            entity.HasKey(e => e.MapId).HasName("PK__MKT_AdPl__3265E21B5BDECFFA");
 
             entity.ToTable("MKT_AdPlacementMap", tb => tb.HasComment("廣告與位置對應表"));
 
@@ -777,7 +749,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktCampaign>(entity =>
         {
-            entity.HasKey(e => e.CampaignId).HasName("PK__MKT_Camp__3F5E8A999204A539");
+            entity.HasKey(e => e.CampaignId).HasName("PK__MKT_Camp__3F5E8A9937EF340D");
 
             entity.ToTable("MKT_Campaign", tb => tb.HasComment("行銷活動基本資訊"));
 
@@ -823,7 +795,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktCoupon>(entity =>
         {
-            entity.HasKey(e => e.CouponId).HasName("PK__MKT_Coup__384AF1BACDA9F9C7");
+            entity.HasKey(e => e.CouponId).HasName("PK__MKT_Coup__384AF1BAC43F4D1C");
 
             entity.ToTable("MKT_Coupon", tb =>
                 {
@@ -885,7 +857,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktCouponRule>(entity =>
         {
-            entity.HasKey(e => e.RuleId).HasName("PK__MKT_Coup__110458E20911E66E");
+            entity.HasKey(e => e.RuleId).HasName("PK__MKT_Coup__110458E2C5EABEA9");
 
             entity.ToTable("MKT_CouponRule", tb => tb.HasComment("優惠券規則分類檔（定義優惠券類型與條件）"));
 
@@ -914,7 +886,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<MktPlacement>(entity =>
         {
-            entity.HasKey(e => e.PlacementId).HasName("PK__MKT_Plac__2E328C65E2A482E2");
+            entity.HasKey(e => e.PlacementId).HasName("PK__MKT_Plac__2E328C65537FE378");
 
             entity.ToTable("MKT_Placement", tb => tb.HasComment("廣告位置"));
 
@@ -938,7 +910,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdEcpayReturnNotification>(entity =>
         {
-            entity.HasKey(e => e.NotificationId).HasName("PK__ORD_Ecpa__20CF2E12C69D5874");
+            entity.HasKey(e => e.NotificationId).HasName("PK__ORD_Ecpa__20CF2E12D7220783");
 
             entity.ToTable("ORD_EcpayReturnNotification", tb => tb.HasComment("綠界付款結果通知"));
 
@@ -1013,7 +985,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdInvoice>(entity =>
         {
-            entity.HasKey(e => e.InvoiceId).HasName("PK__ORD_Invo__D796AAB575C4D10E");
+            entity.HasKey(e => e.InvoiceId).HasName("PK__ORD_Invo__D796AAB5FD469E99");
 
             entity.ToTable("ORD_Invoice", tb => tb.HasComment("發票"));
 
@@ -1068,7 +1040,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdOrder>(entity =>
         {
-            entity.HasKey(e => e.OrderId).HasName("PK__ORD_Orde__C3905BCFFB1B5484");
+            entity.HasKey(e => e.OrderId).HasName("PK__ORD_Orde__C3905BCF15372E36");
 
             entity.ToTable("ORD_Order", tb => tb.HasComment("訂單主檔"));
 
@@ -1104,11 +1076,16 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasComment("訂單號碼；唯一");
-            entity.Property(e => e.OrderStatusId).HasComment("訂單狀態（對照表後補）");
+            entity.Property(e => e.OrderStatusId)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("訂單狀態（對照表後補）");
             entity.Property(e => e.PaymentConfigId).HasComment("付款方式（FK）");
             entity.Property(e => e.PaymentStatus)
                 .IsRequired()
-                .HasMaxLength(20)
+                .HasMaxLength(10)
+                .IsUnicode(false)
                 .HasComment("付款狀態：unpaid/paid/refunded…");
             entity.Property(e => e.ReceiverAddress)
                 .IsRequired()
@@ -1127,7 +1104,11 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.ShippingFee)
                 .HasComment("運費")
                 .HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.ShippingStatusId).HasComment("配送狀態（對照表後補）");
+            entity.Property(e => e.ShippingStatusId)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("配送狀態（對照表後補）");
             entity.Property(e => e.Subtotal)
                 .HasComment("小計金額")
                 .HasColumnType("decimal(20, 2)");
@@ -1149,7 +1130,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdOrderAdjustment>(entity =>
         {
-            entity.HasKey(e => e.AdjustmentId).HasName("PK__ORD_Orde__E60DB893C126B594");
+            entity.HasKey(e => e.AdjustmentId).HasName("PK__ORD_Orde__E60DB893E4EAAF50");
 
             entity.ToTable("ORD_OrderAdjustment", tb => tb.HasComment("訂單層級折扣/調整（只支援 brand 與 coupon）"));
 
@@ -1215,7 +1196,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdOrderItem>(entity =>
         {
-            entity.HasKey(e => e.OrderItemId).HasName("PK__ORD_Orde__57ED0681F42951DE");
+            entity.HasKey(e => e.OrderItemId).HasName("PK__ORD_Orde__57ED068175F6417C");
 
             entity.ToTable("ORD_OrderItem", tb => tb.HasComment("訂單明細"));
 
@@ -1254,7 +1235,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdOrderItemAdjustment>(entity =>
         {
-            entity.HasKey(e => e.AdjustmentItemId).HasName("PK__ORD_Orde__C56CCA7E4CFCA5F2");
+            entity.HasKey(e => e.AdjustmentItemId).HasName("PK__ORD_Orde__C56CCA7E1A24D228");
 
             entity.ToTable("ORD_OrderItemAdjustment", tb => tb.HasComment("品項層級折扣/調整（多品牌時逐品項計算95折）"));
 
@@ -1299,7 +1280,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdPayment>(entity =>
         {
-            entity.HasKey(e => e.PaymentId).HasName("PK__ORD_Paym__9B556A3833F573A6");
+            entity.HasKey(e => e.PaymentId).HasName("PK__ORD_Paym__9B556A38AE910ABA");
 
             entity.ToTable("ORD_Payment", tb => tb.HasComment("付款方式明細"));
 
@@ -1366,7 +1347,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdPaymentConfig>(entity =>
         {
-            entity.HasKey(e => e.PaymentConfigId).HasName("PK__ORD_Paym__5D2F1BAE20A76766");
+            entity.HasKey(e => e.PaymentConfigId).HasName("PK__ORD_Paym__5D2F1BAE697D1167");
 
             entity.ToTable("ORD_PaymentConfig", tb => tb.HasComment("付款方式設定"));
 
@@ -1393,7 +1374,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdReturnItem>(entity =>
         {
-            entity.HasKey(e => e.RmaItemId).HasName("PK__ORD_Retu__FCC4AF151BA68B2B");
+            entity.HasKey(e => e.RmaItemId).HasName("PK__ORD_Retu__FCC4AF150D3CC982");
 
             entity.ToTable("ORD_ReturnItem", tb =>
                 {
@@ -1442,7 +1423,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdReturnRequest>(entity =>
         {
-            entity.HasKey(e => e.RetuenRequestId).HasName("PK__ORD_Retu__401EA6DFB809D811");
+            entity.HasKey(e => e.RetuenRequestId).HasName("PK__ORD_Retu__401EA6DF50BF02F9");
 
             entity.ToTable("ORD_ReturnRequest", tb =>
                 {
@@ -1509,7 +1490,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdShipping>(entity =>
         {
-            entity.HasKey(e => e.ShippingId).HasName("PK__ORD_Ship__5FACD580E3734F4B");
+            entity.HasKey(e => e.ShippingId).HasName("PK__ORD_Ship__5FACD580A36223DC");
 
             entity.ToTable("ORD_Shipping", tb => tb.HasComment("配送明細"));
 
@@ -1552,7 +1533,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdShoppingCart>(entity =>
         {
-            entity.HasKey(e => e.CartId).HasName("PK__ORD_Shop__51BCD7B726D661DE");
+            entity.HasKey(e => e.CartId).HasName("PK__ORD_Shop__51BCD7B789010853");
 
             entity.ToTable("ORD_ShoppingCart", tb => tb.HasComment("購物車（訪客5、會員10 上限；程式設定 + DB 護欄）"));
 
@@ -1593,7 +1574,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdShoppingCartItem>(entity =>
         {
-            entity.HasKey(e => e.CartItemId).HasName("PK__ORD_Shop__488B0B0A5D26216D");
+            entity.HasKey(e => e.CartItemId).HasName("PK__ORD_Shop__488B0B0AAF337B32");
 
             entity.ToTable("ORD_ShoppingCartItem", tb => tb.HasComment("購物車明細（同一 Cart 相同商品不可重複；數量限制參照購物車上限）"));
 
@@ -1629,7 +1610,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdAttribute>(entity =>
         {
-            entity.HasKey(e => e.AttributeId).HasName("PK__PROD_Att__C18929EA1A30C956");
+            entity.HasKey(e => e.AttributeId).HasName("PK__PROD_Att__C18929EA05A76EB8");
 
             entity.ToTable("PROD_Attribute", tb => tb.HasComment("商品屬性定義，可用於篩選與分類，例如功效、性別、年齡層等"));
 
@@ -1652,7 +1633,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdAttributeOption>(entity =>
         {
-            entity.HasKey(e => e.AttributeOptionId).HasName("PK__PROD_Att__CB5BEE310A9822C9");
+            entity.HasKey(e => e.AttributeOptionId).HasName("PK__PROD_Att__CB5BEE315A92CFCE");
 
             entity.ToTable("PROD_AttributeOption", tb => tb.HasComment("屬性選項"));
 
@@ -1679,7 +1660,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdBundle>(entity =>
         {
-            entity.HasKey(e => e.BundleId).HasName("PK__PROD_Bun__42003451E3F9775A");
+            entity.HasKey(e => e.BundleId).HasName("PK__PROD_Bun__420034515614D6EA");
 
             entity.ToTable("PROD_Bundle", tb => tb.HasComment("以某一個「主商品」作為套組對外銷售，內容由多個子商品組成"));
 
@@ -1725,7 +1706,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdIngredient>(entity =>
         {
-            entity.HasKey(e => e.IngredientId).HasName("PK__PROD_Ing__BEAEB25A6775314F");
+            entity.HasKey(e => e.IngredientId).HasName("PK__PROD_Ing__BEAEB25AFA5FF382");
 
             entity.ToTable("PROD_Ingredient", tb => tb.HasComment("成分主檔，可被多個商品共用"));
 
@@ -1748,7 +1729,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProduct>(entity =>
         {
-            entity.HasKey(e => e.ProductId).HasName("PK__PROD_Pro__B40CC6CD2B4F82D3");
+            entity.HasKey(e => e.ProductId).HasName("PK__PROD_Pro__B40CC6CD666DE185");
 
             entity.ToTable("PROD_Product", tb => tb.HasComment("商品基本資料"));
 
@@ -1808,7 +1789,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductAnswer>(entity =>
         {
-            entity.HasKey(e => e.AnswerId).HasName("PK__PROD_Pro__D48250041BD8D532");
+            entity.HasKey(e => e.AnswerId).HasName("PK__PROD_Pro__D4825004E7F3FA80");
 
             entity.ToTable("PROD_ProductAnswer", tb => tb.HasComment("商品問答的回答端；可標示官方回覆"));
 
@@ -1900,7 +1881,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductImage>(entity =>
         {
-            entity.HasKey(e => e.ImageId).HasName("PK__PROD_Pro__7516F70C581767A2");
+            entity.HasKey(e => e.ImageId).HasName("PK__PROD_Pro__7516F70CC6B6D49B");
 
             entity.ToTable("PROD_ProductImage", tb => tb.HasComment("商品與SKU的圖片管理；主圖唯一；順序可控"));
 
@@ -1992,7 +1973,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductQuestion>(entity =>
         {
-            entity.HasKey(e => e.QuestionId).HasName("PK__PROD_Pro__0DC06FAC93221FED");
+            entity.HasKey(e => e.QuestionId).HasName("PK__PROD_Pro__0DC06FACF631307C");
 
             entity.ToTable("PROD_ProductQuestion", tb => tb.HasComment("商品問答的問題端；可搭配審核流程"));
 
@@ -2024,7 +2005,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductReview>(entity =>
         {
-            entity.HasKey(e => e.ReviewId).HasName("PK__PROD_Pro__74BC79CE816D2267");
+            entity.HasKey(e => e.ReviewId).HasName("PK__PROD_Pro__74BC79CE8440B0CF");
 
             entity.ToTable("PROD_ProductReview", tb => tb.HasComment("商品/SKU 的會員評價與圖片；建議搭配審核機制"));
 
@@ -2069,7 +2050,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductReviewImage>(entity =>
         {
-            entity.HasKey(e => e.ReviewImageId).HasName("PK__PROD_Pro__4AE9503F8C1B6289");
+            entity.HasKey(e => e.ReviewImageId).HasName("PK__PROD_Pro__4AE9503FE834DD27");
 
             entity.ToTable("PROD_ProductReviewImage", tb => tb.HasComment("評價附圖；一筆一張，便於審核與排序"));
 
@@ -2098,7 +2079,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductSku>(entity =>
         {
-            entity.HasKey(e => e.SkuId).HasName("PK__PROD_Pro__AED6CBD55C0A92A6");
+            entity.HasKey(e => e.SkuId).HasName("PK__PROD_Pro__AED6CBD55357DF2F");
 
             entity.ToTable("PROD_ProductSku", tb => tb.HasComment("SKU層級與即時庫存(支援多規格)"));
 
@@ -2112,7 +2093,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.SkuCode, "UQ_PROD_ProductSku_SkuCode").IsUnique();
 
-            entity.HasIndex(e => e.SkuCode, "UQ__PROD_Pro__3B2439481511F3F4").IsUnique();
+            entity.HasIndex(e => e.SkuCode, "UQ__PROD_Pro__3B243948F6647095").IsUnique();
 
             entity.Property(e => e.SkuId).HasComment("SKU ID（主鍵）");
             entity.Property(e => e.Barcode)
@@ -2141,6 +2122,11 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false)
                 .HasComment("SKU代碼");
+            entity.Property(e => e.SpecCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("規格碼");
             entity.Property(e => e.StartDate).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.StockQty).HasComment("目前庫存");
             entity.Property(e => e.UnitPrice)
@@ -2203,7 +2189,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdProductTypeConfig>(entity =>
         {
-            entity.HasKey(e => e.ProductTypeId).HasName("PK__PROD_Pro__A1312F6EBE0C2D77");
+            entity.HasKey(e => e.ProductTypeId).HasName("PK__PROD_Pro__A1312F6E896A8AFC");
 
             entity.ToTable("PROD_ProductTypeConfig", tb => tb.HasComment("商品分類設定檔，可支援多階層架構"));
 
@@ -2243,7 +2229,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdSpecificationConfig>(entity =>
         {
-            entity.HasKey(e => e.SpecificationConfigId).HasName("PK__PROD_Spe__48BAAE6C3B58091B");
+            entity.HasKey(e => e.SpecificationConfigId).HasName("PK__PROD_Spe__48BAAE6C8CBE659F");
 
             entity.ToTable("PROD_SpecificationConfig", tb => tb.HasComment("商品的規格設定"));
 
@@ -2267,7 +2253,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdSpecificationOption>(entity =>
         {
-            entity.HasKey(e => e.SpecificationOptionId).HasName("PK__PROD_Spe__50608ED564A6E753");
+            entity.HasKey(e => e.SpecificationOptionId).HasName("PK__PROD_Spe__50608ED5A3564B2B");
 
             entity.ToTable("PROD_SpecificationOption", tb => tb.HasComment("商品的規格設定的選項"));
 
@@ -2293,7 +2279,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupBrand>(entity =>
         {
-            entity.HasKey(e => e.BrandId).HasName("PK__SUP_Bran__DAD4F05E9FFF6654");
+            entity.HasKey(e => e.BrandId).HasName("PK__SUP_Bran__DAD4F05E8053B727");
 
             entity.ToTable("SUP_Brand", tb => tb.HasComment("品牌管理"));
 
@@ -2342,7 +2328,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupBrandAccordionContent>(entity =>
         {
-            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81E7CD5325F");
+            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81EA3858F1C");
 
             entity.ToTable("SUP_BrandAccordionContent", tb => tb.HasComment("品牌摺疊內容表"));
 
@@ -2375,7 +2361,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupBrandArticle>(entity =>
         {
-            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81E9763D711");
+            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81E1E3A79C5");
 
             entity.ToTable("SUP_BrandArticle", tb => tb.HasComment("品牌文章內容表"));
 
@@ -2434,7 +2420,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupLogistic>(entity =>
         {
-            entity.HasKey(e => e.LogisticsId).HasName("PK__SUP_Logi__15C9051B040DCE24");
+            entity.HasKey(e => e.LogisticsId).HasName("PK__SUP_Logi__15C9051BF3BA569D");
 
             entity.ToTable("SUP_Logistics", tb => tb.HasComment("物流方式"));
 
@@ -2456,7 +2442,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupLogisticsRate>(entity =>
         {
-            entity.HasKey(e => e.LogisticsRateId).HasName("PK__SUP_Logi__F0CE4A021DD89346");
+            entity.HasKey(e => e.LogisticsRateId).HasName("PK__SUP_Logi__F0CE4A0216B1F767");
 
             entity.ToTable("SUP_LogisticsRate", tb => tb.HasComment("物流費率"));
 
@@ -2485,7 +2471,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupStockBatch>(entity =>
         {
-            entity.HasKey(e => e.StockBatchId).HasName("PK__SUP_Stoc__6AFCD4DF68A60743");
+            entity.HasKey(e => e.StockBatchId).HasName("PK__SUP_Stoc__6AFCD4DF4171C3CA");
 
             entity.ToTable("SUP_StockBatch", tb => tb.HasComment("庫存批次"));
 
@@ -2505,6 +2491,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.IsSellable)
                 .HasDefaultValue(true)
                 .HasComment("是否可銷售");
+            entity.Property(e => e.ManufactureDate).HasComment("製造日期");
             entity.Property(e => e.Qty).HasComment("數量（CK ? 0）");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.Reviser).HasComment("異動人員");
@@ -2518,7 +2505,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupStockHistory>(entity =>
         {
-            entity.HasKey(e => e.StockHistoryId).HasName("PK__SUP_Stoc__A6CE86FB63DE6FB4");
+            entity.HasKey(e => e.StockHistoryId).HasName("PK__SUP_Stoc__A6CE86FB50923AAD");
 
             entity.ToTable("SUP_StockHistory", tb => tb.HasComment("庫存異動紀錄"));
 
@@ -2554,7 +2541,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SupSupplier>(entity =>
         {
-            entity.HasKey(e => e.SupplierId).HasName("PK__SUP_Supp__4BE666B4F6AE63FB");
+            entity.HasKey(e => e.SupplierId).HasName("PK__SUP_Supp__4BE666B45E51D1ED");
 
             entity.ToTable("SUP_Supplier", tb => tb.HasComment("供應商模組"));
 
@@ -2588,7 +2575,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SysAssetFile>(entity =>
         {
-            entity.HasKey(e => e.FileId).HasName("PK__SYS_Asse__6F0F98BF9ABBBD9F");
+            entity.HasKey(e => e.FileId).HasName("PK__SYS_Asse__6F0F98BF76A7BD38");
 
             entity.ToTable("SYS_AssetFile", tb => tb.HasComment("通用媒體庫（圖片/影片/檔案）"));
 
@@ -2675,7 +2662,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SysProgramConfig>(entity =>
         {
-            entity.HasKey(e => e.ProgramConfigId).HasName("PK__SYS_Prog__3E6165A277757FD6");
+            entity.HasKey(e => e.ProgramConfigId).HasName("PK__SYS_Prog__3E6165A2ACD32C41");
 
             entity.ToTable("SYS_ProgramConfig", tb =>
                 {
@@ -2774,7 +2761,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<SysSeoMetum>(entity =>
         {
-            entity.HasKey(e => e.SeoId).HasName("PK__SYS_SeoM__7A789D357A054D73");
+            entity.HasKey(e => e.SeoId).HasName("PK__SYS_SeoM__7A789D35FE3DCA75");
 
             entity.ToTable("SYS_SeoMeta", tb => tb.HasComment("SEO 設定表"));
 
@@ -2810,7 +2797,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserBlockHistory>(entity =>
         {
-            entity.HasKey(e => e.BlockHistoryId).HasName("PK__USER_Blo__E16BC640A0B2EB80");
+            entity.HasKey(e => e.BlockHistoryId).HasName("PK__USER_Blo__E16BC64019AC5560");
 
             entity.ToTable("USER_BlockHistory", tb => tb.HasComment("會員禁用紀錄"));
 
@@ -2841,7 +2828,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserCouponWallet>(entity =>
         {
-            entity.HasKey(e => e.CouponWalletId).HasName("PK__USER_Cou__E747CD6E7819D654");
+            entity.HasKey(e => e.CouponWalletId).HasName("PK__USER_Cou__E747CD6E91E2CDAA");
 
             entity.ToTable("USER_CouponWallet", tb =>
                 {
@@ -2878,7 +2865,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserCreditCardInfo>(entity =>
         {
-            entity.HasKey(e => e.CreditCardInfoId).HasName("PK__USER_Cre__5EAFB3C00B43DAA0");
+            entity.HasKey(e => e.CreditCardInfoId).HasName("PK__USER_Cre__5EAFB3C01979544D");
 
             entity.ToTable("USER_CreditCardInfo", tb => tb.HasComment("信用卡付款資訊"));
 
@@ -2907,7 +2894,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserGtmManager>(entity =>
         {
-            entity.HasKey(e => e.GtmManagerId).HasName("PK__USER_Gtm__B627E257A1881FE7");
+            entity.HasKey(e => e.GtmManagerId).HasName("PK__USER_Gtm__B627E25721F085EC");
 
             entity.ToTable("USER_GtmManager", tb => tb.HasComment("google tag manager 追蹤碼管理員設定"));
 
@@ -2929,7 +2916,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserLoginLog>(entity =>
         {
-            entity.HasKey(e => e.LoginLogId).HasName("PK__USER_Log__D42E7AEC8AA4C350");
+            entity.HasKey(e => e.LoginLogId).HasName("PK__USER_Log__D42E7AEC596C192F");
 
             entity.ToTable("USER_LoginLog", tb => tb.HasComment("管理員登入紀錄"));
 
@@ -2958,7 +2945,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserMemberPaymentMethod>(entity =>
         {
-            entity.HasKey(e => e.PaymentMethodId).HasName("PK__USER_Mem__DC31C1D36DEF0329");
+            entity.HasKey(e => e.PaymentMethodId).HasName("PK__USER_Mem__DC31C1D3EFC47E7F");
 
             entity.ToTable("USER_MemberPaymentMethod", tb => tb.HasComment("會員付款方式"));
 
@@ -2999,7 +2986,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserMemberRank>(entity =>
         {
-            entity.HasKey(e => e.MemberRankId).HasName("PK__USER_Mem__DE307E343E1FAE28");
+            entity.HasKey(e => e.MemberRankId).HasName("PK__USER_Mem__DE307E3479CEB5B5");
 
             entity.ToTable("USER_MemberRank", tb => tb.HasComment("會員等級設定"));
 
@@ -3028,7 +3015,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserNotification>(entity =>
         {
-            entity.HasKey(e => e.NotificationId).HasName("PK__USER_Not__20CF2E122FB5EC3E");
+            entity.HasKey(e => e.NotificationId).HasName("PK__USER_Not__20CF2E121B341311");
 
             entity.ToTable("USER_Notification", tb => tb.HasComment("會員通知設定"));
 
@@ -3057,7 +3044,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserNotificationHistory>(entity =>
         {
-            entity.HasKey(e => e.NotificationHistoryId).HasName("PK__USER_Not__4A04A54C108BC48C");
+            entity.HasKey(e => e.NotificationHistoryId).HasName("PK__USER_Not__4A04A54C4F445214");
 
             entity.ToTable("USER_NotificationHistory", tb => tb.HasComment("會員通知發送紀錄"));
 
@@ -3101,7 +3088,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<UserRoleModule>(entity =>
         {
-            entity.HasKey(e => e.RoleModuleId).HasName("PK__USER_Rol__87A83030506E2284");
+            entity.HasKey(e => e.RoleModuleId).HasName("PK__USER_Rol__87A830300A5F5614");
 
             entity.ToTable("USER_RoleModule", tb =>
                 {
@@ -3126,6 +3113,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
             entity.Property(e => e.Reviser).HasComment("異動人員");
         });
+        modelBuilder.HasSequence<int>("UserNumberSequence");
 
         OnModelCreatingPartial(modelBuilder);
     }
