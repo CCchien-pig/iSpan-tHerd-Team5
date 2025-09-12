@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace FlexBackend.ORD.Areas.ORD.ViewModels
+namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 {
 	/// <summary>
 	/// 訂單列表 ViewModel
@@ -77,7 +74,7 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		/// 訂單狀態ID
 		/// </summary>
 		[Display(Name = "訂單狀態")]
-		public int OrderStatusId { get; set; }
+		public string OrderStatusId { get; set; }
 
 		/// <summary>
 		/// 訂單狀態名稱
@@ -99,7 +96,7 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		/// 配送狀態ID
 		/// </summary>
 		[Display(Name = "配送狀態")]
-		public int ShippingStatusId { get; set; }
+		public string ShippingStatusId { get; set; }
 
 		/// <summary>
 		/// 配送狀態名稱
@@ -192,8 +189,8 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		//public string OrderNo { get; set; } = "";
 		//public int UserNumberId { get; set; }
 		//public string PaymentStatus { get; set; } = ""; // ORD/04
-		//public int OrderStatusId { get; set; }          // ← 加這行
-		//public int ShippingStatusId { get; set; }
+		//public string OrderStatusId { get; set; }          // ← 加這行
+		//public string ShippingStatusId { get; set; }
 		//public decimal Subtotal { get; set; }
 		//public decimal DiscountTotal { get; set; }
 		//public decimal ShippingFee { get; set; }
@@ -281,7 +278,7 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		/// 訂單狀態篩選
 		/// </summary>
 		[Display(Name = "訂單狀態")]
-		public int? OrderStatusId { get; set; }
+		public string OrderStatusId { get; set; }
 
 		/// <summary>
 		/// 付款狀態篩選
@@ -293,7 +290,7 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		/// 配送狀態篩選
 		/// </summary>
 		[Display(Name = "配送狀態")]
-		public int? ShippingStatusId { get; set; }
+		public string ShippingStatusId { get; set; }
 
 		/// <summary>
 		/// 開始日期
@@ -437,13 +434,13 @@ namespace FlexBackend.ORD.Areas.ORD.ViewModels
 		/// 新的訂單狀態ID
 		/// </summary>
 		[Display(Name = "訂單狀態")]
-		public int? OrderStatusId { get; set; }
+		public string? OrderStatusId { get; set; }
 
 		/// <summary>
 		/// 新的配送狀態ID
 		/// </summary>
 		[Display(Name = "配送狀態")]
-		public int? ShippingStatusId { get; set; }
+		public string? ShippingStatusId { get; set; }
 
 		/// <summary>
 		/// 備註

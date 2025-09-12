@@ -8,9 +8,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		public string OrderNo { get; set; } = "";
 		public int UserNumberId { get; set; }
 
-		[Required] public int OrderStatusId { get; set; }
+		[Required] public string OrderStatusId { get; set; }
 		[Required] public string PaymentStatus { get; set; } = "unpaid";
-		[Required] public int ShippingStatusId { get; set; }
+		[Required] public string ShippingStatusId { get; set; }
 
 		[Range(0, double.MaxValue)] public decimal Subtotal { get; set; }
 		[Range(0, double.MaxValue)] public decimal DiscountTotal { get; set; }

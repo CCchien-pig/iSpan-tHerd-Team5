@@ -1,8 +1,8 @@
-﻿@using FlexBackend.ORD.Areas.ORD.ViewModels
+﻿@using FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 @model OrderListVM
 
 @{
-    ViewBag.Title = "訂單管理";
+    ViewBag.Title = "訂單列表";
 }
 
 <style>
@@ -470,7 +470,7 @@
                             </span>
                         </td>
                         <td>
-                            <span class="status-badge payment-@order.PaymentStatus">
+                            <span class="status-badge payment-@order.PaymentStatusName">
                                 @order.PaymentStatusName
                             </span>
                         </td>
