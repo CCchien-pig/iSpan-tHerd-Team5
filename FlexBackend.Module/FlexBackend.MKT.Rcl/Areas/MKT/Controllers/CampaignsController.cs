@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel;
+using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
 
 namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 {
@@ -57,8 +58,8 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 title = c.CampaignName,
                 start = c.StartDate,
                 end = c.EndDate.HasValue ? c.EndDate : null,
-                color = RandomColor()
-            }).ToList();
+                color = ColorHelper.RandomColor()
+        }).ToList();
 
             return Ok(events); // 回傳 JSON 給 FullCalendar
         }
@@ -106,19 +107,5 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context.SaveChanges();
             return Json(new { success = true });
         }
-
-
-        //fullcalendar活動顯示隨機顏色
-        private static Random rancolor = new Random();
-        private string RandomColor()
-        {
-            int r = rancolor.Next(0, 256);
-            int g = rancolor.Next(0, 256);
-            int b = rancolor.Next(0, 256);
-
-            return $"#{r:X2}{g:X2}{b:X2}";
-        }
-
     }
-
 }
