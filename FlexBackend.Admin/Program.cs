@@ -1,5 +1,6 @@
 ﻿using FlexBackend.Composition;
 using FlexBackend.Infra;
+using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
 using FlexBackend.USER.Rcl.Data;
@@ -42,6 +43,9 @@ namespace FlexBackend.Admin
 	            .AddControllersWithViews()
 	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 
+			//secrets.json 的設定綁定到 SmtpSettings 類別
+			builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+
 			// Identity options configuration
 
 			builder.Services.Configure<IdentityOptions>(options => {
@@ -73,7 +77,7 @@ namespace FlexBackend.Admin
 
 			var app = builder.Build();
 
-			// Create a scope to run the initialization
+			//Create a scope to run the initialization
 			using (var scope = app.Services.CreateScope())
 			{
 				var serviceProvider = scope.ServiceProvider;

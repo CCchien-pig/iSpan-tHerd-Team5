@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using FlexBackend.Services.USER;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Linq;
@@ -10,10 +14,19 @@ namespace FlexBackend.USER.Rcl
 {
 	public class EmailSender : IEmailSender
 	{
+
+		private readonly SmtpSettings _smtpSettings;
+
+		// 透過建構函式注入 IOptions<SmtpSettings>
+		public EmailSender(IOptions<SmtpSettings> smtpSettings)
+		{
+			_smtpSettings = smtpSettings.Value;
+		}
+
 		public async Task SendEmailAsync(string email, string subject, string htmlMessage)
 		{
 			var mail = new MailMessage();
-			mail.From = new MailAddress("ispanchien@gmail.com");
+			mail.From = new MailAddress(_smtpSettings.smtpMailAddress);
 			mail.To.Add(email);
 			mail.Subject = subject;
 			mail.IsBodyHtml = true;
@@ -23,7 +36,7 @@ namespace FlexBackend.USER.Rcl
 			//SmtpClient client = new SmtpClient("smtp.live.com");
 			client.Port = 587;
 			client.UseDefaultCredentials = false;
-			client.Credentials = new NetworkCredential("ispanchien@gmail.com", "sefirkfinryyoufm");
+			client.Credentials = new NetworkCredential(_smtpSettings.smtpMailAddress, _smtpSettings.smtpMailPassword);
 			client.EnableSsl = true;
 			client.Send(mail);
 		}
