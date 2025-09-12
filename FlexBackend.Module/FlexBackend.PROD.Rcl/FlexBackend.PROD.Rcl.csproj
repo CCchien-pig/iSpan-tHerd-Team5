@@ -12,16 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="Areas\PROD\Views\Products\Index_ex_datatable.cshtml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Areas\PROD\ViewModels\" />
-    <Folder Include="Areas\PROD\Views\Products\NewFolder\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

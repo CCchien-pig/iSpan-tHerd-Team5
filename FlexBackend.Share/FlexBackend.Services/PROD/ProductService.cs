@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.Exceptions;
 using FlexBackend.Core.Interfaces.PROD;
 using FlexBackend.Core.Interfaces.Products;
 
@@ -15,39 +16,79 @@ namespace FlexBackend.Services.PROD
 
         public async Task<IEnumerable<ProdProductDto>> GetAllAsync()
         {
-            return await _repo.GetAllAsync();
+            try
+            {
+                return await _repo.GetAllAsync();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
         }
 
         public async Task<ProdProductDto?> GetByIdAsync(int productId)
         {
-            if (productId <= 0)
-                throw new ArgumentException("ProductId must be greater than zero.");
+            try
+            {
+                if (productId <= 0)
+                    throw new ArgumentException("ProductId must be greater than zero.");
 
-            return await _repo.GetByIdAsync(productId);
+                return await _repo.GetByIdAsync(productId);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
         }
 
         public async Task<int> CreateAsync(ProdProductDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.ProductName))
-                throw new ArgumentException("Product name is required.");
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.ProductName))
+                    throw new ArgumentException("Product name is required.");
 
-            return await _repo.AddAsync(dto);
+                return await _repo.AddAsync(dto);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
         }
 
         public async Task UpdateAsync(ProdProductDto dto)
         {
-            if (dto.ProductId <= 0)
-                throw new ArgumentException("Invalid ProductId.");
+            try
+            {
+                if (dto.ProductId <= 0)
+                    throw new ArgumentException("Invalid ProductId.");
 
-            await _repo.UpdateAsync(dto);
+                await _repo.UpdateAsync(dto);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
         }
 
         public async Task DeleteAsync(int productId)
         {
-            if (productId <= 0)
-                throw new ArgumentException("Invalid ProductId.");
+            try
+            {
+                if (productId <= 0)
+                    throw new ArgumentException("Invalid ProductId.");
 
-            await _repo.DeleteAsync(productId);
+                await _repo.DeleteAsync(productId);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
         }
     }
 }
