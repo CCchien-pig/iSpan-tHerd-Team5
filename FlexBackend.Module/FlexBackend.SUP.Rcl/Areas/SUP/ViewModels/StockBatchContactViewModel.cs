@@ -24,7 +24,16 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		[Display(Name = "有效日期")]
 		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd}", ApplyFormatInEditMode = true)]
 
-		public DateTime? ExpireDate { get; set; }
+		public int ShelfLifeDays { get; set; }  // 從 SKU 帶進來
+		public DateTime? ExpireDate
+		{
+			get
+			{
+				if (ManufactureDate.HasValue && ShelfLifeDays > 0)
+					return ManufactureDate.Value.AddDays(ShelfLifeDays);
+				return null;
+			}
+		}
 
 		[Display(Name = "製造日期")]
 		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd}", ApplyFormatInEditMode = true)]
@@ -53,9 +62,13 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		public int ChangeQty { get; set; }       // 變動數量
 		public string Remark { get; set; }
 		public int? UserId { get; set; }
-
+		public int SafetyStockQty { get; set; }
+		public int ReorderPoint { get; set; }
+		public int MaxStockQty { get; set; }
 		public string ProductName { get; set; }       // 商品名稱 (唯讀)
 		public string BrandName { get; set; }         // 品牌名稱 (唯讀)
+		public int? BrandId { get; set; }
+		public int? ProductId { get; set; }
 	}	
 }
 
