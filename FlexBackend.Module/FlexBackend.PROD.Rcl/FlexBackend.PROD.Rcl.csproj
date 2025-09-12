@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,10 +9,6 @@
 
   <ItemGroup>
     <Compile Remove="Areas\HomeController1.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Remove="Areas\PROD\Views\Products\Index_ex_datatable.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
