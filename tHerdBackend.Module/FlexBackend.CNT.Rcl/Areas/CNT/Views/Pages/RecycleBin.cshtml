@@ -7,8 +7,8 @@
         🗑️ ［大型工業垃圾］桶
 
         <!-- 🔍 搜尋表單 -->
-        <form asp-action="RecycleBin" method="get" class="mb-2">
-            <div class="input-group input-group-sm">
+        <form asp-action="RecycleBin" method="get" class="mb-2 ">
+            <div class="input-group input-group-sm" style="max-width:640px;">
                 <span class="input-group-text">每頁筆數</span>
                 <select name="pageSize" class="form-select form-select-sm"
                         style="width:80px;"
@@ -17,7 +17,7 @@
 
                 <input type="text" name="keyword" value="@ViewBag.Keyword"
                        class="form-control form-control-sm"
-                       style="width:160px;"
+                       style="width:240px;"
                        placeholder="輸入ID或標題..." />
 
                 <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>

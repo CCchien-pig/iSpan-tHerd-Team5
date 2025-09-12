@@ -8,7 +8,7 @@
         🏷️ 標籤管理
     </div>
     <div class="card-body">
-        <a asp-action="Create" class="btn btn-outline-success mb-3">➕ 新增標籤</a>
+        <a asp-action="Create" class="btn btn-outline-success btn-lg mb-3">➕ 新增標籤</a>
 
         <table class="table table-bordered table-striped align-middle">
             <thead class="table-dark">
@@ -40,9 +40,9 @@
                         <td>@item.Revisor</td>
                         <td>@item.RevisedDate?.ToString("yyyy-MM-dd HH:mm")</td>                    
                         <td>
-                            <a asp-action="Edit" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-warning">✏️ 編輯</a>
-                            <a asp-action="Details" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-info">🔎 檢視</a>
-                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>
+                            <a asp-controller="Tags" asp-action="Edit" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-warning">✏️ 編輯</a>
+                            <a asp-controller="Tags" asp-action="Details" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-info">🔎 檢視</a>
+                            <a asp-controller="Tags" asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>
                         </td>
                         
                     </tr>
