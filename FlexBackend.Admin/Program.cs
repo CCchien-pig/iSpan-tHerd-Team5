@@ -1,15 +1,18 @@
-﻿using FlexBackend.Admin.Data;
-using FlexBackend.Composition;
+﻿using FlexBackend.Composition;
 using FlexBackend.Infra;
 using FlexBackend.UIKit.Rcl;
+using FlexBackend.USER.Rcl;
+using FlexBackend.USER.Rcl.Data;
+using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.Admin
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -19,11 +22,15 @@ namespace FlexBackend.Admin
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+            builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+				.AddRoles<ApplicationRole>()
+				.AddEntityFrameworkStores<ApplicationDbContext>();
 
+			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
-            var connStr = builder.Configuration.GetConnectionString("THerdDB")!;
+			builder.Services.AddScoped<FlexBackend.USER.Rcl.Services.UserService>();
+
+			var connStr = builder.Configuration.GetConnectionString("THerdDB")!;
 
             // 註冊資料存取 (Infrastructure: Dapper + EF Core)
             builder.Services.AddFlexInfra(connStr);
@@ -35,10 +42,56 @@ namespace FlexBackend.Admin
 	            .AddControllersWithViews()
 	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 
+			// Identity options configuration
+
+			builder.Services.Configure<IdentityOptions>(options => {
+				options.Password.RequireDigit = true;
+				options.Password.RequireLowercase = true;
+				options.Password.RequireNonAlphanumeric = true;
+				options.Password.RequireUppercase = true;
+				options.Password.RequiredLength = 8;
+				options.Password.RequiredUniqueChars = 1;
+
+				options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+				options.Lockout.MaxFailedAccessAttempts = 3;
+				options.Lockout.AllowedForNewUsers = true;
+
+				options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+				options.User.RequireUniqueEmail = true;
+				options.SignIn.RequireConfirmedEmail = true;
+			});
+			builder.Services.ConfigureApplicationCookie(options => {
+				options.Cookie.HttpOnly = true;
+				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+				options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+				options.LoginPath = "/Identity/Account/Login";
+				options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+				options.SlidingExpiration = true;
+			});
+
+			//----------------------------------------
+
 			var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+			// Create a scope to run the initialization
+			using (var scope = app.Services.CreateScope())
+			{
+				var serviceProvider = scope.ServiceProvider;
+				try
+				{
+					// Call your static method to seed the data
+					await RoleInitializer.SeedRolesAsync(serviceProvider);
+					await UserInitializer.SeedUsersAsync(serviceProvider);
+				}
+				catch (Exception ex)
+				{
+					var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+					logger.LogError(ex, "An error occurred while seeding the database.");
+				}
+			}
+
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
             {
                 app.UseMigrationsEndPoint();
             }

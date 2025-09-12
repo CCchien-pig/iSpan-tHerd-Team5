@@ -12,9 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Areas\Controllers\" />
     <Folder Include="Areas\USER\Controllers\" />
     <Folder Include="Areas\USER\ViewModels\" />
-    <Folder Include="Models\" />
   </ItemGroup>
 
   <ItemGroup>
