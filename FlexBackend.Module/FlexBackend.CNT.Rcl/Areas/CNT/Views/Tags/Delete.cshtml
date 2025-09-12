@@ -1,0 +1,40 @@
+﻿@model FlexBackend.Infra.Models.CntTag
+
+@{
+    ViewData["Title"] = "刪除標籤";
+    var boundPages = ViewBag.BoundPages as List<string>;
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-danger text-white fw-bold">
+        ⚠️ 刪除標籤確認
+    </div>
+    <div class="card-body">
+        <p><strong>標籤名稱：</strong> @Model.TagName</p>
+        <p><strong>狀態：</strong> @(Model.IsActive ? "啟用" : "停用")</p>
+
+        @if (boundPages != null && boundPages.Any())
+        {
+            <div class="alert alert-warning">
+                <strong>注意：</strong> 此標籤仍被以下文章使用，若要刪除，必須先解除綁定：
+                <ul>
+                    @foreach (var page in boundPages)
+                    {
+                        <li>@(page)</li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                確定要刪除此標籤嗎？刪除後將無法復原。
+            </div>
+            <form asp-action="DeleteConfirmed" method="post">
+                <input type="hidden" asp-for="TagId" />
+                <button type="submit" class="btn btn-danger">🗑️ 確定刪除</button>
+                <a asp-action="Index" class="btn btn-secondary">↩ 返回</a>
+            </form>
+        }
+    </div>
+</div>
