@@ -38,6 +38,11 @@ public partial class SupStockBatch
     public DateTime? ManufactureDate { get; set; }
 
     /// <summary>
+    /// 製造日期
+    /// </summary>
+    public DateOnly? ManufactureDate { get; set; }
+
+    /// <summary>
     /// 是否可銷售
     /// </summary>
     public bool IsSellable { get; set; }
