@@ -10,11 +10,11 @@ namespace FlexBackend.Core.DTOs.SUP
 	public class SupStockMovementDto
 	{
 		public int SkuId { get; set; }             // 影響哪個 SKU
-		public int StockBatchId { get; set; }      // 批次ID (可選，如果你有批號管理)
+		public int StockBatchId { get; set; }      // 批次ID 
 		public string MovementType { get; set; }   // Purchase / Sale / Return / Expire / Adjust
 		public int ChangeQty { get; set; }         // 異動數量
 		public bool IsAdd { get; set; }            // Adjust 用，判斷是加還是減
-		public int CurrentQty { get; set; }        // 異動前庫存 (前端帶來，或後端查也行)
+		public int CurrentQty { get; set; }        // 異動前庫存
 		public bool IsSellable { get; set; }       // 是否可售
 		public int? UserId { get; set; }           // 操作者
 		public string? Remark { get; set; }        // 備註
