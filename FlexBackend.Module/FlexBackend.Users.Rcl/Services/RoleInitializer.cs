@@ -1,6 +1,7 @@
 ﻿using FlexBackend.USER.Rcl.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FlexBackend.USER.Rcl.Services
 {
@@ -9,14 +10,12 @@ namespace FlexBackend.USER.Rcl.Services
 		public static async Task SeedRolesAsync(IServiceProvider serviceProvider)
 		{
 			var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+			var logger = serviceProvider.GetRequiredService<ILogger<RoleInitializer>>();
 
-			// List of all the roles you want to create
-			string[] roleNames = { "Member", "超級管理員", "會員管理員","商品管理員", "供應鏈管理員", "活動管理員", "訂單管理員", "客服管理員", "內容管理員", };
+			string[] roleNames = { "Member", "超級管理員", "會員管理員", "商品管理員", "供應鏈管理員", "活動管理員", "訂單管理員", "客服管理員", "內容管理員" };
 
-			// Check if the "Member" role already exists
 			foreach (var roleName in roleNames)
 			{
-				// Check if the role already exists
 				if (!await roleManager.RoleExistsAsync(roleName))
 				{
 					var role = new ApplicationRole
@@ -25,16 +24,15 @@ namespace FlexBackend.USER.Rcl.Services
 						Description = $"{roleName} 的角色",
 						CreatedDate = DateTime.Now,
 					};
-
-					await roleManager.CreateAsync(role); // ← 這裡要呼叫 CreateAsync
+					var r = await roleManager.CreateAsync(role);
+					if (!r.Succeeded)
+					{
+						var msg = $"Create role [{roleName}] failed: " + string.Join(", ", r.Errors.Select(e => $"{e.Code}:{e.Description}"));
+						logger.LogError(msg);
+						throw new InvalidOperationException(msg);
+					}
 				}
 			}
-
-			// You can add logic for other roles here, like "Admin"
-			//if (!await roleManager.RoleExistsAsync("Admin"))
-			//{
-			//	await roleManager.CreateAsync(new IdentityRole("Admin"));
-			//}
 		}
 	}
 }

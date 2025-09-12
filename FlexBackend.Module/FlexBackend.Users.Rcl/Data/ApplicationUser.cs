@@ -25,7 +25,7 @@ namespace FlexBackend.USER.Rcl.Data
 		[MaxLength(10)]
 		public string MemberRankId { get; set; } = "MR001";
 		[MaxLength(20)]
-		public string ReferralCode { get; set; }
+		public string? ReferralCode { get; set; }
 		[MaxLength(20)]
 		public string? UsedReferralCode { get; set; }
 		public DateTime CreatedDate { get; set; } = DateTime.Now;
