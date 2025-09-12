@@ -1,0 +1,53 @@
+﻿@model IEnumerable<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.TagListVM>
+@{
+    ViewData["Title"] = "標籤管理";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-primary text-white fw-bold">
+        🏷️ 標籤管理
+    </div>
+    <div class="card-body">
+        <a asp-action="Create" class="btn btn-success mb-3">➕ 新增標籤</a>
+
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>標籤名稱</th>
+                    <th>狀態</th>
+                    <th>異動人員</th>
+                    <th>最後修改</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.TagId</td>
+                        <td>@item.TagName</td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="badge bg-success">啟用</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">停用</span>
+                            }
+                        </td>
+                        <td>@item.Revisor</td>
+                        <td>@item.RevisedDate?.ToString("yyyy-MM-dd HH:mm")</td>                    
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.TagId" class="btn btn-sm btn-warning">✏️ 編輯</a>
+                            <a asp-action="Details" asp-route-id="@item.TagId" class="btn btn-sm btn-info">🔎 檢視</a>
+                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-danger">🗑️ 刪除</a>
+                        </td>
+                        
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
