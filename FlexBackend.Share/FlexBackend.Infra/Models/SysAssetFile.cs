@@ -75,6 +75,8 @@ public partial class SysAssetFile
     /// </summary>
     public bool IsActive { get; set; }
 
+    public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
+
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();
 
     public virtual ICollection<MktAd> MktAds { get; set; } = new List<MktAd>();
