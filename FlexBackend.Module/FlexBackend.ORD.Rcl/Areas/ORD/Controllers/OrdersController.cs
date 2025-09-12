@@ -1,30 +1,23 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-
+﻿using FlexBackend.Infra.Models;
+using FlexBackend.ORD.Areas.ORD.ViewModels;
 using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels;
-// ★ SysCode 的命名空間（你剛貼的那個）
-using FlexBackend.Infra.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 {
 	[Area("ORD")]
 	public class OrdersController : Controller
 	{
-		// ★ 換成你的 DbContext 型別名稱
-		private readonly tHerdDBContext _db;
+		private readonly tHerdDBContext _db; // ← 換成你的 DbContext 型別
 		public OrdersController(tHerdDBContext db) => _db = db;
 
-		// 付款狀態碼（ORD/04）查詢
-		private IQueryable<SysCode> OrdCodes(string codeId) =>
-			_db.SysCodes.Where(c => c.ModuleId == "ORD" && c.CodeId == codeId);
-
-		// -------- LIST --------
-		public async Task<IActionResult> Index(string? q, bool showHidden = false)
+		// GET: /ORD/Orders
+		public async Task<IActionResult> Index(
+			string? q, string sort = "CreatedDate", string dir = "desc",
+			int page = 1, int pageSize = 10, bool showHidden = false)
 		{
+			// 1) 基礎查詢 + 搜尋 + 是否顯示軟刪
 			var query = _db.OrdOrders.AsNoTracking().AsQueryable();
 
 			if (!showHidden)
@@ -36,151 +29,132 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 					o.ReceiverName.Contains(q) ||
 					o.ReceiverPhone.Contains(q));
 
-			var list = await query
-				.OrderByDescending(o => o.CreatedDate)
-				.Select(o => new OrderListVM
-				{
-					OrderId = o.OrderId,
-					OrderNo = o.OrderNo,
-					UserNumberId = o.UserNumberId,
-					PaymentStatus = o.PaymentStatus,     // string（直接對 SYS_CODE.04 的 CodeNo）
-					ShippingStatusId = o.ShippingStatusId,  // int（暫顯示數字）
-					Subtotal = o.Subtotal,
-					DiscountTotal = o.DiscountTotal,
-					ShippingFee = o.ShippingFee,
-					CreatedDate = o.CreatedDate,
-					IsVisibleToMember = o.IsVisibleToMember
-				})
-				.Take(300)
-				.ToListAsync();
+			// 2) 排序（支援：OrderNo / UserNumberId / PaymentStatus / ShippingStatusId / Total / CreatedDate）
+			query = (sort, dir.ToLower()) switch
+			{
+				("OrderNo", "asc") => query.OrderBy(o => o.OrderNo),
+				("OrderNo", _) => query.OrderByDescending(o => o.OrderNo),
 
-			// 只建立付款狀態字典（string→中文）
-			ViewBag.PaymentStatusMap = await OrdCodes("04")
-				.ToDictionaryAsync(c => c.CodeNo, c => c.CodeDesc);
+				("UserNumberId", "asc") => query.OrderBy(o => o.UserNumberId),
+				("UserNumberId", _) => query.OrderByDescending(o => o.UserNumberId),
 
-			// 其餘兩個暫時不做字典（因為你欄位是 int，SysCode 是 string）
-			ViewBag.ShippingStatusMap = null;
-			ViewBag.OrderStatusMap = null;
+				("PaymentStatus", "asc") => query.OrderBy(o => o.PaymentStatus),
+				("PaymentStatus", _) => query.OrderByDescending(o => o.PaymentStatus),
 
-			ViewBag.Query = q;
-			ViewBag.ShowHidden = showHidden;
-			return View(list);
-		}
+				("ShippingStatusId", "asc") => query.OrderBy(o => o.ShippingStatusId),
+				("ShippingStatusId", _) => query.OrderByDescending(o => o.ShippingStatusId),
 
-		// -------- DETAILS --------
-		public async Task<IActionResult> Details(int id)
-		{
-			var o = await _db.OrdOrders.AsNoTracking()
-									   .FirstOrDefaultAsync(x => x.OrderId == id);
-			if (o == null) return NotFound();
-			return View(o);
-		}
+				("Total", "asc") => query.OrderBy(o => o.Subtotal - o.DiscountTotal + o.ShippingFee),
+				("Total", _) => query.OrderByDescending(o => o.Subtotal - o.DiscountTotal + o.ShippingFee),
 
-		// -------- CREATE：關閉（依你的規則） --------
-		public IActionResult Create() => NotFound();
-		[HttpPost, ValidateAntiForgeryToken]
-		public IActionResult Create(object _) => StatusCode(405);
+				// default
+				("CreatedDate", "asc") => query.OrderBy(o => o.CreatedDate),
+				_ => query.OrderByDescending(o => o.CreatedDate),
+			};
 
-		// -------- EDIT --------
-		public async Task<IActionResult> Edit(int id)
-		{
-			var o = await _db.OrdOrders.FindAsync(id);
-			if (o == null) return NotFound();
+			// 3) 總數 + 取分頁資料（先投影成 VM，不包含 Items）
+			page = Math.Max(1, page);
+			pageSize = Math.Clamp(pageSize, 5, 100);
 
-			await LoadSelectsAsync();
+			var totalItems = await query.CountAsync();
 
-			var vm = new EditOrderVM
+			List<string> codeIds = new List<string> { "04", "07" };
+			var sysStatuses = await GetsysStatuses("ORD", codeIds); // 取得所有需要的系統代碼
+
+			// 取得各個狀態
+			var sysPaymentStatus = StatusDictionary("04", sysStatuses); // 付款狀態代碼設定
+			var sysOrderStatusId = StatusDictionary("07", sysStatuses); // 訂單狀態代碼設定
+
+			var orderEntities = await query
+				.Skip((page - 1) * pageSize)
+				.Take(pageSize)
+				.ToListAsync(); // 先把資料抓回來
+
+			var orders = orderEntities.Select(o => new OrderListItemVM
 			{
 				OrderId = o.OrderId,
 				OrderNo = o.OrderNo,
 				UserNumberId = o.UserNumberId,
+				PaymentStatus = GetSysCodeDesc(o.PaymentStatus, sysPaymentStatus), // 現在是記憶體操作
 				OrderStatusId = o.OrderStatusId,
-				PaymentStatus = o.PaymentStatus,
 				ShippingStatusId = o.ShippingStatusId,
 				Subtotal = o.Subtotal,
 				DiscountTotal = o.DiscountTotal,
 				ShippingFee = o.ShippingFee,
-				PaymentConfigId = o.PaymentConfigId,
-				LogisticsId = o.LogisticsId,
-				ReceiverName = o.ReceiverName,
-				ReceiverPhone = o.ReceiverPhone,
-				ReceiverAddress = o.ReceiverAddress,
-				IsVisibleToMember = o.IsVisibleToMember
+				CreatedDate = o.CreatedDate,
+			}).ToList();
+
+			// 4) 批次載入明細給展開列（避免 N+1）
+			var orderIds = orders.Select(x => x.OrderId).ToList();
+			var items = await _db.OrdOrderItems.AsNoTracking()
+				.Where(i => orderIds.Contains(i.OrderId))
+				.Select(i => new OrderItemVM
+				{
+					OrderId = i.OrderId,
+					OrderItemId = i.OrderItemId,
+					ProductId = i.ProductId,
+					SkuId = i.SkuId,
+					UnitPrice = i.UnitPrice,
+					Qty = i.Qty
+				})
+				.ToListAsync();
+
+			var grouped = items.GroupBy(i => i.OrderId)
+							   .ToDictionary(g => g.Key, g => g.ToList());
+
+			foreach (var o in orders)
+				o.Items = grouped.TryGetValue(o.OrderId, out var list) ? list : new List<OrderItemVM>();
+
+			// 5) 付款狀態中文（可選；若不需要可移除）
+			ViewBag.PaymentStatusMap = await _db.SysCodes
+				.Where(c => c.ModuleId == "ORD" && c.CodeId == "04")
+				.ToDictionaryAsync(c => c.CodeNo, c => c.CodeDesc);
+
+			// 1) 建立分頁資訊
+			var pageVm = new PaginationVM
+			{
+				TotalCount = totalItems,
+				CurrentPage = page,
+				PageSize = pageSize
 			};
+
+			// 2) 包裝成 OrderListVM
+			var vm = new OrderListVM
+			{
+				Orders = orders.ToList(),  // 這裡 orders 是 List<OrderListItemVM>
+				Pagination = pageVm,
+				PaymentStatusOptions = sysPaymentStatus
+			};
+
 			return View(vm);
 		}
 
-		[HttpPost, ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, EditOrderVM vm)
+		// 根據代碼 ID 從字典中取得描述，若找不到則回傳原始代碼
+		public static string GetSysCodeDesc(string codeId, IEnumerable<SelectOption> sysStatuses)
 		{
-			if (id != vm.OrderId) return BadRequest();
-			if (!ModelState.IsValid) { await LoadSelectsAsync(); return View(vm); }
-
-			var o = await _db.OrdOrders.FindAsync(id);
-			if (o == null) return NotFound();
-
-			o.OrderStatusId = vm.OrderStatusId;
-			o.PaymentStatus = vm.PaymentStatus;
-			o.ShippingStatusId = vm.ShippingStatusId;
-			o.Subtotal = vm.Subtotal;
-			o.DiscountTotal = vm.DiscountTotal;
-			o.ShippingFee = vm.ShippingFee;
-			o.PaymentConfigId = vm.PaymentConfigId;
-			o.LogisticsId = vm.LogisticsId;
-			o.ReceiverName = vm.ReceiverName;
-			o.ReceiverPhone = vm.ReceiverPhone;
-			o.ReceiverAddress = vm.ReceiverAddress;
-			o.IsVisibleToMember = vm.IsVisibleToMember;
-			o.RevisedDate = DateTime.Now;
-
-			await _db.SaveChangesAsync();
-			TempData["ok"] = "已更新";
-			return RedirectToAction(nameof(Index));
+			var match = sysStatuses.FirstOrDefault(s => s.Value == codeId);
+			return match != null ? match.Text : codeId;
 		}
 
-		// -------- DELETE（軟刪） --------
-		public async Task<IActionResult> Delete(int id)
+		// 取得指定 CodeId 的狀態字典
+		private IEnumerable<SelectOption> StatusDictionary(string codeId, List<SysCode> sysStatuses)
 		{
-			var o = await _db.OrdOrders.AsNoTracking()
-									   .FirstOrDefaultAsync(x => x.OrderId == id);
-			if (o == null) return NotFound();
-			return View(o);
-		}
-
-		[HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
-		public async Task<IActionResult> DeleteConfirmed(int id)
-		{
-			var o = await _db.OrdOrders.FindAsync(id);
-			if (o == null) return NotFound();
-
-			o.IsVisibleToMember = false;
-			// ※ 這裡先不自動切「cancelled」，因為我們不知道 int ↔ CodeNo 的對照
-			o.RevisedDate = DateTime.Now;
-
-			await _db.SaveChangesAsync();
-			TempData["ok"] = "已軟刪除";
-			return RedirectToAction(nameof(Index));
-		}
-
-		// 產下拉（不使用 SysCode 的 PK；先用現有資料值）
-		private async Task LoadSelectsAsync()
-		{
-			// 付款狀態（04）：字典（CodeNo→CodeDesc），Edit.cshtml 會用它做 <option>
-			ViewBag.PaymentStatusMap = await OrdCodes("04")
-				.ToDictionaryAsync(c => c.CodeNo, c => c.CodeDesc);
-
-			// 配送/訂單狀態：用資料表現有的 int 值先頂著（顯示數字）
-			var shipVals = await _db.OrdOrders.Select(x => x.ShippingStatusId)
-								  .Distinct().OrderBy(x => x).ToListAsync();
-			ViewBag.ShippingStatusList = shipVals
-				.Select(v => new SelectListItem { Value = v.ToString(), Text = v.ToString() })
+			return sysStatuses
+				.Where(c => c.CodeId == codeId)
+				.Select(x => new SelectOption
+				{
+					Value = x.CodeNo,
+					Text = x.CodeDesc
+				})
 				.ToList();
+		}
 
-			var orderVals = await _db.OrdOrders.Select(x => x.OrderStatusId)
-								   .Distinct().OrderBy(x => x).ToListAsync();
-			ViewBag.OrderStatusList = orderVals
-				.Select(v => new SelectListItem { Value = v.ToString(), Text = v.ToString() })
-				.ToList();
+		// 取得多個系統代碼
+		private async Task<List<SysCode>> GetsysStatuses(string ModuleId, List<string> codeIds)
+		{
+			return await _db.SysCodes
+				.Where(c => c.ModuleId == ModuleId && codeIds.Contains(c.CodeId) && c.IsActive)
+				.ToListAsync();  // 返回符合條件的 SysCode 列表
 		}
 	}
 }

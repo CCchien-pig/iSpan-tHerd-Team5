@@ -1,65 +1,779 @@
-﻿@model IEnumerable<OrderListVM>
+﻿@using FlexBackend.ORD.Areas.ORD.ViewModels
+@model OrderListVM
 
 @{
-    ViewData["Title"] = "訂單列表";
-    var q = (string)ViewBag.Query ?? "";
-    bool showHidden = (bool)(ViewBag.ShowHidden ?? false);
-
-    var payMap = ViewBag.PaymentStatusMap as IDictionary<string, string>; // 04
-    var shipMap = ViewBag.ShippingStatusMap as IDictionary<int, string>;    // 05
-    var ordMap = ViewBag.OrderStatusMap as IDictionary<int, string>;    // 07
+    ViewBag.Title = "訂單管理";
 }
-<h2 class="mb-3">@ViewData["Title"]</h2>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <input name="q" value="@q" class="form-control" placeholder="訂單號/姓名/電話" />
+<style>
+    .order-list-container {
+        padding: 20px;
+    }
+    
+    .search-panel {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .search-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .search-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .search-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .search-group input, 
+    .search-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .btn {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .table-toolbar {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .bulk-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .orders-table thead th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .orders-table thead th.sortable:hover {
+        background: #e9ecef;
+    }
+    
+    .orders-table thead th .sort-icon {
+        margin-left: 5px;
+        color: #6c757d;
+    }
+    
+    .orders-table tbody tr {
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .orders-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .orders-table tbody td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    
+    .expand-toggle {
+        cursor: pointer;
+        color: #007bff;
+        font-size: 18px;
+        transition: transform 0.3s;
+    }
+    
+    .expand-toggle.expanded {
+        transform: rotate(90deg);
+    }
+    
+    .order-details {
+        display: none;
+        background: #f1f3f5;
+    }
+    
+    .order-details.show {
+        display: table-row;
+    }
+    
+    .order-items {
+        padding: 20px;
+    }
+    
+    .order-items-table {
+        width: 100%;
+        background: white;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .order-items-table th {
+        background: #e9ecef;
+        padding: 10px;
+        text-align: left;
+        font-size: 13px;
+    }
+    
+    .order-items-table td {
+        padding: 10px;
+        font-size: 13px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .status-pending { background: #ffc107; color: #212529; }
+    .status-confirmed { background: #17a2b8; color: white; }
+    .status-processing { background: #007bff; color: white; }
+    .status-completed { background: #28a745; color: white; }
+    .status-cancelled { background: #dc3545; color: white; }
+    
+    .payment-paid { background: #28a745; color: white; }
+    .payment-pending { background: #ffc107; color: #212529; }
+    .payment-refunded { background: #6c757d; color: white; }
+    .payment-failed { background: #dc3545; color: white; }
+    
+    .shipping-picking { background: #17a2b8; color: white; }
+    .shipping-packed { background: #007bff; color: white; }
+    .shipping-shipped { background: #6f42c1; color: white; }
+    .shipping-intransit { background: #20c997; color: white; }
+    .shipping-delivered { background: #28a745; color: white; }
+    .shipping-returned { background: #dc3545; color: white; }
+    
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        gap: 5px;
+    }
+    
+    .pagination button {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #495057;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    
+    .pagination button:hover {
+        background: #e9ecef;
+    }
+    
+    .pagination button.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .page-size-selector {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+    
+    .modal.show {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+    }
+    
+    .modal-header {
+        margin-bottom: 20px;
+    }
+    
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .modal-body {
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+</style>
+
+<div class="order-list-container">
+    <h2>訂單管理</h2>
+    
+    <!-- 搜尋面板 -->
+    <div class="search-panel">
+        <form id="searchForm" method="get">
+            <div class="search-row">
+                <div class="search-group">
+                    <label>搜尋</label>
+                    <input type="text" name="Keyword" value="@Model.SearchParams.Keyword"
+                           placeholder="訂單編號/會員姓名/收件人/電話">
+                </div>
+
+                <div class="search-group">
+                    <label>訂單狀態</label>
+                    @Html.DropDownListFor(
+                    m => m.SearchParams.OrderStatusId,
+                                        new SelectList(Model.OrderStatusOptions, "Value", "Text", Model.SearchParams.OrderStatusId),
+                                        "-- 全部 --",
+                                        new { @class = "form-control" }
+                                        )
+                </div>
+
+                <div class="search-group">
+                    <label>付款狀態</label>
+                    @Html.DropDownListFor(
+                                        m => m.SearchParams.PaymentStatus,
+                                        new SelectList(Model.PaymentStatusOptions, "Value", "Text", Model.SearchParams.PaymentStatus),
+                                        "-- 全部 --",
+                                        new { @class = "form-control" }
+                                        )
+                </div>
+
+                <div class="search-group">
+                    <label>配送狀態</label>
+                    @Html.DropDownListFor(
+                                        m => m.SearchParams.ShippingStatusId,
+                                        new SelectList(Model.ShippingStatusOptions, "Value", "Text", Model.SearchParams.ShippingStatusId),
+                                        "-- 全部 --",
+                                        new { @class = "form-control" }
+                                        )
+                </div>
+            </div>
+
+            <div class="search-row">
+                <div class="search-group">
+                    <label>開始日期</label>
+                    <input type="date" name="StartDate" value="@Model.SearchParams.StartDate?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="search-group">
+                    <label>結束日期</label>
+                    <input type="date" name="EndDate" value="@Model.SearchParams.EndDate?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="search-group">
+                    <label>金額下限</label>
+                    <input type="number" name="MinAmount" value="@Model.SearchParams.MinAmount" placeholder="0">
+                </div>
+                <div class="search-group">
+                    <label>金額上限</label>
+                    <input type="number" name="MaxAmount" value="@Model.SearchParams.MaxAmount" placeholder="999999">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-search"></i> 搜尋
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetSearch()">
+                    <i class="fa fa-undo"></i> 重置
+                </button>
+                <button type="button" class="btn btn-success" onclick="exportOrders()">
+                    <i class="fa fa-file-excel"></i> 匯出Excel
+                </button>
+            </div>
+        </form>
     </div>
-    <div class="col-auto form-check align-self-center">
-        <input type="checkbox" class="form-check-input" id="showHidden" name="showHidden" value="true" @(showHidden ? "checked" : "") />
-        <label class="form-check-label" for="showHidden">包含已軟刪</label>
-    </div>
-    <div class="col-auto"><button class="btn btn-outline-secondary">搜尋</button></div>
-</form>
 
-@if (!(Model?.Any() ?? false))
-{
-    <div class="alert alert-light border">沒有資料</div>
-}
-else
-{
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>訂單號</th>
-                <th>會員</th>
-                <th>付款</th>
-                <th>配送</th>
-                <th class="text-end">應付</th>
-                <th>建立</th>
-                <th class="text-end">操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var x in Model)
-            {
-                var pay = (payMap != null && payMap.TryGetValue(x.PaymentStatus, out var pd)) ? pd : x.PaymentStatus;
-                var ship = (shipMap != null && shipMap.TryGetValue(x.ShippingStatusId, out var sd)) ? sd : x.ShippingStatusId.ToString();
-
-                <tr class="@(x.IsVisibleToMember ? "" : "table-secondary")">
-                    <td>@x.OrderNo</td>
-                    <td>@x.UserNumberId</td>
-                    <td>@pay</td>
-                    <td>@ship</td>
-                    <td class="text-end">@x.Total.ToString("N0")</td>
-                    <td>@x.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td class="text-end">
-                        <a asp-action="Details" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-secondary">明細</a>
-                        <a asp-action="Edit" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-primary">編輯</a>
-                        <a asp-action="Delete" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-danger">刪除</a>
-                    </td>
+    
+    <!-- 表格容器 -->
+    <div class="table-container">
+        <div class="table-toolbar">
+            <div class="bulk-actions">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <label for="selectAll">全選</label>
+                <button class="btn btn-sm btn-warning" onclick="batchUpdateStatus()">
+                    批次更新狀態
+                </button>
+            </div>
+            <div class="page-size-selector">
+                <label>每頁顯示：</label>
+                @Html.DropDownListFor(
+                                m => m.SearchParams.PageSize,
+                                new SelectList(Model.Pagination.PageSizeOptions.Select(x => new { Value = x, Text = $"{x} 筆" }),
+                                "Value", "Text", Model.SearchParams.PageSize),
+                                new { @class = "form-control", onchange = "changePageSize(this.value)" }
+                                )
+            </div>
+        </div>
+        
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th width="30"></th>
+                    <th width="40"></th>
+                    <th class="sortable" onclick="sortBy('OrderNo')">
+                        訂單編號 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th>會員</th>
+                    <th class="sortable" onclick="sortBy('OrderStatus')">
+                        訂單狀態 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable" onclick="sortBy('PaymentStatus')">
+                        付款狀態 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable" onclick="sortBy('ShippingStatus')">
+                        配送狀態 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th class="sortable" onclick="sortBy('TotalAmount')">
+                        總金額 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th>收件人</th>
+                    <th class="sortable" onclick="sortBy('CreatedDate')">
+                        建立時間 <span class="sort-icon">⇅</span>
+                    </th>
+                    <th width="150">操作</th>
                 </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.Orders)
+                {
+                    <tr data-order-id="@order.OrderId">
+                        <td>
+                            <span class="expand-toggle" onclick="toggleOrderDetails(@order.OrderId)">▶</span>
+                        </td>
+                        <td>
+                            <input type="checkbox" class="order-checkbox" value="@order.OrderId">
+                        </td>
+                        <td>@order.OrderNo</td>
+                        <td>@order.UserName</td>
+                        <td>
+                            <span class="status-badge status-@order.OrderStatusName?.ToLower()?.Replace(" ", "")">
+                                @order.OrderStatusName
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge payment-@order.PaymentStatus">
+                                @order.PaymentStatusName
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge shipping-@order.ShippingStatusName?.ToLower()?.Replace(" ", "")">
+                                @order.ShippingStatusName
+                            </span>
+                        </td>
+                        <td>NT$ @order.TotalAmount.ToString("N0")</td>
+                        <td>@order.ReceiverName<br><small>@order.ReceiverPhone</small></td>
+                        <td>@order.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-primary" onclick="editOrder(@order.OrderId)">
+                                    編輯
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="updateStatus(@order.OrderId)">
+                                    更新狀態
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="order-details" id="details-@order.OrderId">
+                        <td colspan="11">
+                            <div class="order-items">
+                                <h4>訂單明細</h4>
+                                <div id="items-@order.OrderId">載入中...</div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        <!-- 分頁 -->
+        <div class="pagination">
+            <button @(!Model.Pagination.HasPreviousPage ? "disabled" : "") 
+                    onclick="goToPage(1)">首頁</button>
+            <button @(!Model.Pagination.HasPreviousPage ? "disabled" : "") 
+                    onclick="goToPage(@(Model.Pagination.CurrentPage - 1))">上一頁</button>
+            
+            @foreach (var pageNum in Model.Pagination.PageNumbers)
+            {
+                <button class="@(pageNum == Model.Pagination.CurrentPage ? "active" : "")" 
+                        onclick="goToPage(@pageNum)">@pageNum</button>
             }
-        </tbody>
-    </table>
-}
+            
+            <button @(!Model.Pagination.HasNextPage ? "disabled" : "") 
+                    onclick="goToPage(@(Model.Pagination.CurrentPage + 1))">下一頁</button>
+            <button @(!Model.Pagination.HasNextPage ? "disabled" : "") 
+                    onclick="goToPage(@Model.Pagination.TotalPages)">末頁</button>
+            
+            <span style="margin-left: 20px;">
+                共 @Model.Pagination.TotalCount 筆，第 @Model.Pagination.CurrentPage / @Model.Pagination.TotalPages 頁
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- 更新狀態Modal -->
+<div id="statusModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">更新訂單狀態</h3>
+        </div>
+        <div class="modal-body">
+            <form id="statusForm">
+                <input type="hidden" id="updateOrderId">
+                <div class="form-group">
+                    <label>訂單狀態</label>
+                    <select id="updateOrderStatus">
+                        <option value="">不變更</option>
+                        @foreach (var option in Model.OrderStatusOptions)
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>配送狀態</label>
+                    <select id="updateShippingStatus">
+                        <option value="">不變更</option>
+                        @foreach (var option in Model.ShippingStatusOptions)
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>備註</label>
+                    <textarea id="updateRemarks" rows="3" placeholder="輸入備註..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="submitStatusUpdate()">確認更新</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 展開/收合訂單明細
+    function toggleOrderDetails(orderId) {
+        const detailRow = document.getElementById('details-' + orderId);
+        const toggle = event.target;
+        
+        if (detailRow.classList.contains('show')) {
+            detailRow.classList.remove('show');
+            toggle.classList.remove('expanded');
+        } else {
+            detailRow.classList.add('show');
+            toggle.classList.add('expanded');
+            loadOrderItems(orderId);
+        }
+    }
+    
+    // 載入訂單明細
+    function loadOrderItems(orderId) {
+        const container = document.getElementById('items-' + orderId);
+        
+        fetch('/ORD/Orders/GetOrderDetails?orderId=' + orderId)
+            .then(response => response.json())
+            .then(data => {
+                let html = '<table class="order-items-table">';
+                html += '<thead><tr>';
+                html += '<th>商品圖片</th>';
+                html += '<th>商品名稱</th>';
+                html += '<th>規格</th>';
+                html += '<th>單價</th>';
+                html += '<th>數量</th>';
+                html += '<th>小計</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.forEach(item => {
+                    html += '<tr>';
+                    html += `<td><img src="${item.ProductImageUrl || '/images/no-image.png'}" width="50"></td>`;
+                    html += `<td>${item.ProductName}</td>`;
+                    html += `<td>${item.SkuSpec || '-'}</td>`;
+                    html += `<td>NT$ ${item.UnitPrice.toFixed(0)}</td>`;
+                    html += `<td>${item.Qty}</td>`;
+                    html += `<td>NT$ ${item.Subtotal.toFixed(0)}</td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                container.innerHTML = '<p>載入失敗</p>';
+                console.error('Error:', error);
+            });
+    }
+    
+    // 排序
+    function sortBy(field) {
+        const form = document.getElementById('searchForm');
+        const currentSort = '@Model.SearchParams.SortBy';
+        const currentDirection = '@Model.SearchParams.SortDirection';
+        
+        // 建立隱藏欄位
+        let sortByInput = form.querySelector('input[name="SortBy"]');
+        if (!sortByInput) {
+            sortByInput = document.createElement('input');
+            sortByInput.type = 'hidden';
+            sortByInput.name = 'SortBy';
+            form.appendChild(sortByInput);
+        }
+        
+        let sortDirectionInput = form.querySelector('input[name="SortDirection"]');
+        if (!sortDirectionInput) {
+            sortDirectionInput = document.createElement('input');
+            sortDirectionInput.type = 'hidden';
+            sortDirectionInput.name = 'SortDirection';
+            form.appendChild(sortDirectionInput);
+        }
+        
+        sortByInput.value = field;
+        
+        // 切換排序方向
+        if (currentSort === field) {
+            sortDirectionInput.value = currentDirection === 'ASC' ? 'DESC' : 'ASC';
+        } else {
+            sortDirectionInput.value = 'DESC';
+        }
+        
+        form.submit();
+    }
+    
+    // 分頁
+    function goToPage(page) {
+        const form = document.getElementById('searchForm');
+        let pageInput = form.querySelector('input[name="PageNumber"]');
+        if (!pageInput) {
+            pageInput = document.createElement('input');
+            pageInput.type = 'hidden';
+            pageInput.name = 'PageNumber';
+            form.appendChild(pageInput);
+        }
+        pageInput.value = page;
+        form.submit();
+    }
+    
+    // 變更每頁筆數
+    function changePageSize(size) {
+        const form = document.getElementById('searchForm');
+        let sizeInput = form.querySelector('input[name="PageSize"]');
+        if (!sizeInput) {
+            sizeInput = document.createElement('input');
+            sizeInput.type = 'hidden';
+            sizeInput.name = 'PageSize';
+            form.appendChild(sizeInput);
+        }
+        sizeInput.value = size;
+        form.submit();
+    }
+    
+    // 重置搜尋
+    function resetSearch() {
+        window.location.href = '/ORD/Orders';
+    }
+    
+    // 匯出Excel
+    function exportOrders() {
+        const queryString = window.location.search;
+        window.location.href = '/ORD/Orders/Export' + queryString;
+    }
+    
+    // 全選/取消全選
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.order-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    }
+    
+    // 更新狀態
+    function updateStatus(orderId) {
+        document.getElementById('updateOrderId').value = orderId;
+        document.getElementById('statusModal').classList.add('show');
+    }
+    
+    // 關閉Modal
+    function closeModal() {
+        document.getElementById('statusModal').classList.remove('show');
+    }
+    
+    // 提交狀態更新
+    function submitStatusUpdate() {
+        const orderId = document.getElementById('updateOrderId').value;
+        const orderStatusId = document.getElementById('updateOrderStatus').value;
+        const shippingStatusId = document.getElementById('updateShippingStatus').value;
+        const remarks = document.getElementById('updateRemarks').value;
+        
+        fetch('/ORD/Orders/UpdateOrderStatus', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                OrderId: orderId,
+                OrderStatusId: orderStatusId || null,
+                ShippingStatusId: shippingStatusId || null,
+                Remarks: remarks
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                closeModal();
+                location.reload();
+            } else {
+                alert('更新失敗: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('更新失敗');
+        });
+    }
+    
+    // 批次更新狀態
+    function batchUpdateStatus() {
+        const selectedOrders = [];
+        document.querySelectorAll('.order-checkbox:checked').forEach(cb => {
+            selectedOrders.push(cb.value);
+        });
+        
+        if (selectedOrders.length === 0) {
+            alert('請選擇要更新的訂單');
+            return;
+        }
+        
+        // 這裡可以開啟一個Modal讓使用者選擇要更新的狀態
+        // 或直接進行批次更新
+        if (confirm('確定要批次更新 ' + selectedOrders.length + ' 筆訂單嗎？')) {
+            // 實作批次更新邏輯
+            console.log('批次更新訂單:', selectedOrders);
+        }
+    }
+    
+    // 編輯訂單
+    function editOrder(orderId) {
+        window.location.href = '/ORD/Orders/Edit/' + orderId;
+    }
+</script>
