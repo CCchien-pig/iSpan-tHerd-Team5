@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <Folder Include="Areas\CS\ViewModels\" />
-    <Folder Include="Areas\Partials\" />
   </ItemGroup>
 
   <ItemGroup>
