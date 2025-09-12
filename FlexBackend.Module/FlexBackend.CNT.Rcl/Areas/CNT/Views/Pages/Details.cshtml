@@ -19,11 +19,12 @@
             <dt class="col-sm-3">狀態</dt>
             <dd class="col-sm-9">
                 <span class="badge rounded-pill px-3 py-2
-                    @(Model.Status == "1" ? "bg-success" :
-                                            Model.Status == "0" ? "bg-secondary" :
-                                            Model.Status == "2" ? "bg-warning text-dark" :
-                                            "bg-danger")">
-                    @Model.Status
+                    @(Model.Status == "1" ? "bg-success-subtle text-dark border border-success" :
+                    Model.Status == "0" ? "bg-secondary-subtle text-dark border border-secondary" :
+                    Model.Status == "2" ? "bg-warning-subtle text-dark border border-warning" :
+                    Model.Status == "9" ? "bg-danger text-white border border-danger" :
+                    "bg-light")">
+                    @Model.StatusText
                 </span>
             </dd>
 
