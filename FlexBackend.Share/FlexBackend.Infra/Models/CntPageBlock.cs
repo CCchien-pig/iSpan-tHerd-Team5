@@ -50,6 +50,8 @@ public partial class CntPageBlock
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
+
     public virtual SysAssetFile Img { get; set; }
 
     public virtual CntPage Page { get; set; }
