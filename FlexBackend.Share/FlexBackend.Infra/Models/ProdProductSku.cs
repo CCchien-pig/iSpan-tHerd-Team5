@@ -16,6 +16,11 @@ public partial class ProdProductSku
     public int SkuId { get; set; }
 
     /// <summary>
+    /// 規格碼
+    /// </summary>
+    public string SpecCode { get; set; }
+
+    /// <summary>
     /// SKU代碼
     /// </summary>
     public string SkuCode { get; set; }

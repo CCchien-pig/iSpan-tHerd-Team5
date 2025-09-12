@@ -16,10 +16,6 @@
    "T4TemplatePath": null,
    "Tables": [
       {
-         "Name": "[dbo].[CNT_Media]",
-         "ObjectType": 0
-      },
-      {
          "Name": "[dbo].[CNT_Page]",
          "ObjectType": 0
       },
