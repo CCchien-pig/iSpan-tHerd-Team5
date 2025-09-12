@@ -24,7 +24,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		public IActionResult Index(int? page)
 		{
 			int pageNumber = page ?? 1;   // 預設第 1 頁
-			int pageSize = 6;             // 每頁顯示 6 筆
+			int pageSize = 8;             // 每頁顯示 8 筆
 
 			var pages = _db.CntPages
 				.Where(p => p.Status != "9")  // 過濾掉已刪除（回收桶）
