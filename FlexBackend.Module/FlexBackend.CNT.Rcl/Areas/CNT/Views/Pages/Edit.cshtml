@@ -1,1 +1,48 @@
-﻿@* Edit.cshtml    → 編輯文章 *@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
+@{
+    ViewData["Title"] = "編輯文章";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-warning text-dark fw-bold">
+        ✏️ 編輯文章
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="PageId" />
+
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">標題</label>
+                <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label">狀態</label>
+                <select asp-for="Status" class="form-select">
+                    <option value="0" selected="@(Model.Status == "0")">草稿</option>
+                    <option value="1" selected="@(Model.Status == "1")">已發佈</option>
+                    <option value="2" selected="@(Model.Status == "2")">封存</option>
+                    <option value="9" selected="@(Model.Status == "9")">刪除</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="RevisedDate" class="form-label">最後修改時間</label>
+                <input asp-for="RevisedDate" class="form-control" readonly />
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-outline-secondary">⬅ 返回列表</a>
+                <button type="submit" class="btn btn-warning text-dark">💾 儲存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
