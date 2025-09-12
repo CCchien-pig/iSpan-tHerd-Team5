@@ -28,7 +28,7 @@
 
     <div class="card-body">
         <div class="mb-2 text-muted">
-            目前找到 <strong>@ViewBag.Count</strong> 筆已刪除的文章
+            目前找到 <strong>@Model.TotalItemCount</strong> 筆已刪除的文章
         </div>
 
         <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
@@ -66,22 +66,28 @@
         共 <strong>@Model.TotalItemCount</strong> 筆刪除的文章
         （每頁 <strong>@Model.PageSize</strong> 筆，共 <strong>@Model.PageCount</strong> 頁）
     </div>
-    <div class="card-footer d-flex justify-content-between align-items-center">
-        @Html.PagedListPager(
-        Model,
-        page => Url.Action("RecycleBin", new { page, keyword = ViewBag.Keyword, pageSize = Model.PageSize }),
-                new PagedListRenderOptions
-                {
-                    DisplayLinkToFirstPage = PagedListDisplayMode.Always,
-                    DisplayLinkToLastPage = PagedListDisplayMode.Always,
-                    DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
-                    DisplayLinkToNextPage = PagedListDisplayMode.Always,
-                    UlElementClasses = new[] { "pagination" },
-                    LiElementClasses = new[] { "page-item" },
-                    PageClasses = new[] { "page-link" }
-                }
-                )
+    <div class="card-footer d-flex align-items-center">
+        <div class="flex-grow-1 d-flex justify-content-center">
+            @Html.PagedListPager(
+            Model,
+            page => Url.Action("RecycleBin", new { page, keyword = ViewBag.Keyword, pageSize = Model.PageSize }),
+                        new PagedListRenderOptions
+                        {
+                            DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+                            DisplayLinkToLastPage = PagedListDisplayMode.Always,
+                            DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+                            DisplayLinkToNextPage = PagedListDisplayMode.Always,
+                            UlElementClasses = new[] { "pagination" },
+                            LiElementClasses = new[] { "page-item" },
+                            PageClasses = new[] { "page-link" }
+                        }
+                        )
+        </div>
+
         <a asp-area="CNT" asp-controller="Pages" asp-action="Index"
-           class="btn btn-outline-secondary btn-lg ms-2" style="border-radius:8px">🔙 返回文章列表</a>
+           class="btn btn-outline-secondary btn-lg ms-2" style="border-radius:8px">
+            🔙 返回文章列表
+        </a>
     </div>
+
 </div>
