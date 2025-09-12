@@ -13,9 +13,81 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         {
             _context = context;
         }
+		// === 1) 給 Index.cshtml AJAX 載入的 Partial（分類列表表格） ===
+		[HttpGet]
+		public async Task<IActionResult> IndexPartial()
+		{
+			var list = await _context.CsFaqCategories
+									 .OrderBy(c => c.OrderSeq)
+									 .ToListAsync();
+			// 依你的實際路徑調整。如果放在 Areas/CS/Views/Shared 以外，要換成對應路徑
+			return PartialView("~/Areas/CS/Views/Shared/_FaqCategoriesTable.cshtml", list);
+		}
 
-        // GET: CsFaqCategories
-        public async Task<IActionResult> Index()
+		// === 2) AJAX：切換啟用/停用（供列表的開關用） ===
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ToggleActive(int id, bool isActive)
+		{
+			var cat = await _context.CsFaqCategories.FindAsync(id);
+			if (cat == null)
+				return NotFound(new { ok = false, message = "找不到分類" });
+
+			cat.IsActive = isActive;
+			cat.RevisedDate = DateTime.UtcNow;
+			await _context.SaveChangesAsync();
+			return Json(new { ok = true });
+		}
+
+		// === 3) AJAX：單筆刪除（供列表上的「刪除」按鈕） ===
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> DeleteAjax(int id)
+		{
+			var cat = await _context.CsFaqCategories.FindAsync(id);
+			if (cat == null)
+				return NotFound(new { ok = false, message = "找不到分類" });
+
+			try
+			{
+				_context.CsFaqCategories.Remove(cat);
+				await _context.SaveChangesAsync();
+				return Json(new { ok = true });
+			}
+			catch (DbUpdateException)
+			{
+				return Json(new { ok = false, message = "分類被引用，無法刪除" });
+			}
+		}
+
+		// === 4) AJAX：批次刪除（供「刪除所選」） ===
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> DeleteManyAjax([FromForm] int[] ids)
+		{
+			if (ids == null || ids.Length == 0)
+				return Json(new { ok = false, message = "沒有要刪除的項目" });
+
+			var list = await _context.CsFaqCategories
+									 .Where(c => ids.Contains(c.CategoryId))
+									 .ToListAsync();
+			if (list.Count == 0)
+				return Json(new { ok = false, message = "找不到要刪除的項目" });
+
+			try
+			{
+				_context.CsFaqCategories.RemoveRange(list);
+				await _context.SaveChangesAsync();
+				return Json(new { ok = true, count = list.Count });
+			}
+			catch (DbUpdateException)
+			{
+				return Json(new { ok = false, message = "部分分類被引用，無法刪除" });
+			}
+		}
+
+		// GET: CsFaqCategories
+		public async Task<IActionResult> Index()
         {
             var therd_store_dbContext = _context.CsFaqCategories.Include(c => c.ParentCategory);
             return View(await therd_store_dbContext.ToListAsync());
