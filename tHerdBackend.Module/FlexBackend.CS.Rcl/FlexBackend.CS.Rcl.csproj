@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<Folder Include="Areas\CS\Controllers\" />
     <Folder Include="Areas\CS\ViewModels\" />
   </ItemGroup>
 
