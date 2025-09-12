@@ -8,23 +8,30 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
         📑 文章管理
+        
          @* 🔍 查詢表單 *@
-        <form asp-action="Index" method="get" class="d-flex me-3">
+        <form asp-action="Index" method="get" class="mb-2">
             <div class="input-group input-group-sm">
-                <!-- 狀態下拉 -->
-                <select name="status" class="form-select form-select-sm" asp-items="ViewBag.StatusList"></select>
 
-                <!-- 關鍵字輸入 -->
+                <!-- 每頁筆數 (最小) -->
+                <span class="input-group-text">每頁筆數</span>
+                <select name="pageSize" class="form-select form-select-sm "
+                        style="max-width:75px;"
+                        asp-items="ViewBag.PageSizeList"
+                        onchange="this.form.submit()"></select>
+
+                <!-- 狀態下拉 (中等大小) -->
+                <select name="status" class="form-select form-select-sm " style=" max-width:120px;" asp-items="ViewBag.StatusList"></select>
+
+                <!-- 關鍵字輸入 (最大，自動撐開) -->
                 <input type="text" name="keyword" value="@ViewBag.Keyword"
-                       class="form-control form-control-sm"
+                       class="form-control form-control-sm flex-grow-1"
                        placeholder="輸入ID或標題..." />
 
                 <!-- 查詢按鈕 -->
                 <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
             </div>
         </form>
-
-
         @* 功能按鈕 *@
         <div class="d-flex gap-3">
             <a asp-action="Create" class="btn btn-light btn-sm">➕ 發表文章</a>
@@ -85,12 +92,18 @@
             </tbody>
         </table>
     </div>
+    <div class="d-flex justify-content-center mb-2 text-muted">
+        顯示第 <strong>@Model.FirstItemOnPage</strong> - <strong>@Model.LastItemOnPage</strong> 筆，
+        共 <strong>@Model.TotalItemCount</strong> 筆資料
+        （每頁 <strong>@Model.PageSize</strong> 筆，共 <strong>@Model.PageCount</strong> 頁）
+    </div>
+
     <div class="card-footer">
         <div class="d-flex justify-content-between">
             <div class="d-flex justify-content-center flex-grow-1">
                 @Html.PagedListPager(
                 Model,
-                page => Url.Action("Index", new { page, keyword = ViewBag.Keyword }),
+                page => Url.Action("Index", new { page, keyword = ViewBag.Keyword, status = ViewBag.Status, pageSize = Model.PageSize }),
                 new PagedListRenderOptions
                 {
                     DisplayLinkToFirstPage = PagedListDisplayMode.Always,
@@ -103,6 +116,8 @@
                 }
                 )
             </div>
+            
+
         </div>
     </div>
 </div>
