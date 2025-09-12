@@ -84,9 +84,4 @@ public partial class ProdProductDto
     /// 異動時間
     /// </summary>
     public DateTime? RevisedDate { get; set; }
-
-	/// <summary>
-	/// 異動時間
-	/// </summary>
-	public IEnumerable<>? RevisedDate { get; set; }
 }
