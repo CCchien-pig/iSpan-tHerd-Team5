@@ -14,69 +14,17 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         {
             _context = context;
         }
-        // AJAX: 切換 FAQ 啟用狀態
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleActive(int id, bool isActive)
+        // 新首頁（殼）
+        public IActionResult Hub() => View();
+
+        // 若想保留舊 Index，但導向新首頁：
+        public IActionResult Index() => RedirectToAction(nameof(Hub));
+
+        // 給 Hub 取用的 Partial（FAQ 主表）
+        public async Task<IActionResult> IndexPartial()
         {
-            // 1) 取得資料
-            var faq = await _context.CsFaqs.FirstOrDefaultAsync(x => x.FaqId == id);
-            if (faq == null)
-                return NotFound(new { ok = false, message = "找不到該 FAQ。" });
-
-            // 2) 更新狀態 + 異動時間
-            faq.IsActive = isActive;
-            faq.RevisedDate = DateTime.UtcNow;
-
-            // 3) 儲存
-            await _context.SaveChangesAsync();
-
-            // 4) 回傳 JSON 給前端
-            return Json(new { ok = true, isActive = faq.IsActive });
-        }
-        // AJAX: 刪除 FAQ
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteAjax(int id)
-        {
-            var faq = await _context.CsFaqs.FindAsync(id);
-            if (faq == null)
-                return NotFound(new { ok = false, message = "找不到該 FAQ。" });
-
-            try
-            {
-                _context.CsFaqs.Remove(faq);
-                await _context.SaveChangesAsync();
-                return Json(new { ok = true });
-            }
-            catch (DbUpdateException)
-            {
-                // 常見：有外鍵關聯（例如被其它表參照）導致無法刪除
-                return Json(new { ok = false, message = "此 FAQ 已被引用，無法刪除。" });
-            }
-        }
-        // AJAX: 批次刪除 FAQ
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteManyAjax([FromForm] int[] ids)
-        {
-            if (ids == null || ids.Length == 0)
-                return Json(new { ok = false, message = "沒有要刪除的項目。" });
-
-            var list = await _context.CsFaqs.Where(f => ids.Contains(f.FaqId)).ToListAsync();
-            if (list.Count == 0)
-                return Json(new { ok = false, message = "找不到要刪除的項目。" });
-
-            try
-            {
-                _context.CsFaqs.RemoveRange(list);
-                await _context.SaveChangesAsync();
-                return Json(new { ok = true, count = list.Count });
-            }
-            catch (DbUpdateException)
-            {
-                return Json(new { ok = false, message = "有資料被引用而無法刪除。" });
-            }
+            var data = await _context.CsFaqs.Include(x => x.Category).ToListAsync();
+            return PartialView("~/Areas/CS/Views/Shared/_FaqsTable.cshtml", data); // 若放在 Views/Faqs 底下就改路徑
         }
 
         // GET: CsFaqs
@@ -128,35 +76,44 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             ViewData["CategoryId"] = new SelectList(_context.CsFaqCategories, "CategoryId", "CategoryName", csFaq.CategoryId);
             return View(csFaq);
         }
+
+  
+
+        // POST: CsFaqs/Edit/5
+        // To protect from overposting attacks, enable the specific properties you want to bind to.
+        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, CsFaq input, bool publishNow = false)
+        public async Task<IActionResult> Edit(int id, [Bind("FaqId,Title,AnswerHtml,Status,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate,RevisedDate")] CsFaq csFaq)
         {
-            var faq = await _context.CsFaqs.FindAsync(id);
-            if (faq == null) return NotFound();
-
-            // 只更新允許的欄位，避免 overposting
-            faq.Title = input.Title;
-            faq.AnswerHtml = input.AnswerHtml;
-            faq.Status = input.Status;
-            faq.CategoryId = input.CategoryId;
-            faq.OrderSeq = input.OrderSeq;
-            faq.LastPublishedTime = input.LastPublishedTime;
-            faq.IsActive = input.IsActive;
-
-            if (publishNow)
+            if (id != csFaq.FaqId)
             {
-                faq.IsActive = true;
-                faq.LastPublishedTime ??= DateTime.UtcNow;
+                return NotFound();
             }
-            faq.RevisedDate = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(csFaq);
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!CsFaqExists(csFaq.FaqId))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            ViewData["CategoryId"] = new SelectList(_context.CsFaqCategories, "CategoryId", "CategoryName", csFaq.CategoryId);
+            return View(csFaq);
         }
-
-
-
 
         // GET: CsFaqs/Delete/5
         public async Task<IActionResult> Delete(int? id)
