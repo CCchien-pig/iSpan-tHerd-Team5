@@ -10,11 +10,10 @@ namespace FlexBackend.Infra.Models;
 /// </summary>
 public partial class ProdProductSku
 {
-
-	/// <summary>
-	/// SKU ID（主鍵）
-	/// </summary>
-	public int SkuId { get; set; }
+    /// <summary>
+    /// SKU ID（主鍵）
+    /// </summary>
+    public int SkuId { get; set; }
 
     /// <summary>
     /// 規格碼
@@ -80,6 +79,12 @@ public partial class ProdProductSku
     /// 是否允許缺貨預購（1=可超賣，0=禁止）
     /// </summary>
     public bool IsAllowBackorder { get; set; }
+
+    public int ShelfLifeDays { get; set; }
+
+    public DateTime StartDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
 
     /// <summary>
     /// 是否啟用
