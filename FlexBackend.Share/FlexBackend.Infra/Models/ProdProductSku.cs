@@ -11,9 +11,6 @@ namespace FlexBackend.Infra.Models;
 public partial class ProdProductSku
 {
 
-	public DateTime StartDate { get; set; }
-	public int ShelfLifeDays { get; set; }
-
 	/// <summary>
 	/// SKU ID（主鍵）
 	/// </summary>
