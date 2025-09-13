@@ -74,9 +74,8 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 if (!ModelState.IsValid)
                     return Json(new { success = false, message = "資料驗證失敗" });
 
-                // ✅ 自動設定欄位
+                // LeftQty 一樣自動算
                 model.LeftQty = model.TotQty;
-                model.Creator = 1; // TODO: 改成登入者 ID
                 model.CreatedDate = DateTime.Now;
 
                 _context.MktCoupons.Add(model);
@@ -89,6 +88,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
 
         // 更新優惠券
         [HttpPost]
