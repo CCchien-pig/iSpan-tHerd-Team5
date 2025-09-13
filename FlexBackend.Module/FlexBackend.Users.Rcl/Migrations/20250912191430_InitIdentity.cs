@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FlexBackend.USER.Rcl.Migrations
 {
     /// <inheritdoc />
-    public partial class DefaultSchema : Migration
+    public partial class InitIdentity : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

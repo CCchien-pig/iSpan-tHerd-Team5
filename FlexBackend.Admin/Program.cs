@@ -20,7 +20,8 @@ namespace FlexBackend.Admin
             // Add services to the container.
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionString));
+                options.UseSqlServer(connectionString, sql =>
+		sql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -79,22 +80,23 @@ namespace FlexBackend.Admin
 
 			var app = builder.Build();
 
-			//Create a scope to run the initialization
-			using (var scope = app.Services.CreateScope())
-			{
-				var sp = scope.ServiceProvider;
+			//Create a scope to run the initialization(只有第一次執行帶入假資料用到)
+			//using (var scope = app.Services.CreateScope())
+			//{
+			//	var sp = scope.ServiceProvider;
 
-				// ★ 先確保 schema 已到位
-				var db = sp.GetRequiredService<ApplicationDbContext>();
-				await db.Database.MigrateAsync();
+			//	// ★ 先套遷移，確保表存在
+			//	var db = sp.GetRequiredService<ApplicationDbContext>();
+			//	await db.Database.MigrateAsync();
 
-				// 可視化：印出實際使用的 DB 名稱，避免套到錯庫
-				var logger = sp.GetRequiredService<ILogger<Program>>();
-				logger.LogInformation("Seeding against DB: {DbName}", db.Database.GetDbConnection().Database);
+			//	var logger = sp.GetRequiredService<ILogger<Program>>();
+			//	logger.LogInformation("Seeding against DB: {Db}", db.Database.GetDbConnection().Database);
 
-				await RoleInitializer.SeedRolesAsync(sp);
-				await UserInitializer.SeedUsersAsync(sp);
-			}
+			//	await RoleInitializer.SeedRolesAsync(sp);
+			//	await UserInitializer.SeedUsersAsync(sp);
+			//}
+
+			
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
