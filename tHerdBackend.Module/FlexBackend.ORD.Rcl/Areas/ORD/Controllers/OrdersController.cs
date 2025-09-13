@@ -221,7 +221,87 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			}
 		}
 
+		// ======================
+		// 批量更新訂單狀態
+		// ======================
+		[HttpPost]
+		public async Task<IActionResult> BulkUpdateOrders(
+		[FromForm] List<int> orderIds,
+		[FromForm] string? shippingStatusId,
+		[FromForm] string? orderStatusId)
+		{
+			if (orderIds == null || !orderIds.Any())
+				return Json(new { success = false, message = "沒有選擇訂單" });
 
+			try
+			{
+				var orders = await _db.OrdOrders
+					.Where(o => orderIds.Contains(o.OrderId))
+					.ToListAsync();
+
+				if (!orders.Any())
+					return Json(new { success = false, message = "找不到訂單" });
+
+				foreach (var order in orders)
+				{
+					if (!string.IsNullOrEmpty(shippingStatusId))
+						order.ShippingStatusId = shippingStatusId;
+
+					if (!string.IsNullOrEmpty(orderStatusId))
+						order.OrderStatusId = orderStatusId;
+
+					order.RevisedDate = DateTime.Now;
+				}
+
+				await _db.SaveChangesAsync();
+				return Json(new { success = true });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
+
+
+		// ======================
+		// 批量列印出貨單
+		// ======================
+		public async Task<IActionResult> PrintOrders(string ids)
+		{
+			if (string.IsNullOrEmpty(ids))
+				return Content("沒有選擇訂單");
+
+			var orderIds = ids.Split(',').Select(int.Parse).ToList();
+
+			var orders = await _db.OrdOrders
+				.Where(o => orderIds.Contains(o.OrderId))
+				.Select(o => new PrintOrderVM
+				{
+					Order = o,
+					ShippingMethod = _db.SupLogistics
+						.Where(l => l.LogisticsId == o.LogisticsId)
+						.Select(l => l.ShippingMethod)
+						.FirstOrDefault(), // 撈配送方式名稱
+					Items = _db.OrdOrderItems
+						.Where(i => i.OrderId == o.OrderId)
+						.Join(_db.ProdProducts, i => i.ProductId, p => p.ProductId,
+							(i, p) => new { i, p.ProductName })
+						.Join(_db.ProdProductSkus, x => x.i.SkuId, s => s.SkuId,
+							(x, s) => new PrintOrderItemVM
+							{
+								ProductName = x.ProductName,
+								SpecCode = s.SpecCode,
+								UnitPrice = x.i.UnitPrice,
+								Qty = x.i.Qty,
+								Subtotal = x.i.UnitPrice * x.i.Qty
+							})
+						.ToList()
+				})
+				.ToListAsync();
+
+			return View("PrintOrders", orders);
+		}
+    
 
 
 		// 讀取 sysCode 的描述
