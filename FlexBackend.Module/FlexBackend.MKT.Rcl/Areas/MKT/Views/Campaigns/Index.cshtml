@@ -1,40 +1,200 @@
-﻿@{
-    ViewData["Title"] = "活動列表";
-}
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+﻿<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
 
 <div class="container my-4">
     <h2>@ViewData["Title"]</h2>
-
-    <!-- 新增活動按鈕 -->
-    <a href="@Url.Action("CreateCampaign", "Campaigns", new { area = "MKT" })" class="btn btn-primary mb-3">新增活動</a>
-
-    <!-- 活動列表/日曆 -->
+    <button id="openCreateCampaign" class="btn btn-secondary mb-3">新增活動</button>
     <div id="calendar"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<!-- Modals -->
+@Html.Partial("~/Areas/MKT/Views/Partial/_EditModal.cshtml")
+@Html.Partial("~/Areas/MKT/Views/Partial/_CreateCampaignModal.cshtml")
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // FullCalendar 初始化
         var calendarEl = document.getElementById('calendar');
-        if (!calendarEl) {
-            console.error("找不到 calendar 元素！");
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: '/MKT/Campaigns/GetEvents',
+            displayEventTime: false,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: ''   // 不要的地方設為空字串
+            },
+            eventClick: function(info){
+                var eventId = info.event.id;
+                fetch(`/MKT/Campaigns/GetEventById/${eventId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // 填入 Edit Modal 欄位
+                        $("#editId").val(data.id);
+                        $("#editTitle").val(data.title);
+                        $("#editType").val(data.type);
+                        $("#editDescription").val(data.description);
+                        $("#editStart").val(data.startDate?.split('T')[0] || '');
+                        $("#editEnd").val(data.endDate?.split('T')[0] || '');
+                        $("#editStatus").val(data.status);
+                        $("#editCreator").val(data.creator);
+                        $("#editImgId").val(data.ingId || '');
+
+                        $(".editProductType").prop("checked", false);
+                        if(data.productType){
+                            data.productType.split(',').forEach(pt => {
+                                $(".editProductType[value='" + pt + "']").prop("checked", true);
+                            });
+                        }
+
+                        $("input[name='editIsActive'][value='" + data.isActive + "']").prop("checked", true);
+
+                        $("#editModal").modal("show");
+                    })
+                    .catch(err => console.error(err));
+            }
+        });
+        calendar.render();
+
+        // 開啟新增活動 Modal
+        $("#openCreateCampaign").on("click", function(){
+            $("#createCampaignModal").modal("show");
+        });
+
+        // 提交新增活動
+            $("#createSubmitBtn").on("click", function (e) {
+        e.preventDefault();
+
+        var startDate = $("#createCampaignForm input[name='StartDate']").val();
+        var endDate = $("#createCampaignForm input[name='EndDate']").val();
+        var today = new Date();
+        today.setHours(0, 0, 0, 0); // 把今天的時間歸零，避免小時影響比較
+
+        // 轉換成 Date 物件
+        var start = startDate ? new Date(startDate) : null;
+        var end = endDate ? new Date(endDate) : null;
+
+        // 驗證 startDate 是否在今天之後
+        if (!start || start <= today) {
+            Swal.fire("錯誤", "開始日期必須在今天之後", "error");
             return;
         }
 
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            events: [
-                // 這裡可改成 Ajax 從後端抓取活動
-                { id: 1, title: "測試活動A", start: "2025-09-10", color: "#CAABD8" },
-                { id: 2, title: "測試活動B", start: "2025-09-10", color: "#FFA07A" }
-            ]
-        });
+        // 驗證 endDate 是否在 startDate 之後
+        if (!end || end <= start) {
+            Swal.fire("錯誤", "結束日期必須在開始日期之後", "error");
+            return;
+        }
 
-        calendar.render();
+        var data = {
+            CampaignName: $("#createCampaignForm input[name='CampaignName']").val(),
+            CampaignType: $("#createCampaignForm select[name='CampaignType']").val(),
+            CampaignDescription: $("#createCampaignForm input[name='CampaignDescription']").val(),
+            ProductType: $("#createCampaignForm input[name='ProductType']:checked").map(function () { return this.value; }).get().join(","),
+            StartDate: startDate || null,
+            EndDate: endDate || null,
+            IsActive: $("#createCampaignForm input[name='IsActive']:checked").val() === "true",
+            Status: $("#createCampaignForm select[name='Status']").val(),
+            Creator: parseInt($("#createCampaignForm input[name='Creator']").val()),
+            ImgId: parseInt($("#createCampaignForm input[name='ImgId']").val()) || null
+        };
+
+        $.ajax({
+            url: '/MKT/Campaigns/CreateCampaign',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire("成功", "活動已新增！", "success").then(() => {
+                        calendar.refetchEvents();
+                        $("#createCampaignModal").modal("hide");
+                    });
+                } else {
+                    Swal.fire("錯誤", "操作失敗：" + res.message, "error");
+                }
+            },
+            error: function (xhr, status, error) {
+                Swal.fire("錯誤", "操作失敗：" + xhr.responseText, "error");
+            }
+        });
+    });
+
+
+        // 提交編輯活動
+        $("#saveBtn").on("click", function(e){
+            e.preventDefault();
+            var data = {
+                CampaignId: parseInt($("#editId").val()),
+                CampaignName: $("#editTitle").val(),
+                CampaignType: $("#editType").val(),
+                CampaignDescription: $("#editDescription").val(),
+                ProductType: $(".editProductType:checked").map(function(){ return this.value; }).get().join(","),
+                StartDate: $("#editStart").val() || null,
+                EndDate: $("#editEnd").val() || null,
+                IsActive: $("input[name='editIsActive']:checked").val() === "true",
+                Status: $("#editStatus").val(),
+                Creator: parseInt($("#editCreator").val()),
+                ImgId: parseInt($("#editImgId").val()) || null
+            };
+
+            $.ajax({
+                url: '/MKT/Campaigns/UpdateCampaign',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res){
+                    if(res.success){
+                        Swal.fire("成功","活動已更新！","success").then(() => {
+                            calendar.refetchEvents();
+                            $("#editModal").modal("hide");
+                        });
+                    } else {
+                        Swal.fire("錯誤","操作失敗：" + res.message,"error");
+                    }
+                },
+                error: function(xhr,status,error){
+                    Swal.fire("錯誤","操作失敗：" + xhr.responseText,"error");
+                }
+            });
+        });
+        $("#backBtn").on("click", function(){
+        $("#editModal").modal("hide");
+        });
+        $("#deleteBtn").on("click", function(){
+        var campaignId = $("#editId").val();
+        if(!campaignId) return;
+
+        Swal.fire({
+            title: '確定刪除活動？',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '刪除',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if(result.isConfirmed){
+                $.ajax({
+                    url: '/MKT/Campaigns/DeleteCampaign/' + campaignId,
+                    type: 'POST',
+                    success: function(res){
+                        if(res.success){
+                            Swal.fire('已刪除','活動已刪除','success').then(()=>{
+                                $("#editModal").modal("hide");
+                                location.reload(); // 或重新 render FullCalendar
+                            });
+                        } else {
+                            Swal.fire('錯誤','刪除失敗：' + res.message,'error');
+                        }
+                    },
+                    error: function(xhr,status,error){
+                        Swal.fire('錯誤','刪除失敗：' + xhr.responseText,'error');
+                    }
+                });
+            }
+        });
+    });
+
     });
 </script>
