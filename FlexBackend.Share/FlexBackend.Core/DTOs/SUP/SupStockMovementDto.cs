@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FlexBackend.Core.DTOs.SUP
+﻿namespace FlexBackend.Core.DTOs.SUP
 {
 	public class SupStockMovementDto
 	{
@@ -19,7 +12,7 @@ namespace FlexBackend.Core.DTOs.SUP
 		public int? UserId { get; set; }           // 操作者
 		public string? Remark { get; set; }        // 備註
 	}
-
+}
 	// [SYS_Code]
 	// ModuleId CodeId  CodeNo CodeDesc
 	// ('SUP', '00', '01', N'庫存異動類型'),
@@ -28,5 +21,3 @@ namespace FlexBackend.Core.DTOs.SUP
 	// ('SUP', '01', 'Return', N'退貨入庫'),
 	// ('SUP', '01', 'Expire', N'到期報廢'),
 	// ('SUP', '01', 'Adjust', N'手動調整'),
-
-}
