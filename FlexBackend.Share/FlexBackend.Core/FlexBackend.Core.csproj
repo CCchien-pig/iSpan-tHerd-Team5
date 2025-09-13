@@ -24,13 +24,11 @@
     <Folder Include="DTOs\CNT\" />
     <Folder Include="DTOs\CS\" />
     <Folder Include="DTOs\ORD\" />
-	<Folder Include="DTOs\SUP\" />
     <Folder Include="DTOs\USER\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\MKT\" />
     <Folder Include="Interfaces\ORD\" />
-    <Folder Include="Interfaces\SUP\" />
     <Folder Include="Interfaces\USER\" />
     <Folder Include="ValueObjects\CNT\" />
     <Folder Include="ValueObjects\CS\" />
