@@ -15,10 +15,15 @@ public partial class ProdProductSku
     /// </summary>
     public int SkuId { get; set; }
 
-    /// <summary>
-    /// SKU代碼
-    /// </summary>
-    public string SkuCode { get; set; }
+	/// <summary>
+	/// SKU 規格
+	/// </summary>
+	public string SpecCode { get; set; }
+
+	/// <summary>
+	/// SKU代碼
+	/// </summary>
+	public string SkuCode { get; set; }
 
     /// <summary>
     /// 商品ID（外鍵）
