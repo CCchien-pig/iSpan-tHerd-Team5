@@ -65,7 +65,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("FaqId,Title,AnswerHtml,Status,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate,RevisedDate")] CsFaq csFaq)
+        public async Task<IActionResult> Create([Bind("FaqId,Title,AnswerHtml,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate,RevisedDate")] CsFaq csFaq)
         {
             if (ModelState.IsValid)
             {
@@ -84,7 +84,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("FaqId,Title,AnswerHtml,Status,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate,RevisedDate")] CsFaq csFaq)
+        public async Task<IActionResult> Edit(int id, [Bind("FaqId,Title,AnswerHtml,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate,RevisedDate")] CsFaq csFaq)
         {
             if (id != csFaq.FaqId)
             {
