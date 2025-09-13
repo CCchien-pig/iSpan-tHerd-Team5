@@ -10,10 +10,19 @@ namespace FlexBackend.Infra.Models;
 /// </summary>
 public partial class ProdProductSku
 {
+
+	public DateTime StartDate { get; set; }
+	public int ShelfLifeDays { get; set; }
+
+	/// <summary>
+	/// SKU ID（主鍵）
+	/// </summary>
+	public int SkuId { get; set; }
+
     /// <summary>
-    /// SKU ID（主鍵）
+    /// 規格碼
     /// </summary>
-    public int SkuId { get; set; }
+    public string SpecCode { get; set; }
 
     /// <summary>
     /// SKU代碼

@@ -1,0 +1,87 @@
+﻿@using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
+@* _StockBatchInfoPartial.cshtml 唯讀欄位 *@
+
+@model StockBatchContactViewModel
+
+<div class="container-fluid">
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.SkuCode)：</div>
+        <div>@Model.SkuCode</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.BrandName)：</div>
+        <div>@Model.BrandName</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.ProductName)：</div>
+        <div>@Model.ProductName</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.BatchNumber)：</div>
+        <div>@Model.BatchNumber</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Qty)：</div>
+        <div>@Model.Qty</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.SafetyStockQty)：</div>
+        <div>@Model.SafetyStockQty</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.ReorderPoint)：</div>
+        <div>@Model.ReorderPoint</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.MaxStockQty)：</div>
+        <div>@Model.MaxStockQty</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.IsSellable)：</div>
+        <div>@(Model.IsSellable ? "可銷售" : "不可銷售")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.ManufactureDate)：</div>
+        <div>@(Model.ManufactureDate.HasValue? Model.ManufactureDate.Value.ToString("yyyy/MM/dd") : "-")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.ExpireDate)：</div>
+        <div>@(Model.ExpireDate.HasValue? Model.ExpireDate.Value.ToString("yyyy/MM/dd") : "-")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Creator)：</div>
+        <div>@Model.Creator</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.CreatedDate)：</div>
+        <div>@Model.CreatedDate.ToString("yyyy/MM/dd tt hh:mm:ss")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Reviser)：</div>
+        <div>@(Model.Reviser.HasValue? Model.Reviser.ToString() : "尚無異動紀錄")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.RevisedDate)：</div>
+        <div>@(Model.RevisedDate.HasValue? Model.RevisedDate.Value.ToString("yyyy/MM/dd tt hh:mm:ss") : "尚無異動紀錄")</div>
+    </div>
+
+    <div class="text-center mt-3">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回列表</button>
+    </div>
+
+</div>
