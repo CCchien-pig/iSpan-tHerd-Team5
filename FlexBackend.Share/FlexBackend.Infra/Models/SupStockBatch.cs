@@ -33,7 +33,12 @@ public partial class SupStockBatch
     /// <summary>
     /// 效期
     /// </summary>
-    public DateOnly? ExpireDate { get; set; }
+    public DateTime? ExpireDate { get; set; }
+
+    /// <summary>
+    /// 製造日期
+    /// </summary>
+    public DateTime? ManufactureDate { get; set; }
 
     /// <summary>
     /// 是否可銷售

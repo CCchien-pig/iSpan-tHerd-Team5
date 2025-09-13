@@ -1,0 +1,311 @@
+﻿@* StockBatches Index *@
+@{
+    ViewData["Title"] = "庫存管理";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
+}
+
+<div class="d-flex justify-content-between mb-2">
+    <h4>庫存管理</h4>
+    <button id="createStockBatchBtn" class="btn btn-outline-success">新增庫存</button>
+</div>
+
+<div class="stockbatch-card">
+    <table id="stockBatchTable" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>批號</th>
+                <th>品牌</th>
+                <th>商品</th>
+                <th>到期日</th>
+                <th>庫存量</th>
+                <th>再訂購點</th>
+                <th>安全庫存</th>
+                <th>規格</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <div class="modal-header">
+                <h5 id="stockBatchModalTitle" class="modal-title">庫存</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="stockBatchModalContent" class="modal-body p-4">
+                <!-- AJAX 載入 _StockBatchFormPartial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            // ======= 初始化庫存 DataTable =======
+            var stockBatchTable = $('#stockBatchTable').DataTable({
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: '/SUP/StockBatches/IndexJson',
+                    type: 'POST',
+                    dataSrc: function(json) {
+                        console.log(json);      // 印出整個 JSON
+                        console.log(json.data); // 印出每筆 row
+                        return json.data;
+                    }
+                },
+                columns: [
+                    { data: 'skuCode', title: 'SKU' },            // SKU
+                    { data: 'batchNumber', title: '批號' },      // 批號
+                    { data: 'brandName', title: '品牌' },        // 品牌
+                    { data: 'productName', title: '商品' },      // 商品
+                    { data: 'expireDate', title: '到期日' },     // 到期日
+                    { data: 'qty', title: '庫存量' },            // 庫存量
+                    { data: 'reorderPoint', title: '再訂購點' },// 再訂購點
+                    { data: 'safetyStockQty', title: '安全庫存' },// 安全庫存
+                    {
+                        data: 'specifications',                  // 規格
+                        title: '規格',
+                        render: function(data) {
+                            if(!data) return '';
+                            return data.map(s => s.GroupName + ':' + s.OptionName).join(' / ');
+                        }
+                    },
+                    {
+                        data: 'stockBatchId',                     // 操作
+                        title: '操作',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            return `
+                                <button class="btn btn-sm btn-primary edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="庫存異動">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info stock-history-btn" data-brandid="${row.BrandCode}" data-bs-toggle="tooltip" title="異動紀錄">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
+                scrollY: "500px",
+                scrollCollapse: true,
+                colReorder: true,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                }
+            });
+
+            // ======= 初始化 Modal Form 函數 =======
+            window.initStockBatchForm = function(selectedBrandId = null, selectedProductId = null, selectedSkuId = null) {
+                var $brandSelect = $('#BrandSelect');
+                var $productSelect = $('#ProductSelect');
+                var $skuSelect = $('#SkuSelect');
+                var $movementTypeSelect = $('#MovementTypeSelect');
+                var $changeQtyInput = $('#ChangeQtyInput');
+                var $adjustTypeSelect = $('#AdjustTypeSelect');
+                var $predictedQty = $('#PredictedQty');
+
+                // 載入品牌
+                $brandSelect.html('<option value="">請選品牌</option>');
+                $.get('/SUP/StockBatches/GetBrands', function (brands) {
+                    brands.forEach(b => $brandSelect.append(`<option value="${b.brandId}">${b.brandName}</option>`));
+                    if (selectedBrandId) $brandSelect.val(selectedBrandId).trigger('change');
+                });
+
+                // 載入異動類型
+                $movementTypeSelect.html('<option value="">請選異動類型</option>');
+                $.get('/SUP/StockBatches/GetMovementTypes', function (types) {
+                    types.forEach(m => $movementTypeSelect.append(`<option value="${m.value}">${m.text}</option>`));
+                });
+
+                // 品牌選擇後載入商品
+                $brandSelect.off('change').on('change', function () {
+                    var brandId = $(this).val();
+                    $productSelect.html('<option value="">請選商品</option>').prop('disabled', !brandId);
+                    $skuSelect.html('<option value="">請選 SKU</option>').prop('disabled', true);
+
+                    if (brandId) {
+                        $.get('/SUP/StockBatches/GetProductsByBrand', { brandId: brandId }, function (products) {
+                            products.forEach(p => $productSelect.append(`<option value="${p.productId}">${p.productName}</option>`));
+                            if (selectedProductId) $productSelect.val(selectedProductId).trigger('change');
+                        });
+                    }
+                });
+
+                // 商品選擇後載入 SKU
+                $productSelect.off('change').on('change', function() {
+                    var productId = $(this).val();
+                    var isPublished = $(this).find(':selected').data('ispublished') || 0;
+                    $('#IsPublishedText').text(isPublished ? '上架中' : '未上架');
+
+                    $skuSelect.html('<option value="">請選 SKU</option>').prop('disabled', !productId);
+
+                    if (productId) {
+                        $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
+                            skus.forEach(sku => $skuSelect.append(`
+                                <option value="${sku.skuId}"
+                                    data-qty="${sku.stockQty}"
+                                    data-reorder="${sku.reorderPoint}"
+                                    data-safety="${sku.safetyStockQty}"
+                                    data-max="${sku.maxStockQty}"
+                                    data-allowbackorder="${sku.isAllowBackorder}">
+                                    ${sku.skuCode}
+                                </option>
+                            `));
+                            if (selectedSkuId) $skuSelect.val(selectedSkuId).trigger('change');
+                        });
+                    }
+                });
+
+                // 選 SKU 更新庫存資訊 & 預計庫存
+                $skuSelect.off('change').on('change', function() {
+                    var selected = $(this).find(':selected');
+                    var currentQty = selected.data('qty') || 0;
+                    var reorderPoint = selected.data('reorder') || 0;
+                    var safetyStock = selected.data('safety') || 0;
+                    var maxStock = selected.data('max') || 0;
+                    var allowBackorder = selected.data('allowbackorder') || 0;
+
+                    $('#CurrentQty').text(currentQty);
+                    $('#ReorderPoint').text(reorderPoint);
+                    $('#SafetyStockQty').text(safetyStock);
+                    $('#MaxStockQty').text(maxStock);
+                    $('#IsAllowBackorderText').text(allowBackorder ? '可超賣' : '禁止');
+
+                    var $changeQty = $('#ChangeQtyInput');
+                    var $predictedQty = $('#PredictedQty');
+
+                    var adjustType = $('#AdjustTypeSelect').val() === 'true';
+                    var maxAdd = Math.max(0, maxStock - currentQty);
+                    var maxRemove = Math.max(0, currentQty - safetyStock);
+
+                    $changeQty.attr('max', maxAdd).val(0);
+                    $predictedQty.text(currentQty);
+
+                    $changeQty.off('input').on('input', function() {
+                        var val = parseInt($(this).val()) || 0;
+
+                        if(adjustType && val > maxAdd) $(this).val(maxAdd);
+                        if(!adjustType && val > maxRemove) $(this).val(maxRemove);
+
+                        var newQty = currentQty;
+                        var movementType = $('#MovementTypeSelect').val();
+                        switch(movementType){
+                            case 'Purchase':
+                            case 'Return':
+                            case 'Adjust':
+                                newQty += (adjustType ? val : -val);
+                                break;
+                            case 'Sale':
+                            case 'Expire':
+                                newQty -= val;
+                                break;
+                        }
+
+                        if(!allowBackorder && newQty < 0) newQty = 0;
+
+                        $predictedQty.text(newQty);
+                    });
+                });
+
+                // 異動類型切換顯示手動加減
+                $movementTypeSelect.off('change').on('change', function () {
+                    $('#AdjustTypeDiv').toggle($(this).val() === 'Adjust');
+                    $skuSelect.trigger('change');
+                });
+
+                // 初始化品牌/商品/SKU 選項
+                if(selectedBrandId) $brandSelect.val(selectedBrandId).trigger('change');
+                if(selectedProductId) $productSelect.val(selectedProductId).trigger('change');
+                if(selectedSkuId) $skuSelect.val(selectedSkuId).trigger('change');
+
+            };
+
+            // ======= 新增庫存按鈕 =======
+            $('#createStockBatchBtn').on('click', function () {
+                $.get('/SUP/StockBatches/Create', function(html){
+                    $('#stockBatchModalContent').html(html);
+                    $('#stockBatchModalTitle').text("新增庫存");
+                    $('#stockBatchModal').modal('show');
+
+                    window.initStockBatchForm();
+                });
+            });
+
+            // ======= 新增 & 更新庫存表單提交 =======
+            $('#stockBatchModalContent').off('submit', '#stockBatchForm').on('submit', '#stockBatchForm', function (e) {
+                e.preventDefault();
+                var form = $(this);
+                var formData = new FormData(form[0]);
+
+                // Adjust 類型需額外傳 IsAdd
+                if ($('#MovementTypeSelect').val() === 'Adjust') {
+                    formData.set('IsAdd', $('#AdjustTypeSelect').val() === 'true');
+                }
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]', form).val()
+                    },
+                    success: function(res){
+                        if(res.success){
+                            $('#stockBatchModal').modal('hide');
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: res.message || '操作成功',
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+                            stockBatchTable.ajax.reload(null, false);
+                        } else {
+                            Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
+                        }
+                    },
+                    error: function(){
+                        Swal.fire('操作失敗', '', 'error');
+                    }
+                });
+            });
+
+
+            // ======= 編輯庫存 =======
+            $('#stockBatchTable').on('click', '.edit-stock-btn', function() {
+                var id = $(this).data('id');
+                $.get(`/SUP/StockBatches/Edit/${id}`, function(html){
+                    $('#stockBatchModalContent').html(html);
+                    $('#stockBatchModalTitle').text("庫存量異動");
+                    $('#stockBatchModal').modal('show');
+
+                    var selectedBrandId = $('#SelectedBrandId').val() || null;
+                    var selectedProductId = $('#SelectedProductId').val() || null;
+                    var selectedSkuId = $('#SelectedSkuId').val() || null;
+                    window.initStockBatchForm(selectedBrandId, selectedProductId, selectedSkuId);
+                });
+            });
+
+            // ======= 異動紀錄按鈕 =======
+            $('#stockBatchTable').on('click', '.stock-history-btn', function() {
+                var brandCode = $(this).data('brandid');
+                window.location.href = stockHistoryUrl + `?brandCode=${brandCode}`;
+            });
+
+        });
+    </script>
+}
