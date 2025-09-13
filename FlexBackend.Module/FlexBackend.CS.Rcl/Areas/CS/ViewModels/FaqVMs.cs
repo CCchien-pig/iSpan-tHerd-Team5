@@ -45,4 +45,19 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
         [Display(Name = "修改時間")] public DateTime? RevisedDate { get; set; }
         [Display(Name = "分類")] public string CategoryName { get; set; }
     }
+    public class FaqCategoryListVM
+    {
+        public int CategoryId { get; set; }
+        public string CategoryName { get; set; } = default!;
+        public string? ParentCategoryName { get; set; }
+        public string? Description { get; set; }
+        public string? ColorHex { get; set; }         // 可選
+        public bool ShowOnHome { get; set; }
+        public int OrderSeq { get; set; }
+        public int ActiveFaqCount { get; set; }       // 啟用 FAQ 數
+        public int TotalFaqCount { get; set; }        // 全部 FAQ 數
+        public bool IsActive { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? RevisedDate { get; set; }
+    }
 }
