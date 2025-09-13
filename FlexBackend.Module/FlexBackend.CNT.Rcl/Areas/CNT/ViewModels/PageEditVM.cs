@@ -1,30 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 {
 	public class PageEditVM
 	{
 		public int PageId { get; set; }           // 文章 ID
+
+		[Required(ErrorMessage = "標題必填")]
 		public string Title { get; set; }         // 標題
-		public string Status { get; set; }        // 狀態 (資料庫是 varchar)
 
-		public DateTime? RevisedDate { get; set; } // 異動時間 (系統自動更新)
+		[Required(ErrorMessage = "狀態必填")]
+		[EnumDataType(typeof(PageStatus))]
+		public PageStatus Status { get; set; }    // 改成 enum，而不是 string
 
+		public DateTime? RevisedDate { get; set; } // 異動時間
 
-		// 額外方便輸出的屬性
+		// 下拉選單使用（不驗證）
+		[ValidateNever]
+		public IEnumerable<SelectListItem> StatusList { get; set; }
+
+		// ⭐ 使用者選取的標籤 Id（多選）
+		public List<int> SelectedTagIds { get; set; } = new();
+
+		// ⭐ 可供選擇的標籤清單（只做 UI 選項，不驗證）
+		[ValidateNever]
+		public IEnumerable<SelectListItem> TagOptions { get; set; }
+
+		// 狀態中文顯示
 		public string StatusText =>
 			Status switch
 			{
-				"0" => "草稿",
-				"1" => "已發佈",
-				"2" => "封存",
-				"9" => "刪除",
-				_ => "未知狀態"
+				PageStatus.Draft => "草稿",
+				PageStatus.Published => "已發佈",
+				PageStatus.Archived => "封存",
+				PageStatus.Deleted => "刪除",
+				_ => "未知"
 			};
 	}
 }
-

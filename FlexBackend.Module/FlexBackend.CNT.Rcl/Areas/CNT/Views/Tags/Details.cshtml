@@ -36,13 +36,18 @@
 
         @if (Model.BoundPages.Any())
         {
-            <h5 class="mt-4">📄 綁定的文章</h5>
+            
+            <h5 class="mt-4 fw-bold ">📄 綁定的文章</h5>            
             <ul class="list-group">
                 @foreach (var page in Model.BoundPages)
                 {
-                    <li class="list-group-item">@(page)</li>
+                    <li class="list-group-item bg-light">
+                        <span class="fw-semibold text-dark">@(page)</span>
+                        <span class="badge bg-success ms-2">已綁定</span>
+                    </li>                  
                 }
             </ul>
+            
         }
         else
         {

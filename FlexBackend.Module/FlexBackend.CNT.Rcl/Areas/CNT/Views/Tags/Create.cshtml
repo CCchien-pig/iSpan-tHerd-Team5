@@ -9,6 +9,9 @@
     </div>
     <div class="card-body">
         <form asp-action="Create" method="post">
+            <!-- 🔴 新增錯誤摘要 -->
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
             <div class="mb-3">
                 <label asp-for="TagName" class="form-label">標籤名稱</label>
                 <input asp-for="TagName" class="form-control" />
@@ -20,8 +23,10 @@
                 <label asp-for="IsActive" class="form-check-label">啟用</label>
             </div>
 
-            <button type="submit" class="btn btn-outline-success btn-lg">💾 儲存</button>
+            <div class="card-footer d-flex gap-3">
             <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回列表</a>
+            <button type="submit" class="btn btn-outline-success btn-lg">💾 儲存</button>
+            </div>
         </form>
     </div>
 </div>
