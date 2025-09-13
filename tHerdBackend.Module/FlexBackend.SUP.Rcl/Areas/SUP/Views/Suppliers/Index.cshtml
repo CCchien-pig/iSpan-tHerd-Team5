@@ -322,10 +322,23 @@
             $('#supplierTable').on('click', '.inventory-btn', function() {
                 var supplierId = $(this).data('id');
 
-                // 庫存頁面 URL 為 /SUP/StockBatches/Index
-                // 我們用 query string 傳遞 SupplierId
-                var url = '/SUP/StockBatches/Index?supplierId=' + supplierId;
-                window.location.href = url;
+                // 傳進 URL 版
+                // var url = '/SUP/StockBatches/Index?supplierId=' + supplierId;
+                // window.location.href = url;
+
+                // 用 TempData 傳版
+                $.ajax({
+                    url: '/SUP/StockBatches/GetBrandNameBySupplier',
+                    type: 'GET',
+                    data: { supplierId: supplierId },
+                    success: function(brandName) {
+                        // 將品牌名稱放入 sessionStorage
+                        sessionStorage.setItem('selectedBrandName', brandName);
+
+                        // 跳轉到庫存頁
+                        window.location.href = '/SUP/StockBatches/Index';
+                    }
+                });
             });
 
         });
