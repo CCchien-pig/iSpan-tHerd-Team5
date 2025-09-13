@@ -23,17 +23,31 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_stockBatchService = stockBatchService;
 		}
 
-		// GET: /SUP/StockBatches/Index
+		// GET: /SUP/StockBatches/Index?{supplierId?}
 		[HttpGet]
-		public IActionResult Index()
+		public IActionResult Index(int? supplierId = null)
 		{
+			ViewBag.SupplierId = supplierId;
 			return View();
 		}
 
+		[HttpGet]
+		public IActionResult GetBrandNameBySupplier(int supplierId)
+		{
+			var brandName = _context.SupBrands
+				.Where(b => b.SupplierId == supplierId)
+				.Select(b => b.BrandName)
+				.FirstOrDefault();
+
+			return Ok(brandName ?? "");
+		}
+
+
 		// POST: StockBatches/IndexJson
 		[HttpPost]
-		public async Task<IActionResult> IndexJson()
+		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null)
 		{
+
 			// 從 DataTables POST 取得參數
 			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
 			var start = Convert.ToInt32(Request.Form["start"].FirstOrDefault() ?? "0");
@@ -51,6 +65,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						join b in _context.SupBrands on p.BrandId equals b.BrandId
 						select new
 						{
+							SupplierId = b.SupplierId,
+
 							sb.StockBatchId,
 							SkuCode = sku.SkuCode,
 							sb.BatchNumber,
@@ -76,6 +92,14 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								.ToArray()
 						};
 
+			// 如果有傳 SupplierId，就過濾對應品牌
+			if (!string.IsNullOrEmpty(supplierId))
+			{
+				if (int.TryParse(supplierId, out int sId))
+				{
+					query = query.Where(x => x.SupplierId == sId);
+				}
+			}
 
 			// 搜尋功能
 			if (!string.IsNullOrEmpty(searchValue))
