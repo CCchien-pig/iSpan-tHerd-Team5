@@ -1,4 +1,4 @@
-﻿
+﻿using FlexBackend.CS.Rcl.Areas.CS.ViewModels;
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -6,183 +6,244 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 {
-	[Area("CS")]
-	public class FaqKeywordsController : Controller
-	{
-		private readonly tHerdDBContext _context;
-		public FaqKeywordsController(tHerdDBContext context) => _context = context;
+    [Area("CS")]
+    public class FaqKeywordsController : Controller
+    {
+        private readonly tHerdDBContext _context;
 
-		// ====== 首頁（可保留為獨立頁面，不影響 AJAX Partial 的載入）======
-		[HttpGet]
-		public async Task<IActionResult> Index()
-		{
-			var list = await _context.CsFaqKeywords
-									 .Include(k => k.Faq) // 若無導航屬性可移除
-									 .OrderByDescending(k => k.CreatedDate)
-									 .ToListAsync();
-			return View(list);
-		}
+        public FaqKeywordsController(tHerdDBContext context)
+        {
+            _context = context;
+        }
 
-		// ====== 給 Index.cshtml（或 Hub）AJAX 載入的 Partial ======
-		[HttpGet]
-		public async Task<IActionResult> IndexPartial()
-		{
-			var list = await _context.CsFaqKeywords
-									 .Include(k => k.Faq) // 若無導航屬性可移除
-									 .OrderByDescending(k => k.CreatedDate)
-									 .ToListAsync();
+        // =============== Index ===============
+        // 視圖建議：@model IEnumerable<FaqKeywordListVM>
+        public async Task<IActionResult> Index()
+        {
+            var list = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .Include(k => k.Faq)
+                .OrderBy(k => k.Keyword)
+                .Select(k => new FaqKeywordListVM
+                {
+                    KeywordId = k.KeywordId,
+                    FaqId = k.FaqId,
+                    FaqTitle = k.Faq.Title,
+                    Keyword = k.Keyword,
+                    CreatedDate = k.CreatedDate
+                })
+                .ToListAsync();
 
-			// 依你的實際放置位置調整 Partial 路徑
-			return PartialView("~/Areas/CS/Views/Shared/_FaqKeywordsTable.cshtml", list);
-		}
+            return View(list);
+        }
 
-		// ====== 詳細 ======
-		[HttpGet]
-		public async Task<IActionResult> Details(int? id)
-		{
-			if (id == null) return NotFound();
+        // =============== Details ===============
+        // 視圖建議：@model FaqKeywordListVM
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
 
-			var kw = await _context.CsFaqKeywords
-								   .Include(k => k.Faq)
-								   .FirstOrDefaultAsync(m => m.KeywordId == id);
-			if (kw == null) return NotFound();
+            var vm = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .Include(k => k.Faq)
+                .Where(k => k.KeywordId == id)
+                .Select(k => new FaqKeywordListVM
+                {
+                    KeywordId = k.KeywordId,
+                    FaqId = k.FaqId,
+                    FaqTitle = k.Faq.Title,
+                    Keyword = k.Keyword,
+                    CreatedDate = k.CreatedDate
+                })
+                .FirstOrDefaultAsync();
 
-			return View(kw);
-		}
+            if (vm == null) return NotFound();
+            return View(vm);
+        }
 
-		// ====== 新增 ======
-		[HttpGet]
-		public IActionResult Create()
-		{
-			// 下拉顯示 FAQ 標題；若沒有 Title 欄位，改成你要的顯示欄位
-			ViewData["FaqId"] = new SelectList(_context.CsFaqs, "FaqId", "Title");
-			return View();
-		}
+        // =============== Create ===============
+        // 視圖建議：@model FaqKeywordEditVM
+        public IActionResult Create()
+        {
+            ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title");
+            return View(new FaqKeywordEditVM());
+        }
 
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Create([Bind("FaqId,Keyword")] CsFaqKeyword input)
-		{
-			if (!ModelState.IsValid)
-			{
-				ViewData["FaqId"] = new SelectList(_context.CsFaqs, "FaqId", "Title", input.FaqId);
-				return View(input);
-			}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(FaqKeywordEditVM vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title", vm.FaqId);
+                return View(vm);
+            }
 
-			input.CreatedDate = DateTime.UtcNow;
-			_context.CsFaqKeywords.Add(input);
-			await _context.SaveChangesAsync();
-			return RedirectToAction(nameof(Index));
-		}
+            // -> 伺服器端去除空白並做唯一性檢查（同一 FAQ 下不得重複）
+            var keyword = (vm.Keyword ?? string.Empty).Trim();
+            var exists = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .AnyAsync(k => k.FaqId == vm.FaqId && k.Keyword == keyword);
 
-		// ====== 編輯 ======
-		[HttpGet]
-		public async Task<IActionResult> Edit(int? id)
-		{
-			if (id == null) return NotFound();
+            if (exists)
+            {
+                ModelState.AddModelError(nameof(vm.Keyword), "此 FAQ 已存在相同關鍵字。");
+                ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title", vm.FaqId);
+                return View(vm);
+            }
 
-			var kw = await _context.CsFaqKeywords.FindAsync(id);
-			if (kw == null) return NotFound();
+            var entity = new CsFaqKeyword
+            {
+                FaqId = vm.FaqId,
+                Keyword = keyword,
+                CreatedDate = DateTime.UtcNow
+            };
 
-			ViewData["FaqId"] = new SelectList(_context.CsFaqs, "FaqId", "Title", kw.FaqId);
-			return View(kw);
-		}
+            _context.CsFaqKeywords.Add(entity);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
 
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, [Bind("KeywordId,FaqId,Keyword")] CsFaqKeyword input)
-		{
-			if (id != input.KeywordId) return NotFound();
+        // =============== Edit ===============
+        // 視圖建議：@model FaqKeywordEditVM
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null) return NotFound();
 
-			var kw = await _context.CsFaqKeywords.FindAsync(id);
-			if (kw == null) return NotFound();
+            var entity = await _context.CsFaqKeywords.AsNoTracking().FirstOrDefaultAsync(k => k.KeywordId == id);
+            if (entity == null) return NotFound();
 
-			if (!ModelState.IsValid)
-			{
-				ViewData["FaqId"] = new SelectList(_context.CsFaqs, "FaqId", "Title", input.FaqId);
-				return View(input);
-			}
+            var vm = new FaqKeywordEditVM
+            {
+                KeywordId = entity.KeywordId,
+                FaqId = entity.FaqId,
+                Keyword = entity.Keyword
+            };
 
-			// 僅更新可編輯欄位，避免覆寫 CreatedDate
-			kw.FaqId = input.FaqId;
-			kw.Keyword = input.Keyword;
+            ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title", vm.FaqId);
+            return View(vm);
+        }
 
-			await _context.SaveChangesAsync();
-			return RedirectToAction(nameof(Index));
-		}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, FaqKeywordEditVM vm)
+        {
+            if (id != vm.KeywordId) return NotFound();
 
-		// ====== 刪除（頁面版）======
-		[HttpGet]
-		public async Task<IActionResult> Delete(int? id)
-		{
-			if (id == null) return NotFound();
+            if (!ModelState.IsValid)
+            {
+                ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title", vm.FaqId);
+                return View(vm);
+            }
 
-			var kw = await _context.CsFaqKeywords
-								   .Include(k => k.Faq)
-								   .FirstOrDefaultAsync(m => m.KeywordId == id);
-			if (kw == null) return NotFound();
+            var entity = await _context.CsFaqKeywords.FirstOrDefaultAsync(k => k.KeywordId == id);
+            if (entity == null) return NotFound();
 
-			return View(kw);
-		}
+            var keyword = (vm.Keyword ?? string.Empty).Trim();
 
-		[HttpPost, ActionName("Delete")]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> DeleteConfirmed(int id)
-		{
-			var kw = await _context.CsFaqKeywords.FindAsync(id);
-			if (kw != null) _context.CsFaqKeywords.Remove(kw);
+            // 編輯時也做唯一性檢查（排除自己）
+            var exists = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .AnyAsync(k => k.KeywordId != id && k.FaqId == vm.FaqId && k.Keyword == keyword);
 
-			await _context.SaveChangesAsync();
-			return RedirectToAction(nameof(Index));
-		}
+            if (exists)
+            {
+                ModelState.AddModelError(nameof(vm.Keyword), "此 FAQ 已存在相同關鍵字。");
+                ViewBag.FaqId = new SelectList(_context.CsFaqs.AsNoTracking().OrderBy(f => f.Title), "FaqId", "Title", vm.FaqId);
+                return View(vm);
+            }
 
-		// ====== AJAX：單筆刪除（供 DataTables/SweetAlert2）======
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> DeleteAjax(int id)
-		{
-			var kw = await _context.CsFaqKeywords.FindAsync(id);
-			if (kw == null) return NotFound(new { ok = false, message = "找不到關鍵字" });
+            entity.FaqId = vm.FaqId;
+            entity.Keyword = keyword;
 
-			try
-			{
-				_context.CsFaqKeywords.Remove(kw);
-				await _context.SaveChangesAsync();
-				return Json(new { ok = true });
-			}
-			catch (DbUpdateException)
-			{
-				return Json(new { ok = false, message = "此關鍵字被引用，無法刪除" });
-			}
-		}
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
 
-		// ====== AJAX：批次刪除 ======
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> DeleteManyAjax([FromForm] int[] ids)
-		{
-			if (ids == null || ids.Length == 0)
-				return Json(new { ok = false, message = "沒有要刪除的項目" });
+        // =============== Delete（傳統頁面版） ===============
+        // 視圖建議：@model FaqKeywordListVM
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return NotFound();
 
-			var list = await _context.CsFaqKeywords
-									 .Where(k => ids.Contains(k.KeywordId))
-									 .ToListAsync();
-			if (list.Count == 0)
-				return Json(new { ok = false, message = "找不到要刪除的項目" });
+            var vm = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .Include(k => k.Faq)
+                .Where(k => k.KeywordId == id)
+                .Select(k => new FaqKeywordListVM
+                {
+                    KeywordId = k.KeywordId,
+                    FaqId = k.FaqId,
+                    FaqTitle = k.Faq.Title,
+                    Keyword = k.Keyword
+                })
+                .FirstOrDefaultAsync();
 
-			try
-			{
-				_context.CsFaqKeywords.RemoveRange(list);
-				await _context.SaveChangesAsync();
-				return Json(new { ok = true, count = list.Count });
-			}
-			catch (DbUpdateException)
-			{
-				return Json(new { ok = false, message = "部分資料被引用，無法刪除" });
-			}
-		}
+            if (vm == null) return NotFound();
+            return View(vm);
+        }
 
-		private bool CsFaqKeywordExists(int id) =>
-			_context.CsFaqKeywords.Any(e => e.KeywordId == id);
-	}
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var kw = await _context.CsFaqKeywords.FindAsync(id);
+            if (kw != null)
+            {
+                _context.CsFaqKeywords.Remove(kw);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        // =============== AJAX：單筆刪除 ===============
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAjax(int id)
+        {
+            var kw = await _context.CsFaqKeywords.FindAsync(id);
+            if (kw == null) return NotFound(new { ok = false, message = "找不到關鍵字" });
+
+            try
+            {
+                _context.CsFaqKeywords.Remove(kw);
+                await _context.SaveChangesAsync();
+                return Json(new { ok = true });
+            }
+            catch (DbUpdateException)
+            {
+                return Json(new { ok = false, message = "關鍵字被引用或重複，無法刪除" });
+            }
+        }
+
+        // =============== AJAX：批次刪除 ===============
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteManyAjax([FromForm] int[] ids)
+        {
+            if (ids == null || ids.Length == 0)
+                return Json(new { ok = false, message = "沒有要刪除的項目" });
+
+            var list = await _context.CsFaqKeywords
+                .Where(k => ids.Contains(k.KeywordId))
+                .ToListAsync();
+
+            if (list.Count == 0)
+                return Json(new { ok = false, message = "找不到要刪除的項目" });
+
+            try
+            {
+                _context.CsFaqKeywords.RemoveRange(list);
+                await _context.SaveChangesAsync();
+                return Json(new { ok = true, count = list.Count });
+            }
+            catch (DbUpdateException)
+            {
+                return Json(new { ok = false, message = "部分項目被引用或重複，無法刪除" });
+            }
+        }
+
+        private bool CsFaqKeywordExists(int id)
+            => _context.CsFaqKeywords.Any(e => e.KeywordId == id);
+    }
 }
