@@ -11,72 +11,49 @@
         📑 標籤管理
     </div>
     <div class="card-body">
-        @* 🔍 查詢表單 *@
-        @* <form asp-action="Index" method="get" class="mb-2">
-            <div class="d-flex justify-content-between align-items-center">
+       @* 🔍 查詢表單 *@
+<form asp-action="Index" method="get" class="mb-2">
+    <div class="d-flex justify-content-between align-items-center">
 
-                <!-- 左邊：功能按鈕 -->
-                <div class="d-flex align-items-center">
-                    <a asp-action="Create"
-                       class="btn btn-outline-secondary btn-lg me-2">
-                        ➕ 新增標籤
-                    </a>
-                    <a asp-action="RecycleBin"
-                       class="btn btn-outline-secondary btn-lg text-danger fw-bold">
-                        🗑️ 標籤回收桶
-                    </a>
-                </div>
+        <!-- 左邊：功能按鈕 -->
+        <div class="d-flex align-items-center">
+            <a asp-action="Create"
+               class="btn btn-outline-secondary btn-lg me-2">
+                ➕ 新增標籤
+            </a>
+        </div>
 
-                <!-- 右邊：查詢條件 -->
-                <div class="input-group input-group-sm" style="max-width:640px;">
-                    <span class="input-group-text">每頁筆數</span>
-                    <select name="pageSize" class="form-select form-select-sm"
-                            style="max-width:80px;"
-                            asp-items="ViewBag.PageSizeList"
-                            onchange="this.form.submit()"></select>
+        <!-- 右邊：查詢條件 -->
+        <div class="input-group input-group-sm" style="max-width:720px;">
+            <span class="input-group-text">每頁筆數</span>
+            <select name="pageSize" class="form-select form-select-sm"
+                    style="max-width:100px;"
+                    onchange="this.form.submit()">
+                <option value="5" selected="@(ViewBag.PageSize == 5)">5 筆</option>
+                <option value="10" selected="@(ViewBag.PageSize == 10)">10 筆</option>
+                <option value="20" selected="@(ViewBag.PageSize == 20)">20 筆</option>
+            </select>
 
-                    <span class="input-group-text">狀態</span>
-                    <select name="status" class="form-select form-select-sm"
-                            style="max-width:120px;"
-                            asp-items="ViewBag.StatusList"
-                            onchange="this.form.submit()"></select>
+            <span class="input-group-text">狀態</span>
+            <select name="status" class="form-select form-select-sm"
+                    style="max-width:120px;"
+                    onchange="this.form.submit()">
+                        <option value="" selected="@(String.IsNullOrEmpty(ViewBag.Status))">全部</option>
+                        <option value="active" selected="@(ViewBag.Status == "active")">啟用</option>
+                        <option value="inactive" selected="@(ViewBag.Status == "inactive")">停用</option>
+            </select>
 
-                    <input type="text" name="keyword" value="@ViewBag.Keyword"
-                           class="form-control form-control-sm"
-                           style="max-width:240px;"
-                           placeholder="輸入標籤名稱..." />
+            <input type="text" name="keyword" value="@ViewBag.Keyword"
+                   class="form-control form-control-sm"
+                   style="max-width:240px;"
+                   placeholder="輸入標籤名稱..." />
 
-                    <button type="submit" class="btn btn-secondary btn-sm">🔍 搜尋</button>
-                </div>
+            <button type="submit" class="btn btn-secondary btn-sm">🔍 搜尋</button>
+        </div>
+    </div>
+</form>
 
-            </div>
-        </form> *@
-
-
-        <!-- 搜尋表單 -->
-        <form method="get" class="row g-2 mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <!-- 左邊：功能按鈕 --><div class="d-flex align-items-center">
-                    <a asp-action="Create"
-                       class="btn btn-outline-secondary btn-lg me-2">
-                        ➕ 新增標籤
-                    </a>
-                    </div>
-                <input type="text" name="keyword" value="@ViewBag.Keyword"
-                       class="form-control" placeholder="輸入標籤名稱搜尋..." />
-            </div>
-            <div class="col-md-3">
-                <select name="pageSize" class="form-select" onchange="this.form.submit()">
-                    <option value="5" selected="@(ViewBag.PageSize == 5)">5 筆</option>
-                    <option value="10" selected="@(ViewBag.PageSize == 10)">10 筆</option>
-                    <option value="20" selected="@(ViewBag.PageSize == 20)">20 筆</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">🔎 搜尋</button>
-            </div>
-        </form>
-
+                      
         <!-- 標籤列表 -->
         <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
             <thead class="table-dark">
@@ -117,10 +94,10 @@
                                 @item.RevisedDate?.ToString("yyyy-MM-dd HH:mm")
                             </span>
                         </td>
-                        <td>
+                        <td>                            
                             <a asp-action="Edit" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-warning">✏️ 編輯</a>
                             <a asp-action="Details" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-info">👁 檢視</a>
-                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>
+                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>                            
                         </td>
                         <!-- 操作按鈕群組化 -->
                         @* <td>

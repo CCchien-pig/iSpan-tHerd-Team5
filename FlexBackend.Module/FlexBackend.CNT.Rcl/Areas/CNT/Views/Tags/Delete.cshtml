@@ -30,11 +30,15 @@
             <div class="alert alert-danger">
                 確定要刪除此標籤嗎？刪除後將無法復原。
             </div>
+            
             <form asp-action="DeleteConfirmed" method="post">
+                <div class="card-footer d-flex gap-3">
                 <input type="hidden" asp-for="TagId" />
-                <button type="submit" class="btn btn-outline-danger btn-lg">🗑️ 確定刪除</button>
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回</a>
+                <button type="submit" class="btn btn-outline-danger btn-lg">🗑️ 確定刪除</button>
+                </div>
             </form>
+            
         }
     </div>
 </div>

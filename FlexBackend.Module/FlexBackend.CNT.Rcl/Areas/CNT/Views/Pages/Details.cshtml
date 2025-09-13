@@ -1,4 +1,5 @@
-﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM
+﻿
+@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
 
 @{
     ViewData["Title"] = "文章詳情";
@@ -18,15 +19,30 @@
 
             <dt class="col-sm-3">狀態</dt>
             <dd class="col-sm-9">
-                <span class="badge rounded-pill px-3 py-2
-                    @(Model.Status == "1" ? "bg-success-subtle text-dark border border-success" :
-                    Model.Status == "0" ? "bg-secondary-subtle text-dark border border-secondary" :
-                    Model.Status == "2" ? "bg-warning-subtle text-dark border border-warning" :
-                    Model.Status == "9" ? "bg-danger text-white border border-danger" :
-                    "bg-light")">
+                <span class="badge
+                    @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
+                        Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
+                        Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
+                        Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
+                                                 "bg-light text-dark")">
                     @Model.StatusText
                 </span>
             </dd>
+            <dt class="col-sm-3">標籤</dt>
+            <dd class="col-sm-9">
+                @if (Model.TagNames.Any())
+                {
+                    foreach (var tag in Model.TagNames)
+                    {
+                        <span class="badge bg-info me-1">@tag</span>
+                    }
+                }
+                else
+                {
+                    <span class="text-muted">（尚未設定標籤）</span>
+                }
+            </dd>
+
 
             <dt class="col-sm-3">建立時間</dt>
             <dd class="col-sm-9">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</dd>

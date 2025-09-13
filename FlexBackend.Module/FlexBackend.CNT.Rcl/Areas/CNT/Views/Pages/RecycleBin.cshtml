@@ -48,14 +48,26 @@
                         <td class="text-start">@item.Title</td>
                         <td>@(item.RevisedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
                         <td>
+                            <!-- ♻️ 還原 (GET 可) -->
                             <a asp-area="CNT" asp-controller="Pages" asp-action="Restore" asp-route-id="@item.PageId"
                                class="btn btn-sm btn-outline-success me-1 btn-lg"
-                               onclick="return confirm('確定要還原這篇文章嗎？');">♻️ 還原</a>
+                               onclick="return confirm('確定要還原這篇文章嗎？');">
+                                ♻️ 還原
+                            </a>
 
-                            <a asp-area="CNT" asp-controller="Pages" asp-action="Destroy" asp-route-id="@item.PageId"
-                               class="btn btn-sm btn-outline-danger btn-lg"
-                               onclick="return confirm('⚠️ 確定要永久刪除這篇文章嗎？此動作無法還原！');">💀 永久刪除</a>
+                            <!-- 💀 永久刪除 (必須 POST) -->
+                            <form asp-area="CNT" asp-controller="Pages" asp-action="Destroy"
+                                  asp-route-id="@item.PageId" method="post"
+                                  class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger btn-lg"
+                                        onclick="return confirm('⚠️ 確定要永久刪除這篇文章嗎？此動作無法還原！');">
+                                    💀 永久刪除
+                                </button>
+                            </form>
                         </td>
+
                     </tr>
                 }
             </tbody>

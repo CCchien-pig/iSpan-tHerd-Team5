@@ -3,12 +3,22 @@
     ViewData["Title"] = "編輯文章";
 }
 
+@section Styles {
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+}
+
 <div class="card shadow-sm border-0">
     <div class="card-header bg-warning text-dark fw-bold">
         ✏️ 編輯文章
     </div>
     <div class="card-body">
-        <form asp-action="Edit" method="post">
+        <form asp-area="CNT" asp-controller="Pages" asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+
+            <!-- 顯示整體錯誤訊息 -->
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
             <input type="hidden" asp-for="PageId" />
 
             <div class="mb-3">
@@ -19,13 +29,17 @@
 
             <div class="mb-3">
                 <label asp-for="Status" class="form-label">狀態</label>
-                <select asp-for="Status" class="form-select">
-                    <option value="0" selected="@(Model.Status == "0")">草稿</option>
-                    <option value="1" selected="@(Model.Status == "1")">已發佈</option>
-                    <option value="2" selected="@(Model.Status == "2")">封存</option>
-                    <option value="9" selected="@(Model.Status == "9")">刪除</option>
-                </select>
+                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
                 <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">標籤</label>
+                <select asp-for="SelectedTagIds"
+                        asp-items="Model.TagOptions"
+                        multiple="multiple"
+                        class="tag-selector w-100">
+                </select>
+                <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
@@ -42,7 +56,18 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <!-- 載入驗證所需 script -->
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('.tag-selector').select2({
+                placeholder: "請選擇標籤",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
 }

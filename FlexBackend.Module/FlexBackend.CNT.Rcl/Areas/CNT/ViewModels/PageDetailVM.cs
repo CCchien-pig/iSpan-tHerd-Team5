@@ -1,23 +1,21 @@
-﻿using System;
+﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
 
 namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 {
-	public class PageListVM
+	public class PageDetailVM
 	{
 		public int PageId { get; set; }
 		public string Title { get; set; }
-
-		public PageStatus Status { get; set; }   // 用 enum 取代 string
-
+		public PageStatus Status { get; set; }
 		public DateTime CreatedDate { get; set; }
 		public DateTime? RevisedDate { get; set; }
 
-		// 額外輸出文字
+		// ⭐ 顯示標籤名稱（不是 Id）
+		public List<string> TagNames { get; set; } = new();
+
+		// ⭐ 額外：讓 Razor 直接顯示中文狀態，不用再寫判斷
 		public string StatusText =>
 			Status switch
 			{
@@ -29,4 +27,3 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 			};
 	}
 }
-

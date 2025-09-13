@@ -17,9 +17,29 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		}
 
 		// GET: CNT/Tags
-		public IActionResult Index(string keyword, int? page, int pageSize = 10)
+		public IActionResult Index(string keyword, string status, int? page, int pageSize = 10)
 		{
-			var query = _db.CntTags
+			var query = _db.CntTags.AsQueryable();
+
+			// 關鍵字搜尋
+			if (!string.IsNullOrEmpty(keyword))
+			{
+				query = query.Where(t => t.TagName.Contains(keyword));
+			}
+
+			// 狀態篩選
+			if (!string.IsNullOrEmpty(status))
+			{
+				if (status == "active")
+					query = query.Where(t => t.IsActive);
+				else if (status == "inactive")
+					query = query.Where(t => !t.IsActive);
+			}
+
+			// 分頁處理
+			int pageNumber = page ?? 1;
+			var pagedList = query
+				.OrderByDescending(t => t.TagId)
 				.Select(t => new TagListVM
 				{
 					TagId = t.TagId,
@@ -27,24 +47,17 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					IsActive = t.IsActive,
 					Revisor = t.Revisor,
 					RevisedDate = t.RevisedDate
-				});
-
-			if (!string.IsNullOrEmpty(keyword))
-			{
-				query = query.Where(t => t.TagName.Contains(keyword));
-			}
-
-			int pageNumber = page ?? 1;
-
-			var pagedList = query
-				.OrderByDescending(t => t.TagId)
+				})
 				.ToPagedList(pageNumber, pageSize);
 
+			// 傳遞給 View
 			ViewBag.Keyword = keyword;
 			ViewBag.PageSize = pageSize;
+			ViewBag.Status = status; // ➡️ 保留目前篩選狀態
 
 			return View(pagedList);
 		}
+
 
 
 		// GET: CNT/Tags/Create
@@ -60,11 +73,20 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		{
 			if (!ModelState.IsValid) return View(model);
 
+			// 檢查是否已存在相同名稱（不區分大小寫）
+			bool exists = _db.CntTags
+							 .Any(t => t.TagName == model.TagName);
+			if (exists)
+			{
+				ModelState.AddModelError("TagName", "已存在相同名稱的標籤");
+				return View(model);
+			}
+
 			var tag = new CntTag
 			{
 				TagName = model.TagName,
 				IsActive = model.IsActive,
-				Revisor = "Admin", // TODO: 從登入者帳號取得
+				Revisor = "Admin",
 				RevisedDate = DateTime.Now
 			};
 
@@ -74,6 +96,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			TempData["Msg"] = "標籤新增成功";
 			return RedirectToAction(nameof(Index));
 		}
+
 
 		// GET: CNT/Tags/Edit/5
 		public IActionResult Edit(int id)
@@ -99,12 +122,20 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		{
 			if (!ModelState.IsValid) return View(model);
 
+			bool exists = _db.CntTags
+							 .Any(t => t.TagName == model.TagName && t.TagId != model.TagId);
+			if (exists)
+			{
+				ModelState.AddModelError("TagName", "已存在相同名稱的標籤");
+				return View(model);
+			}
+
 			var tag = _db.CntTags.Find(model.TagId);
 			if (tag == null) return NotFound();
 
 			tag.TagName = model.TagName;
 			tag.IsActive = model.IsActive;
-			tag.Revisor = "Admin"; // TODO: 從登入者帳號取得
+			tag.Revisor = "Admin";
 			tag.RevisedDate = DateTime.Now;
 
 			_db.SaveChanges();
@@ -112,6 +143,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			TempData["Msg"] = "標籤更新成功";
 			return RedirectToAction(nameof(Index));
 		}
+
 
 		//[HttpPost]
 		//[ValidateAntiForgeryToken]
