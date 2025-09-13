@@ -1,65 +1,429 @@
-﻿@model IEnumerable<OrderListVM>
+﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.OrderListVM
 
-@{
-    ViewData["Title"] = "訂單列表";
-    var q = (string)ViewBag.Query ?? "";
-    bool showHidden = (bool)(ViewBag.ShowHidden ?? false);
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <style>
+        td.order-toggle {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+        }
 
-    var payMap = ViewBag.PaymentStatusMap as IDictionary<string, string>; // 04
-    var shipMap = ViewBag.ShippingStatusMap as IDictionary<int, string>;    // 05
-    var ordMap = ViewBag.OrderStatusMap as IDictionary<int, string>;    // 07
+        tr.shown td.order-toggle {
+            font-weight: bold;
+        }
+
+        .order-detail-card {
+            background: #f9f9f9;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #ddd;
+        }
+
+        .order-summary {
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        #jumpPageInput {
+            width: 80px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        th.no-sort::after {
+            display: none !important;
+        }
+    </style>
 }
-<h2 class="mb-3">@ViewData["Title"]</h2>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <input name="q" value="@q" class="form-control" placeholder="訂單號/姓名/電話" />
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 text-purple2">訂單清單查詢</h6>
     </div>
-    <div class="col-auto form-check align-self-center">
-        <input type="checkbox" class="form-check-input" id="showHidden" name="showHidden" value="true" @(showHidden ? "checked" : "") />
-        <label class="form-check-label" for="showHidden">包含已軟刪</label>
+    <div class="card-body">
+
+        <!-- 批次操作 -->
+        <div class="mb-3">
+            <button type="button" id="bulkUpdate" class="btn btn-warning">批量更改狀態</button>
+            <button type="button" id="bulkPrint" class="btn btn-success">列印出貨單</button>
+        </div>
+
+        <!-- 篩選表單 -->
+        <form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">關鍵字</label>
+                <input type="text" class="form-control" name="Keyword"
+                       placeholder="輸入訂單編號/收件人/電話"
+                       value="@Model.SearchParams.Keyword" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">付款狀態</label>
+                <select class="form-select" name="PaymentStatus">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.PaymentStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.PaymentStatus)">
+                            @option.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">配送狀態</label>
+                <select class="form-select" name="ShippingStatusId">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.ShippingStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.ShippingStatusId)">
+                            @option.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">訂單狀態</label>
+                <select class="form-select" name="OrderStatusId">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.OrderStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.OrderStatusId)">
+                            @option.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">每頁筆數</label>
+                <select class="form-select" name="PageSize">
+                    @foreach (var size in Model.Pagination.PageSizeOptions)
+                    {
+                        <option value="@size" selected="@(size == Model.SearchParams.PageSize)">
+                            @size
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1 d-grid">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary">套用</button>
+            </div>
+        </form>
+
+        <!-- 主表格 -->
+        <div class="table-responsive">
+            <table id="ordersTable" class="table table-bordered table-striped" width="100%">
+                <thead>
+                    <tr>
+                        <th class="no-sort"><input type="checkbox" id="selectAll" /></th>
+                        <th>訂單編號</th>
+                        <th>會員姓名</th>
+                        <th>付款狀態</th>
+                        <th>配送狀態</th>
+                        <th>訂單狀態</th>
+                        <th>總金額</th>
+                        <th>建立時間</th>
+                        <th class="no-sort">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr data-id="@order.OrderId">
+                            <td><input type="checkbox" class="row-check" value="@order.OrderId" /></td>
+                            <td class="order-toggle">@order.OrderNo</td>
+                            <td>@order.UserName</td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="PaymentStatus">
+                                    @foreach (var option in Model.PaymentStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.PaymentStatus)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="ShippingStatusId">
+                                    @foreach (var option in Model.ShippingStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.ShippingStatusId)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="OrderStatusId">
+                                    @foreach (var option in Model.OrderStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.OrderStatusId)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>@order.TotalAmount.ToString("C0")</td>
+                            <td>@order.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><button class="btn btn-sm btn-primary btn-edit" data-id="@order.OrderId">編輯</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分頁 -->
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div>總筆數 <strong>@Model.Pagination.TotalCount</strong></div>
+            <div class="d-flex align-items-center">
+                <span class="me-2">第</span>
+                <input type="number" id="jumpPageInput"
+                       class="form-control"
+                       min="1" max="@Model.Pagination.TotalPages"
+                       value="@Model.Pagination.CurrentPage" />
+                <span class="ms-2">/ 共 <strong>@Model.Pagination.TotalPages</strong> 頁</span>
+            </div>
+        </div>
     </div>
-    <div class="col-auto"><button class="btn btn-outline-secondary">搜尋</button></div>
-</form>
+</div>
 
-@if (!(Model?.Any() ?? false))
-{
-    <div class="alert alert-light border">沒有資料</div>
-}
-else
-{
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>訂單號</th>
-                <th>會員</th>
-                <th>付款</th>
-                <th>配送</th>
-                <th class="text-end">應付</th>
-                <th>建立</th>
-                <th class="text-end">操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var x in Model)
-            {
-                var pay = (payMap != null && payMap.TryGetValue(x.PaymentStatus, out var pd)) ? pd : x.PaymentStatus;
-                var ship = (shipMap != null && shipMap.TryGetValue(x.ShippingStatusId, out var sd)) ? sd : x.ShippingStatusId.ToString();
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-                <tr class="@(x.IsVisibleToMember ? "" : "table-secondary")">
-                    <td>@x.OrderNo</td>
-                    <td>@x.UserNumberId</td>
-                    <td>@pay</td>
-                    <td>@ship</td>
-                    <td class="text-end">@x.Total.ToString("N0")</td>
-                    <td>@x.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td class="text-end">
-                        <a asp-action="Details" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-secondary">明細</a>
-                        <a asp-action="Edit" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-primary">編輯</a>
-                        <a asp-action="Delete" asp-route-id="@x.OrderId" class="btn btn-sm btn-outline-danger">刪除</a>
-                    </td>
-                </tr>
+    <script>
+        // DataTables 初始化 (修正 select 排序)
+        var table = $('#ordersTable').DataTable({
+            paging: false,
+            searching: false,
+            ordering: true,
+            info: false,
+            order: [[7, "desc"]], // 預設建立時間 DESC
+            columnDefs: [
+                { orderable: false, targets: [0, 8] }, // checkbox + 操作不排序
+
+                // 狀態下拉選單排序 (抓文字)
+                {
+                    targets: [3, 4, 5],
+                    render: function (data, type, row) {
+                        if (type === 'sort' || type === 'type') {
+                            let $el = $('<div>').html(data);
+                            return $el.find("option:selected").text();
+                        }
+                        return data;
+                    }
+                },
+
+                // 總金額排序
+                {
+                    targets: 6,
+                    render: function (data, type) {
+                        if (type === 'sort' || type === 'type') {
+                            return parseFloat(data.replace(/[^\d.-]/g, '')) || 0;
+                        }
+                        return data;
+                    }
+                }
+            ]
+        });
+
+        // 即時更新
+        $(document).on("change", ".status-dropdown", function () {
+            var orderId = $(this).data("id");
+            var field = $(this).data("field");
+            var value = $(this).val();
+
+            $.post('@Url.Action("UpdateOrderStatus", "Orders")',
+                { orderId: orderId, field: field, value: value },
+                function (res) {
+                    if (res.success) {
+                        Swal.fire({ icon: 'success', title: '更新成功', timer: 1200, showConfirmButton: false });
+                    } else {
+                        Swal.fire({ icon: 'error', title: '更新失敗', text: res.message });
+                    }
+                });
+        });
+
+        // 點訂單編號展開明細
+        $('#ordersTable tbody').on('click', 'td.order-toggle', function () {
+            var tr = $(this).closest('tr');
+            var row = table.row(tr);
+
+            if (row.child.isShown()) {
+                row.child.hide();
+                tr.removeClass('shown');
+            } else {
+                var orderId = tr.data('id');
+                row.child('<div class="text-muted">載入中...</div>').show();
+                tr.addClass('shown');
+                $.getJSON('@Url.Action("GetOrderDetails", "Orders")', { orderId: orderId })
+                    .done(function (data) {
+                        if (!data || data.error) {
+                            row.child('<div class="text-danger">查無訂單資料</div>').show();
+                            return;
+                        }
+                        let o = data.order;
+                        let items = data.items || [];
+                        let html = `
+                            <div class="order-detail-card">
+                                <h6>收件資訊</h6>
+                                <p><strong>收件人：</strong>${o.receiverName}</p>
+                                <p><strong>電話：</strong>${o.receiverPhone}</p>
+                                <p><strong>地址：</strong>${o.receiverAddress}</p>
+                                <p><strong>配送方式：</strong>${o.shippingMethod ?? '-'}</p>
+                            </div>
+                            <h6>商品明細</h6>
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>小計</th></tr>
+                                </thead><tbody>`;
+                        items.forEach(i => {
+                            html += `<tr>
+                                <td>${i.productName}</td>
+                                <td>${i.skuSpec}</td>
+                                <td>${i.unitPrice.toLocaleString()}</td>
+                                <td>${i.qty}</td>
+                                <td>${i.subtotal.toLocaleString()}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table>
+                            <div class="order-summary">
+                                <p><strong>優惠券：</strong>${o.couponCode ?? '-'}</p>
+                                <p><strong>優惠折扣：</strong>${o.discountTotal?.toLocaleString() ?? 0}</p>
+                                <p><strong>運費：</strong>${o.shippingFee.toLocaleString()}</p>
+                                <p><strong>總金額：</strong>${o.totalAmount.toLocaleString()}</p>
+                            </div>`;
+                        row.child(html).show();
+                    })
+                    .fail(() => row.child('<div class="text-danger">載入失敗</div>').show());
             }
-        </tbody>
-    </table>
+        });
+
+        // 全選
+        $("#selectAll").on("click", function () {
+            $(".row-check").prop("checked", this.checked);
+        });
+
+        function getSelectedOrders() {
+            var ids = [];
+            $(".row-check:checked").each(function () { ids.push($(this).val()); });
+            return ids;
+        }
+
+        // 批量更改狀態 (只能選一個)
+        $("#bulkUpdate").on("click", function () {
+            var ids = getSelectedOrders();
+            if (ids.length === 0) {
+                Swal.fire("請先選擇訂單", "", "warning");
+                return;
+            }
+
+            let htmlContent = `
+                <div style="text-align:left">
+                    <label><input type="radio" name="bulkType" value="shipping" checked> 配送狀態</label>
+                    <select id="bulkShipping" class="swal2-select">
+                        @foreach (var option in Model.ShippingStatusOptions)
+                        {
+                                <option value="@option.Value">@option.Text</option>
+                        }
+                    </select>
+                    <br/><br/>
+                    <label><input type="radio" name="bulkType" value="order"> 訂單狀態</label>
+                    <select id="bulkOrder" class="swal2-select" disabled>
+                        @foreach (var option in Model.OrderStatusOptions)
+                        {
+                                <option value="@option.Value">@option.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <script>
+                    $("input[name='bulkType']").on("change", function () {
+                        if ($(this).val() === "shipping") {
+                            $("#bulkShipping").prop("disabled", false);
+                            $("#bulkOrder").prop("disabled", true);
+                        } else {
+                            $("#bulkShipping").prop("disabled", true);
+                            $("#bulkOrder").prop("disabled", false);
+                        }
+                    });
+                <\/script>
+            `;
+
+            Swal.fire({
+                title: "批量更改狀態",
+                html: htmlContent,
+                focusConfirm: false,
+                preConfirm: () => {
+                    let type = $("input[name='bulkType']:checked").val();
+                    return {
+                        type: type,
+                        shippingStatus: $("#bulkShipping").val(),
+                        orderStatus: $("#bulkOrder").val()
+                    };
+                },
+                showCancelButton: true,
+                confirmButtonText: "更新"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("BulkUpdateOrders", "Orders")',
+                        {
+                            orderIds: ids,
+                            shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
+                            orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
+                        },
+                        function (res) {
+                            if (res.success) {
+                                ids.forEach(function (id) {
+                                    let row = $("tr[data-id='" + id + "']");
+                                    if (result.value.type === "shipping") {
+                                        row.find("td:eq(4) select").val(result.value.shippingStatus);
+                                    } else {
+                                        row.find("td:eq(5) select").val(result.value.orderStatus);
+                                    }
+                                });
+                                Swal.fire("更新成功", "", "success");
+                                $(".row-check, #selectAll").prop("checked", false);
+                            } else {
+                                Swal.fire("更新失敗", res.message, "error");
+                            }
+                        });
+                }
+            });
+        });
+
+        // 批量列印
+        $("#bulkPrint").on("click", function () {
+            var ids = getSelectedOrders();
+            if (ids.length === 0) {
+                Swal.fire("請先選擇訂單", "", "warning");
+                return;
+            }
+            window.open('@Url.Action("PrintOrders", "Orders")' + "?ids=" + ids.join(","));
+        });
+
+        // 跳頁
+        $("#jumpPageInput").on("keypress", function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                let page = parseInt($(this).val());
+                if (isNaN(page)) return;
+                if (page < 1) page = 1;
+                if (page > @Model.Pagination.TotalPages) page = @Model.Pagination.TotalPages;
+                var url = '@Url.Action("Index", "Orders")'
+                    + '?Keyword=@Model.SearchParams.Keyword'
+                    + '&PaymentStatus=@Model.SearchParams.PaymentStatus'
+                    + '&ShippingStatusId=@Model.SearchParams.ShippingStatusId'
+                    + '&OrderStatusId=@Model.SearchParams.OrderStatusId'
+                    + '&PageSize=@Model.SearchParams.PageSize'
+                    + '&PageNumber=' + page;
+                window.location.href = url;
+            }
+        });
+    </script>
 }
