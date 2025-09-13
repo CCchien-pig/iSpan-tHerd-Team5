@@ -67,6 +67,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		public string? BrandName { get; set; }
 		public int? BrandId { get; set; }
 		public int? ProductId { get; set; }
+		public bool IsPublished { get; set; }   // [ProdProduct]的[IsPublished]
 
 		// 自訂驗證邏輯
 		public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
