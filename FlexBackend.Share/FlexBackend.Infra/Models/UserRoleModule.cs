@@ -44,6 +44,4 @@ public partial class UserRoleModule
     /// 異動時間 (UTC)
     /// </summary>
     public DateTime? RevisedDate { get; set; }
-
-    public virtual UserAdminRole AdminRole { get; set; }
 }

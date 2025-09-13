@@ -58,7 +58,7 @@ public partial class UserNotificationHistory
     /// <summary>
     /// 模組名稱
     /// </summary>
-    public string ModuleName { get; set; }
+    public string ModuleId { get; set; }
 
     /// <summary>
     /// 判斷通知是否已讀
