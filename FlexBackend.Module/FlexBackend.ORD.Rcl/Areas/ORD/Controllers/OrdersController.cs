@@ -103,8 +103,10 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 				CreatedDate = o.CreatedDate,
 				RevisedDate = o.RevisedDate,
 				ReceiverName = o.ReceiverName,
-				ReceiverPhone = o.ReceiverPhone
-			}).ToList();
+				ReceiverPhone = o.ReceiverPhone,
+
+                IsVisibleToMember = o.IsVisibleToMember
+            }).ToList();
 
 			var pageVm = new PaginationVM
 			{
@@ -163,6 +165,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 					discountTotal = o.DiscountTotal,
 					shippingFee = o.ShippingFee,
 					totalAmount = o.Subtotal - o.DiscountTotal + o.ShippingFee
+
 				})
 				.FirstOrDefaultAsync();
 
@@ -302,11 +305,28 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			return View("PrintOrders", orders);
 		}
 
+        // ======================
+        // 切換訂單對會員是否可見
+        // ======================
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleVisible(int orderId, bool visible)
+        {
+            var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+            if (order == null)
+                return Json(new { success = false, message = "找不到訂單" });
+
+            order.IsVisibleToMember = !visible ? false : true; // 保持語意清楚
+            order.RevisedDate = DateTime.Now;
+
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, visible = order.IsVisibleToMember });
+        }
 
 
 
-		// 讀取 sysCode 的描述
-		private static string GetSysCodeDesc(string codeId, IEnumerable<SelectOption> sysStatuses)
+        // 讀取 sysCode 的描述
+        private static string GetSysCodeDesc(string codeId, IEnumerable<SelectOption> sysStatuses)
 		{
 			var match = sysStatuses.FirstOrDefault(s => s.Value == codeId);
 			return match != null ? match.Text : codeId;
