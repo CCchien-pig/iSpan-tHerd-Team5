@@ -1,10 +1,13 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using FlexBackend.CS.Rcl.Areas.CS.ViewModels;
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+
 
 namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 {
@@ -14,19 +17,31 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         private readonly tHerdDBContext _context;
         public FaqsController(tHerdDBContext context) => _context = context;
 
-        // ========== Views (CRUD) ==========
-
-        // GET: CS/Faqs
-        public async Task<IActionResult> Index()
+        
+        public async Task<IActionResult> Index()//改中文標題
         {
             var list = await _context.CsFaqs
                 .Include(f => f.Category)
                 .AsNoTracking()
                 .OrderByDescending(f => f.CreatedDate)
+                .Select(f => new FaqListItemVM
+                {
+                    FaqId = f.FaqId,
+                    Title = f.Title,
+                    AnswerHtml = f.AnswerHtml,
+                    OrderSeq = f.OrderSeq,
+                    LastPublishedTime = f.LastPublishedTime,
+                    IsActive = f.IsActive,
+                    CreatedDate = f.CreatedDate,
+                    RevisedDate = f.RevisedDate,
+                    CategoryId = f.CategoryId,
+                    CategoryName = f.Category.CategoryName
+                })
                 .ToListAsync();
 
             return View(list);
         }
+        // ========== Views (CRUD) ==========
 
         // GET: CS/Faqs/Details/1001
         public async Task<IActionResult> Details(int? id)
@@ -112,7 +127,6 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
                 // 允許更新的欄位
                 db.Title = input.Title;
                 db.AnswerHtml = input.AnswerHtml;
-                db.Status = input.Status;
                 db.CategoryId = input.CategoryId;
                 db.OrderSeq = input.OrderSeq;
                 db.IsActive = input.IsActive;
