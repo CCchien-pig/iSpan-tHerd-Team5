@@ -1,0 +1,68 @@
+﻿
+@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
+
+@{
+    ViewData["Title"] = "文章詳情";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-info text-white fw-bold">
+        📄 文章詳情
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.PageId</dd>
+
+            <dt class="col-sm-3">標題</dt>
+            <dd class="col-sm-9">@Model.Title</dd>
+
+            <dt class="col-sm-3">狀態</dt>
+            <dd class="col-sm-9">
+                <span class="badge
+                    @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
+                        Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
+                        Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
+                        Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
+                                                 "bg-light text-dark")">
+                    @Model.StatusText
+                </span>
+            </dd>
+            <dt class="col-sm-3">標籤</dt>
+            <dd class="col-sm-9">
+                @if (Model.TagNames.Any())
+                {
+                    foreach (var tag in Model.TagNames)
+                    {
+                        <span class="badge bg-info me-1">@tag</span>
+                    }
+                }
+                else
+                {
+                    <span class="text-muted">（尚未設定標籤）</span>
+                }
+            </dd>
+
+
+            <dt class="col-sm-3">建立時間</dt>
+            <dd class="col-sm-9">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</dd>
+
+            <dt class="col-sm-3">最後修改</dt>
+            <dd class="col-sm-9">
+                @if (Model.RevisedDate.HasValue)
+                {
+                    @Model.RevisedDate.Value.ToString("yyyy-MM-dd HH:mm")
+                }
+                else
+                {
+                    <span class="text-muted">—</span>
+                }
+            </dd>
+        </dl>
+    </div>
+    <div class="card-footer d-flex gap-3">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+        <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
+    </div>
+
+</div>
