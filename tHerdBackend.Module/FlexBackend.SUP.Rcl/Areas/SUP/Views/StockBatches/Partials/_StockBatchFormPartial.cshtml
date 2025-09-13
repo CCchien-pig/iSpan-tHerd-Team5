@@ -6,7 +6,7 @@
 @{
     var formAction = ViewBag.FormAction == "Edit" ?
         Url.Action("Edit", "StockBatches", new { id = Model.StockBatchId, area = "SUP" }) :
-        Url.Action("Create", "StockBatches", new { area = "SUP" });
+        Url.Action("CreateStockBatch", "StockBatches", new { area = "SUP" });
 }
 
 <form id="stockBatchForm" action="@formAction" method="post">
@@ -20,6 +20,7 @@
     <input type="hidden" id="SelectedBrandId" value="@Model.BrandId" />
     <input type="hidden" id="SelectedProductId" value="@Model.ProductId" />
     <input type="hidden" id="SelectedSkuId" value="@Model.SkuId" />
+    <input type="hidden" id="SelectedMovementType" value="@Model.MovementType" />
 
     <div class="container-fluid">
 
@@ -49,16 +50,17 @@
 
         <!-- 製造日期 -->
         <div class="form-floating mb-2">
-            <input asp-for="ManufactureDate" type="date" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            <input asp-for="ManufactureDate" id="ManufactureDate" type="date" class="form-control"
+                   max="@DateTime.Now.ToString("yyyy-MM-dd")" value="@(Model.ManufactureDate?.ToString("yyyy-MM-dd") ?? "")" />
             <label>製造日期</label>
         </div>
 
         <!-- 唯讀庫存資訊 -->
         <div class="mb-2">
             <div>當前庫存: <span id="CurrentQty">@Model.Qty</span></div>
+            <div>最大庫存量: <span id="MaxStockQty">@Model.MaxStockQty</span></div>
             <div>再訂購點: <span id="ReorderPoint">@Model.ReorderPoint</span></div>
             <div>安全庫存量: <span id="SafetyStockQty">@Model.SafetyStockQty</span></div>
-            <div>最大庫存量: <span id="MaxStockQty">@Model.MaxStockQty</span></div>
             <div>是否可銷售: <span id="IsSellableText">@Model.IsSellable ? "可銷售" : "不可銷售"</span></div>
         </div>
 
@@ -71,7 +73,7 @@
         </div>
 
         <!-- 手動調整加/減 -->
-        <div class="form-floating mb-2" id="AdjustTypeDiv" style="display:none;">
+        <div class="form-floating mb-2" id="AdjustTypeDiv" style="display:@(Model.MovementType == "Adjust" ? "block" : "none");">
             <select asp-for="IsAdd" class="form-select" id="AdjustTypeSelect">
                 <option value="true">加</option>
                 <option value="false">減</option>
@@ -81,14 +83,14 @@
 
         <!-- 變動庫存量 -->
         <div class="form-floating mb-2">
-            <input asp-for="ChangeQty" type="number" class="form-control" min="0" id="ChangeQtyInput" />
+            <input asp-for="ChangeQty" type="number" class="form-control" min="0"
+                   max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
             <label>變動庫存量</label>
-            <small>最大允許庫存: <span id="MaxQty">@Model.MaxStockQty</span></small>
         </div>
 
         <!-- 備註 -->
         <div class="form-floating mb-2">
-            <textarea asp-for="Remark" class="form-control" placeholder="輸入備註"></textarea>
+            <textarea asp-for="Remark" class="form-control" placeholder="輸入備註">@Model.Remark</textarea>
             <label>備註</label>
         </div>
 
@@ -99,168 +101,3 @@
         </div>
     </div>
 </form>
-
-
-
-@section Scripts {
-    <script>
-        $(document).ready(function () {
-
-            // ======= 初始化表單函數（全域） =======
-            window.initStockBatchForm = function(selectedBrandId = null, selectedProductId = null, selectedSkuId = null) {
-                var $brandSelect = $('#BrandSelect');
-                var $productSelect = $('#ProductSelect');
-                var $skuSelect = $('#SkuSelect');
-                var $movementTypeSelect = $('#MovementTypeSelect');
-
-                // 載入品牌
-                $brandSelect.html('<option value="">請選品牌</option>');
-                $.get('/SUP/StockBatches/GetBrands', function(brands){
-                    brands.forEach(b => $brandSelect.append(`<option value="${b.brandId}">${b.brandName}</option>`));
-                    if(selectedBrandId) $brandSelect.val(selectedBrandId).trigger('change');
-                });
-
-                // 載入異動類型
-                $movementTypeSelect.html('<option value="">請選異動類型</option>');
-                $.get('/SUP/StockBatches/GetMovementTypes', function(types){
-                    types.forEach(m => $movementTypeSelect.append(`<option value="${m.value}">${m.text}</option>`));
-                });
-
-                // 品牌選擇後載入商品
-                $brandSelect.off('change').on('change', function(){
-                    var brandId = $(this).val();
-                    $productSelect.html('<option value="">請選商品</option>').prop('disabled', !brandId);
-                    $skuSelect.html('<option value="">請選 SKU</option>').prop('disabled', true);
-
-                    if(brandId){
-                        $.get('/SUP/StockBatches/GetProductsByBrand', {brandId: brandId}, function(products){
-                            products.forEach(p => $productSelect.append(`<option value="${p.productId}">${p.productName}</option>`));
-                            if(selectedProductId) $productSelect.val(selectedProductId).trigger('change');
-                        });
-                    }
-                });
-
-                // 商品選擇後載入 SKU
-                $productSelect.off('change').on('change', function(){
-                    var productId = $(this).val();
-                    $skuSelect.html('<option value="">請選 SKU</option>').prop('disabled', !productId);
-
-                    if(productId){
-                        $.get('/SUP/StockBatches/GetSkusByProduct', {productId: productId}, function(skus){
-                            skus.forEach(sku => $skuSelect.append(`
-                                <option value="${sku.skuId}"
-                                    data-qty="${sku.stockQty}"
-                                    data-reorder="${sku.reorderPoint}"
-                                    data-safety="${sku.safetyStockQty}"
-                                    data-max="${sku.maxStockQty}"
-                                    data-issellable="${sku.isSellable}">
-                                    ${sku.skuCode}
-                                </option>
-                            `));
-                            if(selectedSkuId) $skuSelect.val(selectedSkuId).trigger('change');
-                        });
-                    }
-                });
-
-                // 選 SKU 更新庫存資訊
-                $skuSelect.off('change').on('change', function(){
-                    var selected = $(this).find(':selected');
-                    $('#CurrentQty').text(selected.data('qty') || 0);
-                    $('#ReorderPoint').text(selected.data('reorder') || 0);
-                    $('#SafetyStockQty').text(selected.data('safety') || 0);
-                    $('#MaxStockQty').text(selected.data('max') || 0);
-                    $('#IsSellableText').text(selected.data('issellable') ? '可銷售' : '不可銷售');
-                });
-
-                // 異動類型切換手動加減
-                $movementTypeSelect.off('change').on('change', function(){
-                    $('#AdjustTypeDiv').toggle($(this).val() === 'Adjust');
-                });
-            };
-
-            // ======= 新增庫存 =======
-            $("#createStockBatchBtn").on('click', function(){
-                // $.get('/SUP/StockBatches/Create', function(html){
-                //     $("#stockBatchModalContent").html(html);
-                //     $("#stockBatchModalTitle").text("新增庫存");
-                //     $('#stockBatchModal').modal('show');
-                //     window.initStockBatchForm();
-                // });
-        $.get('/SUP/StockBatches/GetBrands', function(brands){
-            console.log("brands ajax", brands);  // 觀察實際資料結構
-            // 情境1：資料直接是陣列
-            if (Array.isArray(brands)) {
-                brands.forEach(b => $brandSelect.append(
-                    `<option value="${b.brandId}">${b.brandName}</option>`
-                ));
-            }
-            // 情境2：資料包在 data 屬性
-            else if (brands.data && Array.isArray(brands.data)) {
-                brands.data.forEach(b => $brandSelect.append(
-                    `<option value="${b.brandId}">${b.brandName}</option>`
-                ));
-            }
-        });
-
-            });
-
-
-
-            // ======= 編輯庫存 =======
-            $('#stockBatchTable').on('click', '.edit-btn', function(){
-                var id = $(this).data('id');
-                $.get(`/SUP/StockBatches/Edit/${id}`, function(html){
-                    $("#stockBatchModalContent").html(html);
-                    $("#stockBatchModalTitle").text("庫存量異動");
-                    $('#stockBatchModal').modal('show');
-
-                    var selectedBrandId = $('#SelectedBrandId').val() || null;
-                    var selectedProductId = $('#SelectedProductId').val() || null;
-                    var selectedSkuId = $('#SelectedSkuId').val() || null;
-
-                    // 初始化表單，帶入選項
-                    window.initStockBatchForm(selectedBrandId, selectedProductId, selectedSkuId);
-                });
-            });
-
-            // ======= 表單提交 =======
-            $('#stockBatchModalContent').on('submit', '#stockBatchForm', function(e){
-                e.preventDefault();
-                var form = $(this);
-
-                var dto = {
-                    StockBatchId: $('#StockBatchId').val(),
-                    SkuId: $('#SkuSelect').val(),
-                    MovementType: $('#MovementTypeSelect').val(),
-                    ChangeQty: parseInt($('#ChangeQtyInput').val()) || 0,
-                    IsAdd: $('#AdjustTypeSelect').val() === 'true',
-                    IsSellable: $('#SkuSelect').find(':selected').data('issellable'),
-                    Remark: $('textarea[name="Remark"]').val(),
-                    UserId: 111111
-                };
-
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(dto),
-                    success: function(res){
-                        if(res.success){
-                            $('#stockBatchModal').modal('hide');
-                            Swal.fire({position:'center',icon:'success',title:'操作成功',showConfirmButton:false,timer:1500});
-                            $('#stockBatchTable').DataTable().ajax.reload(null,false);
-                        } else {
-                            Swal.fire('操作失敗', res.message || '', 'error');
-                        }
-                    },
-                    error: function(){
-                        Swal.fire('操作失敗','','error');
-                    }
-                });
-            });
-
-        });
-    </script>
-}
-
-
