@@ -14,12 +14,16 @@ namespace FlexBackend.USER.Rcl.Migrations
             migrationBuilder.EnsureSchema(
                 name: "dbo");
 
-            migrationBuilder.CreateSequence<int>(
-                name: "UserNumberSequence",
-                schema: "dbo",
-                startValue: 1001L);
+			migrationBuilder.Sql(@"
+IF NOT EXISTS (
+    SELECT 1 FROM sys.sequences 
+    WHERE name = 'UserNumberSequence' AND SCHEMA_ID('dbo') = SCHEMA_ID('dbo')
+)
+    CREATE SEQUENCE [dbo].[UserNumberSequence]
+    AS int START WITH 1001 INCREMENT BY 1 NO MINVALUE NO MAXVALUE NO CYCLE;
+");
 
-            migrationBuilder.CreateTable(
+			migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
