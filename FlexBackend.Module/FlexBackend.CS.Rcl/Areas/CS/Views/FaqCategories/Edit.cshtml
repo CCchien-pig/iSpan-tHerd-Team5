@@ -1,59 +1,73 @@
 ﻿@model FlexBackend.Infra.Models.CsFaqCategory
-
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "編輯分類";
 }
 
-<h1>Edit</h1>
+<h1 class="mb-3">@ViewData["Title"]</h1>
 
-<h4>CsFaqCategory</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-area="CS" asp-controller="FaqCategories" asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="CategoryId" />
-            <div class="form-group">
-                <label asp-for="ParentCategoryId" class="control-label"></label>
-                <select asp-for="ParentCategoryId" class="form-control" asp-items="ViewBag.ParentCategoryId"></select>
-                <span asp-validation-for="ParentCategoryId" class="text-danger"></span>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-3">
+                <!-- 分類名稱 -->
+                <div class="col-md-6">
+                    <label class="form-label">分類名稱 <span class="text-danger">*</span></label>
+                    <input asp-for="CategoryName" class="form-control" />
+                    <span asp-validation-for="CategoryName" class="text-danger"></span>
+                </div>
+
+                <!-- 父分類 -->
+                <div class="col-md-6">
+                    <label class="form-label">上層分類</label>
+                    <select asp-for="ParentCategoryId"
+                            class="form-select"
+                            asp-items="@(ViewData["ParentCategoryId"] as SelectList)">
+                        <option value="">— 無（最上層）—</option>
+                    </select>
+                </div>
+
+                <!-- 排序 -->
+                <div class="col-md-3">
+                    <label class="form-label">排序</label>
+                    <input asp-for="OrderSeq" class="form-control" type="number" min="0" />
+                    <span asp-validation-for="OrderSeq" class="text-danger"></span>
+                </div>
+
+                <!-- 啟用 -->
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label">啟用</label>
+                    </div>
+                </div>
+
+                <!-- 建立 / 修改時間（唯讀顯示） -->
+                <div class="col-md-3">
+                    <label class="form-label">建立時間</label>
+                    <input value="@(Model.CreatedDate.ToString("yyyy/MM/dd HH:mm"))" class="form-control" readonly />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">修改時間</label>
+                    <input value="@(Model.RevisedDate?.ToString("yyyy/MM/dd HH:mm"))" class="form-control" readonly />
+                </div>
             </div>
-            <div class="form-group">
-                <label asp-for="CategoryName" class="control-label"></label>
-                <input asp-for="CategoryName" class="form-control" />
-                <span asp-validation-for="CategoryName" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="OrderSeq" class="control-label"></label>
-                <input asp-for="OrderSeq" class="form-control" />
-                <span asp-validation-for="OrderSeq" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="IsActive" /> @Html.DisplayNameFor(model => model.IsActive)
-                </label>
-            </div>
-            <div class="form-group">
-                <label asp-for="CreatedDate" class="control-label"></label>
-                <input asp-for="CreatedDate" class="form-control" />
-                <span asp-validation-for="CreatedDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="RevisedDate" class="control-label"></label>
-                <input asp-for="RevisedDate" class="form-control" />
-                <span asp-validation-for="RevisedDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+
+            <div class="mt-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存
+                </button>
+                <a asp-area="CS" asp-controller="FaqCategories" asp-action="Index" class="btn btn-outline-secondary">
+                    返回列表
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
 }
