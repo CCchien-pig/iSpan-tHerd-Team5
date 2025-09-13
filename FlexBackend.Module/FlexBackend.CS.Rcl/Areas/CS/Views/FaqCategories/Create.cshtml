@@ -1,47 +1,72 @@
 ﻿@model FlexBackend.Infra.Models.CsFaqCategory
-
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "新增分類";
 }
 
-<h1>Create</h1>
+<h1 class="mb-3">@ViewData["Title"]</h1>
 
-<h4>CsFaqCategory</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="ParentCategoryId" class="control-label"></label>
-                <select asp-for="ParentCategoryId" class ="form-control" asp-items="ViewBag.ParentCategoryId"></select>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-area="CS" asp-controller="FaqCategories" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-3">
+                <!-- 分類名稱 -->
+                <div class="col-md-6">
+                    <label class="form-label">分類名稱 <span class="text-danger">*</span></label>
+                    <input asp-for="CategoryName" class="form-control" />
+                    <span asp-validation-for="CategoryName" class="text-danger"></span>
+                </div>
+
+                <!-- 父分類 -->
+                <div class="col-md-6">
+                    <label class="form-label">上層分類</label>
+                    <select asp-for="ParentCategoryId"
+                            class="form-select"
+                            asp-items="@(ViewData["ParentCategoryId"] as SelectList)">
+                        <option value="">— 無（最上層）—</option>
+                    </select>
+                    <span class="form-text">可不選；不選表示此分類為最上層。</span>
+                </div>
+
+                <!-- 排序 -->
+                <div class="col-md-3">
+                    <label class="form-label">排序</label>
+                    <input asp-for="OrderSeq" class="form-control" type="number" min="0" value="0" />
+                    <span asp-validation-for="OrderSeq" class="text-danger"></span>
+                </div>
+
+                <!-- 啟用 -->
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label">啟用</label>
+                    </div>
+                </div>
+
+                <!-- 系統欄位提示 -->
+                <div class="col-12">
+                    <div class="alert alert-light border">
+                        <div class="small text-muted">
+                            建立後「建立時間 / 異動時間」將由系統自動填入。
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label asp-for="CategoryName" class="control-label"></label>
-                <input asp-for="CategoryName" class="form-control" />
-                <span asp-validation-for="CategoryName" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="OrderSeq" class="control-label"></label>
-                <input asp-for="OrderSeq" class="form-control" />
-                <span asp-validation-for="OrderSeq" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="RevisedDate" class="control-label"></label>
-                <input asp-for="RevisedDate" class="form-control" />
-                <span asp-validation-for="RevisedDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+
+            <div class="mt-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存
+                </button>
+                <a asp-area="CS" asp-controller="FaqCategories" asp-action="Index" class="btn btn-outline-secondary">
+                    返回列表
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
 }
