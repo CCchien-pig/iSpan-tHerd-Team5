@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FlexBackend.USER.Rcl.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250912123906_Default Schema")]
-    partial class DefaultSchema
+    [Migration("20250912191430_InitIdentity")]
+    partial class InitIdentity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
