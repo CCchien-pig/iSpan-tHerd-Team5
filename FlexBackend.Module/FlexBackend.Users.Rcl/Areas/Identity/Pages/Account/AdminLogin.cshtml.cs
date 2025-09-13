@@ -18,12 +18,13 @@ using Microsoft.Extensions.Logging;
 
 namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
 {
-    public class AdminLoginModel : PageModel
+	[AllowAnonymous]
+	public class AdminLoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<LoginModel> _logger;
+        private readonly ILogger<AdminLoginModel> _logger;
 
-        public AdminLoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+        public AdminLoginModel(SignInManager<ApplicationUser> signInManager, ILogger<AdminLoginModel> logger)
         {
             _signInManager = signInManager;
             _logger = logger;
