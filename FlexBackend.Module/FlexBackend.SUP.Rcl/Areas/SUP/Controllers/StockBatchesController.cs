@@ -192,82 +192,84 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (sku == null)
 				return Json(new { success = false, message = "找不到 SKU" });
 
-			// 2. 製造日期
+			// 2. 驗證製造日期
 			if (!vm.ManufactureDate.HasValue)
 				return Json(new { success = false, message = "請選擇製造日期" });
 
-			// 3. 新增 SupStockBatch（Qty 預設 0，之後根據異動再更新）（這裡就先產生批號）
 			string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
 
+			// 3. 新增 SupStockBatch
 			var stockBatch = new SupStockBatch
 			{
 				SkuId = vm.SkuId,
 				Qty = 0,
-				IsSellable = vm.IsSellable,
 				ManufactureDate = vm.ManufactureDate,
 				Creator = vm.UserId ?? 0,
 				CreatedDate = DateTime.Now,
-				BatchNumber = GenerateBatchNumber(brandCode) // 👈 先生成批號
+				BatchNumber = GenerateBatchNumber(brandCode)
 			};
 
-			if (sku.ShelfLifeDays > 0 && vm.ManufactureDate.HasValue)
+			if (sku.ShelfLifeDays > 0)
 				stockBatch.ExpireDate = vm.ManufactureDate.Value.AddDays(sku.ShelfLifeDays);
 
 			_context.SupStockBatches.Add(stockBatch);
-			await _context.SaveChangesAsync(); // 先存一次，拿到 StockBatchId
+			await _context.SaveChangesAsync();
 
-			// 4. 產生批號（從商品 → 品牌 → BrandCode）
-			//string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
 			stockBatch.BatchNumber = GenerateBatchNumber(brandCode);
 			await _context.SaveChangesAsync();
 
-			// 5. 異動邏輯（若 MovementType 有傳值）
+			// 4. 處理異動
 			if (!string.IsNullOrEmpty(vm.MovementType))
 			{
-				// 將 nullable 轉成 int（若 null 則用 0）
 				int changeQty = vm.ChangeQty ?? 0;
-
-				// 驗證異動類型是否存在
-				bool isValidMovementType = await _context.SysCodes
-					.AnyAsync(c => c.ModuleId == "SUP" && c.CodeId == "01" && c.CodeNo == vm.MovementType);
-
-				if (!isValidMovementType)
-					return Json(new { success = false, message = $"無效的異動類型: {vm.MovementType}" });
-
 				int beforeQty = stockBatch.Qty;
 				int newQty = beforeQty;
 
 				switch (vm.MovementType)
 				{
-					case "Purchase": // 進貨
+					case "Purchase":
+					case "Return":
 						newQty += changeQty;
 						break;
-					case "Sale": // 銷售
-						if (changeQty > beforeQty)
-							return Json(new { success = false, message = "銷售出庫量不能大於現有庫存" });
+					case "Sale":
+					case "Expire":
 						newQty -= changeQty;
 						break;
-					case "Return": // 退貨
-						newQty += changeQty;
-						break;
-					case "Expire": // 報廢/過期
-						newQty -= changeQty;
-						break;
-					case "Adjust": // 人工調整
-						newQty += vm.IsAdd ? changeQty : -changeQty;
+					case "Adjust":
+						newQty += vm.IsAdd == true ? changeQty : -changeQty;
 						break;
 				}
 
-				// 最大庫存檢查
+				// 最大庫存檢查（僅限非負庫存）
 				if (sku.MaxStockQty > 0 && newQty > sku.MaxStockQty)
 					return Json(new { success = false, message = $"調整後庫存 {newQty} 超過最大庫存量 {sku.MaxStockQty}" });
 
-				// 更新並存檔
 				stockBatch.Qty = newQty;
-				stockBatch.IsSellable = vm.IsSellable;
 				await _context.SaveChangesAsync();
 
-				// 新增歷史紀錄（使用 changeQty 確保型別一致）
+				// 更新 SKU 總庫存
+				int skuNewStockQty = sku.StockQty;
+				switch (vm.MovementType)
+				{
+					case "Purchase":
+					case "Return":
+					case "Adjust":
+						skuNewStockQty += vm.IsAdd == true ? changeQty : -changeQty;
+						break;
+					case "Sale":
+					case "Expire":
+						skuNewStockQty -= changeQty;
+						break;
+				}
+
+				// 判斷是否允許負庫存
+				if (!sku.IsAllowBackorder && skuNewStockQty < 0)
+					skuNewStockQty = 0;
+
+				sku.StockQty = skuNewStockQty;
+				await _context.SaveChangesAsync();
+
+				// 新增異動歷史紀錄
 				_context.SupStockHistories.Add(new SupStockHistory
 				{
 					StockBatchId = stockBatch.StockBatchId,
@@ -286,7 +288,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				success = true,
 				batchNumber = stockBatch.BatchNumber,
-				newQty = stockBatch.Qty
+				newQty = stockBatch.Qty,
+				totalStockQty = sku.StockQty
 			});
 		}
 

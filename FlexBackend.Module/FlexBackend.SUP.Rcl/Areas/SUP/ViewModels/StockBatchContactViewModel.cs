@@ -11,10 +11,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		[Display(Name = "批號")]
 		public string? BatchNumber { get; set; }
 
-		[Display(Name = "數量")]
+		[Display(Name = "異動數量")]
 		public int? Qty { get; set; }  // 改成可空，由 ChangeQty 控制
 
-		[Display(Name = "上下架狀態(檢視)")]
+		[Display(Name = "上下架狀態(檢視)，別用這個，直接用[ProdProduct]的[IsPublished]")]
 		public bool IsSellable { get; set; }
 		public int ShelfLifeDays { get; set; }
 
