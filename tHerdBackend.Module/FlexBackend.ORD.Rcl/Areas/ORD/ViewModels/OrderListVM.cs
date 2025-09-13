@@ -199,12 +199,15 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		//public decimal Total => Subtotal - DiscountTotal + ShippingFee;
 
 		public List<OrderItemVM> Items { get; set; } = new(); // 若有用展開明細
-	}
 
-	/// <summary>
-	/// 訂單項目 ViewModel
-	/// </summary>
-	public class OrderItemVM
+        public bool IsVisibleToMember { get; set; }
+
+    }
+
+    /// <summary>
+    /// 訂單項目 ViewModel
+    /// </summary>
+    public class OrderItemVM
 	{
 		/// <summary>
 		/// 訂單明細ID
