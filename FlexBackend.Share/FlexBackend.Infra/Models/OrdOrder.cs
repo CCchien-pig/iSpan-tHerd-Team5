@@ -28,7 +28,7 @@ public partial class OrdOrder
     /// <summary>
     /// 訂單狀態（對照表後補）
     /// </summary>
-    public int OrderStatusId { get; set; }
+    public string OrderStatusId { get; set; }
 
     /// <summary>
     /// 付款狀態：unpaid/paid/refunded…
@@ -38,7 +38,7 @@ public partial class OrdOrder
     /// <summary>
     /// 配送狀態（對照表後補）
     /// </summary>
-    public int ShippingStatusId { get; set; }
+    public string ShippingStatusId { get; set; }
 
     /// <summary>
     /// 小計金額
