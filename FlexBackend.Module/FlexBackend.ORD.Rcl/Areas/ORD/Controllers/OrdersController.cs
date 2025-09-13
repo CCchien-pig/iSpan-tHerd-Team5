@@ -143,6 +143,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 		[HttpGet]
 		public async Task<IActionResult> GetOrderDetails(int orderId)
 		{
+			// 撈訂單主檔
 			var order = await _db.OrdOrders
 				.Where(o => o.OrderId == orderId)
 				.Select(o => new
@@ -151,7 +152,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 					receiverName = o.ReceiverName,
 					receiverPhone = o.ReceiverPhone,
 					receiverAddress = o.ReceiverAddress,
-					// 🚀 配送方式從 SUP_Logistics 撈
 					shippingMethod = _db.SupLogistics
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
@@ -169,25 +169,62 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			if (order == null)
 				return Json(new { error = "找不到訂單" });
 
-			var items = await _db.OrdOrderItems
-				.Where(i => i.OrderId == orderId)
-				.Select(i => new
+			// 撈訂單明細 (Join Product 與 Sku)
+			var items = await (
+				from i in _db.OrdOrderItems
+				join p in _db.ProdProducts on i.ProductId equals p.ProductId
+				join s in _db.ProdProductSkus on i.SkuId equals s.SkuId
+				where i.OrderId == orderId
+				select new
 				{
-					productName = "商品#" + i.ProductId,
-					skuSpec = "SKU#" + i.SkuId,
+					productName = p.ProductName,   
+					skuSpec = s.SpecCode,          
 					unitPrice = i.UnitPrice,
 					qty = i.Qty,
 					subtotal = i.UnitPrice * i.Qty
-				})
-				.ToListAsync();
+				}).ToListAsync();
 
 			return Json(new { order, items });
 		}
 
 
+		[HttpPost]
+		public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
+		{
+			var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+			if (order == null)
+			{
+				return Json(new { success = false, message = "找不到訂單" });
+			}
+
+			try
+			{
+				switch (field)
+				{
+					case "PaymentStatus":
+						order.PaymentStatus = value; // 存 CodeNo
+						break;
+					case "ShippingStatusId":
+						order.ShippingStatusId = value;
+						break;
+					case "OrderStatusId":
+						order.OrderStatusId = value;
+						break;
+				}
+
+				await _db.SaveChangesAsync();
+				return Json(new { success = true });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
 
 
 
+
+		// 讀取 sysCode 的描述
 		private static string GetSysCodeDesc(string codeId, IEnumerable<SelectOption> sysStatuses)
 		{
 			var match = sysStatuses.FirstOrDefault(s => s.Value == codeId);

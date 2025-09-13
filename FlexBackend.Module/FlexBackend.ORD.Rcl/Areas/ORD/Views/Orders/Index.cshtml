@@ -4,16 +4,12 @@
     <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
     <style>
         td.details-control {
-            background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
             cursor: pointer;
+            text-align: center;
         }
 
-        tr.shown td.details-control {
-            background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
-        }
-
-        .pagination {
-            justify-content: center;
+        tr.shown td.details-control i {
+            color: red;
         }
 
         .order-detail-card {
@@ -27,6 +23,16 @@
         .order-summary {
             text-align: right;
             margin-top: 1rem;
+        }
+
+        #jumpPageInput {
+            width: 80px;
+            display: inline-block;
+            text-align: center;
+        }
+        /* 移除排序箭頭樣式 */
+        th.no-sort::after {
+            display: none !important;
         }
     </style>
 }
@@ -43,18 +49,6 @@
                 <input type="text" class="form-control" name="Keyword"
                        placeholder="輸入訂單編號/收件人/電話"
                        value="@Model.SearchParams.Keyword" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold">訂單狀態</label>
-                <select class="form-select" name="OrderStatusId">
-                    <option value="">全部</option>
-                    @foreach (var option in Model.OrderStatusOptions)
-                    {
-                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.OrderStatusId)">
-                            @option.Text
-                        </option>
-                    }
-                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label fw-bold">付款狀態</label>
@@ -81,6 +75,18 @@
                 </select>
             </div>
             <div class="col-md-2">
+                <label class="form-label fw-bold">訂單狀態</label>
+                <select class="form-select" name="OrderStatusId">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.OrderStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.OrderStatusId)">
+                            @option.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label fw-bold">每頁筆數</label>
                 <select class="form-select" name="PageSize">
                     @foreach (var size in Model.Pagination.PageSizeOptions)
@@ -97,21 +103,12 @@
             </div>
         </form>
 
-        <!-- 分頁資訊 -->
-        <div class="mb-3">
-            <span>
-                第 <strong>@Model.Pagination.CurrentPage</strong> 頁 /
-                共 <strong>@Model.Pagination.TotalPages</strong> 頁，
-                總筆數 <strong>@Model.Pagination.TotalCount</strong>
-            </span>
-        </div>
-
         <!-- 主表格 -->
         <div class="table-responsive">
             <table id="ordersTable" class="table table-bordered table-striped" width="100%">
                 <thead>
                     <tr>
-                        <th></th>
+                        <th class="no-sort"></th> <!-- ✅ 明細欄不排序 -->
                         <th>訂單編號</th>
                         <th>會員姓名</th>
                         <th>付款狀態</th>
@@ -119,19 +116,49 @@
                         <th>訂單狀態</th>
                         <th>總金額</th>
                         <th>建立時間</th>
-                        <th>操作</th>
+                        <th class="no-sort">操作</th> <!-- ✅ 操作欄不排序 -->
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var order in Model.Orders)
                     {
                         <tr data-id="@order.OrderId">
-                            <td class="details-control"></td>
+                            <td class="details-control"><i class="fa-solid fa-circle-plus text-success"></i></td>
                             <td>@order.OrderNo</td>
                             <td>@order.UserName</td>
-                            <td class="payment-status">@order.PaymentStatusName</td>
-                            <td class="shipping-status">@order.ShippingStatusName</td>
-                            <td class="order-status">@order.OrderStatusName</td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="PaymentStatus">
+                                    @foreach (var option in Model.PaymentStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.PaymentStatus)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="ShippingStatusId">
+                                    @foreach (var option in Model.ShippingStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.ShippingStatusId)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown"
+                                        data-id="@order.OrderId" data-field="OrderStatusId">
+                                    @foreach (var option in Model.OrderStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.OrderStatusId)">
+                                            @option.Text
+                                        </option>
+                                    }
+                                </select>
+                            </td>
                             <td>@order.TotalAmount.ToString("C0")</td>
                             <td>@order.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>
@@ -143,117 +170,36 @@
             </table>
         </div>
 
-        <!-- 分頁控制 -->
-        <nav class="mt-4">
-            <ul class="pagination">
-                @if (Model.Pagination.HasPreviousPage)
-                {
-                    <li class="page-item">
-                        <a class="page-link" asp-action="Index"
-                           asp-route-Keyword="@Model.SearchParams.Keyword"
-                           asp-route-OrderStatusId="@Model.SearchParams.OrderStatusId"
-                           asp-route-PaymentStatus="@Model.SearchParams.PaymentStatus"
-                           asp-route-ShippingStatusId="@Model.SearchParams.ShippingStatusId"
-                           asp-route-PageNumber="@(Model.Pagination.CurrentPage - 1)"
-                           asp-route-PageSize="@Model.SearchParams.PageSize">上一頁</a>
-                    </li>
-                }
-                @foreach (var p in Model.Pagination.PageNumbers)
-                {
-                    <li class="page-item @(p == Model.Pagination.CurrentPage ? "active" : "")">
-                        <a class="page-link" asp-action="Index"
-                           asp-route-Keyword="@Model.SearchParams.Keyword"
-                           asp-route-OrderStatusId="@Model.SearchParams.OrderStatusId"
-                           asp-route-PaymentStatus="@Model.SearchParams.PaymentStatus"
-                           asp-route-ShippingStatusId="@Model.SearchParams.ShippingStatusId"
-                           asp-route-PageNumber="@p"
-                           asp-route-PageSize="@Model.SearchParams.PageSize">@p</a>
-                    </li>
-                }
-                @if (Model.Pagination.HasNextPage)
-                {
-                    <li class="page-item">
-                        <a class="page-link" asp-action="Index"
-                           asp-route-Keyword="@Model.SearchParams.Keyword"
-                           asp-route-OrderStatusId="@Model.SearchParams.OrderStatusId"
-                           asp-route-PaymentStatus="@Model.SearchParams.PaymentStatus"
-                           asp-route-ShippingStatusId="@Model.SearchParams.ShippingStatusId"
-                           asp-route-PageNumber="@(Model.Pagination.CurrentPage + 1)"
-                           asp-route-PageSize="@Model.SearchParams.PageSize">下一頁</a>
-                    </li>
-                }
-            </ul>
-        </nav>
+        <!-- 分頁：第 [輸入框] / 共 N 頁 -->
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div>
+                總筆數 <strong>@Model.Pagination.TotalCount</strong>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="me-2">第</span>
+                <input type="number" id="jumpPageInput"
+                       class="form-control"
+                       min="1" max="@Model.Pagination.TotalPages"
+                       value="@Model.Pagination.CurrentPage" />
+                <span class="ms-2">/ 共 <strong>@Model.Pagination.TotalPages</strong> 頁</span>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
-        // 即點即查訂單詳情
-        function format(orderId, callback) {
-            $.getJSON('@Url.Action("GetOrderDetails", "Orders")', { orderId: orderId })
-                .done(function (data) {
-                    if (!data || data.error) {
-                        callback('<div class="text-danger">查無訂單資料</div>');
-                        return;
-                    }
-
-                    let o = data.order;
-                    let items = data.items || [];
-
-                    let html = `
-                        <div class="order-detail-card">
-                            <h6>收件資訊</h6>
-                                <p><strong>收件人：</strong>${o.receiverName}</p>
-                                <p><strong>電話：</strong>${o.receiverPhone}</p>
-                                <p><strong>地址：</strong>${o.receiverAddress}</p>
-                                <p><strong>配送方式：</strong>${o.shippingMethod ?? '-'}</p>
-                        </div>
-
-                        <h6>商品明細</h6>
-                        <table class="table table-sm table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>商品</th>
-                                    <th>規格</th>
-                                    <th>單價</th>
-                                    <th>數量</th>
-                                    <th>小計</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-
-                    items.forEach(function (item) {
-                        html += `
-                            <tr>
-                                <td>${item.productName}</td>
-                                <td>${item.skuSpec}</td>
-                                <td>${item.unitPrice.toLocaleString()}</td>
-                                <td>${item.qty}</td>
-                                <td>${item.subtotal.toLocaleString()}</td>
-                            </tr>`;
-                    });
-
-                    html += `
-                            </tbody>
-                        </table>
-
-                        <div class="order-summary">
-                            <p><strong>優惠券：</strong>${o.couponCode ?? '-'}</p>
-                            <p><strong>優惠折扣：</strong>${o.discountTotal?.toLocaleString() ?? 0}</p>
-                            <p><strong>運費：</strong>${o.shippingFee.toLocaleString()}</p>
-                            <p><strong>總金額：</strong>${o.totalAmount.toLocaleString()}</p>
-                        </div>
-                    `;
-
-                    callback(html);
-                })
-                .fail(function () {
-                    callback('<div class="text-danger">載入明細失敗</div>');
-                });
-        }
+        // DataTables 自訂排序：讀取 <select> 的值
+        $.fn.dataTable.ext.order['dom-select'] = function (settings, col) {
+            return this.api().column(col, { order: 'index' }).nodes().map(function (td) {
+                return $('select', td).val();
+            });
+        };
 
         $(document).ready(function () {
             var table = $('#ordersTable').DataTable({
@@ -261,24 +207,159 @@
                 searching: false,
                 ordering: true,
                 info: false,
-                columnDefs: [{ orderable: false, targets: 0 }]
+                order: [[7, "desc"]], // ✅ 預設以建立時間 (第8欄) 由新到舊排序
+                columnDefs: [
+                    { orderable: false, targets: [0, 8] }, // ✅ 明細欄 + 操作欄 不排序
+                    { targets: 3, orderDataType: "dom-select" },
+                    { targets: 4, orderDataType: "dom-select" },
+                    { targets: 5, orderDataType: "dom-select" },
+                    {
+                        targets: 6, // ✅ 總金額數字排序
+                        render: function (data, type, row) {
+                            if (type === 'sort' || type === 'type') {
+                                return parseFloat(data.replace(/[^\d.-]/g, '')) || 0;
+                            }
+                            return data;
+                        }
+                    }
+                ]
             });
+
+            // 下拉更新狀態
+            $(document).on("change", ".status-dropdown", function () {
+                var orderId = $(this).data("id");
+                var field = $(this).data("field");
+                var value = $(this).val();
+
+                $.ajax({
+                    url: '@Url.Action("UpdateOrderStatus", "Orders")',
+                    type: 'POST',
+                    data: { orderId: orderId, field: field, value: value },
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '更新成功',
+                                text: '訂單狀態已更新！',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '更新失敗',
+                                text: res.message || '請稍後再試'
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '伺服器錯誤',
+                            text: '請稍後再試'
+                        });
+                    }
+                });
+            });
+
+            // 詳情展開
+            function format(orderId, callback) {
+                $.getJSON('@Url.Action("GetOrderDetails", "Orders")', { orderId: orderId })
+                    .done(function (data) {
+                        if (!data || data.error) {
+                            callback('<div class="text-danger">查無訂單資料</div>');
+                            return;
+                        }
+                        let o = data.order;
+                        let items = data.items || [];
+
+                        let html = `
+                            <div class="order-detail-card">
+                                <h6>收件資訊</h6>
+                                <p><strong>收件人：</strong>${o.receiverName}</p>
+                                <p><strong>電話：</strong>${o.receiverPhone}</p>
+                                <p><strong>地址：</strong>${o.receiverAddress}</p>
+                                <p><strong>配送方式：</strong>${o.shippingMethod ?? '-'}</p>
+                            </div>
+                            <h6>商品明細</h6>
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>商品</th>
+                                        <th>規格</th>
+                                        <th>單價</th>
+                                        <th>數量</th>
+                                        <th>小計</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                        items.forEach(function (item) {
+                            html += `
+                                <tr>
+                                    <td>${item.productName}</td>
+                                    <td>${item.skuSpec}</td>
+                                    <td>${item.unitPrice.toLocaleString()}</td>
+                                    <td>${item.qty}</td>
+                                    <td>${item.subtotal.toLocaleString()}</td>
+                                </tr>`;
+                        });
+                        html += `
+                                </tbody>
+                            </table>
+                            <div class="order-summary">
+                                <p><strong>優惠券：</strong>${o.couponCode ?? '-'}</p>
+                                <p><strong>優惠折扣：</strong>${o.discountTotal?.toLocaleString() ?? 0}</p>
+                                <p><strong>運費：</strong>${o.shippingFee.toLocaleString()}</p>
+                                <p><strong>總金額：</strong>${o.totalAmount.toLocaleString()}</p>
+                            </div>`;
+                        callback(html);
+                    })
+                    .fail(function () {
+                        callback('<div class="text-danger">載入明細失敗</div>');
+                    });
+            }
 
             $('#ordersTable tbody').on('click', 'td.details-control', function () {
                 var tr = $(this).closest('tr');
                 var row = table.row(tr);
+                var icon = $(this).find("i");
 
                 if (row.child.isShown()) {
                     row.child.hide();
                     tr.removeClass('shown');
+                    icon.removeClass("fa-circle-minus text-danger")
+                        .addClass("fa-circle-plus text-success");
                 } else {
                     var orderId = tr.data('id');
                     row.child('<div class="text-muted">載入中...</div>').show();
                     tr.addClass('shown');
-
                     format(orderId, function (html) {
                         row.child(html).show();
                     });
+                    icon.removeClass("fa-circle-plus text-success")
+                        .addClass("fa-circle-minus text-danger");
+                }
+            });
+
+            // 分頁輸入框 (Enter 跳轉)
+            $("#jumpPageInput").on("keypress", function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    let page = parseInt($(this).val());
+                    if (isNaN(page)) return;
+
+                    if (page < 1) page = 1;
+                    if (page > @Model.Pagination.TotalPages) page = @Model.Pagination.TotalPages;
+
+                    var url = '@Url.Action("Index", "Orders")'
+                        + '?Keyword=@Model.SearchParams.Keyword'
+                        + '&PaymentStatus=@Model.SearchParams.PaymentStatus'
+                        + '&ShippingStatusId=@Model.SearchParams.ShippingStatusId'
+                        + '&OrderStatusId=@Model.SearchParams.OrderStatusId'
+                        + '&PageSize=@Model.SearchParams.PageSize'
+                        + '&PageNumber=' + page;
+
+                    window.location.href = url;
                 }
             });
         });
