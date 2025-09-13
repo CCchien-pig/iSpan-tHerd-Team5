@@ -124,7 +124,7 @@
                         <th>訂單狀態</th>
                         <th>總金額</th>
                         <th>建立時間</th>
-                        <th>對會員隱藏</th>
+                        <th>前台顯示</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,7 +173,7 @@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input toggle-visible" type="checkbox"
                                            data-id="@order.OrderId"
-                                           @(order.IsVisibleToMember ? "" : "checked")>
+                                           @(order.IsVisibleToMember ? "checked" : "")>
                                 </div>
                             </td>
                         </tr>
@@ -268,19 +268,19 @@
             });
         });
 
-        // 2) 單筆「對會員隱藏」切換
+        // 2) 單筆「對會員隱藏」切換ㄞ
         $(document).on("change", ".toggle-visible", function () {
             const $checkbox = $(this);
             const id = $checkbox.data("id");
-            const hidden = $checkbox.is(":checked"); // 勾選 = 隱藏
+            const visible = $checkbox.is(":checked"); // 勾選 = 顯示
 
             $.post("/ORD/Orders/ToggleVisible",
-                { orderId: id, visible: !hidden },
+                { orderId: id, visible: visible },
                 function (res) {
                     if (res.success) {
                         Swal.fire({
                             icon: 'success',
-                            title: hidden ? '已設為隱藏' : '已設為顯示',
+                            title: visible ? '已設為顯示' : '已設為隱藏',
                             showConfirmButton: false,
                             timer: 1200
                         });
@@ -290,18 +290,21 @@
                             title: '更新失敗',
                             text: res.message || '請稍後再試'
                         });
-                        $checkbox.prop("checked", !hidden);
+                        // 還原狀態
+                        $checkbox.prop("checked", !visible);
                     }
                 }
-            ).fail(function () {
+            ).fail(() => {
                 Swal.fire({
                     icon: 'error',
                     title: '系統錯誤',
                     text: '無法更新狀態'
                 });
-                $checkbox.prop("checked", !hidden);
+                // 還原狀態
+                $checkbox.prop("checked", !visible);
             });
         });
+
 
         // 3) 批量更新狀態
         $("#bulkUpdate").on("click", function () {

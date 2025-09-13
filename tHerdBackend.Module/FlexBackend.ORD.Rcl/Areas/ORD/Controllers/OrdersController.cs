@@ -316,11 +316,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             if (order == null)
                 return Json(new { success = false, message = "找不到訂單" });
 
-            order.IsVisibleToMember = !visible ? false : true; // 保持語意清楚
+            order.IsVisibleToMember = visible;
             order.RevisedDate = DateTime.Now;
-
             await _db.SaveChangesAsync();
-            return Json(new { success = true, visible = order.IsVisibleToMember });
+
+            return Json(new { success = true, visible });
         }
 
 
