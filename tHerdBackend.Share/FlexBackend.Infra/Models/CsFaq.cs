@@ -26,11 +26,6 @@ public partial class CsFaq
     public string AnswerHtml { get; set; }
 
     /// <summary>
-    /// 0=停用、1=啟用
-    /// </summary>
-    public int Status { get; set; }
-
-    /// <summary>
     /// 所屬分類
     /// </summary>
     public int CategoryId { get; set; }
