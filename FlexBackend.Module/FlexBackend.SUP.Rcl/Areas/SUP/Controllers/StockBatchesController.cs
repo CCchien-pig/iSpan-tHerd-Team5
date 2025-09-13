@@ -23,25 +23,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_stockBatchService = stockBatchService;
 		}
 
-		// GET: /SUP/StockBatches/Index?{supplierId?}
+		// GET: /SUP/StockBatches/Index
 		[HttpGet]
-		public IActionResult Index(int? supplierId = null)
+		public IActionResult Index()
 		{
-			ViewBag.SupplierId = supplierId;
+			//ViewBag.SupplierId = supplierId;
+			//ViewBag.BrandName = TempData["BrandName"] as string ?? "";
+
 			return View();
 		}
-
-		[HttpGet]
-		public IActionResult GetBrandNameBySupplier(int supplierId)
-		{
-			var brandName = _context.SupBrands
-				.Where(b => b.SupplierId == supplierId)
-				.Select(b => b.BrandName)
-				.FirstOrDefault();
-
-			return Ok(brandName ?? "");
-		}
-
 
 		// POST: StockBatches/IndexJson
 		[HttpPost]
