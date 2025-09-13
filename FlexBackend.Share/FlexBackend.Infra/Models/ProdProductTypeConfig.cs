@@ -21,6 +21,11 @@ public partial class ProdProductTypeConfig
     public int? ParentId { get; set; }
 
     /// <summary>
+    /// 分類簡碼
+    /// </summary>
+    public string ProductTypeCode { get; set; }
+
+    /// <summary>
     /// 分類名稱
     /// </summary>
     public string ProductTypeName { get; set; }

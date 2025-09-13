@@ -16,11 +16,6 @@ public partial class ProdProduct
     public int ProductId { get; set; }
 
     /// <summary>
-    /// 供應商ID(FK)
-    /// </summary>
-    public int SupplierId { get; set; }
-
-    /// <summary>
     /// 品牌ID
     /// </summary>
     public int? BrandId { get; set; }
@@ -29,6 +24,11 @@ public partial class ProdProduct
     /// Seo設定
     /// </summary>
     public int? SeoId { get; set; }
+
+    /// <summary>
+    /// 商品簡碼
+    /// </summary>
+    public string ProductCode { get; set; }
 
     /// <summary>
     /// 商品名稱
@@ -91,8 +91,6 @@ public partial class ProdProduct
 
     public virtual ICollection<OrdShoppingCartItem> OrdShoppingCartItems { get; set; } = new List<OrdShoppingCartItem>();
 
-    public virtual ICollection<ProdBundle> ProdBundles { get; set; } = new List<ProdBundle>();
-
     public virtual ICollection<ProdProductAttribute> ProdProductAttributes { get; set; } = new List<ProdProductAttribute>();
 
     public virtual ICollection<ProdProductFavorite> ProdProductFavorites { get; set; } = new List<ProdProductFavorite>();
@@ -115,5 +113,5 @@ public partial class ProdProduct
 
     public virtual SysSeoMetum Seo { get; set; }
 
-    public virtual SupSupplier Supplier { get; set; }
+    public virtual ICollection<ProdBundle> Bundles { get; set; } = new List<ProdBundle>();
 }

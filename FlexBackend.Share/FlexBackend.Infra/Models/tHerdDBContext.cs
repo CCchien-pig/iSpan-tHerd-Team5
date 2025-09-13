@@ -153,8 +153,6 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<SysSeoMetum> SysSeoMeta { get; set; }
 
-    public virtual DbSet<UserAdminRole> UserAdminRoles { get; set; }
-
     public virtual DbSet<UserBlockHistory> UserBlockHistories { get; set; }
 
     public virtual DbSet<UserCouponWallet> UserCouponWallets { get; set; }
@@ -179,7 +177,6 @@ public partial class tHerdDBContext : DbContext
     {
         modelBuilder.Entity<CntMedium>(entity =>
         {
-
             entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF3998BBEF");
 
             entity.ToTable("CNT_Medium", tb => tb.HasComment("媒體資源"));
@@ -353,7 +350,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.ScheduleId).HasName("PK__CNT_Sche__9C8A5B497B397938");
 
-
             entity.ToTable("CNT_Schedule", tb => tb.HasComment("頁面排程"));
 
             entity.HasIndex(e => e.PageId, "IX_CNT_Schedule_PageId");
@@ -385,7 +381,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<CntShareClick>(entity =>
         {
             entity.HasKey(e => e.ShareClickId).HasName("PK__CNT_Shar__46D82BFC7AC56D53");
-
 
             entity.ToTable("CNT_ShareClick", tb => tb.HasComment("分享點擊紀錄"));
 
@@ -421,7 +416,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.TagId).HasName("PK__CNT_Tag__657CF9AC79BC1D5A");
 
-
             entity.ToTable("CNT_Tag", tb => tb.HasComment("標籤"));
 
             entity.HasIndex(e => e.TagName, "UQ_CNT_Tag_TagName").IsUnique();
@@ -446,7 +440,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.RuleId).HasName("PK__CS_AutoR__110458E230302CA5");
 
-
             entity.ToTable("CS_AutoReplyRule", tb => tb.HasComment("自動回覆規則"));
 
             entity.HasIndex(e => new { e.IsActive, e.Priority }, "IX_CS_AutoReplyRule_IsActive_Priority");
@@ -470,7 +463,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.ResponseFaqId).HasComment("對應 FAQ（對應 1）");
             entity.Property(e => e.ResponseText)
                 .HasMaxLength(1000)
-                .IsUnicode(false)
                 .HasComment("回覆文字（對應 2）");
             entity.Property(e => e.ResponseType).HasComment("1=導向FAQ、2=文字、3=連結、4=轉人工/表單");
             entity.Property(e => e.ResponseUrl)
@@ -488,7 +480,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.MessageId).HasName("PK__CS_ChatM__C87C0C9C8E145F56");
 
-
             entity.ToTable("CS_ChatMessage", tb => tb.HasComment("前台聊天式自助客服—訊息"));
 
             entity.HasIndex(e => e.CreatedDate, "IX_CS_ChatMessage_CreatedDate");
@@ -503,7 +494,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Message)
                 .IsRequired()
                 .HasMaxLength(2000)
-                .IsUnicode(false)
                 .HasComment("訊息內容");
             entity.Property(e => e.RuleId).HasComment("套用的規則（可空）");
             entity.Property(e => e.SenderType).HasComment("0=使用者、1=機器人、2=客服");
@@ -554,7 +544,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.FaqId).HasName("PK__CS_Faq__9C741C43DB2A4611");
 
-
             entity.ToTable("CS_Faq", tb => tb.HasComment("FAQ 主內容"));
 
             entity.HasIndex(e => e.CategoryId, "IX_CS_Faq_CategoryId");
@@ -564,8 +553,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.FaqId).HasComment("FAQ 主鍵");
             entity.Property(e => e.AnswerHtml)
                 .IsRequired()
-                .HasComment("答案內容（可含 HTML）")
-                .HasColumnType("text");
+                .HasComment("答案內容（可含 HTML）");
             entity.Property(e => e.CategoryId).HasComment("所屬分類");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -579,7 +567,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Title)
                 .IsRequired()
                 .HasMaxLength(300)
-                .IsUnicode(false)
                 .HasComment("問題標題");
 
             entity.HasOne(d => d.Category).WithMany(p => p.CsFaqs)
@@ -664,7 +651,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Keyword)
                 .IsRequired()
                 .HasMaxLength(100)
-                .IsUnicode(false)
                 .HasComment("關鍵字／同義詞");
 
             entity.HasOne(d => d.Faq).WithMany(p => p.CsFaqKeywords)
@@ -676,7 +662,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<CsTicket>(entity =>
         {
             entity.HasKey(e => e.TicketId).HasName("PK__CS_Ticke__712CC607C452D4A7");
-
 
             entity.ToTable("CS_Ticket", tb => tb.HasComment("工單主表"));
 
@@ -693,7 +678,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Subject)
                 .IsRequired()
                 .HasMaxLength(300)
-                .IsUnicode(false)
                 .HasComment("工單主旨");
             entity.Property(e => e.UserId).HasComment("建單會員（訪客可空）");
 
@@ -705,7 +689,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<MktAd>(entity =>
         {
             entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
-
 
             entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
 
@@ -901,7 +884,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.RuleId).HasName("PK__MKT_Coup__110458E2C5EABEA9");
 
-
             entity.ToTable("MKT_CouponRule", tb => tb.HasComment("優惠券規則分類檔（定義優惠券類型與條件）"));
 
             entity.HasIndex(e => e.CouponType, "UQ_MKT_CouponRule_CouponType").IsUnique();
@@ -1085,7 +1067,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.OrderId).HasName("PK__ORD_Orde__C3905BCF15372E36");
 
-
             entity.ToTable("ORD_Order", tb => tb.HasComment("訂單主檔"));
 
             entity.HasIndex(e => new { e.LogisticsId, e.CreatedDate }, "IX_Order_LogisticsId_CreatedDate");
@@ -1242,7 +1223,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.OrderItemId).HasName("PK__ORD_Orde__57ED068175F6417C");
 
-
             entity.ToTable("ORD_OrderItem", tb => tb.HasComment("訂單明細"));
 
             entity.HasIndex(e => e.OrderId, "IX_OrderItem_OrderId");
@@ -1281,7 +1261,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<OrdOrderItemAdjustment>(entity =>
         {
             entity.HasKey(e => e.AdjustmentItemId).HasName("PK__ORD_Orde__C56CCA7E1A24D228");
-
 
             entity.ToTable("ORD_OrderItemAdjustment", tb => tb.HasComment("品項層級折扣/調整（多品牌時逐品項計算95折）"));
 
@@ -1327,7 +1306,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<OrdPayment>(entity =>
         {
             entity.HasKey(e => e.PaymentId).HasName("PK__ORD_Paym__9B556A38AE910ABA");
-
 
             entity.ToTable("ORD_Payment", tb => tb.HasComment("付款方式明細"));
 
@@ -1421,7 +1399,6 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<OrdReturnItem>(entity =>
         {
-
             entity.HasKey(e => e.RmaItemId).HasName("PK__ORD_Retu__FCC4AF150D3CC982");
 
             entity.ToTable("ORD_ReturnItem", tb =>
@@ -1624,7 +1601,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.CartItemId).HasName("PK__ORD_Shop__488B0B0AAF337B32");
 
-
             entity.ToTable("ORD_ShoppingCartItem", tb => tb.HasComment("購物車明細（同一 Cart 相同商品不可重複；數量限制參照購物車上限）"));
 
             entity.HasIndex(e => e.CartId, "IX_ShoppingCartItem_CartId");
@@ -1715,8 +1691,6 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.IsActive, "IX_PROD_Bundle_IsActive");
 
-            entity.HasIndex(e => e.SubProductId, "IX_PROD_Bundle_SubProductId");
-
             entity.HasIndex(e => e.BundleName, "UQ_PROD_Bundle_BundleName").IsUnique();
 
             entity.Property(e => e.BundleId).HasComment("套組ID（主鍵）");
@@ -1732,12 +1706,27 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("是否啟用");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.Reviser).HasComment("異動人員");
-            entity.Property(e => e.SubProductId).HasComment("組合商品Id");
 
-            entity.HasOne(d => d.SubProduct).WithMany(p => p.ProdBundles)
-                .HasForeignKey(d => d.SubProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PROD_Bundle_SubProductId");
+            entity.HasMany(d => d.Products).WithMany(p => p.Bundles)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ProdBundleItem",
+                    r => r.HasOne<ProdProduct>().WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PROD_BundleItem_ProductId"),
+                    l => l.HasOne<ProdBundle>().WithMany()
+                        .HasForeignKey("BundleId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PROD_BundleItem_BundleId"),
+                    j =>
+                    {
+                        j.HasKey("BundleId", "ProductId").HasName("UQ_BundleItem");
+                        j.ToTable("PROD_BundleItem", tb => tb.HasComment("套組明細表：記錄套組內有哪些子商品"));
+                        j.HasIndex(new[] { "BundleId" }, "IX_BundleItem_BundleId");
+                        j.HasIndex(new[] { "ProductId" }, "IX_BundleItem_ProductId");
+                        j.IndexerProperty<int>("BundleId").HasComment("套組ID (FK)");
+                        j.IndexerProperty<int>("ProductId").HasComment("商品ID (FK)");
+                    });
         });
 
         modelBuilder.Entity<ProdIngredient>(entity =>
@@ -1775,8 +1764,6 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.IsPublished, "IX_PROD_Product_IsPublished");
 
-            entity.HasIndex(e => e.SupplierId, "IX_PROD_Product_SupplierId");
-
             entity.HasIndex(e => e.ProductName, "UQ_PROD_Product_ProductName").IsUnique();
 
             entity.Property(e => e.ProductId).HasComment("商品ID");
@@ -1787,6 +1774,11 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Creator).HasComment("建檔人員");
             entity.Property(e => e.FullDesc).HasComment("商品完整描述，用於詳細頁");
             entity.Property(e => e.IsPublished).HasComment("是否上架（0=否，1=是）");
+            entity.Property(e => e.ProductCode)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("商品簡碼");
             entity.Property(e => e.ProductName)
                 .IsRequired()
                 .HasMaxLength(200)
@@ -1797,7 +1789,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.ShortDesc)
                 .HasMaxLength(1000)
                 .HasComment("商品簡短描述，常用於列表展示");
-            entity.Property(e => e.SupplierId).HasComment("供應商ID(FK)");
             entity.Property(e => e.VolumeCubicMeter)
                 .HasDefaultValue(0m)
                 .HasComment("體積")
@@ -1819,11 +1810,6 @@ public partial class tHerdDBContext : DbContext
             entity.HasOne(d => d.Seo).WithMany(p => p.ProdProducts)
                 .HasForeignKey(d => d.SeoId)
                 .HasConstraintName("FK_PROD_Product_SeoId");
-
-            entity.HasOne(d => d.Supplier).WithMany(p => p.ProdProducts)
-                .HasForeignKey(d => d.SupplierId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PROD_Product_SupplierId");
         });
 
         modelBuilder.Entity<ProdProductAnswer>(entity =>
@@ -2161,14 +2147,12 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false)
                 .HasComment("SKU代碼");
-
             entity.Property(e => e.SpecCode)
                 .IsRequired()
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasComment("規格碼");
             entity.Property(e => e.StartDate).HasDefaultValueSql("(sysutcdatetime())");
-
             entity.Property(e => e.StockQty).HasComment("目前庫存");
             entity.Property(e => e.UnitPrice)
                 .HasComment("單價")
@@ -2240,7 +2224,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.ParentId, "IX_PROD_ProductTypeConfig_ParentId");
 
-            entity.HasIndex(e => e.ProductTypeName, "UQ_PROD_ProductTypeConfig_ProductTypeName").IsUnique();
+            entity.HasIndex(e => new { e.ParentId, e.ProductTypeName }, "UQ_PROD_ProductTypeConfig_Parent_ProductTypeName").IsUnique();
 
             entity.Property(e => e.ProductTypeId).HasComment("分類ID（主鍵）");
             entity.Property(e => e.IsActive)
@@ -2248,6 +2232,11 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("是否啟用分類（0=否，1=是）");
             entity.Property(e => e.OrderSeq).HasComment("顯示順序");
             entity.Property(e => e.ParentId).HasComment("父分類ID（NULL 代表最上層）");
+            entity.Property(e => e.ProductTypeCode)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("分類簡碼");
             entity.Property(e => e.ProductTypeName)
                 .IsRequired()
                 .HasMaxLength(100)
@@ -2297,7 +2286,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.OptionName, "IX_PROD_SpecificationOption_OptionName");
 
-            entity.HasIndex(e => e.OptionName, "UQ_PROD_SpecificationOption_OptionName").IsUnique();
+            entity.HasIndex(e => new { e.SpecificationConfigId, e.OptionName }, "UQ_PROD_SpecificationOption_Config_OptionName ").IsUnique();
 
             entity.Property(e => e.SpecificationOptionId).HasComment("規格選項ID（主鍵）");
             entity.Property(e => e.OptionName)
@@ -2445,7 +2434,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.UserNumberId).HasComment("關聯會員Id");
             entity.Property(e => e.BrandId).HasComment("關聯品牌Id");
             entity.Property(e => e.CreatedDate)
-                .HasPrecision(3)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建立時間");
 
@@ -2561,7 +2549,9 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Remark)
                 .HasMaxLength(500)
                 .HasComment("備註");
-            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.RevisedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("異動時間");
             entity.Property(e => e.Reviser).HasComment("異動人員");
             entity.Property(e => e.StockBatchId).HasComment("關聯庫存批次");
 
@@ -2830,27 +2820,6 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("SEO 標題簡稱");
         });
 
-        modelBuilder.Entity<UserAdminRole>(entity =>
-        {
-            entity.HasKey(e => e.AdminRoleId).HasName("PK__USER_Adm__D0B2ED06F79A722C");
-
-            entity.ToTable("USER_AdminRole", tb => tb.HasComment("後台管理員與角色關聯"));
-
-            entity.HasIndex(e => e.RoleName, "UQ_USER_AdminRole_RoleName").IsUnique();
-
-            entity.Property(e => e.AdminRoleId).HasComment("管理員角色 ID");
-            entity.Property(e => e.CreatedDate)
-                .HasDefaultValueSql("(sysdatetime())")
-                .HasComment("建立時間 (UTC)");
-            entity.Property(e => e.Creator).HasComment("建立人員 ID");
-            entity.Property(e => e.RevisedDate).HasComment("異動時間");
-            entity.Property(e => e.Reviser).HasComment("異動人員 ID");
-            entity.Property(e => e.RoleName)
-                .IsRequired()
-                .HasMaxLength(10)
-                .HasComment("角色名稱");
-        });
-
         modelBuilder.Entity<UserBlockHistory>(entity =>
         {
             entity.HasKey(e => e.BlockHistoryId).HasName("PK__USER_Blo__E16BC64019AC5560");
@@ -2885,7 +2854,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<UserCouponWallet>(entity =>
         {
             entity.HasKey(e => e.CouponWalletId).HasName("PK__USER_Cou__E747CD6E91E2CDAA");
-
 
             entity.ToTable("USER_CouponWallet", tb =>
                 {
@@ -2952,7 +2920,6 @@ public partial class tHerdDBContext : DbContext
         modelBuilder.Entity<UserGtmManager>(entity =>
         {
             entity.HasKey(e => e.GtmManagerId).HasName("PK__USER_Gtm__B627E25721F085EC");
-
 
             entity.ToTable("USER_GtmManager", tb => tb.HasComment("google tag manager 追蹤碼管理員設定"));
 
@@ -3075,7 +3042,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.NotificationId).HasName("PK__USER_Not__20CF2E121B341311");
 
-
             entity.ToTable("USER_Notification", tb => tb.HasComment("會員通知設定"));
 
             entity.HasIndex(e => e.CreatedDate, "IX_USER_Notification_CreatedDate");
@@ -3105,7 +3071,6 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.NotificationHistoryId).HasName("PK__USER_Not__4A04A54C4F445214");
 
-
             entity.ToTable("USER_NotificationHistory", tb => tb.HasComment("會員通知發送紀錄"));
 
             entity.HasIndex(e => e.IsRead, "IX_USER_NotificationHistory_IsRead");
@@ -3129,8 +3094,9 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(50)
                 .HasComment("發送管道");
             entity.Property(e => e.IsRead).HasComment("判斷通知是否已讀");
-            entity.Property(e => e.ModuleName)
-                .HasMaxLength(50)
+            entity.Property(e => e.ModuleId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
                 .HasComment("模組名稱");
             entity.Property(e => e.NotificationType)
                 .IsRequired()
@@ -3171,11 +3137,6 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("模組代號");
             entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
             entity.Property(e => e.Reviser).HasComment("異動人員");
-
-            entity.HasOne(d => d.AdminRole).WithMany(p => p.UserRoleModules)
-                .HasForeignKey(d => d.AdminRoleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_USER_RoleModule_AdminRoleId");
         });
         modelBuilder.HasSequence<int>("UserNumberSequence");
 

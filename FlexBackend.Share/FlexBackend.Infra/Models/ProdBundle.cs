@@ -16,11 +16,6 @@ public partial class ProdBundle
     public int BundleId { get; set; }
 
     /// <summary>
-    /// 組合商品Id
-    /// </summary>
-    public int SubProductId { get; set; }
-
-    /// <summary>
     /// 套組名稱
     /// </summary>
     public string BundleName { get; set; }
@@ -50,5 +45,5 @@ public partial class ProdBundle
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
-    public virtual ProdProduct SubProduct { get; set; }
+    public virtual ICollection<ProdProduct> Products { get; set; } = new List<ProdProduct>();
 }
