@@ -281,19 +281,19 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 					ShippingMethod = _db.SupLogistics
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
-						.FirstOrDefault(), // 撈配送方式名稱
+						.FirstOrDefault(),
 					Items = _db.OrdOrderItems
 						.Where(i => i.OrderId == o.OrderId)
 						.Join(_db.ProdProducts, i => i.ProductId, p => p.ProductId,
 							(i, p) => new { i, p.ProductName })
-						.Join(_db.ProdProductSkus, x => x.i.SkuId, s => s.SkuId,
-							(x, s) => new PrintOrderItemVM
+						.Join(_db.ProdProductSkus, ip => ip.i.SkuId, s => s.SkuId,
+							(ip, s) => new PrintOrderItemVM
 							{
-								ProductName = x.ProductName,
+								ProductName = ip.ProductName,
 								SpecCode = s.SpecCode,
-								UnitPrice = x.i.UnitPrice,
-								Qty = x.i.Qty,
-								Subtotal = x.i.UnitPrice * x.i.Qty
+								UnitPrice = ip.i.UnitPrice,
+								Qty = ip.i.Qty,
+								Subtotal = ip.i.UnitPrice * ip.i.Qty
 							})
 						.ToList()
 				})
@@ -301,7 +301,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 
 			return View("PrintOrders", orders);
 		}
-    
+
+
 
 
 		// 讀取 sysCode 的描述
