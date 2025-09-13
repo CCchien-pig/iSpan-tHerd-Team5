@@ -1,0 +1,321 @@
+﻿@* Suppliers Index *@
+@* 可搜 供應商名/聯絡人名/電話/Email *@
+
+@section Styles {  
+    <!-- Area 專用 CSS -->
+    <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
+    <style>
+    </style>
+}
+
+<button id="create" class="btn btn-outline-success mb-2">新增供應商</button>
+
+@* 渲染 DataTable *@
+<div class="supplier-card">
+    <h5>供應商資料</h5>
+    <table id="supplierTable" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- 新增/修改供應商 Modal -->
+<div id="supplierModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="supplierModalTitle" class="modal-title">供應商</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div id="supplierModalContent" class="modal-body p-4">
+                <!-- 透過 AJAX 載入 _SupplierFormPartial.cshtml -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+        $(document).ready(function() {
+            // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Suppliers/...）
+            var indexJsonUrl = '@Url.Action("IndexJson", "Suppliers", new { area = "SUP" })';
+            var createUrl = '@Url.Action("Create", "Suppliers", new { area = "SUP" })';
+            var editUrl = '@Url.Action("Edit", "Suppliers", new { area = "SUP" })';
+            var detailsUrl = '@Url.Action("Details", "Suppliers", new { area = "SUP" })';
+            var deleteUrl = '@Url.Action("DeleteAjax", "Suppliers", new { area = "SUP" })';
+            var toggleActiveUrl = '@Url.Action("ToggleActive", "Suppliers", new { area = "SUP" })';
+            var stockBatchUrl = '@Url.Action("Index", "StockBatches", new { area = "SUP" })';
+
+
+            // 初始化 DataTable
+            var table = $('#supplierTable').DataTable({
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: indexJsonUrl,
+                    type: 'POST',
+                    dataSrc: 'data'
+                },
+                columns: [
+                    {
+                        data: 'supplierName',
+                        title: '供應商名稱',
+                        render: function(data, type, row) {
+                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.supplierId}"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
+                        }
+                    },
+                    { data: 'contactName', title: '聯絡人' },
+                    { data: 'phone', title: '聯絡電話', className: 'text-center'},
+                    { data: 'email', title: 'Email'},
+                    {
+                        data: 'isActive',
+                        title: '啟用狀態',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            var checked = data ? 'checked' : '';
+                            return `
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-active" type="checkbox" data-id="${row.supplierId}" ${checked}>
+                                </div>
+                            `;
+                        },
+                    },
+                    {
+                        data: 'supplierId',
+                        title: '操作',
+                        orderable: false,   // 禁止排序
+                        render: function(data) {
+                            return `
+                                <button class="btn btn-sm inventory-btn" data-id="${data}"><i class="fa-regular fa-truck" style="color: #dca91e;"></i> 庫存</button>
+                                <button class="btn btn-sm edit-btn" data-id="${data}" title="編輯" data-bs-toggle="tooltip"><i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i></button>
+                                <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除" data-bs-toggle="tooltip"><i class="fa-solid fa-trash" style="color: #6688b7;"></i></button>
+                            `;
+                        }
+                    }
+                ],
+                // fixedHeader: true,
+                scrollY: "500px",     // 表格顯示區域的高度
+                scrollCollapse: true, // 垂直滾動條，當資料少於高度時收合
+                colReorder: true,
+                columnDefs: [
+                    { targets: '_all', type: 'string' } // 所有欄位都設成文字
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',   // i18n
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'   // 自訂載入圖示，大小fa-3x
+                }
+            });
+
+            // 初始化 tooltip
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
+            });
+
+            // 每次 redraw 都要再初始化 tooltip
+            table.on('draw', function() {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (el) {
+                    return new bootstrap.Tooltip(el);
+                });
+            });
+
+            // ======= 新增供應商 =======
+            // 發送 GET 請求到 /Suppliers/Create
+            $("#create").click(function() {
+                $.get( createUrl,  function(html) {
+                    // 動態設定 Modal 標題
+                    $("#supplierModalTitle").text("新增供應商");
+                    // 將 Partial 載入 Modal
+                    $('#supplierModalContent').html(html);
+                    // 重新解析 jQuery Unobtrusive Validation
+                    $.validator.unobtrusive.parse('#supplierModalContent');
+                    $('#supplierModal').modal('show');
+                });
+            });
+
+            // ======= 編輯供應商 =======
+            $('#supplierTable').on('click', '.edit-btn', function () {
+                var id = $(this).data('id');
+
+                // 用 AJAX 把 Partial View 載入到 Modal 裡
+                $.get(`${editUrl}/${id}`, function (html) {
+                    $("#supplierModalTitle").text("修改供應商"); // 動態設定 Modal 標題
+                    $('#supplierModalContent').html(html);  // 把表單塞進去
+                    $.validator.unobtrusive.parse('#supplierModalContent');
+                    $('#supplierModal').modal('show'); // 顯示 Modal
+                });
+            });
+
+            // 編輯 Modal 內 checkbox
+            $('#supplierModalContent').on('change', 'input[name="IsActive"]', function() {
+                var checkbox = $(this);
+                var supplierName = $('#SupplierName').val();
+                var newStatus = checkbox.prop('checked');
+
+                Swal.fire({
+                    title: newStatus ?
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                    icon: newStatus ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: newStatus ? '啟用' : '停用',
+                    cancelButtonText: '取消',
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        // 使用者取消 → 回復舊值
+                        checkbox.prop('checked', !newStatus);
+                    } else {
+                        // 使用者確認 → 更新提示 p
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態，進貨權限將會一同變動`);
+                    }
+                });
+            });
+
+            // ======= 提交表單 (新增/修改) =======
+            $('#supplierModalContent').on('submit', '#supplierForm', function(e) {
+                e.preventDefault();
+                var form = $(this);
+
+                $.post(form.attr('action'), form.serialize())
+                .done(function(res) {
+                    // 判斷回傳結果是否為 JSON
+                    var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
+                    var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
+
+                    if(data){
+                        if(data.success){
+                            $('#supplierModal').modal('hide');
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: data.isCreate ? '新增成功' : '修改成功',
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+                            table.ajax.reload(null, false);
+                        } else if(data.message === "未變更") {
+                            Swal.fire('未變更', '', 'info');
+                        } else {
+                            $('#supplierModalContent').html(res);
+                            $.validator.unobtrusive.parse('#supplierModalContent');
+                        }
+                    }
+                })
+                .fail(function(){
+                    Swal.fire('操作失敗', '', 'error');
+                });
+            });
+
+            // ======= 啟用/停用供應商 =======
+            $('#supplierTable').on('change', '.toggle-active', function() {
+                var checkbox = $(this);
+                var id = checkbox.data('id');
+                var rowData = table.row(checkbox.closest('tr')).data();
+                var supplierName = rowData.supplierName;
+                var newStatus = checkbox.prop('checked'); // true = 啟用
+
+                // 回復原本狀態，等待確認
+                checkbox.prop('checked', !newStatus);
+
+                Swal.fire({
+                    title: newStatus ?
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                    icon: newStatus ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: newStatus ? '啟用' : '停用',
+                    cancelButtonText: '取消',
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                }).then((result) => {
+                    if(result.isConfirmed){
+                        $.post(`${toggleActiveUrl}/${id}`, { isActive: newStatus })
+                        .done(function(res){
+                            if(res.success){
+                                checkbox.prop('checked', newStatus);
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: `供應商已${newStatus ? '啟用' : '停用'}`,
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('操作失敗', res.message || '', 'error');
+                            }
+                        })
+                        .fail(function(){ Swal.fire('操作失敗', '', 'error'); });
+                    }
+                });
+            });
+
+            // ======= 查看詳情i =======
+            $('#supplierTable').on('click', '.details-btn', function() {
+                var id = $(this).data('id');
+
+                // GET 詳細資料 Partial View
+                    $.get(`${detailsUrl}/${id}`, function(html) {
+                    $('#supplierModalTitle').text("供應商詳細資料");
+                    $('#supplierModalContent').html(html);  // 塞進 Modal
+                    $('#supplierModal').modal('show');      // 顯示 Modal
+                });
+            });
+
+            // ======= 刪除供應商 =======
+            $('#supplierTable').on('click', '.delete-btn', function() {
+                var id = $(this).data('id');
+                var rowData = table.row($(this).closest('tr')).data();
+                var supplierName = rowData.supplierName;
+
+                Swal.fire({
+                    title: `確定要刪除供應商："${supplierName}" 嗎？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',   // 確認 → 紅色
+                    cancelButtonColor: '#3085d6', // 取消 → 藍色
+                    confirmButtonText: '刪除',
+                    cancelButtonText: '取消'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${deleteUrl}/${id}`,
+                            type: 'POST',
+                            success: function(res) {
+                                if (res.success) {
+                                    Swal.fire('刪除成功', '', 'success');
+                                    table.ajax.reload(null, false);
+                                } else {
+                                    Swal.fire('刪除失敗', res.message || '', 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('刪除失敗', '', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // ======= 點[庫存]跳轉 =======
+            $('#supplierTable').on('click', '.inventory-btn', function() {
+                var id = $(this).data('id');
+                window.location.href = stockBatchUrl + `?supplierId=${id}`;
+            });
+        });
+    </script>
+}
