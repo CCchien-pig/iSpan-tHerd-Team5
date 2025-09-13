@@ -1,0 +1,101 @@
+﻿@model IEnumerable<FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.PrintOrderVM>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>出貨單</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .order-block {
+            page-break-after: always;
+            margin-bottom: 30px;
+        }
+
+        h2, h3 {
+            margin: 5px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #333;
+            padding: 6px;
+            text-align: center;
+        }
+
+        th {
+            background: #f2f2f2;
+        }
+
+        .info {
+            margin-top: 5px;
+        }
+
+        .summary {
+            margin-top: 10px;
+            text-align: right;
+        }
+
+            .summary p {
+                margin: 3px 0;
+            }
+    </style>
+</head>
+<body onload="window.print()">
+    <h2 style="text-align:center;">tHerd 出貨單</h2>
+
+    @foreach (var vm in Model)
+    {
+        var order = vm.Order;
+        <div class="order-block">
+            <h3>訂單編號：@order.OrderNo</h3>
+            <div class="info">
+                <p><strong>收件人：</strong>@order.ReceiverName</p>
+                <p><strong>電話：</strong>@order.ReceiverPhone</p>
+                <p><strong>地址：</strong>@order.ReceiverAddress</p>
+                <p><strong>配送方式：</strong>@(vm.ShippingMethod ?? "-")</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>商品名稱</th>
+                        <th>規格</th>
+                        <th>單價</th>
+                        <th>數量</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in vm.Items)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td>@item.SpecCode</td>
+                            <td>@item.UnitPrice.ToString("C0")</td>
+                            <td>@item.Qty</td>
+                            <td>@item.Subtotal.ToString("C0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="summary">
+                <p><strong>優惠券：</strong>@(order.CouponId?.ToString() ?? "-")</p>
+                <p><strong>優惠折扣：</strong>@order.DiscountTotal.ToString("C0")</p>
+                <p><strong>運費：</strong>@order.ShippingFee.ToString("C0")</p>
+                <p><strong>總金額：</strong>@order.Subtotal.ToString("C0")</p>
+            </div>
+        </div>
+    }
+</body>
+</html>
