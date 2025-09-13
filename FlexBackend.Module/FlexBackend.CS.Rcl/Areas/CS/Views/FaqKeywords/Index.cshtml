@@ -1,4 +1,5 @@
-﻿@model IEnumerable<FlexBackend.Infra.Models.CsFaqKeyword>
+﻿@* ====== 正確的型別：用 VM，而不是實體 ====== *@
+@model IEnumerable<FaqKeywordListVM>
 
 @{
     ViewData["Title"] = "FAQ 關鍵字設定";
@@ -11,6 +12,7 @@
     <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
 
     <style>
+        /* 表頭 / 表格微調 */
         .table thead th {
             background: #f8f9fa;
             font-weight: 600;
@@ -25,7 +27,7 @@
             border-bottom-color: #eee;
         }
 
-        /* 紫色 badge (FAQ 標題) */
+        /* 紫色 badge（顯示 FAQ 標題） */
         :root {
             --faq-bg: #f3e8ff;
             --faq-bd: #e9d5ff;
@@ -51,6 +53,7 @@
                 color: var(--faq-fg);
             }
 
+        /* 單行省略（FAQ 標題） */
         .line-clamp-1 {
             display: block;
             overflow: hidden;
@@ -59,6 +62,7 @@
             max-width: 560px;
         }
 
+        /* 小圖示按鈕 */
         .btn-icon {
             width: 2rem;
             height: 2rem;
@@ -69,7 +73,7 @@
             border-radius: .5rem;
         }
 
-        /* Overlay 載入動畫 */
+        /* ===== 載入 Overlay（修正 keyframes） ===== */
         #kwWrap {
             position: relative;
         }
@@ -104,7 +108,7 @@
             border-top-color: #6d28d9;
             animation: kw-spin .9s linear infinite;
         }
-       
+        
 
         {
             transform: rotate(360deg);
@@ -121,8 +125,8 @@
             .kw-q span {
                 font: 700 28px/1 "Segoe UI",system-ui,-apple-system,"PingFang TC","Noto Sans TC",Arial,sans-serif;
                 color: #6d28d9;
-                animation: kw-bounce 1s ease-in-out infinite;
                 filter: drop-shadow(0 2px 0 rgba(109,40,217,.1));
+                animation: kw-bounce 1s ease-in-out infinite;
             }
 
                 .kw-q span:nth-child(2) {
@@ -132,7 +136,7 @@
                 .kw-q span:nth-child(3) {
                     animation-delay: .24s;
                 }
-      
+        
 
         {
             transform: translateY(0);
@@ -185,16 +189,16 @@
         <thead>
             <tr>
                 <th style="width:36px" class="text-center"><input type="checkbox" id="chkAll" /></th>
-                <th>Keyword</th>
-                <th>CreatedDate</th>
-                <th>Faq</th>
+                <th>關鍵字</th>
+                <th>建立時間</th>
+                <th>所屬 FAQ</th>
                 <th>操作</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in Model)
             {
-                var faqTitle = item.Faq?.Title ?? "";
+                var faqTitle = item.FaqTitle ?? "";
                 var faqLink = Url.Action("Details", "Faqs", new { area = "CS", id = item.FaqId });
 
                 <tr>
@@ -223,7 +227,9 @@
                                class="btn btn-outline-secondary btn-icon" data-bs-toggle="tooltip" title="檢視">
                                 <i class="fa-regular fa-eye"></i>
                             </a>
-                            <button type="button" class="btn btn-outline-danger btn-icon js-delete" data-id="@item.KeywordId" data-title="@item.Keyword"
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-icon js-delete"
+                                    data-id="@item.KeywordId" data-title="@item.Keyword"
                                     data-bs-toggle="tooltip" title="刪除">
                                 <i class="fa-regular fa-trash-can"></i>
                             </button>
@@ -259,7 +265,8 @@
             const antiToken = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
 
             // 全域 AJAX：開始/結束時顯示/隱藏載入動畫
-            $(document).on('ajaxStart', showLoading).on('ajaxStop', hideLoading);
+            $(document).on('ajaxStart', showLoading)
+                       .on('ajaxStop',  hideLoading);
 
             // DataTables
             const table = new DataTable('#kwTable', {
@@ -295,7 +302,7 @@
             };
             initTips(); table.on('draw', initTips);
 
-            // ===== 全選/行選/按鈕狀態 =====
+            // 全選/行選/按鈕狀態
             const $chkAll = $('#chkAll');
             const $btnDeleteSelected = $('#btnDeleteSelected');
 
@@ -314,7 +321,7 @@
             $('#kwTable').on('change', '.js-row-check', refreshBulkUI);
             table.on('draw', refreshBulkUI);
 
-            // ===== 單筆刪除 =====
+            // 單筆刪除
             $('#kwTable').on('click', '.js-delete', function(){
                 const $btn = $(this);
                 const id = $btn.data('id');
@@ -356,7 +363,7 @@
                 });
             });
 
-            // ===== 批次刪除 =====
+            // 批次刪除
             $btnDeleteSelected.on('click', function(){
                 const ids = $('#kwTable .js-row-check:checked').map(function(){ return $(this).val(); }).get();
                 if(ids.length===0) return;
