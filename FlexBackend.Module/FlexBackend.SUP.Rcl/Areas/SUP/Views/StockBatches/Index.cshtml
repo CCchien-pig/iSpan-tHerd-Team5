@@ -7,12 +7,13 @@
     <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
 }
 
-<div class="d-flex justify-content-between mb-2">
-    <h4>庫存管理</h4>
-    <button id="createStockBatchBtn" class="btn btn-outline-success">新增庫存</button>
-</div>
-
 <div class="stockbatch-card">
+    <button id="createStockBatchBtn" class="btn btn-outline-success">新增庫存</button>
+    <div class="legend">
+        <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
+        <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
+        <span><span class="dot normal"></span> 正常</span>
+    </div>
     <table id="stockBatchTable" class="display" style="width:100%">
         <thead>
             <tr>
@@ -36,10 +37,13 @@
 <div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content bg-white container">
+            <!-- Header -->
             <div class="modal-header">
                 <h5 id="stockBatchModalTitle" class="modal-title">庫存</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            <!-- Body -->
             <div id="stockBatchModalContent" class="modal-body p-4">
                 <!-- AJAX 載入 _StockBatchFormPartial -->
             </div>
@@ -51,60 +55,164 @@
     <script>
         $(document).ready(function () {
 
-            // ======= 初始化庫存 DataTable =======
-            var stockBatchTable = $('#stockBatchTable').DataTable({
-                serverSide: true,
-                processing: true,
-                ajax: {
-                    url: '/SUP/StockBatches/IndexJson',
-                    type: 'POST',
-                    dataSrc: function(json) {
-                        console.log(json);      // 印出整個 JSON
-                        console.log(json.data); // 印出每筆 row
-                        return json.data;
-                    }
-                },
-                columns: [
-                    { data: 'skuCode', title: 'SKU' },            // SKU
-                    { data: 'batchNumber', title: '批號' },      // 批號
-                    { data: 'brandName', title: '品牌' },        // 品牌
-                    { data: 'productName', title: '商品' },      // 商品
-                    { data: 'expireDate', title: '到期日' },     // 到期日
-                    { data: 'qty', title: '庫存量' },            // 庫存量
-                    { data: 'reorderPoint', title: '再訂購點' },// 再訂購點
-                    { data: 'safetyStockQty', title: '安全庫存' },// 安全庫存
-                    {
-                        data: 'specifications',                  // 規格
-                        title: '規格',
-                        render: function(data) {
-                            if(!data) return '';
-                            return data.map(s => s.GroupName + ':' + s.OptionName).join(' / ');
+            // ======= 從 ViewBag 拿到 SupplierId =======
+            var selectedSupplierId = @Html.Raw(Json.Serialize(ViewBag.SupplierId ?? ""));   // 加上 JSON.stringify 保險
+
+            // ======= 先判斷是否有 SupplierId =======
+            var initDataTable = function(brandName) {
+
+                // 初始化庫存 DataTable
+                var stockBatchTable = $('#stockBatchTable').DataTable({
+                    serverSide: true,
+                    processing: true,
+                    ajax: {
+                        url: '/SUP/StockBatches/IndexJson',
+                        type: 'POST',
+                        data: function(d) {
+                            d.supplierId = selectedSupplierId; // 傳給 IndexJson
+                        },
+                        dataSrc: function(json) {
+                            console.log(json);      // 印出整個 JSON
+                            console.log(json.data); // 印出每筆 row
+                            return json.data;
                         }
                     },
-                    {
-                        data: 'stockBatchId',                     // 操作
-                        title: '操作',
-                        orderable: false,
-                        render: function(data, type, row) {
-                            return `
-                                <button class="btn btn-sm btn-primary edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="庫存異動">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <button class="btn btn-sm btn-info stock-history-btn" data-brandid="${row.BrandCode}" data-bs-toggle="tooltip" title="異動紀錄">
-                                    <i class="fa-solid fa-clock-rotate-left"></i>
-                                </button>
-                            `;
+                    columns: [
+                        { data: 'skuCode', title: 'SKU', className: 'text-center'},
+                        { data: 'batchNumber', title: '批號', className: 'text-center'},
+                        { data: 'brandName', title: '品牌', className: 'text-center'},
+                        { data: 'productName', title: '商品名稱', className: 'text-center'},
+                        {
+                            data: 'expireDate',
+                            title: '到期日',
+                            render: function(data) {
+                                if (!data) return '無';
+                                let date = new Date(data);
+                                let today = new Date();
+                                let formatted = date.toLocaleDateString('zh-TW');
+
+                                if (date < today.setHours(0,0,0,0)) {
+                                    return `<span class="text-danger">${formatted} (已過期)</span>`;
+                                }
+                                return formatted;
+                            }
+                        },
+                        {
+                            data: 'qty', title: '庫存量',
+                            render: function (data, type, row) {
+                                let stock = parseInt(data);
+                                let reorder = parseInt(row.reorderPoint);
+                                let safety = parseInt(row.safetyStockQty);
+
+                                if (stock <= safety) {
+                                    return `<span class="stock-danger" data-bs-toggle="tooltip" title="低於安全庫存"><i class="fa-solid fa-triangle-exclamation" style="color: #e66774;"></i>${stock}</span>`;
+                                } else if (stock <= reorder) {
+                                    return `<span class="stock-low" data-bs-toggle="tooltip" title="庫存低於再訂購點"><i class="fa-solid fa-circle-exclamation" style="color: #f9d66f;"></i>${stock}</span>`;
+                                }
+                                return `<span class="stock-normal" data-bs-toggle="tooltip" title="庫存正常">${stock}</span>`;
+                            }
+                        },
+                        { data: 'reorderPoint', title: '再訂購點' },
+                        { data: 'safetyStockQty', title: '安全庫存' },
+                        {
+                            data: 'specifications',
+                            className: 'text-center',
+                            title: '規格',
+                                render: function(data) {
+                                console.log(data);  // 印出確認
+                                if(!data) return '';
+                                return data.map(s => s.groupName + ':' + s.optionName).join(' / ');
+                            }
+                        },
+                        {
+                            data: 'stockBatchId',
+                            title: '操作',
+                            orderable: false,
+                            render: function(data, type, row) {
+                                return `
+                                    <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="庫存異動">
+                                        <i class="fa-solid fa-pen-to-square" style="color: #9073e8;"></i>
+                                    </button>
+                                    <button class="btn btn-sm stock-history-btn" data-brandid="${row.BrandCode}" data-bs-toggle="tooltip" title="異動紀錄">
+                                        <i class="fa-solid fa-clock-rotate-left" style="color: #1c7ed6;"></i>
+                                    </button>
+                                `;
+                            }
                         }
+                    ],
+                    scrollY: "500px",
+                    scrollCollapse: true,
+                    colReorder: true,
+                    columnDefs: [
+                        { targets: '_all', type: 'string' } // 所有欄位都設成文字
+                    ],
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                        processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                    },
+                    initComplete: function(settings, json) {
+                        // ===== 自動填入搜尋品牌名稱（不觸發搜尋）=====
+                        if (brandName) {
+                            $('#dt-search-0').val(brandName);
+
+                            Swal.fire({
+                                icon: 'info',
+                                title: '已篩選',
+                                text: `目前顯示供應商 "${brandName}" 的品牌庫存`,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+
+                            // 填入搜尋欄但不觸發 DataTable 搜尋
+                            $('#dt-search-0').val(brandName);
+                        }
+
+                        // ===== 在搜尋欄旁加重置按鈕 =====
+                        var searchBox = $('.dt-search');
+                        if (searchBox.length && !$('#resetSearchBtn').length) {
+                            searchBox.append(`
+                                <button id="resetSearchBtn" class="btn btn-sm btn-outline-secondary ms-2" title="重置搜尋" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-arrows-rotate" style="color: #f4a4d7;"></i>
+                                </button>
+                            `);
+
+                            $('#resetSearchBtn').on('click', function() {
+                                $('#dt-search-0').val('');        // 清空搜尋文字
+                                stockBatchTable.search('').draw(); // 重新 draw
+                            });
+                        }
+
+                        // 初始化 tooltip
+                        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                        tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+
                     }
-                ],
-                scrollY: "500px",
-                scrollCollapse: true,
-                colReorder: true,
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
-                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
-                }
-            });
+                });
+
+                // 每次 redraw 都重新初始化 tooltip
+                stockBatchTable.on('draw', function() {
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+                });            
+            }
+
+            // 如果有 SupplierId，先取得品牌名稱
+            if (selectedSupplierId) {
+                $.ajax({
+                    url: '/SUP/StockBatches/GetBrandNameBySupplier',
+                    type: 'GET',
+                    data: { supplierId: selectedSupplierId },
+                    success: function(brandName) {
+                        initDataTable(brandName);
+                    },
+                    error: function() {
+                        initDataTable('');
+                    }
+                });
+            } 
+            else {
+                initDataTable('');
+            }
 
             // ======= 初始化 Modal Form 函數 =======
             window.initStockBatchForm = function(selectedBrandId = null, selectedProductId = null, selectedSkuId = null) {
@@ -181,7 +289,7 @@
                     $('#ReorderPoint').text(reorderPoint);
                     $('#SafetyStockQty').text(safetyStock);
                     $('#MaxStockQty').text(maxStock);
-                    $('#IsAllowBackorderText').text(allowBackorder ? '可超賣' : '禁止');
+                    $('#IsAllowBackorderText').text(allowBackorder ? '可預購' : '不可預購');
 
                     var $changeQty = $('#ChangeQtyInput');
                     var $predictedQty = $('#PredictedQty');
@@ -195,28 +303,30 @@
 
                     $changeQty.off('input').on('input', function() {
                         var val = parseInt($(this).val()) || 0;
-
-                        if(adjustType && val > maxAdd) $(this).val(maxAdd);
-                        if(!adjustType && val > maxRemove) $(this).val(maxRemove);
-
-                        var newQty = currentQty;
                         var movementType = $('#MovementTypeSelect').val();
+                        var newQty = currentQty;
+
                         switch(movementType){
-                            case 'Purchase':
-                            case 'Return':
-                            case 'Adjust':
-                                newQty += (adjustType ? val : -val);
+                            case 'Purchase':   // 採購入庫
+                            case 'Return':     // 退貨入庫
+                                newQty += val;
                                 break;
-                            case 'Sale':
-                            case 'Expire':
+                            case 'Sale':       // 銷售出庫
+                            case 'Expire':     // 到期報廢
                                 newQty -= val;
+                                break;
+                            case 'Adjust':     // 手動調整
+                                var isAdd = $('#AdjustTypeSelect').val() === 'true';
+                                newQty += isAdd ? val : -val;
                                 break;
                         }
 
+                        // 判斷是否允許負庫存
                         if(!allowBackorder && newQty < 0) newQty = 0;
 
                         $predictedQty.text(newQty);
                     });
+
                 });
 
                 // 異動類型切換顯示手動加減
