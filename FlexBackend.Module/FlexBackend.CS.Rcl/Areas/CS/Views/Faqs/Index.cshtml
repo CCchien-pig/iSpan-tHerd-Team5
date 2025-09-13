@@ -87,75 +87,70 @@
             <th style="width:36px;" class="text-center">
                 <input type="checkbox" id="chkAll" />
             </th>
-            <th>@Html.DisplayNameFor(model => model.Title)</th>
-            <th>@Html.DisplayNameFor(model => model.AnswerHtml)</th>
-            <th>@Html.DisplayNameFor(model => model.Status)</th>
-            <th>@Html.DisplayNameFor(model => model.OrderSeq)</th>
-            <th>@Html.DisplayNameFor(model => model.LastPublishedTime)</th>
-            <th>@Html.DisplayNameFor(model => model.IsActive)</th>
-            <th>@Html.DisplayNameFor(model => model.CreatedDate)</th>
-            <th>@Html.DisplayNameFor(model => model.RevisedDate)</th>
-            <th>@Html.DisplayNameFor(model => model.Category)</th>
-            <th>操作</th>
+            <th>
+                @Html.DisplayNameFor(model => model.AnswerHtml)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.OrderSeq)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.LastPublishedTime)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IsActive)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CreatedDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RevisedDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Category)
+            </th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td class="text-center">
-                    <input type="checkbox" class="js-row-check" value="@item.FaqId" />
-                </td>
-                <td>@item.Title</td>
-
-                <!-- 讓 JS 做兩行省略 + title 顯示全文 -->
-                <td class="answer-cell">@Html.Raw(item.AnswerHtml)</td>
-
-                <td>@item.Status</td>
-                <td>@item.OrderSeq</td>
-                <td>@(item.LastPublishedTime?.ToString("yyyy/MM/dd HH:mm"))</td>
-
-                <td class="text-center">
-                    @{
-                        var toggleId = $"toggle-{item.FaqId}";
-                    }
-                    <div class="form-check form-switch m-0 d-inline-flex align-items-center switch-wrap">
-                        <input id="@toggleId"
-                               class="form-check-input js-toggle-active"
-                               type="checkbox"
-                               data-id="@item.FaqId"
-                               @(item.IsActive ? "checked" : "")
-                               aria-label="切換啟用狀態" />
-                        <label class="form-check-label" for="@toggleId">
-                            @(item.IsActive ? "啟用" : "停用")
-                        </label>
-                    </div>
-                </td>
-
-                <td>@item.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
-                <td>@(item.RevisedDate?.ToString("yyyy/MM/dd HH:mm"))</td>
-                <td>@item.Category?.CategoryName</td>
-
-                <td class="text-nowrap">
-                    <div class="btn-group" role="group" aria-label="Actions">
-                        <a asp-action="Edit" asp-route-id="@item.FaqId"
-                           class="btn btn-outline-primary btn-icon" data-bs-toggle="tooltip" title="編輯">
-                            <i class="fa-solid fa-pen"></i>
-                        </a>
-                        <a asp-action="Details" asp-route-id="@item.FaqId"
-                           class="btn btn-outline-secondary btn-icon" data-bs-toggle="tooltip" title="檢視">
-                            <i class="fa-regular fa-eye"></i>
-                        </a>
-                        <button type="button"
-                                class="btn btn-outline-danger btn-icon js-delete-btn"
-                                data-id="@item.FaqId" data-title="@item.Title"
-                                data-bs-toggle="tooltip" title="刪除">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        }
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Title)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AnswerHtml)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Status)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.OrderSeq)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.LastPublishedTime)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsActive)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RevisedDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Category.CategoryName)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.FaqId">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.FaqId">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.FaqId">Delete</a>
+            </td>
+        </tr>
+}
     </tbody>
 </table>
 
