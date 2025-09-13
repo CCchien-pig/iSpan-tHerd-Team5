@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.EntityFrameworkCore;
 namespace FlexBackend.Services.USER
 {
     public static class USERModuleServiceCollectionExtensions
