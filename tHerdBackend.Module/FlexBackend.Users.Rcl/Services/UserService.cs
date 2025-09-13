@@ -18,27 +18,6 @@ namespace FlexBackend.USER.Rcl.Services
 		// 負責建立新使用者並自動產生推薦碼
 		public async Task<IdentityResult> RegisterUserAsync(string email, string password, string firstName, string lastName,string gender)
 		{
-			//int nextId;
-
-			// 確保使用 DbContext 的 Connection
-			//var connection = _context.Database.GetDbConnection();
-
-			//try
-			//{
-			//	if (connection.State != System.Data.ConnectionState.Open)
-			//		await connection.OpenAsync();
-
-			//	using (var cmd = connection.CreateCommand())
-			//	{
-			//		cmd.CommandText = "SELECT NEXT VALUE FOR dbo.UserNumberSequence";
-			//		var numIdresult = await cmd.ExecuteScalarAsync();
-			//		nextId = Convert.ToInt32(numIdresult);
-			//	}
-			//}
-			//finally
-			//{
-			//	// 不要關閉 connection，交給 EF Core 管理
-			//}
 
 			var newUser = new ApplicationUser
 			{

@@ -40,11 +40,11 @@ namespace FlexBackend.USER.Rcl.Services
 				throw new InvalidOperationException("UserPassword not configured in secrets.json.");
 
 			// 若已存在任一使用者，避免重複 seeding（可依需求調整）
-			if (await userManager.Users.AnyAsync())
-			{
-				logger.LogInformation("Users already exist. Skipping user seeding.");
-				return;
-			}
+			//if (await userManager.Users.AnyAsync())
+			//{
+			//	logger.LogInformation("Users already exist. Skipping user seeding.");
+			//	return;
+			//}
 
 			// 模組管理員角色清單（需先由 RoleInitializer 建好）
 			string[] moduleAdminRoles =
