@@ -8,7 +8,7 @@ namespace FlexBackend.Infra.Models;
 /// <summary>
 /// 商品的規格設定的選項
 /// </summary>
-public partial class ProdSpecificationOptionDto
+public partial class ProdSpecificationDto
 {
     /// <summary>
     /// 規格選項ID（主鍵）
@@ -24,6 +24,11 @@ public partial class ProdSpecificationOptionDto
     /// 規格群組ID（外鍵）
     /// </summary>
     public int SpecificationConfigId { get; set; }
+
+    /// <summary>
+    /// 規格群組名稱（例如：容量、口味、顏色）
+    /// </summary>
+    public string GroupName { get; set; }
 
     /// <summary>
     /// 規格選項名稱（例如：250ml、巧克力）

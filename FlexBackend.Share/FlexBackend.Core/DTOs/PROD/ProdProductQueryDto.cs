@@ -17,9 +17,19 @@ public partial class ProdProductQueryDto
     public int ProductId { get; set; }
 
     /// <summary>
+    /// 商品名稱
+    /// </summary>
+    public string ProductName { get; set; }
+
+    /// <summary>
     /// 供應商ID(FK)
     /// </summary>
-    public int SupplierId { get; set; }
+    public int? SupId { get; set; }
+
+    /// <summary>
+    /// 供應商名稱
+    /// </summary>
+    public string SupName { get; set; }
 
     /// <summary>
     /// 品牌ID
@@ -27,24 +37,39 @@ public partial class ProdProductQueryDto
     public int? BrandId { get; set; }
 
     /// <summary>
-    /// 商品名稱
+    /// 品牌名稱
     /// </summary>
-    public string ProductName { get; set; }
+    public string BrandName { get; set; }
+
+    /// <summary>
+    /// 折扣率 (0 ~ 100%)
+    /// </summary>
+    public decimal? BrandDisCntRate { get; set; } // DiscountRate
+
+    /// <summary>
+    /// 折扣狀態，1=有效、0=結束（排程更新）
+    /// </summary>
+    public bool BrandDisCntActive { get; set; } // IsDiscountActive
+
+    /// <summary>
+    /// 聯絡人
+    /// </summary>
+    public string SupContact { get; set; } // ContactName
+
+    /// <summary>
+    /// 聯絡電話
+    /// </summary>
+    public string SupPhone { get; set; } // Phone
+
+    /// <summary>
+    /// 電子郵件
+    /// </summary>
+    public string SupEmail { get; set; } // Email
 
     /// <summary>
     /// 商品簡短描述，常用於列表展示
     /// </summary>
     public string ShortDesc { get; set; }
-
-    /// <summary>
-    /// 商品完整描述，用於詳細頁
-    /// </summary>
-    public string FullDesc { get; set; }
-
-    /// <summary>
-    /// 是否上架（0=否，1=是）
-    /// </summary>
-    public bool IsPublished { get; set; }
 
     /// <summary>
     /// 重量（公斤）
@@ -62,14 +87,79 @@ public partial class ProdProductQueryDto
     public string VolumeUnit { get; set; }
 
     /// <summary>
-    /// SKU清單
+    /// SKU 編號
     /// </summary>
-    public List<ProdProductSkuDto> Skus { get; set; } = new();
+    public int? SkuId { get; set; }
 
     /// <summary>
-    /// 照片清單
+    /// 規格碼
+    /// </summary
+    public string SpecCode { get; set; }
+
+    /// <summary>
+    /// SKU代碼
     /// </summary>
-    public List<ProdProductImageDto> Images { get; set; } = new();
+    public string SkuCode { get; set; }
+
+    /// <summary>
+    /// 條碼
+    /// </summary>
+    public string Barcode { get; set; }
+
+    /// <summary>
+    /// 成本價
+    /// </summary>
+    public decimal? CostPrice { get; set; }
+
+    /// <summary>
+    /// 原價
+    /// </summary>
+    public decimal? ListPrice { get; set; }
+
+    /// <summary>
+    /// 單價
+    /// </summary>
+    public decimal? UnitPrice { get; set; }
+
+    /// <summary>
+    /// 優惠價
+    /// </summary>
+    public decimal SalePrice { get; set; }
+
+    /// <summary>
+    /// 目前庫存
+    /// </summary>
+    public int? StockQty { get; set; }
+
+    /// <summary>
+    /// 安全庫存量（低於提醒）
+    /// </summary>
+    public int? SafetyStockQty { get; set; }
+
+    /// <summary>
+    /// 再訂購點（≧安全庫存量）
+    /// </summary>
+    public int? ReorderPoint { get; set; }
+
+    /// <summary>
+    /// 最大庫存量（0=不限制)
+    /// </summary>
+    public int? MaxStockQty { get; set; }
+
+    /// <summary>
+    /// 是否允許缺貨預購（1=可超賣，0=禁止）
+    /// </summary>
+    public bool? IsAllowBackorder { get; set; }
+
+    /// <summary>
+    /// 有效天數
+    /// </summary>
+    public int? ShelfLifeDays { get; set; }
+
+    /// <summary>
+    /// 商品分類
+    /// </summary>
+    public string ProductTypeName { get; set; }
 
     /// <summary>
     /// 分類清單
@@ -77,14 +167,19 @@ public partial class ProdProductQueryDto
     public List<ProdProductTypeDto> Types { get; set; } = new();
 
     /// <summary>
-    /// 規格清單
+    /// 規格
     /// </summary>
-    public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
+    public string Spec { get; set; } // PROD_SpecificationConfig.GroupName
 
     /// <summary>
     /// 規格選項清單
     /// </summary>
-    public List<ProdSpecificationOptionDto> SpecOptions { get; set; } = new();
+    public List<ProdSpecificationDto> SpecOptions { get; set; } = new();
+
+    /// <summary>
+    /// 規格
+    /// </summary>
+    public string Attribute { get; set; } // PROD_AttributeOption.Attribute
 
     /// <summary>
     /// 屬性選項清單
@@ -92,9 +187,19 @@ public partial class ProdProductQueryDto
     public List<ProdAttributeOptionDto> AttributeOptions { get; set; } = new();
 
     /// <summary>
+    /// 組合
+    /// </summary>
+    public string Bundle { get; set; } // PROD_BundleItem.Bundle
+
+    /// <summary>
     /// 組合清單
     /// </summary>
     public List<ProdBundleItemDto> BundleItems { get; set; } = new();
+
+    /// <summary>
+    /// 組合
+    /// </summary>
+    public string Ingredient { get; set; } // PROD_ProductIngredient.Ingredients
 
     /// <summary>
     /// 成分清單
