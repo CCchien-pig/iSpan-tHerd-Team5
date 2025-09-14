@@ -1,253 +1,311 @@
-﻿@{
-    ViewData["Title"] = "RMA售後處理";
+﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns.ReturnListPageVM
+@{
+    ViewData["Title"] = "售後申請處理";
+    string Q(string g) => Url.Action("Index", new { group = g, keyword = Model.Keyword, page = 1, pageSize = Model.PageSize })!;
 }
 
-<!-- ★ 不用 section：直接在頁面插入 DataTables 所需 CSS -->
-<link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-<style>
-    .dataTables_wrapper .dataTables_filter {
-        float: right;
-        text-align: right;
-    }
+@section Styles {
+    <style>
+        .card.shadow {
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
 
-    .dt-nowrap {
-        white-space: nowrap;
+        thead {
+            background-color: #652D77;
+            color: #fff;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background-color: #F2F2F2;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f3e8ff;
+        }
+
+        .badge {
+            font-weight: 500;
+        }
+    </style>
+}
+
+<style>
+    /* 隱藏列表內（table）殘留的舊按鈕，不影響明細視窗 */
+    .table .btn-approve,
+    .table .btn-reject {
+        display: none !important;
     }
 </style>
 
-<div class="card shadow">
-    <div class="card-header"><h5 class="m-0">RMA 售後處理</h5></div>
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 text-purple2">售後申請審核</h6>
+        <div>
+            <a class="btn btn-sm btn-outline-secondary me-2" href="@Q(null)">全部 <span class="badge bg-secondary">@Model.Tabs.All</span></a>
+            <a class="btn btn-sm btn-outline-secondary me-2 @(Model.Group == "pending" ? "active" : "")" href="@Q("pending")">待審核 <span class="badge bg-secondary">@Model.Tabs.Pending</span></a>
+            <a class="btn btn-sm btn-outline-secondary me-2 @(Model.Group == "approved" ? "active" : "")" href="@Q("approved")">已批准 <span class="badge bg-secondary">@Model.Tabs.Approved</span></a>
+            <a class="btn btn-sm btn-outline-secondary me-2 @(Model.Group == "done" ? "active" : "")"href="@Q("done")">處理完成 <span class="badge bg-secondary">@Model.Tabs.Done</span></a>
+            <a class="btn btn-sm btn-outline-secondary @(Model.Group == "rejected" ? "active" : "")" href="@Q("rejected")">已駁回 <span class="badge bg-secondary">@Model.Tabs.Rejected</span></a>
+        </div>
+    </div>
+
     <div class="card-body">
-
-        <ul class="nav nav-tabs" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-req" type="button">退貨申請（待審核）</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-list" type="button">RMA 清單（已核准流程）</button>
-            </li>
-        </ul>
-
-        <div class="tab-content mt-3">
-            <!-- 分頁①：待審核 -->
-            <div class="tab-pane fade show active" id="tab-req">
-                <table id="dt-req" class="table table-striped table-bordered w-100">
-                    <thead>
-                        <tr>
-                            <th class="dt-nowrap">操作</th>
-                            <th class="dt-nowrap">申請單ID</th>
-                            <th class="dt-nowrap">RMA Id</th>
-                            <th class="dt-nowrap">訂單編號</th>
-                            <th>申請類型</th>
-                            <th>退款範圍</th>
-                            <th>原因</th>
-                            <th>原因說明</th>
-                            <th class="dt-nowrap">建立者</th>
-                            <th class="dt-nowrap">建立時間</th>
-                            <th>品項數</th>
-                            <th>退款紀錄</th>
-                        </tr>
-                    </thead>
-                </table>
+        <form id="searchForm" class="row g-2 mb-3" method="get" action="@Url.Action("Index")">
+            <div class="col-md-4">
+                <input name="keyword" class="form-control" placeholder="輸入 RMA / 訂單號"
+                       value="@Model.Keyword" />
             </div>
-
-            <!-- 分頁②：已核准流程 -->
-            <div class="tab-pane fade" id="tab-list">
-                <table id="dt-rma" class="table table-striped table-bordered w-100">
-                    <thead>
-                        <tr>
-                            <th class="dt-nowrap">申請單ID</th>
-                            <th class="dt-nowrap">RMA Id</th>
-                            <th class="dt-nowrap">訂單編號</th>
-                            <th>狀態</th>
-                            <th>審核者</th>
-                            <th class="dt-nowrap">審核時間</th>
-                            <th>備註</th>
-                            <th>品項數</th>
-                            <th>退款紀錄</th>
-                        </tr>
-                    </thead>
-                </table>
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="document.getElementById('searchForm').submit()">
+                    @foreach (var s in new[] { 10, 25, 50, 100 })
+                    {
+                        <option value="@s" selected="@(Model.PageSize == s)">@s /頁</option>
+                    }
+                </select>
             </div>
+            <input type="hidden" name="group" value="@Model.Group" />
+            <div class="col-auto"><button class="btn btn-primary">搜尋</button></div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <td>-</td>
+                        <th>#</th>
+                        <th>RMA</th>
+                        <th>訂單號</th>
+                        <th>類型</th>
+                        <th>範圍</th>
+                        <th>狀態</th>
+                        <th>建立時間</th>
+                        <th>原因</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var it in Model.Items)
+                    {
+                        var canApprove = it.Status == "pending" || it.Status == "review";
+                        <tr data-id="@it.ReturnRequestId" data-orderid="@it.OrderId">
+                            <td class="text-muted">-</td>
+                            <td><a href="javascript:;" class="rma-detail">#@it.ReturnRequestId</a></td>
+                            <td>@(string.IsNullOrEmpty(it.RmaId) ? "-" : it.RmaId)</td>
+                            <td>@it.OrderNo</td>
+                            <td>@(string.IsNullOrEmpty(it.RequestTypeName) ? it.RequestType : it.RequestTypeName)</td>
+                            <td>@(string.IsNullOrEmpty(it.RefundScopeName) ? it.RefundScope : it.RefundScopeName)</td>
+                            <td><span class="badge bg-secondary">@(string.IsNullOrEmpty(it.StatusName) ? it.Status : it.StatusName)</span></td>
+                            <td>@it.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+                            <td>@it.ReasonText</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <nav>
+            @{
+                var p = Model.Page < 1 ? 1 : Model.Page;
+                var pages = (int)Math.Ceiling((double)Model.Total / Model.PageSize);
+                if (pages < 1) pages = 1;
+
+                string Link(int page) => Url.Action("Index", new
+                {
+                    group = Model.Group,
+                    keyword = Model.Keyword,
+                    page = page,
+                    pageSize = Model.PageSize
+                })!;
+            }
+            <div class="d-flex align-items-center mt-3">
+                <div class="text-muted">總筆數 <strong>@Model.Total</strong></div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <a class="btn btn-sm btn-outline-secondary @(p <= 1 ? "disabled" : null)"
+                       href="@(p <= 1 ? "#" : Link(p - 1))" aria-disabled="@(p <= 1)">上一頁</a>
+
+                    <span class="text-muted">第</span>
+                    <span class="px-3 py-1 border rounded bg-white">@p</span>
+                    <span class="text-muted">/ 共 @pages 頁</span>
+
+                    <a class="btn btn-sm btn-outline-secondary @(p >= pages ? "disabled" : null)"
+                       href="@(p >= pages ? "#" : Link(p + 1))" aria-disabled="@(p >= pages)">下一頁</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<!-- 明細用 Modal -->
+<div class="modal fade" id="rmaDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">退貨申請明細</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="rma-detail-body">載入中...</div>
         </div>
     </div>
 </div>
 
-<!-- ★ 不用 section：直接在頁面尾插入 JS（含 jQuery 安全載入） -->
-<script>
-    // 若主站沒載 jQuery 才載 CDN，避免重複
-    if (typeof window.jQuery === "undefined") {
-      var s = document.createElement("script");
-      s.src = "https://code.jquery.com/jquery-3.7.1.min.js";
-      document.head.appendChild(s);
-    }
-</script>
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function(){
+          // 工具
+          const get = (o,...ns)=>{for(const n of ns){if(o&&o[n]!=null)return o[n]}};
+          const fmtMoney=n=>(n==null||isNaN(n))?'-':Number(n).toLocaleString('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0});
+          const fmt=s=>(s==null?'':s);
+          const fmtDate=s=>{ if(!s) return '-'; const d=new Date(s); return isNaN(d)?s:d.toLocaleString('zh-TW'); };
+          const normalizeStatus = (s)=>{
+            if(!s) return ''; const t=String(s).toLowerCase();
+            if(['pending','review','refunding','reshipping','done','rejected'].includes(t)) return t;
+            const map={'審核中':'review','退款中':'refunding','補寄中':'reshipping','處理完成':'done','駁回':'rejected'};
+            return map[s]??t;
+          };
 
-<script>
-    const urlGetReq   = '@Url.Action("GetRequests", "Rma", new { area = "ORD" })';
-    const urlGetList  = '@Url.Action("GetRmaList", "Rma", new { area = "ORD" })';
-    const urlDecide   = '@Url.Action("Decide", "Rma", new { area = "ORD" })';
-    const urlGetItems = '@Url.Action("GetRequestItems", "Rma", new { area = "ORD" })';
+          // Ajax 封裝
+          const api = {
+            order: id => $.getJSON('/ORD/Orders/GetOrderDetails',{orderId:id}),
+            rma  : id => $.getJSON('/ORD/Rma/GetReturnDetail',{id}),
+            approve:(id,next)=>$.post('/ORD/Rma/Approve',{id,nextStatus:next}),
+            reject :(id,reason)=>$.post('/ORD/Rma/Reject',{id,reason}),
+            complete:id=>$.post('/ORD/Rma/Complete',{id})
+          };
 
-    function ready(fn){             // 確保 jQuery 與 DOM 都可用
-      if (window.jQuery) jQuery(fn);
-      else setTimeout(()=>ready(fn), 30);
-    }
+          // 正規化 order item
+          const normItem = it => ({
+            orderItemId: get(it,'orderItemId','OrderItemId','order_item_id'),
+            productName: get(it,'productName','ProductName'),
+            skuSpec    : get(it,'skuSpec','SkuSpec','spec','Spec'),
+            unitPrice  : get(it,'unitPrice','UnitPrice'),
+            qty        : get(it,'qty','Qty','quantity','Quantity'),
+            subtotal   : get(it,'subtotal','Subtotal')
+          });
+          const normRItem = it => ({
+            rmaItemId: get(it,'rmaItemId','RmaItemId'),
+            orderItemId: get(it,'orderItemId','OrderItemId'),
+            qty: get(it,'qty','Qty'),
+            approvedQty: get(it,'approvedQty','ApprovedQty'),
+            refundQty: get(it,'refundQty','RefundQty'),
+            reshipQty: get(it,'reshipQty','ReshipQty'),
+            refundUnitAmount: get(it,'refundUnitAmount','RefundUnitAmount')
+          });
 
-    ready(function(){
-      // 分頁①：待審核
-      const dtReq = $('#dt-req').DataTable({
-        ajax: { url: urlGetReq, dataSrc: 'data' },
-        deferRender: true, processing: true, autoWidth: false,
-        columns: [
-          {
-            data: null, orderable:false, className:'dt-nowrap',
-            render: (r) => `
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-approve" data-id="${r.returnRequestId}">核准</button>
-                <button class="btn btn-outline-danger  btn-reject"  data-id="${r.returnRequestId}">駁回</button>
-                <button class="btn btn-outline-secondary btn-items" data-id="${r.returnRequestId}">明細</button>
-              </div>`
-          },
-          { data: 'returnRequestId' },
-          { data: 'rmaId', defaultContent: '-' },
-          { data: 'orderNo' },
-          { data: 'requestTypeName' },
-          { data: 'refundScopeName' },
-          { data: 'reasonName' },
-          { data: 'reasonText' },
-          { data: 'creatorName', render: v => v || '' },
-          { data: 'createdDate', render: v => v ? new Date(v).toLocaleString() : '' },
-          { data: 'itemCount' },
-          { data: 'hasRefundPayment', render: v => v ? 'Y' : '' }
-        ]
-      });
+          // 渲染明細＋右上角動作
+          function renderDetail($body, order, items, rma, rItems){
+            const idx={}; (items||[]).map(normItem).forEach(x=>idx[x.orderItemId]=x);
 
-      // 分頁②：RMA 清單
-      const dtRma = $('#dt-rma').DataTable({
-        ajax: { url: urlGetList, dataSrc: 'data' },
-        deferRender: true, processing: true, autoWidth: false,
-        columns: [
-          { data: 'returnRequestId' },
-          { data: 'rmaId', defaultContent: '-' },
-          { data: 'orderNo' },
-          { data: 'statusName' },
-          { data: 'reviewerName' },
-          { data: 'reviewedDate', render: v => v ? new Date(v).toLocaleString() : '' },
-          { data: 'reviewComment', defaultContent: '' },
-          { data: 'itemCount' },
-          {
-            data: 'refundPayments', orderable:false,
-            render: (list) => {
-              if (!list || !list.length) return '';
-              return list.map(p => `#${p.paymentId} $${p.amount} (${p.statusName || p.status})`).join('<br/>');
-            }
-          }
-        ]
-      });
-
-      // 切換 tab 時調整欄寬
-      document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn=>{
-        btn.addEventListener('shown.bs.tab', ()=>{
-          $.fn.dataTable.tables({visible:true, api:true}).columns.adjust();
-        });
-      });
-
-      // 審核 Modal
-      const $decisionModal = new bootstrap.Modal('#decisionModal');
-      $('#dt-req').on('click', '.btn-approve,.btn-reject', function(){
-        const id = this.dataset.id;
-        const approve = this.classList.contains('btn-approve');
-        $('#dm-requestId').val(id);
-        $('#dm-approve').val(approve ? 'true' : 'false');
-        $('#dm-note').val('');
-        $decisionModal.show();
-      });
-
-      $('#decisionForm').on('submit', function(e){
-        e.preventDefault();
-        const fd = new FormData(this);
-        fetch(urlDecide, { method:'POST', body: fd })
-          .then(r=>r.json())
-          .then(res=>{
-            if(res.success){
-              $decisionModal.hide();
-              dtReq.ajax.reload(null,false);
-              dtRma.ajax.reload(null,false);
-            }else{
-              alert(res.message || '處理失敗');
-            }
-          })
-          .catch(()=> alert('連線失敗'));
-      });
-
-      // 展開明細
-      $('#dt-req').on('click', '.btn-items', function(){
-        const tr  = $(this).closest('tr');
-        const row = dtReq.row(tr);
-        const id  = this.dataset.id;
-
-        if(row.child.isShown()){ row.child.hide(); tr.removeClass('shown'); return; }
-
-        fetch(`${urlGetItems}?requestId=${id}`)
-          .then(r=>r.json()).then(res=>{
-            const rows = (res.data || []).map(x => `
-              <tr>
-                <td>${x.orderItemId}</td>
-                <td class="text-end">${x.qty}</td>
-                <td class="text-end">${x.approvedQty ?? ''}</td>
-                <td class="text-end">${x.refundQty ?? ''}</td>
-                <td class="text-end">${x.reshipQty ?? ''}</td>
-                <td class="text-end">${x.refundUnitAmount ?? ''}</td>
-                <td class="text-end">${x.subtotal}</td>
-              </tr>`).join('');
-
-            const html = `
-              <div class="p-2">
-                <table class="table table-sm table-bordered mb-0">
-                  <thead>
-                    <tr>
-                      <th>OrderItemId</th>
-                      <th class="text-end">申請數</th>
-                      <th class="text-end">核准數</th>
-                      <th class="text-end">退款數</th>
-                      <th class="text-end">補寄數</th>
-                      <th class="text-end">退款單價</th>
-                      <th class="text-end">小計</th>
-                    </tr>
+            let html = `
+              <div class="fw-bold mb-2">商品明細</div>
+              <div class="table-responsive mb-2">
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light"><tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
+                  <tbody>
+                    ${(items||[]).map(i=>{const x=normItem(i);return `
+                      <tr><td>${fmt(x.productName)}</td><td>${fmt(x.skuSpec)}</td>
+                      <td>${fmtMoney(x.unitPrice)}</td><td>${x.qty??'-'}</td><td>${fmtMoney(x.subtotal)}</td></tr>`;}).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div class="text-end mb-2">
+                <div>優惠券：${fmt(get(order,'couponCode','CouponCode')) || '-'}</div>
+                <div>優惠折扣：${fmtMoney(get(order,'discountTotal','DiscountTotal'))}</div>
+                <div>運費：${fmtMoney(get(order,'shippingFee','ShippingFee'))}</div>
+                <div class="fw-bold">總金額：${fmtMoney(get(order,'totalAmount','TotalAmount'))}</div>
+              </div>
+              <hr class="my-3"/>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <div class="fw-bold">退貨申請</div>
+                  <div class="small text-muted">
+                    <span class="badge bg-secondary me-2">${fmt(get(rma,'StatusName','statusName')||get(rma,'Status','status'))}</span>
+                    ${fmt(get(rma,'RequestTypeName','requestTypeName')||get(rma,'RequestType','requestType'))} /
+                    ${fmt(get(rma,'RefundScopeName','refundScopeName')||get(rma,'RefundScope','refundScope'))}
+                    ・建立：${fmtDate(get(rma,'CreatedDate','createdDate'))}
+                  </div>
+                  ${get(rma,'ReasonText','reasonText')?`<div class="mt-1"><strong>原因：</strong>${fmt(get(rma,'ReasonText','reasonText'))}</div>`:''}
+                </div>
+                <div id="rma-actions"></div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr><th>#</th><th>商品</th><th>規格</th><th>原始數量</th><th>申請</th><th>核可</th><th>退款</th><th>補寄</th><th>退款單價</th></tr>
                   </thead>
-                  <tbody>${rows || '<tr><td colspan="7" class="text-center">無明細</td></tr>'}</tbody>
+                  <tbody>
+                    ${(rItems||[]).map(y=>{const x=normRItem(y);const m=idx[x.orderItemId]||{};
+                      return `<tr>
+                        <td>${x.rmaItemId??'-'}</td>
+                        <td>${fmt(m.productName)}</td>
+                        <td>${fmt(m.skuSpec)}</td>
+                        <td>${m.qty??'-'}</td>
+                        <td>${x.qty??'-'}</td>
+                        <td>${x.approvedQty??'-'}</td>
+                        <td>${x.refundQty??'-'}</td>
+                        <td>${x.reshipQty??'-'}</td>
+                        <td>${x.refundUnitAmount==null?'-':Number(x.refundUnitAmount).toLocaleString('zh-TW',{maximumFractionDigits:2})}</td>
+                      </tr>`;}).join('')}
+                  </tbody>
                 </table>
               </div>`;
-            row.child(html).show(); tr.addClass('shown');
-          })
-          .catch(()=> alert('讀取明細失敗'));
-      });
-    });
-</script>
+            $body.empty().html(html);
 
-<!-- 決議 Modal（原本有的，留在頁面下方也可以） -->
-<div class="modal fade" id="decisionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form id="decisionForm" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">審核退貨申請</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="dm-requestId" name="requestId" />
-                <input type="hidden" id="dm-approve" name="approve" />
-                <div class="mb-3">
-                    <label class="form-label">備註</label>
-                    <textarea class="form-control" id="dm-note" name="note" rows="3"></textarea>
-                </div>
-                <div class="alert alert-secondary small mb-0">核准後會移到「RMA 清單」。</div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
-                <button class="btn btn-primary" type="submit">送出</button>
-            </div>
-        </form>
-        <
+            // 動作按鈕
+            const st = normalizeStatus(get(rma,'Status','status') || get(rma,'StatusName','statusName'));
+            const id = get(rma,'ReturnRequestId','returnRequestId');
+            const $act = $body.find('#rma-actions').empty();
+
+            if (st==='pending'||st==='review'){
+              $act.html(`
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-success" id="btn-approve-refund">批准退款</button>
+                  <button class="btn btn-sm btn-primary" id="btn-approve-reship">批准補寄</button>
+                  <button class="btn btn-sm btn-outline-danger" id="btn-reject">駁回</button>
+                </div>`);
+              $('#btn-approve-refund').one('click',()=>api.approve(id,'refunding').done(res=>{
+                if(res.ok) Swal.fire({icon:'success',title:'批准成功',text:`RMA：${res.rmaId}，狀態：${res.status}`}).then(()=>location.reload());
+                else Swal.fire({icon:'error',title:'操作失敗',text:res.message||'未知錯誤'});
+              }).fail(xhr=>Swal.fire({icon:'error',title:'操作失敗',text:xhr.responseText||xhr.status})));
+              $('#btn-approve-reship').one('click',()=>api.approve(id,'reshipping').done(res=>{
+                if(res.ok) Swal.fire({icon:'success',title:'批准成功',text:`RMA：${res.rmaId}，狀態：${res.status}`}).then(()=>location.reload());
+                else Swal.fire({icon:'error',title:'操作失敗',text:res.message||'未知錯誤'});
+              }).fail(xhr=>Swal.fire({icon:'error',title:'操作失敗',text:xhr.responseText||xhr.status})));
+              $('#btn-reject').one('click',async ()=>{
+                const { value:reason, isDismissed } = await Swal.fire({title:'請輸入駁回原因（可空）',input:'textarea',showCancelButton:true,inputAttributes:{maxlength:400}});
+                if(isDismissed) return;
+                api.reject(id,reason||'').done(res=>{
+                  if(res.ok) Swal.fire({icon:'success',title:'已駁回'}).then(()=>location.reload());
+                  else Swal.fire({icon:'error',title:'操作失敗',text:res.message||'未知錯誤'});
+                }).fail(xhr=>Swal.fire({icon:'error',title:'操作失敗',text:xhr.responseText||xhr.status}));
+              });
+            } else if (st==='refunding' || st==='reshipping'){
+              $act.html(`<button class="btn btn-sm btn-secondary" id="btn-complete">結單</button>`);
+              $('#btn-complete').one('click',()=>api.complete(id).done(res=>{
+                if(res.ok) Swal.fire({icon:'success',title:res.message||'已結單'}).then(()=>location.reload());
+                else Swal.fire({icon:'error',title:'操作失敗',text:res.message||'未知錯誤'});
+              }).fail(xhr=>Swal.fire({icon:'error',title:'操作失敗',text:xhr.responseText||xhr.status})));
+            } else {
+              $act.html('<span class="text-muted">—</span>');
+            }
+          }
+
+          // 開啟明細（雙 Ajax：Orders + RMA）
+          $(document).off('click.rma').on('click.rma','.rma-detail',function(){
+            const $tr = $(this).closest('tr');
+            const rmaId = $tr.data('id');
+            const orderId = $tr.data('orderid');
+
+            $('#rma-detail-body').html('載入中...');
+            new bootstrap.Modal(document.getElementById('rmaDetailModal')).show();
+
+            $.when(api.order(orderId), api.rma(rmaId)).done((oRes, rRes)=>{
+              const o=oRes[0], r=rRes[0];
+              if(!o || !o.order || !r || !r.ok){ $('#rma-detail-body').html('<div class="text-danger">明細載入失敗</div>'); return; }
+              renderDetail($('#rma-detail-body'), o.order, o.items, r.rma, r.items);
+            }).fail(()=>$('#rma-detail-body').html('<div class="text-danger">明細載入失敗</div>'));
+          });
+        })();
+    </script>
+}
+
+
