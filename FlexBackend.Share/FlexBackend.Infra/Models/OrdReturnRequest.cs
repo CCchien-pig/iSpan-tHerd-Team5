@@ -13,7 +13,7 @@ public partial class OrdReturnRequest
     /// <summary>
     /// 申請單編號
     /// </summary>
-    public int RetuenRequestId { get; set; }
+    public int ReturnRequestId { get; set; }
 
     public string RmaId { get; set; }
 
