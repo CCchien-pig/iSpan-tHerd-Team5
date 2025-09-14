@@ -33,7 +33,9 @@
 
                     <select name="status" class="form-select form-select-sm"
                             style="max-width:120px;"
-                            asp-items="ViewBag.StatusList"></select>
+                            asp-items="ViewBag.StatusList"
+                            onchange="this.form.submit()"></select>
+
 
                     <input type="text" name="keyword"
                            value="@System.Net.WebUtility.HtmlEncode(ViewBag.Keyword)"
