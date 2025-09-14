@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using FlexBackend.USER.Rcl.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
 namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
 {
