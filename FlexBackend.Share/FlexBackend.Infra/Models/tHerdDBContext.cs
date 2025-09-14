@@ -1505,7 +1505,6 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasOne(d => d.AttachmentUrl).WithMany(p => p.OrdReturnRequests)
                 .HasForeignKey(d => d.AttachmentUrlId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ORD_ReturnRequest_AttachmentUrlId");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrdReturnRequests)
