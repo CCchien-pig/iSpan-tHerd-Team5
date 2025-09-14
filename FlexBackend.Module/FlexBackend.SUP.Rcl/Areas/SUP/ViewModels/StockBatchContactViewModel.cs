@@ -114,5 +114,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 					new[] { nameof(ChangeQty) });
 			}
 		}
+
+
+		// 提供前端選單用
+		public List<SkuOption> SkuOptions { get; set; } = new();
 	}
+
+	// 前端下拉選單用的 DTO
+	public class SkuOption
+	{
+		public int SkuId { get; set; }
+		public string SkuCode { get; set; } = "";
+	}
+
 }
