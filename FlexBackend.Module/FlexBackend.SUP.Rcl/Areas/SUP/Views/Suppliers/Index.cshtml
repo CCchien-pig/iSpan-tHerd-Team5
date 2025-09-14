@@ -319,8 +319,14 @@
             });
 
             // ======= 點[庫存]跳轉 =======
-            $('#supplierTable').on('click', '.inventory-btn', function() {
+            $('#supplierTable').on('click', '.inventory-btn', function () {
                 var supplierId = $(this).data('id');
+                console.log('點擊[庫存]，取得 supplierId:', supplierId);
+
+                if (!supplierId) {
+                    console.error('❌ supplierId 為空，無法繼續跳轉');
+                    return;
+                }
 
                 // 傳進 URL 版
                 // var url = '/SUP/StockBatches/Index?supplierId=' + supplierId;
@@ -331,16 +337,32 @@
                     url: '/SUP/StockBatches/GetBrandNameBySupplier',
                     type: 'GET',
                     data: { supplierId: supplierId },
-                    success: function(brandName) {
-                        // 將品牌名稱放入 sessionStorage
-                        sessionStorage.setItem('selectedBrandName', brandName);
+                    success: function (brands) {
+                        console.log('AJAX 成功，取得 brands:', brands);
 
-                        // 跳轉到庫存頁
-                        window.location.href = '/SUP/StockBatches/Index';
+                        if (!brands || brands.length === 0) {
+                            console.warn('⚠️ 沒有品牌資料，存空字串');
+                            sessionStorage.setItem('selectedBrandName', '');
+                        } else {
+                            // 注意這裡大小寫要對
+                            var brandName = brands[0].brandName;
+                            console.log('📌 取出的 brandName:', brandName);
+
+                            sessionStorage.setItem('selectedBrandName', brandName);
+                            console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
+                        }
+
+                        console.log('⏳ 10 秒後跳轉到 /SUP/StockBatches/Index ...');
+                        setTimeout(function () {
+                            window.location.href = '/SUP/StockBatches/Index';
+                        });
+                        //, 10000); //等十秒看主控台訊息
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('❌ AJAX 失敗:', status, error);
                     }
                 });
             });
-
         });
     </script>
 }
