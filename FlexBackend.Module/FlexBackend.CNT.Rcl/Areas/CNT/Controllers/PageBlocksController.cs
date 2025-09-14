@@ -56,31 +56,49 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			}
 
 			// 驗證 BlockType
-			if (string.IsNullOrWhiteSpace(model.BlockType) ||
-				(model.BlockType != "richtext" && model.BlockType != "image"))
+			var allowed = new[] { "richtext", "image", "video", "cta" };
+			if (string.IsNullOrWhiteSpace(model.BlockType) || !allowed.Contains(model.BlockType))
 			{
-				ModelState.AddModelError(nameof(model.BlockType), "BlockType 只能是 richtext 或 image");
-			}
-
-			// 處理圖片
-			if (model.BlockType == "image" && imageFile != null && imageFile.Length > 0)
-			{
-				var uploads = Path.Combine(_env.WebRootPath, "uploads");
-				Directory.CreateDirectory(uploads);
-				var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(imageFile.FileName)}";
-				var filePath = Path.Combine(uploads, fileName);
-
-				using (var fs = System.IO.File.Create(filePath))
-					await imageFile.CopyToAsync(fs);
-
-				model.Content = $"/uploads/{fileName}"; // 存 URL
-			}
-			else if (model.BlockType == "richtext")
-			{
-				model.Content = model.NewBlockContent; // 用輸入的 HTML
+				ModelState.AddModelError(nameof(model.BlockType), "BlockType 必須是 richtext / image / video / cta");
 			}
 
 			if (!ModelState.IsValid) return View(model);
+
+			string content = null;
+
+			switch (model.BlockType)
+			{
+				case "richtext":
+					content = model.NewBlockContent ?? model.Content;
+					break;
+
+				case "image":
+					if (imageFile != null && imageFile.Length > 0)
+					{
+						var uploads = Path.Combine(_env.WebRootPath, "uploads");
+						Directory.CreateDirectory(uploads);
+						var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(imageFile.FileName)}";
+						var filePath = Path.Combine(uploads, fileName);
+
+						using (var fs = System.IO.File.Create(filePath))
+							await imageFile.CopyToAsync(fs);
+
+						content = $"/uploads/{fileName}";
+					}
+					break;
+
+				case "video":
+					content = model.VideoUrl;
+					break;
+
+				case "cta":
+					content = System.Text.Json.JsonSerializer.Serialize(new
+					{
+						text = model.CtaText,
+						url = model.CtaUrl
+					});
+					break;
+			}
 
 			// 若未填排序 → 自動最後一個
 			if (model.OrderSeq <= 0)
@@ -98,9 +116,9 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			{
 				PageId = model.PageId,
 				BlockType = model.BlockType,
-				Content = model.Content,
+				Content = content,
 				OrderSeq = model.OrderSeq,
-				CreatedDate = DateTime.UtcNow
+				CreatedDate = DateTime.Now
 			};
 
 			_db.CntPageBlocks.Add(block);
@@ -108,55 +126,104 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = model.PageId });
 		}
-
-
 		// GET: /CNT/PageBlocks/Edit/1001
 		public IActionResult Edit(int id)
 		{
 			var block = _db.CntPageBlocks.FirstOrDefault(b => b.PageBlockId == id);
 			if (block == null) return NotFound();
-			return View(block);
+
+			var vm = new PageBlockEditVM
+			{
+				PageBlockId = block.PageBlockId,
+				PageId = block.PageId,
+				BlockType = block.BlockType,
+				Content = block.Content,
+				OrderSeq = block.OrderSeq,
+				NewBlockContent = block.BlockType == "richtext" ? block.Content : string.Empty
+			};
+
+			// 如果是 CTA，解析 JSON
+			if (block.BlockType == "cta" && !string.IsNullOrWhiteSpace(block.Content))
+			{
+				try
+				{
+					var cta = System.Text.Json.JsonSerializer
+						.Deserialize<Dictionary<string, string>>(block.Content);
+
+					if (cta != null)
+					{
+						if (cta.TryGetValue("text", out var text)) vm.CtaText = text;
+						if (cta.TryGetValue("url", out var url)) vm.CtaUrl = url;
+					}
+				}
+				catch
+				{
+					// JSON 格式錯誤就跳過
+				}
+			}
+
+			return View(vm);
 		}
+
+
+
+
 
 		// POST: /CNT/PageBlocks/Edit/1001
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, CntPageBlock input, IFormFile? imageFile)
+		public async Task<IActionResult> Edit(PageBlockEditVM model, IFormFile? imageFile)
 		{
-			var block = _db.CntPageBlocks.FirstOrDefault(b => b.PageBlockId == id);
+			var block = _db.CntPageBlocks.FirstOrDefault(b => b.PageBlockId == model.PageBlockId);
 			if (block == null) return NotFound();
 
-			if (string.IsNullOrWhiteSpace(input.BlockType) ||
-				(input.BlockType != "richtext" && input.BlockType != "image"))
+			string content = block.Content;
+
+			switch (model.BlockType)
 			{
-				ModelState.AddModelError(nameof(input.BlockType), "BlockType 只能是 richtext 或 image");
+				case "richtext":
+					content = model.NewBlockContent ?? model.Content;
+					break;
+
+				case "image":
+					if (imageFile != null && imageFile.Length > 0)
+					{
+						var uploads = Path.Combine(_env.WebRootPath, "uploads");
+						Directory.CreateDirectory(uploads);
+						var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(imageFile.FileName)}";
+						var filePath = Path.Combine(uploads, fileName);
+
+						using var fs = System.IO.File.Create(filePath);
+						await imageFile.CopyToAsync(fs);
+
+						content = $"/uploads/{fileName}";
+					}
+					break;
+
+				case "video":
+					content = model.VideoUrl;
+					break;
+
+				case "cta":
+					content = System.Text.Json.JsonSerializer.Serialize(new
+					{
+						text = model.CtaText ?? "未命名 CTA",
+						url = model.CtaUrl ?? "#"
+					});
+					break;
 			}
 
-			// 若是 image 且有新檔上傳 → 覆蓋 Content 為新圖URL
-			if (input.BlockType == "image" && imageFile != null && imageFile.Length > 0)
-			{
-				var uploads = Path.Combine(_env.WebRootPath, "uploads");
-				Directory.CreateDirectory(uploads);
-				var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(imageFile.FileName)}";
-				var filePath = Path.Combine(uploads, fileName);
-				using (var fs = System.IO.File.Create(filePath))
-					await imageFile.CopyToAsync(fs);
-
-				block.Content = $"/uploads/{fileName}";
-			}
-			else
-			{
-				block.Content = input.Content;
-			}
-
-			block.BlockType = input.BlockType;
-			block.OrderSeq = input.OrderSeq <= 0 ? block.OrderSeq : input.OrderSeq;
-			block.RevisedDate = DateTime.UtcNow;
+			block.BlockType = model.BlockType;
+			block.Content = content;
+			block.OrderSeq = model.OrderSeq <= 0 ? block.OrderSeq : model.OrderSeq;
+			block.RevisedDate = DateTime.Now;
 
 			await _db.SaveChangesAsync();
 
 			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = block.PageId });
 		}
+
+
 
 		// GET: /CNT/PageBlocks/Delete/1001
 		public IActionResult Delete(int id)
@@ -189,48 +256,42 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = pageId });
 		}
 
-		// 調整排序：上移
-		// POST: /CNT/PageBlocks/MoveUp/1001
+		// POST: /CNT/PageBlocks/Reorder
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> MoveUp(int id)
+		public async Task<IActionResult> Reorder([FromBody] List<BlockOrderVM> order)
 		{
-			var block = _db.CntPageBlocks.FirstOrDefault(b => b.PageBlockId == id);
-			if (block == null) return NotFound();
+			if (order == null || !order.Any())
+				return BadRequest(new { message = "沒有收到排序資料" });
 
-			var prev = _db.CntPageBlocks
-				.Where(b => b.PageId == block.PageId && b.OrderSeq < block.OrderSeq)
-				.OrderByDescending(b => b.OrderSeq)
-				.FirstOrDefault();
-			if (prev != null)
+			// 1. 把所有涉及的區塊取出來
+			var ids = order.Select(o => o.Id).ToList();
+			var blocks = await _db.CntPageBlocks
+								  .Where(b => ids.Contains(b.PageBlockId))
+								  .ToListAsync();
+
+			// 2. 套用新順序
+			foreach (var item in order)
 			{
-				(prev.OrderSeq, block.OrderSeq) = (block.OrderSeq, prev.OrderSeq);
-				await _db.SaveChangesAsync();
+				var block = blocks.FirstOrDefault(b => b.PageBlockId == item.Id);
+				if (block != null)
+				{
+					block.OrderSeq = item.OrderSeq;
+					block.RevisedDate = DateTime.Now;
+				}
 			}
 
-			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = block.PageId });
+			// 3. 儲存變更（非同步）
+			await _db.SaveChangesAsync();
+
+			return Json(new { success = true, message = "排序已更新" });
 		}
+	}
 
-		// 調整排序：下移
-		// POST: /CNT/PageBlocks/MoveDown/1001
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> MoveDown(int id)
-		{
-			var block = _db.CntPageBlocks.FirstOrDefault(b => b.PageBlockId == id);
-			if (block == null) return NotFound();
-
-			var next = _db.CntPageBlocks
-				.Where(b => b.PageId == block.PageId && b.OrderSeq > block.OrderSeq)
-				.OrderBy(b => b.OrderSeq)
-				.FirstOrDefault();
-			if (next != null)
-			{
-				(next.OrderSeq, block.OrderSeq) = (block.OrderSeq, next.OrderSeq);
-				await _db.SaveChangesAsync();
-			}
-
-			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = block.PageId });
-		}
+	// DTO (用來接收前端傳來的 JSON)
+	public class BlockOrderVM
+	{
+		public int Id { get; set; }
+		public int OrderSeq { get; set; }
 	}
 }
