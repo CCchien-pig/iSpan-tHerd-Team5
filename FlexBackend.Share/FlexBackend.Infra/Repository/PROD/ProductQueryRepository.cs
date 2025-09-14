@@ -4,7 +4,6 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Dapper;
 using FlexBackend.Core.Interfaces.Products;
-using System.Threading.Tasks.Dataflow;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
@@ -97,19 +96,19 @@ namespace FlexBackend.Infra.Repository.PROD
                         ShelfLifeDays = (int?)CheckValueNull(row.ShelfLifeDays),
 
                         ProductTypeName = row.ProductTypeName,
-                        Types = new List<ProdProductTypeDto>(),
+                        Types = new List<ProdProductTypeQueryDto>(),
 
                         Spec = string.Empty,
-                        SpecOptions = new List<ProdSpecificationDto>(),
+                        SpecOptions = new List<ProdSpecificationQueryDto>(),
 
                         Attribute = string.Empty,
-                        AttributeOptions = new List<ProdAttributeOptionDto>(),
+                        AttributeOptions = new List<ProdAttributeOptionQueryDto>(),
 
                         Bundle = string.Empty,
-                        BundleItems = new List<ProdBundleItemDto>(),
+                        BundleItems = new List<ProdBundleItemQueryDto>(),
 
                         Ingredient = string.Empty,
-                        Ingredients = new List<ProdProductIngredientDto>()
+                        Ingredients = new List<ProdProductIngredientQueryDto>()
                     };
                     lookup.Add(pid, dto);
                 }
@@ -117,24 +116,16 @@ namespace FlexBackend.Infra.Repository.PROD
                 // 規格 Option
                 if (row.SpecificationOptionId != null && !dto.SpecOptions.Any(x => x.SpecificationOptionId == row.SpecificationOptionId))
                 {
-                    dto.SpecOptions.Add(new ProdSpecificationDto { SpecificationOptionId = row.SpecificationOptionId, OptionName = row.SpecName });
+                    dto.SpecOptions.Add(new ProdSpecificationQueryDto { SpecificationOptionId = row.SpecificationOptionId, OptionName = row.SpecName });
                     dto.Spec = string.Join(",", dto.SpecOptions.Select(s => $"{s.GroupName}:{s.OptionName}"));
                 }
 
                 // 屬性 Option
                 if (row.AttributeOptionId != null && !dto.AttributeOptions.Any(x => x.AttributeOptionId == row.AttributeOptionId))
                 {
-                    dto.AttributeOptions.Add(new ProdAttributeOptionDto { AttributeOptionId = row.AttributeOptionId, OptionName = row.AttributeOptionName });
+                    dto.AttributeOptions.Add(new ProdAttributeOptionQueryDto { AttributeOptionId = row.AttributeOptionId, OptionName = row.AttributeOptionName });
                     dto.Attribute = string.Join(",", dto.AttributeOptions.Select(s => $"{s.AttributeName}:{s.OptionName}{(string.IsNullOrWhiteSpace(s.OptionValue)==false ? s.OptionValue : string.Empty)}"));
                 }
-
-                //// BundleItem
-                //if (row.BundleItemId != null && !dto.BundleItems.Any(x => x.BundleItemId == row.BundleItemId))
-                //    dto.BundleItems.Add(new ProdBundleItemDto { BundleItemId = row.BundleItemId, Quantity = row.BundleQty });
-
-                //// Ingredient
-                //if (row.IngredientId != null && !dto.Ingredients.Any(x => x.IngredientId == row.IngredientId))
-                //    dto.Ingredients.Add(new ProdProductIngredientDto { IngredientId = row.IngredientId, IngredientName = row.IngredientName });
             }
 
             if (needDispose) conn.Dispose();
@@ -142,6 +133,11 @@ namespace FlexBackend.Infra.Repository.PROD
             return lookup.Values.ToList();
         }
 
+        /// <summary>
+        /// 檢查數值是否正確
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public static object? CheckValueNull(dynamic value)
         {
             if (value == null || value is DBNull)

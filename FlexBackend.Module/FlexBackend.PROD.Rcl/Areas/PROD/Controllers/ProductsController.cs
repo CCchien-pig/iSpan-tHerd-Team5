@@ -19,7 +19,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
         {
             var products = await _repo.GetAllAsync();
 
-            var productquerys = await _qrepo.GetAllProductQueryListAsync(1000);
+            //var products = await _qrepo.GetAllProductQueryListAsync(1000);
             return View(products);
         }
     }

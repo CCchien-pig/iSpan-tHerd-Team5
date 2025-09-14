@@ -23,19 +23,52 @@ namespace FlexBackend.Infra.Repository.PROD
 
         public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
         {
-            string sql = @"SELECT ProductId, 
-                      BrandId, SeoId, ProductName, ShortDesc,
-                      FullDesc, IsPublished, Weight,
-                      VolumeCubicMeter, VolumeUnit,
-                      Creator, CreatedDate, Reviser,
-                      RevisedDate
-                    FROM PROD_Product;";
+            string sql = @"SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
+                p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
+                p.ShortDesc, p.FullDesc, p.IsPublished,
+                p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
+                p.CreatedDate, p.Reviser, p.RevisedDate, tc.ProductTypeName
+                FROM PROD_Product p
+                JOIN SUP_Brand s ON s.BrandId=p.BrandId 
+                LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
+                LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
+                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
                 var cmd = new CommandDefinition(sql, transaction: tx, cancellationToken: ct);
-                return conn.Query<ProdProductDto>(cmd);
+                var repo = new AspnetusersNameRepository(_factory, _db);
+                var emp = await repo.GetAllUserNameAsync(ct);
+                // 原始查詢結果 (會有重複 ProductId)
+                var raw = conn.Query<ProdProductDto, string, ProdProductDto>(
+                    sql,
+                    (p, typeName) =>
+                    {
+                        p.ProductTypeDesc = new List<string>();
+                        if (!string.IsNullOrEmpty(typeName))
+                            p.ProductTypeDesc.Add(typeName);
+                        return p;
+                    },
+                    splitOn: "ProductTypeName",
+                    transaction: tx);
+
+                // GroupBy → 合併 ProductTypeNames
+                var list = raw
+                    .GroupBy(p => p.ProductId)
+                    .Select(g =>
+                    {
+                        var first = g.First();
+                        first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc).Distinct().ToList();
+                        return first;
+                    })
+                    .ToList();
+
+                foreach (var item in list) {
+                    item.CreatorNm = emp.FirstOrDefault(e => e.UserNumberId == item.Creator)?.FullName;
+                    item.ReviserNm = emp.FirstOrDefault(e => e.UserNumberId == item.Reviser)?.FullName;
+                }
+                return list;
             }
             finally
             {
