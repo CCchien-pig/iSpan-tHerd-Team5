@@ -42,11 +42,17 @@
 
         <!-- SKU 選擇 -->
         <div class="form-floating mb-2">
-            <select asp-for="SkuId" class="form-select" id="SkuSelect" disabled>
+            <select asp-for="SkuId" class="form-select" id="SkuSelect">
                 <option value="">請選 SKU</option>
+                @foreach (var sku in Model.SkuOptions)
+                {
+                    <option value="@sku.SkuId">@sku.SkuCode</option>
+                }
             </select>
             <label>SKU</label>
         </div>
+
+
 
         <!-- 製造日期 -->
         <div class="form-floating mb-2">
@@ -57,12 +63,9 @@
 
         <!-- 唯讀庫存資訊 -->
         <div class="mb-2">
-            @* <div>當前庫存: <span id="CurrentQty">@Model.Qty</span></div> *@
             <div>當前庫存: <span id="CurrentQty">0</span> &nbsp;|&nbsp; 預計庫存: <span id="PredictedQty">0</span></div>
             <div>最大庫存量: <span id="MaxStockQty">@Model.MaxStockQty</span></div>
             <div>再訂購點: <span id="ReorderPoint">@Model.ReorderPoint</span> &nbsp;|&nbsp; 安全庫存量: <span id="SafetyStockQty">@Model.SafetyStockQty</span></div>
-            @* <div>是否可銷售: <span id="IsSellableText">@Model.IsSellable ? "可銷售" : "不可銷售"</span></div> *@
-            @* <div>上架狀態: <span id="IsPublishedText"></span></div> *@
             <div>是否可缺貨預購: <span id="IsAllowBackorderText"></span></div>
         </div>
 
