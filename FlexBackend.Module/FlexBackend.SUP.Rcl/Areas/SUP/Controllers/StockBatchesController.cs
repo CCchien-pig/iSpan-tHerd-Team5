@@ -178,10 +178,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				var viewModel = new StockBatchContactViewModel();
 
 				ViewBag.FormAction = "Create"; // 告訴 Partial View 這是 Create 動作
-				// return PartialView("Partials/_StockBatchFormPartial", viewModel); // 回傳 Partial View
+											   // return PartialView("Partials/_StockBatchFormPartial", viewModel); // 回傳 Partial View
 				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchFormPartial.cshtml", viewModel);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				return Content("錯誤：" + ex.Message);
 			}
@@ -216,106 +216,115 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (!vm.ManufactureDate.HasValue)
 				return Json(new { success = false, message = "請選擇製造日期" });
 
-			string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
-
-			// 3. 新增 SupStockBatch（先建立批次，Qty=0）
-			var stockBatch = new SupStockBatch
+			// 3. 生成批號 & 建立批次（只有 ChangeQty != 0 才建立）
+			if ((vm.ChangeQty ?? 0) != 0)
 			{
-				SkuId = sku.SkuId,
-				Qty = 0,
-				ManufactureDate = vm.ManufactureDate,
-				Creator = vm.UserId ?? 0,
-				CreatedDate = DateTime.Now,
-				BatchNumber = GenerateBatchNumber(brandCode)
-			};
-
-			if (sku.ShelfLifeDays > 0)
-				stockBatch.ExpireDate = vm.ManufactureDate.Value.AddDays(sku.ShelfLifeDays);
-
-			_context.SupStockBatches.Add(stockBatch);
-			await _context.SaveChangesAsync();
-
-			// 4. 處理異動
-			if (!string.IsNullOrEmpty(vm.MovementType))
-			{
-				if (vm.MovementType != "Purchase" && vm.MovementType != "Adjust")
-					return Json(new { success = false, message = "此批號只允許採購入庫或手動調整" });
-
-				int changeQty = vm.ChangeQty ?? 0;
-				if (changeQty > 0)
+				string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
+				var stockBatch = new SupStockBatch
 				{
-					if (vm.MovementType == "Purchase")
+					SkuId = sku.SkuId,
+					Qty = 0,
+					ManufactureDate = vm.ManufactureDate,
+					Creator = vm.UserId ?? 0,
+					CreatedDate = DateTime.Now,
+					BatchNumber = GenerateBatchNumber(brandCode)
+				};
+
+				if (sku.ShelfLifeDays > 0)
+					stockBatch.ExpireDate = vm.ManufactureDate.Value.AddDays(sku.ShelfLifeDays);
+
+				_context.SupStockBatches.Add(stockBatch);
+				await _context.SaveChangesAsync(); // 確保 BatchNumber 已存入 DB
+
+				// 4. 處理異動
+				if (!string.IsNullOrEmpty(vm.MovementType))
+				{
+					if (vm.MovementType != "Purchase" && vm.MovementType != "Adjust")
+						return Json(new { success = false, message = "此批號只允許採購入庫或手動調整" });
+
+					int changeQty = vm.ChangeQty ?? 0;
+					if (changeQty > 0)
 					{
-						// 採購入庫 → 直接加到批次及 SKU
-						stockBatch.Qty = changeQty;
-
-						_context.SupStockHistories.Add(new SupStockHistory
+						// 採購入庫
+						if (vm.MovementType == "Purchase")
 						{
-							StockBatchId = stockBatch.StockBatchId,
-							ChangeType = "Purchase",
-							ChangeQty = changeQty,
-							Reviser = vm.UserId ?? 0,
-							RevisedDate = DateTime.Now,
-							BeforeQty = 0,
-							AfterQty = stockBatch.Qty,
-							Remark = vm.Remark
-						});
+							stockBatch.Qty = changeQty;
 
-						sku.StockQty += changeQty;
-						await _context.SaveChangesAsync();
+							_context.SupStockHistories.Add(new SupStockHistory
+							{
+								StockBatchId = stockBatch.StockBatchId,
+								ChangeType = "Purchase",
+								ChangeQty = changeQty,
+								Reviser = vm.UserId ?? 0,
+								RevisedDate = DateTime.Now,
+								BeforeQty = 0,
+								AfterQty = stockBatch.Qty,
+								Remark = vm.Remark
+							});
 
-						return Json(new
-						{
-							success = true,
-							batchNumber = stockBatch.BatchNumber,
-							newQty = stockBatch.Qty,
-							totalStockQty = sku.StockQty
-						});
-					}
-					else if (vm.MovementType == "Adjust")
-					{
-						// 手動調整 → 呼叫 StockService
-						int deltaQty = vm.IsAdd ? changeQty : -changeQty;
-
-						try
-						{
-							var result = await _stockService.AdjustStockAsync(
-								skuId: sku.SkuId,
-								changeQty: deltaQty,
-								userId: vm.UserId ?? 0,
-								changeType: vm.MovementType,
-								batchIds: new List<int> { stockBatch.StockBatchId },
-								remark: vm.Remark
-							);
+							sku.StockQty += changeQty;
+							await _context.SaveChangesAsync();
 
 							return Json(new
 							{
 								success = true,
 								batchNumber = stockBatch.BatchNumber,
-								newQty = result.TotalStock,
-								adjustedQty = result.AdjustedQty,
-								totalStockQty = result.TotalStock
+								newQty = stockBatch.Qty,
+								totalStockQty = sku.StockQty
 							});
 						}
-						catch (InvalidOperationException ex)
+						else if (vm.MovementType == "Adjust")
 						{
-							return Json(new { success = false, message = ex.Message });
+							if (changeQty <= 0)
+								return Json(new { success = false, message = "手動調整時請輸入大於 0 的異動數量" });
+
+							try
+							{
+								var result = await _stockService.AdjustStockAsync(
+									skuId: sku.SkuId,
+									changeQty: changeQty,
+									userId: vm.UserId ?? 0,
+									changeType: vm.MovementType,
+									isAdd: vm.IsAdd,
+									batchIds: new List<int> { stockBatch.StockBatchId },
+									remark: vm.Remark
+								);
+
+								return Json(new
+								{
+									success = true,
+									batchNumber = stockBatch.BatchNumber,
+									newQty = result.TotalStock,
+									adjustedQty = result.AdjustedQty,
+									totalStockQty = result.TotalStock
+								});
+							}
+							catch (InvalidOperationException ex)
+							{
+								return Json(new { success = false, message = ex.Message });
+							}
 						}
 					}
 				}
+
+				// 若沒有異動或 ChangeQty = 0
+				return Json(new
+				{
+					success = true,
+					batchNumber = stockBatch.BatchNumber,
+					newQty = stockBatch.Qty,
+					totalStockQty = sku.StockQty
+				});
+			}
+			else
+			{
+				return Json(new { success = false, message = "異動數量不能為 0" });
 			}
 
-			// 若沒有異動或 ChangeQty = 0
-			return Json(new
-			{
-				success = true,
-				batchNumber = stockBatch.BatchNumber,
-				newQty = stockBatch.Qty,
-				totalStockQty = sku.StockQty
-			});
 		}
 
 
+		//
 
 		// +庫存，ProdProductSku的StockQty
 		// 呼叫 StockService.AdjustStockAsync

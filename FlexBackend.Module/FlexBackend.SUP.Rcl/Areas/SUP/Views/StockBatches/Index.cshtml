@@ -162,43 +162,58 @@
                 });
             });
 
+            $(document).ready(function(){
+                // 取得異動類型
+                $.get('/SUP/StockBatches/GetMovementTypes', function(types) {
+                    console.log('MovementTypes:', types);
+                    movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
+                    types.forEach(t => {
+                        var selected = (t.value === (isEdit ? 'Adjust' : '')) ? 'selected' : '';
+                        movementTypeSelect.append(`<option value="${t.value}" ${selected}>${t.text}</option>`);
+                    });
 
-            // 取得異動類型
-            $.get('/SUP/StockBatches/GetMovementTypes', function(types) {
-                console.log('MovementTypes:', types);  // 確認資料
-                movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
-                types.forEach(t => {
-                    var selected = (t.value == (isEdit ? 'Adjust' : '')) ? 'selected' : '';
-                    movementTypeSelect.append(`<option value="${t.value}" ${selected}>${t.text}</option>`);
+                    // 編輯模式固定為 Adjust
+                    if(isEdit) {
+                        movementTypeSelect.val('Adjust').prop('disabled', true);
+                        $('#AdjustOptions').show();
+                        $('#ChangeQtyInput').closest('.form-floating').show();
+                    } else {
+                        movementTypeSelect.prop('disabled', false);
+                        $('#AdjustOptions').hide();
+                        $('#ChangeQtyInput').closest('.form-floating').hide();
+                    }
                 });
 
-                // 編輯模式固定為 Adjust
-                if(isEdit) {
-                    movementTypeSelect.val('Adjust').prop('disabled', true);
-                    $('#AdjustTypeDiv').show();
-                } else {
-                    movementTypeSelect.prop('disabled', false);
-                    $('#AdjustTypeDiv').hide();
-                }
+                // 異動類型選擇事件
+                movementTypeSelect.on('change', function(){
+                    if($(this).val() === 'Adjust'){
+                        $('#AdjustOptions').show();
+                        $('#ChangeQtyInput').closest('.form-floating').show();
+                    } else {
+                        $('#AdjustOptions').hide();
+                        $('#ChangeQtyInput').closest('.form-floating').hide();
+                    }
+                });
             });
 
+
             // 即時更新「預計庫存」欄位
-            $('#ChangeQtyInput').off('input').on('input', function() {
-                var changeQty = parseInt($(this).val()) || 0;   // 使用者輸入的變動庫存量
+            function updatePredictedStock() {
+                var changeQty = parseInt($('#ChangeQtyInput').val()) || 0;
                 var currentStock = parseInt($('#CurrentQty').text()) || 0;
                 var maxStock = parseInt($('#MaxStockQty').text()) || 0;
                 var isAllowBackorder = $('#IsAllowBackorderText').text() === '允許預購';
+                var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
 
-                var maxChange = maxStock - currentStock;
-                if(maxChange < 0) maxChange = 0;
-
-                // 如果輸入超過上限，自動改成上限
-                if(changeQty > maxChange) {
-                    changeQty = maxChange;
-                    $(this).val(changeQty);
+                // 如果增加，不能超過最大庫存
+                if (isAdd && currentStock + changeQty > maxStock) {
+                    changeQty = maxStock - currentStock;
+                    if(changeQty < 0) changeQty = 0;
+                    $('#ChangeQtyInput').val(changeQty);
                 }
 
-                var predictedStock = currentStock + changeQty;
+                // 計算預計庫存
+                var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
 
                 // 非允許預購不能為負
                 if (!isAllowBackorder && predictedStock < 0) {
@@ -206,7 +221,18 @@
                 }
 
                 $('#PredictedQty').text(predictedStock);
+            }
+
+            // 當變動數量輸入時即時更新
+            $('#ChangeQtyInput').off('input').on('input', function() {
+                updatePredictedStock();
             });
+
+            // 當加/減 radio 改變時也即時更新
+            $('input[name="IsAdd"]').off('change').on('change', function() {
+                updatePredictedStock();
+            });
+
         }
 
         $(document).ready(function () {
@@ -277,7 +303,7 @@
                         className: 'text-center',
                         title: '規格',
                         render: function(data) {
-                            console.log(data);  // 印出確認
+                            // console.log(data);  // 印出確認
                             if(!data) return '';
                             return data.map(s => s.groupName + ':' + s.optionName).join(' / ');
                         }
@@ -378,52 +404,56 @@
                 window.location.href = `/SUP/StockBatches/History?brandCode=${brandCode}`;
             });
 
-            // ===== 新增 / 編輯庫存表單提交 =====
             $('#stockBatchModalContent')
-                .off('submit', '#stockBatchForm')
-                .on('submit', '#stockBatchForm', function (e) {
-                    e.preventDefault();
-                    var form = $(this);
-                    var formData = new FormData(form[0]);
+            .off('submit', '#stockBatchForm')
+            .on('submit', '#stockBatchForm', function (e) {
+                e.preventDefault();
+                var form = $(this);
+                var formData = new FormData(form[0]);
 
-                    // 編輯模式：異動類型固定為 Adjust
-                    if ($('#MovementTypeSelect').length && $('#MovementTypeSelect').val() === 'Adjust') {
-                        formData.set('IsAdd', $('#AdjustTypeSelect').val() === 'true'); // +/- 選擇
-                    }
+                // 編輯模式或手動調整時，確保抓到 +/- 選擇
+                if ($('#MovementTypeSelect').length && $('#MovementTypeSelect').val() === 'Adjust') {
+                    // 抓取加減選擇的 radio 值
+                    var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                    formData.set('IsAdd', isAdd);
 
-                    $.ajax({
-                        url: form.attr('action'),
-                        type: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        headers: {
-                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]', form).val()
-                        },
-                        success: function (res) {
-                            if (res.success) {
-                                $('#stockBatchModal').modal('hide');
+                    // 顯示確認訊息
+                    console.log("異動類型:", $('#MovementTypeSelect').val());
+                    console.log("加減選擇:", isAdd ? "增加" : "減少");
+                }
 
-                                Swal.fire({
-                                    position: 'center',
-                                    icon: 'success',
-                                    title: res.message || '操作成功',
-                                    showConfirmButton: false,
-                                    timer: 1200
-                                });
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]', form).val()
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            $('#stockBatchModal').modal('hide');
 
-                                // 更新 DataTable（保持當前頁）
-                                stockBatchTable.ajax.reload(null, false);
-                            } else {
-                                // 顯示錯誤訊息
-                                Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('操作失敗', '伺服器發生錯誤', 'error');
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: res.message || '操作成功',
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+
+                            // 更新 DataTable（保持當前頁）
+                            stockBatchTable.ajax.reload(null, false);
+                        } else {
+                            Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
                         }
-                    });
+                    },
+                    error: function () {
+                        Swal.fire('操作失敗', '伺服器發生錯誤', 'error');
+                    }
                 });
+            });
         });
     </script>
 }
