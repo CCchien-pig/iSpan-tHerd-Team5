@@ -1,5 +1,113 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageBlockEditVM
+
 @{
+    ViewData["Title"] = "編輯區塊";
+}
+@section Styles{
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+    <style>
+        .fab-btn {
+            position: fixed;
+            bottom: 36px;
+            right: 36px;
+            width: 108px; /* 基本大小 */
+            height: 108px;
+            font-size: 36px; /* icon 放大 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+            border: none;
+        }
+
+        .fab-icon {
+            color: #f8f9fa; /* 預設淡白 */
+            transition: color 0.25s ease, transform 0.25s ease;
+        }
+
+        .fab-btn:hover .fab-icon {
+            color: #ffffff; /* icon 變純白 */
+            transform: rotate(180deg);
+        }
+        /* Hover 時放大 */
+        .fab-btn:hover {
+            background-color: mediumspringgreen;
+            transform: scale(1.4); /* 放大到 140% */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+    </style>
+
+}
+
+<h3 class="mb-3">編輯區塊</h3>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="PageBlockId" />
+    <input type="hidden" asp-for="PageId" />
+
+    <div class="mb-3">
+        <label class="form-label">區塊類型</label>
+        <select asp-for="BlockType" class="form-select" id="blockType">
+            <option value="richtext" selected="@("richtext" == Model.BlockType)">RichText</option>
+            <option value="image" selected="@("image" == Model.BlockType)">Image</option>
+        </select>
+    </div>
+
+    <div class="mb-3" id="rtBox">
+        <label class="form-label">內容（RichText HTML 或 目前圖片URL）</label>
+        <textarea asp-for="Content" class="form-control" rows="8" id="editor"></textarea>
+        @if (Model.BlockType == "image" && !string.IsNullOrWhiteSpace(Model.Content))
+        {
+            <div class="mt-2">
+                <span class="text-muted small">目前圖片：</span><br />
+                <img src="@Model.Content" style="max-height:120px" />
+            </div>
+        }
+    </div>
+
+    <div class="mb-3 d-none" id="imgBox">
+        <label class="form-label">上傳新圖片（可空白）</label>
+        <input type="file" name="imageFile" class="form-control" accept="image/*" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">順序（OrderSeq）</label>
+        <input asp-for="OrderSeq" type="number" class="form-control" />
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit">保存變更</button>
+        <a asp-area="CNT" asp-controller="Pages" asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-secondary">回文章</a>
+    </div>
+
+   
+
+    <!-- 浮動新增按鈕 -->
+    <a asp-controller="PageBlocks" asp-action="Create" asp-route-pageId="@Model.PageId"
+       class="btn btn-success rounded-circle shadow-lg fab-btn"
+       data-bs-toggle="tooltip" data-bs-placement="left" title="新增內容區塊">
+        <i class="bi bi-file-earmark-plus fab-icon"></i>
+    </a>
+</form>
+
+@section Scripts {
+    <script>
+        const sel = document.getElementById('blockType');
+        const rt = document.getElementById('rtBox');
+        const img = document.getElementById('imgBox');
+        function toggleBox(){
+          if(sel.value === 'image'){ rt.classList.remove('d-none'); img.classList.remove('d-none'); }
+          else { img.classList.add('d-none'); rt.classList.remove('d-none'); }
+        }
+        sel.addEventListener('change', toggleBox);
+        toggleBox();
+    </script>
+
+    <script>
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>
 }
