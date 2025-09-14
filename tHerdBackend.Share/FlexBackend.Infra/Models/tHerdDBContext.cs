@@ -8,7 +8,9 @@ namespace FlexBackend.Infra.Models;
 
 public partial class tHerdDBContext : DbContext
 {
-    public tHerdDBContext(DbContextOptions<tHerdDBContext> options)
+	
+
+	public tHerdDBContext(DbContextOptions<tHerdDBContext> options)
         : base(options)
     {
     }
