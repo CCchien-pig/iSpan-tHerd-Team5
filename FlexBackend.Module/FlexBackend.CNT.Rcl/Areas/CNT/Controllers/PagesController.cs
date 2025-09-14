@@ -24,10 +24,11 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 共用方法：狀態下拉選單
 		// ================================
-		private IEnumerable<SelectListItem> GetStatusSelectList(PageStatus? selected = null, bool includeAll = false)
+		private IEnumerable<SelectListItem> GetStatusSelectList(PageStatus? selected = null, bool includeAll = false, bool includeDeleted = false)
 		{
 			var items = Enum.GetValues(typeof(PageStatus))
 				.Cast<PageStatus>()
+				 .Where(s => includeDeleted || s != PageStatus.Deleted) // ⭐ 排除刪除
 				.Select(s => new SelectListItem
 				{
 					Text = s switch
@@ -88,7 +89,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			// 給 ViewBag
 			ViewBag.Keyword = keyword;
 			ViewBag.Status = status;
-			ViewBag.StatusList = new SelectList(GetStatusSelectList(null, includeAll: true), "Value", "Text", status);
+			ViewBag.StatusList = new SelectList(
+				GetStatusSelectList(null, includeAll: true, includeDeleted: false),
+				"Value", "Text", status);
+
 
 			// 每頁筆數下拉
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100 }, pageSize);
@@ -108,8 +112,8 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 				// ⭐ 提供所有可選標籤（剛新增所以沒有已選）
 				TagOptions = new MultiSelectList(
-					_db.CntTags.Where(t => t.IsActive == true).ToList(),
-					"TagId", "TagName"
+				_db.CntTags.Where(t => t.IsActive == true).ToList(),
+			"TagId", "TagName"
 				)
 			};
 			return View(vm);
@@ -134,7 +138,8 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			{
 				Title = model.Title,
 				Status = ((int)model.Status).ToString(),
-				CreatedDate = DateTime.Now
+				CreatedDate = DateTime.Now,
+				RevisedDate = DateTime.Now
 			};
 
 			_db.CntPages.Add(page);
@@ -151,12 +156,27 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 						TagId = tagId,
 						CreatedDate = DateTime.Now
 					});
-				}
-				_db.SaveChanges();
+				}				
 			}
 
-			TempData["Msg"] = "文章新增成功";
-			return RedirectToAction(nameof(Index));
+			// ⭐ 建立第一個 PageBlock（如果有輸入內容）
+			if (!string.IsNullOrWhiteSpace(model.NewBlockContent))
+			{
+				var block = new CntPageBlock
+				{
+					PageId = page.PageId,
+					BlockType = model.NewBlockType,
+					Content = model.NewBlockContent,
+					OrderSeq = 1,
+					CreatedDate = DateTime.Now
+				};
+				_db.CntPageBlocks.Add(block);
+			}
+
+			_db.SaveChanges();
+
+			TempData["Msg"] = "文章已建立並新增內容區塊";
+			return RedirectToAction(nameof(Edit), new { id = page.PageId });
 		}
 
 
@@ -165,8 +185,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		public IActionResult Edit(int id)
 		{
-			var page = _db.CntPages.FirstOrDefault(p => p.PageId == id);
-			if (page == null) return NotFound();
+			var page = _db.CntPages
+				.Include(p => p.CntPageBlocks)
+				.FirstOrDefault(p => p.PageId == id && p.Status != "9");
+
+				if (page == null) return NotFound();
+
 
 			// 查找該 Page 已有的 TagId
 			var selectedTagIds = _db.CntPageTags
@@ -183,9 +207,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				StatusList = GetStatusSelectList((PageStatus)int.Parse(page.Status)),
 				SelectedTagIds = selectedTagIds,
 				TagOptions = new MultiSelectList(
-					_db.CntTags.Where(t => t.IsActive == true).ToList(),
-					"TagId", "TagName", selectedTagIds
-				)
+				_db.CntTags.Where(t => t.IsActive == true).ToList(),
+			"TagId", "TagName", selectedTagIds
+		),
+				Blocks = page.CntPageBlocks.OrderBy(b => b.OrderSeq).ToList() // ⭐ 區塊載入
 			};
 
 			return View(vm);
@@ -204,6 +229,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					_db.CntTags.Where(t => t.IsActive == true).ToList(),
 					"TagId", "TagName", model.SelectedTagIds
 				);
+
+				// 重新載入 Blocks
+				model.Blocks = _db.CntPageBlocks
+					.Where(b => b.PageId == model.PageId)
+					.OrderBy(b => b.OrderSeq).ToList();
+
 				return View(model);
 			}
 
@@ -234,7 +265,8 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			_db.SaveChanges();
 			TempData["Msg"] = "文章修改成功";
-			return RedirectToAction(nameof(Index));
+
+			return RedirectToAction(nameof(Edit), new { id = model.PageId });
 		}
 
 
