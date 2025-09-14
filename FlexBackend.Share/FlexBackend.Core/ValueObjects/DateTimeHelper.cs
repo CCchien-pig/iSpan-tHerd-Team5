@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FlexBackend.Core.ValueObjects
 {
-	public  class DateTimeHelper
+	public static class DateTimeHelper
 	{
 		/// <summary>
 		/// 將 DateTime? 轉成指定格式的字串，若為 null 則回傳空字串

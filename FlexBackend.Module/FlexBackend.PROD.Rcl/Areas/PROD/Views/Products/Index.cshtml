@@ -31,14 +31,19 @@
             <table class="table table-bordered display" id="dataTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th></th>
-                        <th>商品編號</th>
-                        <th>供應商</th>
-                        <th>品牌</th>
-                        <th>商品名稱</th>
-                        <th>上架</th>
-                        <th>建檔人員</th>
-                        <th>建檔日期</th>
+                        <th rowspan="2"></th>
+                        <th rowspan="2">供應商</th>
+                        <th rowspan="2">品牌</th>
+                        <th colspan="4">商品</th>
+                        <th rowspan="2">是否上架</th>
+                        <th rowspan="2">建檔人員</th>
+                        <th rowspan="2">建檔日期</th>
+                    </tr>
+                    <tr>
+                        <th>編號</th>
+                        <th>分類</th>
+                        <th>簡碼</th>
+                        <th>名稱</th>
                     </tr>
                 </thead>
                 @* <tfoot>
@@ -69,37 +74,14 @@
             var $table = $('#dataTable');
 
             // 定義要顯示的子資料內容
-            function format(row) {
-              return `
-                <div style="padding:10px">
-                  <div><b>Email：</b>${row.Email}</div>
-                  <div><b>備註：</b>${row.Notes}</div>
-                </div>
-              `;
-            }
-
-          var employees = [
-              {
-                Name: "Tiger Nixon",
-                Position: "System Architect",
-                Office: "Edinburgh",
-                Age: 61,
-                StartDate: "2011/04/25",
-                Salary: "$320,800",
-                Email: "tiger.nixon@example.com",
-                Notes: "喜歡打高爾夫，兼職顧問"
-              },
-              {
-                Name: "Garrett Winters",
-                Position: "Accountant",
-                Office: "Tokyo",
-                Age: 63,
-                StartDate: "2011/07/25",
-                Salary: "$170,750",
-                Email: "garrett.winters@example.com",
-                Notes: "主要負責審計，會日文"
-              }
-            ];
+            // function format(row) {
+            //   return `
+            //     <div style="padding:10px">
+            //       <div><b>Email：</b>${row.Email}</div>
+            //       <div><b>備註：</b>${row.Notes}</div>
+            //     </div>
+            //   `;
+            // }
 
             function calcAvailableHeight() {
               var footerH = $('footer').outerHeight() || 0;
@@ -109,18 +91,28 @@
               return Math.max(240, winH - footerH - tableTop - gap);
             }
 
-             function resizeDataTable() {
-              var h = calcAvailableHeight() - 150;
-              // 用 CSS 方式調整滾動容器高度，最穩定
-              var $scrollBody = $(table.table().container()).find('.dataTables_scrollBody');
-              $scrollBody.css({ height: h + 'px', 'max-height': h + 'px' });
+            function resizeDataTable() {
+                var winH = window.innerHeight;
+                var headerH = $('.navbar, .topbar').outerHeight() || 0;
+                var footerH = $('footer').outerHeight() || 0;
+                var gap = 40;
 
-              // 調整欄寬並重繪，避免位移
-              table.columns.adjust();
-              table.draw(false);
+                // 計算可用高度，但最高只取 300
+                var h = winH - headerH - footerH - gap;
+                var finalH = Math.min(h, 300);
+
+                var $scrollBody = $(table.table().container()).find('.dataTables_scrollBody');
+                $scrollBody.css({
+                    height: finalH + 'px',
+                    'max-height': '300px'
+                });
+
+                table.columns.adjust();
             }
 
-            var initH = calcAvailableHeight();
+
+
+            var initH = calcAvailableHeight() - 300;
             var topbarH = $('.navbar, .topbar').outerHeight() || 0;
 
           var table = $table.DataTable({
@@ -170,31 +162,36 @@
                 data: null,
                 defaultContent: ''
               },
+              { data: 'SupplierName' },
+              { data: 'BrandName' },
               { data: 'ProductId' },
-              { data: 'SupplierId' },
-              { data: 'BrandId' },
+              {
+                data: 'ProductTypeDesc',
+                render: function (data) {
+                    if (!data || data.length === 0) return '';
+                    return data.map(x =>
+                        `<span class="badge text-white me-1" style="background-color:#B57FB3;font-size: 0.9rem;">${x}</span>`
+                    ).join('');
+                }
+              },
+              { data: 'ProductCode' },
               { data: 'ProductName' },
-              { data: 'IsPublished' },
-              { data: 'Creator' },
-              { data: 'CreatedDate' }
+              {
+                    data: 'IsPublished',
+                    render: function (data) {
+                        if (data === true) {
+                            return '<span class="badge bg-success"><i class="fas fa-check"></i> 上架</span>';
+                        }
+                        return '<span class="badge bg-secondary"><i class="fas fa-times"></i> 下架</span>';
+                    }
+                },
+              { data: 'CreatorNm' },
+              { data: 'FormateCreatedDate' }
+            ],
+            columnDefs: [
+                { targets: "_all", className: "text-center align-middle" } // 全欄置中
             ]
           });
-
-            // 點擊展開/收合
-            // $('#dataTable tbody').on('click', 'td.dt-control', function () {
-            //     var tr = $(this).closest('tr');
-            //     var row = table.row(tr);
-
-            //     if (row.child.isShown()) {
-            //         // 已展開 → 收合
-            //         row.child.hide();
-            //         tr.removeClass('shown');
-            //     } else {
-            //         // 展開 → 顯示 format() 的子資料
-            //         row.child(format(row.data())).show();
-            //         tr.addClass('shown');
-            //     }
-            // });
             
             // 點擊展開/收合
             $('#dataTable tbody').on('click', 'td.dt-control', function () {
@@ -209,6 +206,11 @@
                   tr.addClass('shown');
                 }
               });
+
+         // 每次重繪後自動調整高度
+        table.on('draw', function () {
+            resizeDataTable();
+        });
 
         // 初始化後跑一次
         resizeDataTable();
