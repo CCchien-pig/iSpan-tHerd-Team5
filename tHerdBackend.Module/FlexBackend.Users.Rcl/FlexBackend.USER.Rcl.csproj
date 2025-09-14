@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <Folder Include="Areas\USER\ViewModels\" />
-    <Folder Include="Areas\USER\Views\Members\" />
     <Folder Include="Data\" />
   </ItemGroup>
 

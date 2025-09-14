@@ -2,7 +2,7 @@
 
 namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 {
-	public class Members : Controller
+	public class MembersController : Controller
 	{
 		public IActionResult Index()
 		{
