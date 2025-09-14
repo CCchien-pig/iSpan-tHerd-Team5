@@ -1,208 +1,132 @@
 ﻿@{
-    // 可依你的專案調整 Layout；若本檔交由 RCL 使用自己 Layout，可拿掉下一行
-    // Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "儀表板";
 }
 
 <div class="container-fluid">
 
-    <!-- 標題列 -->
+    <!-- 標題列 + 區間選擇 -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-
-        <!-- 右側：報表/重整、時間範圍切換 -->
-        <div class="d-flex align-items-center gap-2">
-            <!-- 天數選單：會觸發重新載入 API -->
-            <select id="rangeSelect" class="custom-select custom-select-sm mr-2" style="width: 140px">
+        <h1 class="h3 mb-0 text-gray-800">儀表板</h1>
+        <div class="d-flex align-items-center">
+            <select id="rangeSelect" class="custom-select custom-select-sm mr-2" style="width: 120px">
                 <option value="7">最近 7 天</option>
                 <option value="30" selected>最近 30 天</option>
                 <option value="90">最近 90 天</option>
             </select>
-
-            <!-- 重新載入按鈕（不真的產報表，單純 refresh） -->
             <a href="javascript:void(0)" id="btnRefresh"
                class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                <i class="fas fa-sync-alt fa-sm text-white-50"></i> Refresh
+                <i class="fas fa-sync-alt fa-sm text-white-50"></i> 重新整理
             </a>
         </div>
     </div>
 
-    <!-- KPI Cards 列 -->
+    <!-- 銷售 KPI（只留與銷售有關的四張卡片） -->
     <div class="row">
-
-        <!-- Earnings (Monthly) -->
+        <!-- 近區間營收 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Earnings (Monthly)
-                            </div>
-                            <!-- 將由 JS 寫入 -->
-                            <div id="kpi-monthly" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">近區間營收</div>
+                        <div id="kpi-range-revenue" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                     </div>
+                    <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Earnings (Annual) -->
+        <!-- 訂單數 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Earnings (Annual)
-                            </div>
-                            <div id="kpi-annual" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">訂單數</div>
+                        <div id="kpi-orders" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                     </div>
+                    <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Tasks -->
+        <!-- 售出數量 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks</div>
-                            <div class="row no-gutters align-items-center">
-                                <div class="col-auto">
-                                    <div id="kpi-task" class="h5 mb-0 mr-3 font-weight-bold text-gray-800">--%</div>
-                                </div>
-                                <div class="col">
-                                    <div class="progress progress-sm mr-2">
-                                        <div id="kpi-taskbar" class="progress-bar bg-info" role="progressbar"
-                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0"
-                                             aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">售出數量</div>
+                        <div id="kpi-units" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                     </div>
+                    <i class="fas fa-cubes fa-2x text-gray-300"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Pending Requests -->
+        <!-- 平均客單價 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Pending Requests
-                            </div>
-                            <div id="kpi-pending" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-comments fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">平均客單價</div>
+                        <div id="kpi-aov" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                     </div>
+                    <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- 圖表列 -->
+    <!-- 圖表列：營收折線圖（保留） -->
     <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">營收概況</h6>
+                </div>
+                <div class="card-body">
+                    <!-- 折線圖（營收 + 訂單數） -->
+                    <div class="chart-area"><canvas id="myAreaChart" height="120"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- 折線/面積圖：Earnings Overview -->
+    <!-- 熱銷 Top + 品類排行 -->
+    <div class="row">
+        <!-- 熱銷商品表格 -->
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Earnings Overview</h6>
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">熱銷商品 Top 10</h6>
                 </div>
-                <div class="card-body">
-                    <div class="chart-area">
-                        <canvas id="myAreaChart" height="120"></canvas>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width:70px">排名</th>
+                                    <th>商品</th>
+                                    <th class="text-right">銷量</th>
+                                    <th class="text-right">營收</th>
+                                    <th class="text-right">佔比</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblTopProducts">
+                                <!-- 由 JS 動態注入 -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 甜甜圈圖：Revenue Sources -->
+        <!-- 品類排行（營收） -->
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Revenue Sources</h6>
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">品類銷售排行（營收）</h6>
                 </div>
                 <div class="card-body">
-                    <div class="chart-pie pt-4 pb-2">
-                        <canvas id="myPieChart"></canvas>
-                    </div>
-                    <div class="mt-4 text-center small">
-                        <!-- 標題色與 Chart.js 顏色不一定 1:1；純展示 -->
-                        <span class="mr-2"><i class="fas fa-circle text-primary"></i> Direct</span>
-                        <span class="mr-2"><i class="fas fa-circle text-success"></i> Social</span>
-                        <span class="mr-2"><i class="fas fa-circle text-info"></i> Referral</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- 其他內容（示範） -->
-    <div class="row">
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Projects</h6>
-                </div>
-                <div class="card-body">
-                    <h4 class="small font-weight-bold">Server Migration <span class="float-right">20%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-danger" role="progressbar" style="width: 20%"
-                             aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Sales Tracking <span class="float-right">40%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: 40%"
-                             aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Customer Database <span class="float-right">60%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar" role="progressbar" style="width: 60%"
-                             aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Payout Details <span class="float-right">80%</span></h4>
-                    <div class="progress mb-4">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: 80%"
-                             aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <h4 class="small font-weight-bold">Account Setup <span class="float-right">Complete!</span></h4>
-                    <div class="progress">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%"
-                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 說明卡 -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Development Approach</h6>
-                </div>
-                <div class="card-body">
-                    <p>此 Dashboard 以 Chart.js 呈現，資料由後端 API 提供。</p>
-                    <p class="mb-0">你可以在 `DashboardApiController.Overview` 直接改為讀資料庫的彙總。</p>
+                    <canvas id="catBarChart" height="260"></canvas>
                 </div>
             </div>
         </div>
@@ -210,155 +134,148 @@
 
 </div>
 
-<!-- Chart.js CDN（也可改用本機檔） -->
+<!-- Chart.js（v4） -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
 <script>
-    // ====== 全域變數（避免重複建立圖表）======
-    let areaChart = null;
-    let pieChart  = null;
+    // ====== 本地化格式工具 ======
+    const fmtMoney = new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 });
+    const fmtInt = new Intl.NumberFormat('zh-TW');
+    const fmtDate = d => new Date(d).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
 
-    // ====== Utils：數字轉 $1,234 形式 =======
-    const toMoney = n => '$' + (n ?? 0).toLocaleString();
+    // ====== 圖表實例 ======
+    let areaChart = null, catBarChart = null;
 
-    // ====== 更新四個 KPI 卡片 =======
-    function updateKpis(k) {
-        // 月營收
-        document.getElementById('kpi-monthly').textContent = toMoney(k.monthly);
-        // 年營收
-        document.getElementById('kpi-annual').textContent  = toMoney(k.annual);
-        // Tasks 進度條與文字
-        document.getElementById('kpi-task').textContent    = (k.task ?? 0) + '%';
-        const bar = document.getElementById('kpi-taskbar');
-        bar.style.width = (k.task ?? 0) + '%';
-        bar.setAttribute('aria-valuenow', k.task ?? 0);
-        // 待處理數
-        document.getElementById('kpi-pending').textContent = k.pending ?? 0;
+    // ====== 銷售 KPI（全部來自 /api/cs/dashboard/tops） ======
+    function updateSalesKpis(k) {
+        document.getElementById('kpi-range-revenue').textContent = fmtMoney.format(k.totalRevenue ?? 0);
+        document.getElementById('kpi-orders').textContent        = fmtInt.format(k.totalOrders ?? 0);
+        document.getElementById('kpi-units').textContent         = fmtInt.format(k.unitsSold ?? 0);
+        document.getElementById('kpi-aov').textContent           = fmtMoney.format(k.aov ?? 0);
     }
 
-    // ====== 建立/重建 折線圖（營收 & 訂單量）======
-    function buildAreaChart(labels, net, orders) {
-        const ctx = document.getElementById('myAreaChart');
-        if (!ctx) return;
-
-        // 已存在則先銷毀，避免重複疊加
+    // ====== 折線圖（來自 Overview：labels/net/orders） ======
+    function buildAreaChart(labelsISO, net, orders) {
+        const ctx = document.getElementById('myAreaChart'); if (!ctx) return;
         if (areaChart) areaChart.destroy();
 
+        const labels = labelsISO.map(fmtDate);
         areaChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
                 datasets: [
-                    {
-                        label: 'Revenue',
-                        data: net,
-                        // fill: true 會有面積感
-                        fill: true,
-                        tension: 0.35,
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'Orders',
-                        data: orders,
-                        yAxisID: 'y1',
-                        borderWidth: 2,
-                        borderDash: [6,4],
-                        tension: 0.3
-                    }
+                    { label: '營收', data: net, fill: true, borderWidth: 2, tension: 0.35 },
+                    { label: '訂單數', data: orders, yAxisID: 'y1', borderWidth: 2, borderDash: [6,4], tension: 0.3 }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    tooltip: { callbacks: { label: (ctx) =>
-                        ctx.dataset.label === 'Revenue'
-                            ? `${ctx.dataset.label}: ${toMoney(ctx.parsed.y)}`
-                            : `${ctx.dataset.label}: ${ctx.parsed.y}`
-                    } }
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) =>
+                                ctx.dataset.label === '營收'
+                                    ? `營收：${fmtMoney.format(ctx.parsed.y)}`
+                                    : `訂單數：${ctx.parsed.y}`
+                        }
+                    },
+                    legend: { labels: { boxWidth: 12 } }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: v => '$' + v.toLocaleString() }
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        position: 'right',
-                        grid: { drawOnChartArea: false }
-                    }
+                    y:  { beginAtZero: true, title: { display: true, text: '金額' },
+                          ticks: { callback: v => fmtMoney.format(v) } },
+                    y1: { beginAtZero: true, position:'right', grid:{ drawOnChartArea:false },
+                          title:{ display:true, text:'筆數' } }
                 }
             }
         });
     }
 
-    // ====== 建立/重建 甜甜圈圖（流量/收入來源）======
-    function buildPieChart(share) {
-        const ctx = document.getElementById('myPieChart');
-        if (!ctx) return;
+    // ====== 橫向長條（品類營收） ======
+    function buildCatBarChart(labels, revenue) {
+        const ctx = document.getElementById('catBarChart'); if (!ctx) return;
+        if (catBarChart) catBarChart.destroy();
 
-        if (pieChart) pieChart.destroy();
-
-        pieChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Direct', 'Social', 'Referral'],
-                datasets: [{
-                    data: [share.Direct, share.Social, share.Referral],
-                    // 顏色可由主題決定，這裡使用 Chart.js 預設配色
-                }]
-            },
+        catBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '營收', data: revenue }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                scales: { x: { ticks: { callback: v => fmtMoney.format(v) } } },
                 plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: { callbacks: { label: (ctx) =>
-                        `${ctx.label}: ${ctx.parsed}%`
-                    } }
-                },
-                cutout: '65%'
+                    tooltip: { callbacks: { label: c => `營收：${fmtMoney.format(c.parsed.x)}` } },
+                    legend: { display: false }
+                }
             }
         });
     }
 
-    // ====== 向後端取資料並更新圖表/KPI =======
+    // ====== 熱銷 Top 表格 ======
+    function renderTopTable(list) {
+        const tbody = document.getElementById('tblTopProducts');
+        tbody.innerHTML = '';
+        list.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-muted">#${p.rank}</td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="font-weight-bold">${p.name}</span>
+                        <small class="text-muted">SKU：${p.sku}　|　分類：${p.category}</small>
+                    </div>
+                </td>
+                <td class="text-right">${fmtInt.format(p.qty)}</td>
+                <td class="text-right">${fmtMoney.format(p.revenue)}</td>
+                <td class="text-right">${p.share}%</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ====== 取數 API ======
+    async function fetchOverview(days) {
+        // 只拿折線圖資料（不再使用收入來源/任務/待處理）
+        const url = '@Url.Content("~/api/cs/dashboard/overview")' + `?days=${encodeURIComponent(days)}`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) throw new Error(`Overview HTTP ${resp.status}`);
+        return await resp.json();
+    }
+
+    async function fetchTops(days, top=10) {
+        // 這支提供銷售 KPI、Top 商品與品類排行
+        const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?days=${encodeURIComponent(days)}&top=${encodeURIComponent(top)}`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
+        return await resp.json();
+    }
+
+    // ====== 整體刷新 ======
     async function refresh(days = 30) {
-        // 以 Url.Content 產生正確根路徑，避免虛擬目錄問題
-        const url = '@Url.Content("~/api/cs/dashboard/overview")' + '?days=' + encodeURIComponent(days);
         try {
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' }});
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const d = await resp.json();
+            // 1) 折線圖
+            const ov = await fetchOverview(days);
+            buildAreaChart(ov.labels, ov.net, ov.orders);
 
-            // 1) 更新圖表
-            buildAreaChart(d.labels, d.net, d.orders);
-            buildPieChart(d.channelShare);
+            // 2) 銷售 KPI + 熱銷 + 品類
+            const tp = await fetchTops(days, 10);
+            updateSalesKpis(tp.kpi);
+            renderTopTable(tp.topProducts.map(x => ({
+                rank: x.rank, sku: x.sku, name: x.name, category: x.category,
+                qty: x.qty, revenue: x.revenue, share: x.share
+            })));
+            buildCatBarChart(tp.categories.labels, tp.categories.revenue);
 
-            // 2) 更新 KPI
-            updateKpis(d.kpi);
         } catch (err) {
-            console.error('Dashboard API 錯誤：', err);
-
-            // 簡易降級：顯示 0、清空圖表，頁面仍可互動
-            updateKpis({ monthly: 0, annual: 0, task: 0, pending: 0 });
-            buildAreaChart([], [], []);
-            buildPieChart({ Direct: 0, Social: 0, Referral: 0 });
+            console.error('Dashboard refresh error:', err);
         }
     }
 
-    // ====== 綁定 UI 事件並初次載入 =======
+    // ====== 初始化事件 ======
     (function init() {
-        // 初次載入（預設 30 天）
         refresh(30);
-
-        // 時間範圍切換
-        document.getElementById('rangeSelect').addEventListener('change', e => {
-            refresh(parseInt(e.target.value, 10));
-        });
-
-        // Refresh 按鈕
+        document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
         document.getElementById('btnRefresh').addEventListener('click', () => {
             const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
             refresh(days);
