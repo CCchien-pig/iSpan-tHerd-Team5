@@ -23,7 +23,7 @@ public partial class ProdProductDto
     /// <summary>
     /// 品牌ID
     /// </summary>
-    public int? BrandId { get; set; }
+    public int BrandId { get; set; }
 
     /// <summary>
     /// Seo設定
