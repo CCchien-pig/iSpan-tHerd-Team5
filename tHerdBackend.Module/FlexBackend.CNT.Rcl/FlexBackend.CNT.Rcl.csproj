@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\CNT\Views\PageBlock\" />
     <Folder Include="Areas\CNT\Views\Shared\" />
   </ItemGroup>
 

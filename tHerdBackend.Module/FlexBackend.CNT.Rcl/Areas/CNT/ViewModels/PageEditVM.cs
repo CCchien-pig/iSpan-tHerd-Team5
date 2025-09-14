@@ -1,4 +1,5 @@
 ﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
@@ -28,6 +29,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		// ⭐ 可供選擇的標籤清單（只做 UI 選項，不驗證）
 		[ValidateNever]
 		public IEnumerable<SelectListItem> TagOptions { get; set; }
+
+		// ⭐ 區塊列表
+		public List<CntPageBlock> Blocks { get; set; }
+
+		// ⭐ 新增的內容區塊（只在 Create 用）
+		public string NewBlockContent { get; set; }
+		public string NewBlockType { get; set; } = "richtext"; // 預設文字
 
 		// 狀態中文顯示
 		public string StatusText =>
