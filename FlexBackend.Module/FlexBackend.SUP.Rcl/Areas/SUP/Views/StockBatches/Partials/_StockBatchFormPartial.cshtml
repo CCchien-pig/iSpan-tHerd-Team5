@@ -52,8 +52,6 @@
             <label>SKU</label>
         </div>
 
-
-
         <!-- 製造日期 -->
         <div class="form-floating mb-2">
             <input asp-for="ManufactureDate" id="ManufactureDate" type="date" class="form-control"
@@ -77,22 +75,26 @@
             <label>異動類型</label>
         </div>
 
-        <!-- 手動調整加/減 -->
-        <div class="form-floating mb-2" id="AdjustTypeDiv" style="display:@(Model.MovementType == "Adjust" ? "block" : "none");">
-            <select asp-for="IsAdd" class="form-select" id="AdjustTypeSelect">
-                <option value="true">加</option>
-                <option value="false">減</option>
-            </select>
-            <label>手動調整加/減</label>
+        <div id="AdjustOptions" style="display:none;">
+            <!-- 手動調整類型，選加/減 -->
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="IsAdd" id="Increase" value="true">                
+                <label class="form-check-label" for="Increase">增加</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="IsAdd" id="Decrease" value="false">                
+                <label class="form-check-label" for="Decrease">減少</label>
+            </div>
+
+            <!-- 變動庫存量 -->
+            <div class="form-floating mb-2">
+                <input asp-for="ChangeQty" type="number" class="form-control" min="0"
+                       max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
+                <label>變動庫存量</label>
+                <small id="ChangeQtyHelp" class="text-muted"></small>
+            </div>
         </div>
 
-        <!-- 變動庫存量 -->
-        <div class="form-floating mb-2">
-            <input asp-for="ChangeQty" type="number" class="form-control" min="0"
-                   max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
-            <label>變動庫存量</label>
-            <small id="ChangeQtyHelp" class="text-muted"></small>
-        </div>
 
         <!-- 備註 -->
         <div class="form-floating mb-2">

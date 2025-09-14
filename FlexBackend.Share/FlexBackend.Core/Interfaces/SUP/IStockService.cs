@@ -8,9 +8,10 @@ namespace FlexBackend.Core.Interfaces.SUP
 			int skuId,
 			int changeQty,
 			int userId,
-			string changeType, // "Adjust", "Sale", "Return"...
-			List<int> batchIds = null,
-			string remark = "");
+			string changeType,          // "Adjust", "Sale", "Return"...
+			bool isAdd = true,          // 手動調整時，是否增加庫存
+			List<int> batchIds = null,  // 退貨回原批次時指定
+			string remark = "");        // 備註
 
 		Task<StockAdjustResultDto> ReturnStockAsync(
 			int skuId,
@@ -20,7 +21,9 @@ namespace FlexBackend.Core.Interfaces.SUP
 			string remark = null);
 
 
-		Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(int skuId);
+		Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(
+			int skuId, 
+			bool forDecrease);
 	}
 }
 

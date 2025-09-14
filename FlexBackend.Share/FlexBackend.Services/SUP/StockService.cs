@@ -4,6 +4,7 @@ using FlexBackend.Infra.Models;
 using Microsoft.EntityFrameworkCore;
 using SupStockHistory = FlexBackend.Infra.Models.SupStockHistory;
 
+
 namespace FlexBackend.Services.SUP
 {
 	public class StockService : IStockService
@@ -19,38 +20,40 @@ namespace FlexBackend.Services.SUP
 		/// 同效期則先建檔先出
 		/// 更新異動紀錄(SupStockHistory)
 		/// 更新SKU總庫存(ProdProductSkus.StockQty)
-		/// 非Return都當扣庫存
-		/// StockService不判斷加減庫存方向，統一依changeQty的正負，在呼叫時，把加/減庫存的數量傳正負
 		/// </summary>
 		public async Task<StockAdjustResultDto> AdjustStockAsync(
 			int skuId,
 			int changeQty,
 			int userId,
-			string changeType,         // "Adjust", "Sale"...
-			List<int> batchIds = null, // 退貨回原批次時指定
+			string changeType,         // "Adjust", "Purchase", "Sale", "Return"
+			bool isAdd = true,         // 手動調整時是否增加庫存
+			List<int> batchIds = null, // 退貨或指定批次時使用
 			string remark = null)
 		{
 			if (changeQty == 0)
+			{
 				return new StockAdjustResultDto
 				{
 					SkuId = skuId,
 					TotalStock = await _context.ProdProductSkus
 						.Where(s => s.SkuId == skuId)
-						.SumAsync(s => s.StockQty),
+						.Select(s => s.StockQty)
+						.FirstOrDefaultAsync(),
 					Success = true,
 					AdjustedQty = 0,
 					RemainingQty = 0
 				};
+			}
 
 			int remaining = changeQty;
-			List<SupStockBatch> batches;
 
 			if (changeType == "Return")
 			{
+				// 退貨：必須指定批次
 				if (batchIds == null || !batchIds.Any())
 					throw new ArgumentException("退貨必須指定批次ID");
 
-				batches = await _context.SupStockBatches
+				var batches = await _context.SupStockBatches
 					.Where(b => batchIds.Contains(b.StockBatchId))
 					.OrderBy(b => batchIds.IndexOf(b.StockBatchId))
 					.ToListAsync();
@@ -86,38 +89,68 @@ namespace FlexBackend.Services.SUP
 			}
 			else
 			{
-				// 出庫或調整
-				batches = await _context.SupStockBatches
-					.Where(b => b.SkuId == skuId && b.Qty > 0)
-					.OrderBy(b => b.ExpireDate ?? DateTime.MaxValue)
-					.ThenBy(b => b.CreatedDate)
-					.ToListAsync();
+				bool isDecrease = (changeType == "Adjust" && !isAdd) || changeType == "Sale";
 
-				int totalStock = batches.Sum(b => b.Qty);
-				if (totalStock < changeQty)
-					throw new InvalidOperationException($"庫存不足：剩餘 {totalStock}，無法扣除 {changeQty}");
-
-				foreach (var batch in batches)
+				if (isDecrease)
 				{
-					if (remaining <= 0) break;
+					// 扣庫存 → 只抓有數量的批次
+					var batches = await GetBatchesBySkuAsync(skuId, forDecrease: true);
+
+					int totalStock = batches.Sum(b => b.Qty);
+					if (totalStock < remaining)
+						throw new InvalidOperationException($"庫存不足：剩餘 {totalStock}，無法扣除 {remaining}");
+
+					foreach (var batch in batches)
+					{
+						if (remaining <= 0) break;
+
+						int beforeQty = batch.Qty;
+						int qtyToDeduct = Math.Min(batch.Qty, remaining);
+
+						batch.Qty -= qtyToDeduct;
+						remaining -= qtyToDeduct;
+
+						_context.SupStockHistories.Add(new SupStockHistory
+						{
+							StockBatchId = batch.StockBatchId,
+							ChangeType = changeType,
+							ChangeQty = -qtyToDeduct,
+							Reviser = userId,
+							RevisedDate = DateTime.Now,
+							BeforeQty = beforeQty,
+							AfterQty = batch.Qty,
+							Remark = remark
+						});
+					}
+				}
+				else
+				{
+					// 增加庫存：必須指定批次（批號由 Controller 建立時產生）
+					if (batchIds == null || !batchIds.Any())
+						throw new InvalidOperationException("增加庫存必須指定批次ID");
+
+					var batch = await _context.SupStockBatches
+						.FirstOrDefaultAsync(b => b.StockBatchId == batchIds.First());
+
+					if (batch == null)
+						throw new InvalidOperationException("指定批次不存在");
 
 					int beforeQty = batch.Qty;
-					int qtyToDeduct = Math.Min(batch.Qty, remaining);
-
-					batch.Qty -= qtyToDeduct;
-					remaining -= qtyToDeduct;
+					batch.Qty += remaining;
 
 					_context.SupStockHistories.Add(new SupStockHistory
 					{
 						StockBatchId = batch.StockBatchId,
 						ChangeType = changeType,
-						ChangeQty = -qtyToDeduct,
+						ChangeQty = remaining,
 						Reviser = userId,
 						RevisedDate = DateTime.Now,
 						BeforeQty = beforeQty,
 						AfterQty = batch.Qty,
 						Remark = remark
 					});
+
+					remaining = 0;
 				}
 			}
 
@@ -236,15 +269,25 @@ namespace FlexBackend.Services.SUP
 			};
 		}
 
+
+
 		/// <summary>
 		/// 取得SKU批次列表
 		/// 先ExpireDate再CreatedDate
 		/// 日期只取年月日
 		/// </summary>
-		public async Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(int skuId)
+		public async Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(int skuId, bool forDecrease = false)
 		{
-			return await _context.SupStockBatches
-				.Where(b => b.SkuId == skuId && b.Qty > 0)
+			var query = _context.SupStockBatches
+				.Where(b => b.SkuId == skuId);
+
+			if (forDecrease)
+			{
+				// 扣庫存才需要 Qty > 0
+				query = query.Where(b => b.Qty > 0);
+			}
+
+			return await query
 				.OrderBy(b => b.ExpireDate.HasValue ? b.ExpireDate.Value.Date : DateTime.MaxValue)
 				.ThenBy(b => b.CreatedDate)
 				.Select(b => new SupStockBatchDto
@@ -263,5 +306,9 @@ namespace FlexBackend.Services.SUP
 				})
 				.ToListAsync();
 		}
+
+
+
+
 	}
 }
