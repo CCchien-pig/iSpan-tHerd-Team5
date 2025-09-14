@@ -19,6 +19,8 @@ namespace FlexBackend.Services.SUP
 		/// 同效期則先建檔先出
 		/// 更新異動紀錄(SupStockHistory)
 		/// 更新SKU總庫存(ProdProductSkus.StockQty)
+		/// 非Return都當扣庫存
+		/// StockService不判斷加減庫存方向，統一依changeQty的正負，在呼叫時，把加/減庫存的數量傳正負
 		/// </summary>
 		public async Task<StockAdjustResultDto> AdjustStockAsync(
 			int skuId,
