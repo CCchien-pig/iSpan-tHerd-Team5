@@ -1,8 +1,4 @@
-﻿using FlexBackend.Core.Interfaces.PROD;
-using FlexBackend.Core.Interfaces.Products;
-using FlexBackend.Core.Interfaces.SUP;
-using FlexBackend.Infra.Repository.PROD;
-using FlexBackend.Services.PROD;
+﻿using FlexBackend.Core.Interfaces.SUP;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexBackend.Services.SUP
