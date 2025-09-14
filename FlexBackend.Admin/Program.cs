@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Composition;
+using FlexBackend.CS.Rcl.Areas.CS.Controllers;
 using FlexBackend.Infra;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -83,6 +85,7 @@ namespace FlexBackend.Admin
 				options.SlidingExpiration = true;
 			});
 
+
 			//Data Protection 金鑰持久化（避免重啟就讓 Cookie 失效）
 			builder.Services.AddDataProtection()
 				.PersistKeysToFileSystem(new DirectoryInfo(
@@ -106,6 +109,20 @@ namespace FlexBackend.Admin
 			});
 
 			var app = builder.Build();
+            // 全站預設需要登入 
+            builder.Services
+                .AddControllersWithViews(options =>
+                {
+                    var policy = new AuthorizationPolicyBuilder()
+                        .RequireAuthenticatedUser()
+                        .Build();
+
+                    options.Filters.Add(new AuthorizeFilter(policy));
+                })
+                .AddApplicationPart(typeof(UiKitRclMarker).Assembly)
+                .AddApplicationPart(typeof(DashboardController).Assembly);
+            //----------------------------------------
+
 
 			//Create a scope to run the initialization(只有第一次執行帶入假資料用到)
 			//using (var scope = app.Services.CreateScope())
@@ -146,9 +163,12 @@ namespace FlexBackend.Admin
 
 			app.UseAuthorization();
 
-			app.MapControllerRoute(
+            // 讓屬性路由（含 API）生效
+            app.MapControllers();
+
+            app.MapControllerRoute(
             name: "areas",
-            pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+            pattern: "{area=CS}/{controller=Dashboard}/{action=Index}/{id?}");
 
             app.MapControllerRoute(
                 name: "default",

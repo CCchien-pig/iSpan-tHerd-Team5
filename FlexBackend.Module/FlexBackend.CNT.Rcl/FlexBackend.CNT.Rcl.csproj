@@ -8,12 +8,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <Content Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <EmbeddedResource Remove="Areas\CNT\Controllers\NewFolder\**" />
+    <None Remove="Areas\CNT\Controllers\NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\CNT\Controllers\" />
-    <Folder Include="Areas\CNT\ViewModels\" />
+    <Folder Include="Areas\CNT\Views\PageBlock\" />
+    <Folder Include="Areas\CNT\Views\Shared\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="X.PagedList" Version="10.5.9" />
+    <PackageReference Include="X.PagedList.Mvc.Core" Version="10.5.9" />
   </ItemGroup>
 
   <ItemGroup>

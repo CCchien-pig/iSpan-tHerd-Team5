@@ -1,0 +1,61 @@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.TagDetailVM
+@{
+    ViewData["Title"] = "標籤詳情";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-info text-white fw-bold">
+        🔎 標籤詳情
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.TagId</dd>
+
+            <dt class="col-sm-3">標籤名稱</dt>
+            <dd class="col-sm-9">@Model.TagName</dd>
+
+            <dt class="col-sm-3">狀態</dt>
+            <dd class="col-sm-9">
+                @if (Model.IsActive)
+                {
+                    <span class="badge bg-success">啟用</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">停用</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">異動人員</dt>
+            <dd class="col-sm-9">@Model.Revisor</dd>
+
+            <dt class="col-sm-3">最後修改</dt>
+            <dd class="col-sm-9">@Model.RevisedDate?.ToString("yyyy-MM-dd HH:mm")</dd>
+        </dl>
+
+        @if (Model.BoundPages.Any())
+        {
+            
+            <h5 class="mt-4 fw-bold ">📄 綁定的文章</h5>            
+            <ul class="list-group">
+                @foreach (var page in Model.BoundPages)
+                {
+                    <li class="list-group-item bg-light">
+                        <span class="fw-semibold text-dark">@(page)</span>
+                        <span class="badge bg-success ms-2">已綁定</span>
+                    </li>                  
+                }
+            </ul>
+            
+        }
+        else
+        {
+            <div class="alert alert-secondary mt-4">
+                沒有文章綁定此標籤
+            </div>
+        }
+
+        <a asp-action="Index" class="btn btn-outline-secondary mt-3 btn-lg">↩ 返回列表</a>
+    </div>
+</div>
