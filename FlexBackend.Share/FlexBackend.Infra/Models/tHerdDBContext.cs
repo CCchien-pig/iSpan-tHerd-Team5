@@ -1495,7 +1495,6 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Reviewer).HasComment("審核者（預留 AdminUsers，**串權限資料）");
             entity.Property(e => e.RevisedDate).HasComment("異動時間（；更新時改寫）");
             entity.Property(e => e.RmaId)
-                .IsRequired()
                 .HasMaxLength(20)
                 .IsUnicode(false);
             entity.Property(e => e.Status)
