@@ -1,0 +1,40 @@
+﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns.ReturnDetailVM
+<div class="mb-3">
+    <div><strong>RMA：</strong>@(string.IsNullOrEmpty(Model.RmaId) ? "-" : Model.RmaId)</div>
+    <div><strong>訂單號：</strong>@Model.OrderNo</div>
+    <div><strong>類型/範圍：</strong>@Model.RequestTypeName / @Model.RefundScopeName</div>
+    <div><strong>狀態：</strong>@Model.StatusName</div>
+    <div><strong>建立時間：</strong>@Model.CreatedDate.ToString("yyyy/MM/dd HH:mm")</div>
+    @if (!string.IsNullOrEmpty(Model.ReasonText))
+    {
+        <div><strong>原因：</strong>@Model.ReasonText</div>
+    }
+</div>
+
+<table class="table table-sm table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th>#</th>
+            <th>OrderItemId</th>
+            <th>申請數量</th>
+            <th>核可數量</th>
+            <th>退款數量</th>
+            <th>補寄數量</th>
+            <th>退款單價</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var x in Model.Items)
+        {
+            <tr>
+                <td>@x.RmaItemId</td>
+                <td>@x.OrderItemId</td>
+                <td>@x.Qty</td>
+                <td>@x.ApprovedQty</td>
+                <td>@x.RefundQty</td>
+                <td>@x.ReshipQty</td>
+                <td>@(x.RefundUnitAmount?.ToString("N2") ?? "-")</td>
+            </tr>
+        }
+    </tbody>
+</table>
