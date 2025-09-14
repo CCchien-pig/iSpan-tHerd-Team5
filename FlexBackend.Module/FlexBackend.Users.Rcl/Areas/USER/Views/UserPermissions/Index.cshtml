@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
 }
 
+
+
+<div class="mb-2 text-end">
+    <button type="button" class="btn btn-success"
+            data-bs-toggle="modal" data-bs-target="#dlgCreateRole">
+        新增角色
+    </button>
+</div>
 <div class="card shadow">
     <div class="card-header">角色列表</div>
     <div class="card-body">
@@ -25,6 +33,37 @@
         </table>
     </div>
 </div>
+
+<!-- ★ 新增角色 Modal -->
+<div class="modal fade" id="dlgCreateRole" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增角色</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmCreateRole" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">角色名稱</label>
+                        <input name="name" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <input name="description" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">建立</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- 設定模組 Modal -->
 <div class="modal fade" id="dlgRoleModules" tabindex="-1">
@@ -50,7 +89,7 @@
 @section Scripts {
     <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
     <script>
-                const dt = new DataTable('#tblRoles', {
+                        const dt = new DataTable('#tblRoles', {
           processing: true, serverSide: true,
           ajax: { url: '/USER/UserPermissions/Roles', type: 'GET', dataSrc: 'data' },
           columns: [
@@ -59,10 +98,63 @@
             { data: 'createdDate' },
             { data: 'moduleCount', className: 'text-center' },
             { data: null, orderable:false, searchable:false,
-              render: (data, type, row) => `<button class="btn btn-sm btn-primary btn-mod" data-id="${row.id}">設定模組</button>`
+              render: (data, type, row) => `
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-primary btn-mod" data-id="${row.id}">設定模組</button>
+                  <button class="btn btn-outline-danger btn-del" data-id="${row.id}">刪除</button>
+                </div>`
             }
           ],
           order: [[2,'desc']]
+        });
+
+                // 方便共用：取任何一個表單裡的 Anti-Forgery Token
+        function getAntiForgeryToken(){
+          const t1 = document.querySelector('#frmRoleModules input[name="__RequestVerificationToken"]');
+          const t2 = document.querySelector('#frmCreateRole input[name="__RequestVerificationToken"]');
+          return (t1?.value || t2?.value || '');
+        }
+
+        // 刪除角色
+        document.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('.btn-del'); if(!btn) return;
+          if(!confirm('確定要刪除這個角色？')) return;
+          const roleId = btn.dataset.id;
+
+          const fd = new FormData();
+          fd.append('roleId', roleId);
+
+          const res = await fetch('/USER/UserPermissions/DeleteRole', {
+            method:'POST',
+            body: fd,
+            headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+            credentials: 'same-origin'
+          });
+          const json = await res.json().catch(()=>({ ok:false }));
+          if(res.ok && json.ok){ dt.ajax.reload(null, false); }
+          else alert(json.message || '刪除失敗');
+        });
+
+        // 新增角色
+        document.getElementById('frmCreateRole').addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const form = e.target;
+          const fd = new FormData(form);
+
+          const res = await fetch('/USER/UserPermissions/CreateRole', {
+            method:'POST',
+            body: fd,
+            headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+            credentials: 'same-origin'
+          });
+          const json = await res.json().catch(()=>({ ok:false }));
+          if(res.ok && json.ok){
+            bootstrap.Modal.getInstance(document.getElementById('dlgCreateRole')).hide();
+            form.reset();
+            dt.ajax.reload(null, false);
+          }else{
+            alert(json.message || '建立失敗');
+          }
         });
 
         // 開啟設定模組
@@ -89,6 +181,8 @@
 
           new bootstrap.Modal(document.getElementById('dlgRoleModules')).show();
         });
+
+
 
         // 送出儲存
                 document.getElementById('frmRoleModules').addEventListener('submit', async (e)=>{

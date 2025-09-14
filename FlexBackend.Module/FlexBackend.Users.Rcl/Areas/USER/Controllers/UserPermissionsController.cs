@@ -1,6 +1,8 @@
-﻿using FlexBackend.Core.Interfaces.SYS;
+﻿using FlexBackend.Core.DTOs.USER;
+using FlexBackend.Core.Interfaces.SYS;
 using FlexBackend.Core.Web_Datatables;
 using FlexBackend.Infra.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,22 +10,25 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 {
 	[Area("USER")]
 	[Controller]
-	public class UserPermissions : Controller
+	public class UserPermissionsController : Controller
 	{
 		private readonly tHerdDBContext _db;
 		private readonly ApplicationDbContext _app;
+		private readonly RoleManager<ApplicationRole> _roleMgr;   // ★ 加入
 
-		public UserPermissions(
+		public UserPermissionsController(
 			tHerdDBContext db,
-			ApplicationDbContext app)
+			ApplicationDbContext app,
+			RoleManager<ApplicationRole> roleMgr)                 // ★ 注入
 		{
 			_db = db;
 			_app = app;
+			_roleMgr = roleMgr;
 		}
 
 		public IActionResult Index() => View();
 
-		// DataTables server-side: 角色清單
+		// DataTables 角色清單（排除 Member）
 		[HttpGet]
 		public async Task<IActionResult> Roles([FromQuery] DataTableRequest dt)
 		{
@@ -31,8 +36,9 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			var length = (dt?.Length ?? 10) > 0 ? dt!.Length : 10;
 			var kw = dt?.Search?.Value?.Trim();
 
-			// 1) 來源用 Identity DB
-			var q = _app.Roles.AsNoTracking();
+			var q = _app.Roles
+						.AsNoTracking()
+						.Where(r => r.Name != "Member");   // ★ 排除 Member
 
 			var recordsTotal = await q.CountAsync();
 
@@ -41,16 +47,12 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 
 			var recordsFiltered = await q.CountAsync();
 
-			// 2) 排序（可改成依 DataTables order）
 			q = q.OrderByDescending(r => r.CreatedDate);
 
-			// 3) 先只投影可被翻譯的欄位，拉回記憶體
-			var page = await q
-				.Skip(start).Take(length)
-				.Select(r => new { r.Id, r.Name, r.Description, r.CreatedDate })
-				.ToListAsync();
+			var page = await q.Skip(start).Take(length)
+							  .Select(r => new { r.Id, r.Name, r.Description, r.CreatedDate })
+							  .ToListAsync();
 
-			// 4) 一次把模組數量算好（避免 N+1）
 			var roleIds = page.Select(p => p.Id).ToList();
 			var moduleCounts = await _db.UserRoleModules
 				.Where(x => roleIds.Contains(x.AdminRoleId))
@@ -58,8 +60,8 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 				.Select(g => new { RoleId = g.Key, Count = g.Count() })
 				.ToDictionaryAsync(x => x.RoleId, x => x.Count);
 
-			// 5) 在記憶體格式化時間
-			var data = page.Select(r => new {
+			var data = page.Select(r => new
+			{
 				r.Id,
 				r.Name,
 				r.Description,
@@ -68,6 +70,57 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			});
 
 			return Json(new { draw = dt?.Draw ?? 0, recordsTotal, recordsFiltered, data });
+		}
+
+		// ★ 新增角色
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> CreateRole([FromForm] string name, [FromForm] string? description)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return BadRequest(new { ok = false, message = "角色名稱必填" });
+
+			if (await _roleMgr.RoleExistsAsync(name.Trim()))
+				return BadRequest(new { ok = false, message = "角色名稱已存在" });
+
+			var role = new ApplicationRole
+			{
+				Name = name.Trim(),
+				Description = description?.Trim(),
+				CreatedDate = DateTime.UtcNow,
+				Creator = 0
+			};
+			var res = await _roleMgr.CreateAsync(role);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
+		}
+
+		// ★ 刪除角色（保護 Member；有使用者時不允許）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> DeleteRole([FromForm] string roleId)
+		{
+			var role = await _roleMgr.FindByIdAsync(roleId);
+			if (role == null) return NotFound(new { ok = false, message = "角色不存在" });
+			if (string.Equals(role.Name, "Member", StringComparison.OrdinalIgnoreCase))
+				return BadRequest(new { ok = false, message = "不可刪除預設角色 Member" });
+
+			var hasUsers = await _app.UserRoles.AnyAsync(ur => ur.RoleId == roleId);
+			if (hasUsers)
+				return BadRequest(new { ok = false, message = "已有使用者屬於此角色，請先移除" });
+
+			// 先清掉角色 × 模組對應
+			var binds = _db.UserRoleModules.Where(x => x.AdminRoleId == roleId);
+			_db.UserRoleModules.RemoveRange(binds);
+			await _db.SaveChangesAsync();
+
+			var res = await _roleMgr.DeleteAsync(role);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
 		}
 
 		// 讀取：某角色擁有哪些模組（給設定用）
