@@ -23,7 +23,7 @@ public partial class ProdProductDto
     /// <summary>
     /// 品牌ID
     /// </summary>
-    public int? BrandId { get; set; }
+    public int BrandId { get; set; }
 
     /// <summary>
     /// Seo設定
@@ -84,9 +84,4 @@ public partial class ProdProductDto
     /// 異動時間
     /// </summary>
     public DateTime? RevisedDate { get; set; }
-
-	/// <summary>
-	/// 異動時間
-	/// </summary>
-	public IEnumerable<>? RevisedDate { get; set; }
 }

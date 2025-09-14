@@ -4,6 +4,7 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Dapper;
 using FlexBackend.Core.Interfaces.Products;
+using System.Threading.Tasks.Dataflow;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
@@ -20,16 +21,16 @@ namespace FlexBackend.Infra.Repository.PROD
 
         public async Task<IEnumerable<ProdProductQueryDto>> GetAllProductQueryListAsync(int productId, CancellationToken ct = default)
 		{
-            string sql = @"SELECT p.ProductId, p.ProductName, p.ShortDesc, 
+            string sql = @"SELECT sk.SkuId, sk.SkuCode, p.ProductId, p.ProductName, 
+                sk.Barcode, sk.CostPrice, sk.ListPrice, sk.UnitPrice,
+                sk.SalePrice, sk.StockQty, sk.SafetyStockQty, sk.ReorderPoint, sk.MaxStockQty,
+                sk.IsAllowBackorder, sk.ShelfLifeDays, p.ShortDesc, 
                 p.Weight, p.VolumeCubicMeter, p.VolumeUnit,
                 p.BrandId, s.BrandName, s.DiscountRate AS BrandDisCntRate, 
                 s.IsDiscountActive AS BrandDisCntActive,
                 s.SupplierId AS SupId, su.SupplierName AS SupName, 
                 su.ContactName AS SupContact, su.Phone AS SupPhone, su.Email AS SupEmail,
                 a.AttributeName, pa.AttributeValue, tc.ProductTypeName,
-                sk.SkuId, sk.SkuCode, sk.Barcode, sk.CostPrice, sk.ListPrice, sk.UnitPrice,
-                sk.SalePrice, sk.StockQty, sk.SafetyStockQty, sk.ReorderPoint, sk.MaxStockQty,
-                sk.IsAllowBackorder, sk.ShelfLifeDays, 
                 sc.GroupName AS SpecGroup, so.OptionName AS SpecName
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId=p.BrandId 
@@ -41,8 +42,7 @@ namespace FlexBackend.Infra.Repository.PROD
                 LEFT JOIN PROD_ProductSku sk ON sk.ProductId=p.ProductId
                 LEFT JOIN PROD_SpecificationConfig sc ON sc.ProductId=p.ProductId
                 LEFT JOIN PROD_SkuSpecificationValue sv ON sv.SkuId=sk.SkuId
-                LEFT JOIN PROD_SpecificationOption so on so.SpecificationOptionId=sv.SpecificationOptionId
-                WHERE p.ProductId = @ProductId;";
+                LEFT JOIN PROD_SpecificationOption so on so.SpecificationOptionId=sv.SpecificationOptionId";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 
@@ -63,47 +63,70 @@ namespace FlexBackend.Infra.Repository.PROD
                     {
                         ProductId = pid,
                         ProductName = row.ProductName,
+
+                        SupId = (int?)CheckValueNull(row.SupId),
+                        SupName = row.SupName,
+                        
+                        BrandId = (int?)CheckValueNull(row.BrandId),
+                        BrandName = row.BrandName,
+                        BrandDisCntRate = (decimal?)CheckValueNull(row.BrandDisCntRate) ?? 0,
+                        BrandDisCntActive = row.BrandDisCntActive,
+
+                        SupContact = row.SupContact,
+                        SupPhone = row.SupPhone,
+                        SupEmail = row.SupEmail,
+
                         ShortDesc = row.ShortDesc,
-                        Weight = row.Weight,
-                        VolumeCubicMeter = row.VolumeCubicMeter,
+                        Weight = (decimal?)CheckValueNull(row.Weight) ?? 0,
+                        VolumeCubicMeter = (decimal?)CheckValueNull(row.VolumeCubicMeter) ?? 0,
                         VolumeUnit = row.VolumeUnit,
-                        BrandId = row.BrandId,
-                        //BrandName = row.BrandName,
-                        //BrandDisCntRate = row.BrandDisCntRate,
-                        //BrandDisCntActive = row.BrandDisCntActive,
-                        //SupId = row.SupId,
-                        //SupName = row.SupName,
-                        //SupContact = row.SupContact,
-                        //SupPhone = row.SupPhone,
-                        //SupEmail = row.SupEmail,
-                        //ProductTypeName = row.ProductTypeName,
-                        Skus = new List<ProdProductSkuDto>(),
-                        Images = new List<ProdProductImageDto>(),
+
+                        SkuId = (int?)CheckValueNull(row.skuId),
+                        SpecCode = row.specCode,
+                        SkuCode = row.SkuCode,
+                        Barcode = row.Barcode,
+                        CostPrice = (decimal?)CheckValueNull(row.CostPrice) ?? 0,
+                        ListPrice = (decimal?)CheckValueNull(row.ListPrice) ?? 0,
+                        UnitPrice = (decimal?)CheckValueNull(row.UnitPrice) ?? 0,
+                        SalePrice = (decimal?)CheckValueNull(row.SalePrice) ?? 0,
+                        StockQty = (int?)CheckValueNull(row.StockQty),
+                        SafetyStockQty = (int?)CheckValueNull(row.SafetyStockQty),
+                        ReorderPoint = (int?)CheckValueNull(row.ReorderPoint),
+                        MaxStockQty = (int?)CheckValueNull(row.MaxStockQty),
+                        IsAllowBackorder = row.IsAllowBackorder,
+                        ShelfLifeDays = (int?)CheckValueNull(row.ShelfLifeDays),
+
+                        ProductTypeName = row.ProductTypeName,
                         Types = new List<ProdProductTypeDto>(),
-                        SpecConfigs = new List<ProdSpecificationConfigDto>(),
-                        SpecOptions = new List<ProdSpecificationOptionDto>(),
+
+                        Spec = string.Empty,
+                        SpecOptions = new List<ProdSpecificationDto>(),
+
+                        Attribute = string.Empty,
                         AttributeOptions = new List<ProdAttributeOptionDto>(),
+
+                        Bundle = string.Empty,
                         BundleItems = new List<ProdBundleItemDto>(),
+
+                        Ingredient = string.Empty,
                         Ingredients = new List<ProdProductIngredientDto>()
                     };
                     lookup.Add(pid, dto);
                 }
 
-                // SKU
-                if (row.SkuId != null && !dto.Skus.Any(x => x.SkuId == row.SkuId))
-                    dto.Skus.Add(new ProdProductSkuDto { SkuId = row.SkuId, SkuCode = row.SkuCode, Barcode = row.Barcode });
-
-                // 規格 Config
-                if (row.SpecificationConfigId != null && !dto.SpecConfigs.Any(x => x.SpecificationConfigId == row.SpecificationConfigId))
-                    dto.SpecConfigs.Add(new ProdSpecificationConfigDto { SpecificationConfigId = row.SpecificationConfigId, GroupName = row.SpecGroup });
-
                 // 規格 Option
                 if (row.SpecificationOptionId != null && !dto.SpecOptions.Any(x => x.SpecificationOptionId == row.SpecificationOptionId))
-                    dto.SpecOptions.Add(new ProdSpecificationOptionDto { SpecificationOptionId = row.SpecificationOptionId, OptionName = row.SpecName });
+                {
+                    dto.SpecOptions.Add(new ProdSpecificationDto { SpecificationOptionId = row.SpecificationOptionId, OptionName = row.SpecName });
+                    dto.Spec = string.Join(",", dto.SpecOptions.Select(s => $"{s.GroupName}:{s.OptionName}"));
+                }
 
                 // 屬性 Option
                 if (row.AttributeOptionId != null && !dto.AttributeOptions.Any(x => x.AttributeOptionId == row.AttributeOptionId))
+                {
                     dto.AttributeOptions.Add(new ProdAttributeOptionDto { AttributeOptionId = row.AttributeOptionId, OptionName = row.AttributeOptionName });
+                    dto.Attribute = string.Join(",", dto.AttributeOptions.Select(s => $"{s.AttributeName}:{s.OptionName}{(string.IsNullOrWhiteSpace(s.OptionValue)==false ? s.OptionValue : string.Empty)}"));
+                }
 
                 //// BundleItem
                 //if (row.BundleItemId != null && !dto.BundleItems.Any(x => x.BundleItemId == row.BundleItemId))
@@ -118,5 +141,13 @@ namespace FlexBackend.Infra.Repository.PROD
 
             return lookup.Values.ToList();
         }
-	}
+
+        public static object? CheckValueNull(dynamic value)
+        {
+            if (value == null || value is DBNull)
+                return null;
+
+            return value;
+        }
+    }
 }
