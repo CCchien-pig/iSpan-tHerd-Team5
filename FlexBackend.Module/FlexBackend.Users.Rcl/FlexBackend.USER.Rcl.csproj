@@ -12,9 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Controllers\" />
-    <Folder Include="Areas\USER\Controllers\" />
     <Folder Include="Areas\USER\ViewModels\" />
+    <Folder Include="Areas\USER\Views\Members\" />
     <Folder Include="Data\" />
   </ItemGroup>
 
