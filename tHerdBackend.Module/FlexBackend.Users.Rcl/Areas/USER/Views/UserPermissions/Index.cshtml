@@ -1,0 +1,119 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = "系統權限管理";
+    // Layout = "/_AdminLayout.cshtml";
+}
+@section Styles {
+    <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
+}
+
+<div class="card shadow">
+    <div class="card-header">角色列表</div>
+    <div class="card-body">
+        <table id="tblRoles" class="table table-striped w-100">
+            <thead>
+                <tr>
+                    <th>角色名稱</th>
+                    <th>描述</th>
+                    <th>建立時間</th>
+                    <th>授權模組數</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- 設定模組 Modal -->
+<div class="modal fade" id="dlgRoleModules" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">設定模組</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmRoleModules" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="roleId" id="roleId" />
+                <div class="modal-body"><div id="moduleChecks" class="row gy-2"></div></div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">儲存</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
+    <script>
+                const dt = new DataTable('#tblRoles', {
+          processing: true, serverSide: true,
+          ajax: { url: '/USER/UserPermissions/Roles', type: 'GET', dataSrc: 'data' },
+          columns: [
+            { data: 'name' },
+            { data: 'description' },
+            { data: 'createdDate' },
+            { data: 'moduleCount', className: 'text-center' },
+            { data: null, orderable:false, searchable:false,
+              render: (data, type, row) => `<button class="btn btn-sm btn-primary btn-mod" data-id="${row.id}">設定模組</button>`
+            }
+          ],
+          order: [[2,'desc']]
+        });
+
+        // 開啟設定模組
+        document.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('.btn-mod'); if(!btn) return;
+          const roleId = btn.dataset.id;  document.getElementById('roleId').value = roleId;
+
+          const res = await fetch(`/USER/UserPermissions/RoleModules?roleId=${encodeURIComponent(roleId)}`);
+          const { all, owned } = await res.json();
+
+          const box = document.getElementById('moduleChecks');
+          box.innerHTML = '';
+          all.forEach(m=>{
+            const id = `mod_${m.code}`;
+            box.insertAdjacentHTML('beforeend', `
+              <div class="col-6 col-md-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="${id}" name="modules" value="${m.code}" ${owned.includes(m.code)?'checked':''}>
+                  <label class="form-check-label" for="${id}">${m.name ?? m.code}</label>
+                </div>
+              </div>
+            `);
+          });
+
+          new bootstrap.Modal(document.getElementById('dlgRoleModules')).show();
+        });
+
+        // 送出儲存
+                document.getElementById('frmRoleModules').addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const form = e.target;
+          const fd = new FormData(form);
+          const token = fd.get('__RequestVerificationToken'); // Razor 產生的隱藏欄位
+
+          const res = await fetch('/USER/UserPermissions/SaveRoleModules', {
+            method:'POST',
+            body: fd,
+            headers: { 'RequestVerificationToken': token },
+            credentials: 'same-origin' // 確保帶上同源 cookie
+          });
+
+          const json = await res.json().catch(()=>({ ok:false }));
+          if (res.ok && json.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('dlgRoleModules')).hide();
+            dt.ajax.reload(null, false);
+          } else {
+            alert(json.message || '儲存失敗');
+          }
+        });
+
+    </script>
+}
+
+
