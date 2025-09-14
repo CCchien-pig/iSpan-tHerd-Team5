@@ -342,6 +342,25 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#region 新增庫存表單用 API
 
+		[HttpGet]
+		public async Task<IActionResult> GetBrandNameBySupplier(int supplierId)
+		{
+			var brandNames = await _context.SupBrands
+				.Where(b => b.SupplierId == supplierId && b.IsActive)
+				.Select(b => new
+				{
+					b.BrandId,
+					b.BrandName
+				})
+				.ToListAsync();
+
+			if (brandNames == null || !brandNames.Any())
+				return NotFound("找不到對應的品牌");
+
+			return Ok(brandNames);
+		}
+
+
 		// 取得品牌列表
 		[HttpGet]
 		public async Task<IActionResult> GetBrands()

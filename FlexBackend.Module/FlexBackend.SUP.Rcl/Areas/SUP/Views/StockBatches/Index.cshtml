@@ -61,7 +61,7 @@
             sessionStorage.removeItem('selectedBrandName');
 
             // ======= 定義 selectedSupplierId =======
-            var selectedSupplierId = ''; // 預設空，可視需求改成從 ViewBag 拿
+            var selectedSupplierId = ''; 
 
             // ======= 初始化庫存 DataTable =======
             var stockBatchTable = $('#stockBatchTable').DataTable({
@@ -121,6 +121,7 @@
                         className: 'text-center',
                         title: '規格',
                         render: function(data) {
+                            console.log(data);  // 印出確認
                             if(!data) return '';
                             return data.map(s => s.groupName + ':' + s.optionName).join(' / ');
                         }
