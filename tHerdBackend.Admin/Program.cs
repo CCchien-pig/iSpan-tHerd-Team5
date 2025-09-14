@@ -97,7 +97,8 @@ namespace FlexBackend.Admin
 			var mvc = builder.Services.AddControllersWithViews(options => {
 				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
 				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
-			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly);
+			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly)
+			  .AddApplicationPart(typeof(DashboardController).Assembly);
 			//----------------------------------------
 
 			//新增Razor Pages 規約，允許特定頁面匿名
@@ -110,21 +111,6 @@ namespace FlexBackend.Admin
 			});
 
 			var app = builder.Build();
-            // 全站預設需要登入 
-            builder.Services
-                .AddControllersWithViews(options =>
-                {
-                    var policy = new AuthorizationPolicyBuilder()
-                        .RequireAuthenticatedUser()
-                        .Build();
-
-                    options.Filters.Add(new AuthorizeFilter(policy));
-                })
-                .AddApplicationPart(typeof(UiKitRclMarker).Assembly)
-                .AddApplicationPart(typeof(DashboardController).Assembly);
-            //----------------------------------------
-
-
 			//Create a scope to run the initialization(只有第一次執行帶入假資料用到)
 			//using (var scope = app.Services.CreateScope())
 			//{
