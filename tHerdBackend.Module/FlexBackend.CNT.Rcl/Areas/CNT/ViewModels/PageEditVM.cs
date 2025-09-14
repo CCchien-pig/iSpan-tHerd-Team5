@@ -30,12 +30,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		[ValidateNever]
 		public IEnumerable<SelectListItem> TagOptions { get; set; }
 
+
 		// ⭐ 區塊列表
 		public List<CntPageBlock> Blocks { get; set; }
 
-		// ⭐ 新增的內容區塊（只在 Create 用）
-		public string NewBlockContent { get; set; }
-		public string NewBlockType { get; set; } = "richtext"; // 預設文字
 
 		// 狀態中文顯示
 		public string StatusText =>

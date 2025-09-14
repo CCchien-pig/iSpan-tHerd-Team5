@@ -146,7 +146,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			_db.SaveChanges(); // ⭐ 先存，確保 PageId 產生
 
 			// ⭐ 新增 CNT_PageTag 關聯
-			if (model.SelectedTagIds != null)
+			if (model.SelectedTagIds?.Any() == true)
 			{
 				foreach (var tagId in model.SelectedTagIds)
 				{
@@ -156,26 +156,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 						TagId = tagId,
 						CreatedDate = DateTime.Now
 					});
-				}				
+				}
+				_db.SaveChanges();
 			}
-
-			// ⭐ 建立第一個 PageBlock（如果有輸入內容）
-			if (!string.IsNullOrWhiteSpace(model.NewBlockContent))
-			{
-				var block = new CntPageBlock
-				{
-					PageId = page.PageId,
-					BlockType = model.NewBlockType,
-					Content = model.NewBlockContent,
-					OrderSeq = 1,
-					CreatedDate = DateTime.Now
-				};
-				_db.CntPageBlocks.Add(block);
-			}
-
-			_db.SaveChanges();
-
-			TempData["Msg"] = "文章已建立並新增內容區塊";
+			TempData["Msg"] = "文章已建立";
 			return RedirectToAction(nameof(Edit), new { id = page.PageId });
 		}
 
@@ -207,10 +191,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				StatusList = GetStatusSelectList((PageStatus)int.Parse(page.Status)),
 				SelectedTagIds = selectedTagIds,
 				TagOptions = new MultiSelectList(
-				_db.CntTags.Where(t => t.IsActive == true).ToList(),
+			_db.CntTags.Where(t => t.IsActive),
 			"TagId", "TagName", selectedTagIds
 		),
-				Blocks = page.CntPageBlocks.OrderBy(b => b.OrderSeq).ToList() // ⭐ 區塊載入
+				Blocks = page.CntPageBlocks.OrderBy(b => b.OrderSeq).ToList() // ⭐ 只顯示，不操作
 			};
 
 			return View(vm);
