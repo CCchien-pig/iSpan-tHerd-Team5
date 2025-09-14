@@ -18,7 +18,7 @@ public partial class OrdReturnItem
     /// <summary>
     /// 申請單編號（FK）
     /// </summary>
-    public int RetuenRequestId { get; set; }
+    public int ReturnRequestId { get; set; }
 
     /// <summary>
     /// 訂單編號（FK）
@@ -69,5 +69,5 @@ public partial class OrdReturnItem
 
     public virtual OrdOrderItem OrderItem { get; set; }
 
-    public virtual OrdReturnRequest RetuenRequest { get; set; }
+    public virtual OrdReturnRequest ReturnRequest { get; set; }
 }
