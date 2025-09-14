@@ -11,9 +11,11 @@ namespace FlexBackend.Services.PROD
         {
             // 註冊 Service
             services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<IProductQueryService, ProductQueryService>();
 
             // 註冊 Repository (實作在 Infra)
             services.AddScoped<IProdProductRepository, ProdProductRepository>();
+            services.AddScoped<IProdProductQueryRepository, ProductQueryRepository>();
 
             return services;
         }

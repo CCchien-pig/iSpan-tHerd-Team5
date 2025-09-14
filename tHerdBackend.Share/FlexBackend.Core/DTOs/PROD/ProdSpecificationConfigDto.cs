@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Infra.Models;
+namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
 /// 商品的規格設定
@@ -24,13 +24,4 @@ public partial class ProdSpecificationConfigDto
     /// 規格群組名稱（例如：容量、口味、顏色）
     /// </summary>
     public string GroupName { get; set; }
-
-    /// <summary>
-    /// 顯示順序
-    /// </summary>
-    public int OrderSeq { get; set; }
-
-    public virtual ICollection<ProdSpecificationOptionDto> ProdSpecificationOptions { get; set; } = new List<ProdSpecificationOptionDto>();
-
-    public virtual ProdProduct Product { get; set; }
 }

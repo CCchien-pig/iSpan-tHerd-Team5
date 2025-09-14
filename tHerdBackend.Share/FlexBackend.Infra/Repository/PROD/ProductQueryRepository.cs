@@ -1,55 +1,122 @@
-﻿using FlexBackend.Infra.DBSetting;
+﻿using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Infra.DBSetting;
+using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
+using Dapper;
+using FlexBackend.Core.Interfaces.Products;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
-	public class ProductQueryRepository
-	{
-		private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
-		public ProductQueryRepository(ISqlConnectionFactory factory, tHerdDBContext db)
-		{
-			_factory = factory;
-		}
+	public class ProductQueryRepository : IProdProductQueryRepository
+    {
+        private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
+        private readonly tHerdDBContext _db;                 // 寫入與交易來源
 
-		public async Task<ProductDetailDto?> GetProductDetailAsync(int productId)
+        public ProductQueryRepository(ISqlConnectionFactory factory, tHerdDBContext db)
+        {
+            _factory = factory;
+            _db = db;
+        }
+
+        public async Task<IEnumerable<ProdProductQueryDto>> GetAllProductQueryListAsync(int productId, CancellationToken ct = default)
 		{
-			string sql = @"
-                SELECT p.ProductId, p.ProductName, p.Price, s.SpecId, s.SpecName, s.SpecValue, i.ImageUrl, st.StockQty
+            string sql = @"SELECT p.ProductId, p.ProductName, p.ShortDesc, 
+                p.Weight, p.VolumeCubicMeter, p.VolumeUnit,
+                p.BrandId, s.BrandName, s.DiscountRate AS BrandDisCntRate, 
+                s.IsDiscountActive AS BrandDisCntActive,
+                s.SupplierId AS SupId, su.SupplierName AS SupName, 
+                su.ContactName AS SupContact, su.Phone AS SupPhone, su.Email AS SupEmail,
+                a.AttributeName, pa.AttributeValue, tc.ProductTypeName,
+                sk.SkuId, sk.SkuCode, sk.Barcode, sk.CostPrice, sk.ListPrice, sk.UnitPrice,
+                sk.SalePrice, sk.StockQty, sk.SafetyStockQty, sk.ReorderPoint, sk.MaxStockQty,
+                sk.IsAllowBackorder, sk.ShelfLifeDays, 
+                sc.GroupName AS SpecGroup, so.OptionName AS SpecName
                 FROM PROD_Product p
-                LEFT JOIN PROD_Specification s ON p.ProductId = s.ProductId
-                LEFT JOIN PROD_Image i ON p.ProductId = i.ProductId
-                LEFT JOIN PROD_Stock st ON p.ProductId = st.ProductId
-                WHERE p.ProductId = @ProductId;
-            ";
+                JOIN SUP_Brand s ON s.BrandId=p.BrandId 
+                LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
+                LEFT JOIN PROD_ProductAttribute pa ON pa.ProductId=p.ProductId
+                LEFT JOIN PROD_Attribute a ON a.AttributeId=pa.AttributeId
+                LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
+                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
+                LEFT JOIN PROD_ProductSku sk ON sk.ProductId=p.ProductId
+                LEFT JOIN PROD_SpecificationConfig sc ON sc.ProductId=p.ProductId
+                LEFT JOIN PROD_SkuSpecificationValue sv ON sv.SkuId=sk.SkuId
+                LEFT JOIN PROD_SpecificationOption so on so.SpecificationOptionId=sv.SpecificationOptionId
+                WHERE p.ProductId = @ProductId;";
 
-			var lookup = new Dictionary<int, ProductDetailDto>();
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 
-			var result = await _db.QueryAsync<ProductDetailDto, SpecificationDto, string, int, ProductDetailDto>(
-				sql,
-				(prod, spec, img, stock) =>
-				{
-					if (!lookup.TryGetValue(prod.ProductId, out var dto))
-					{
-						dto = prod;
-						dto.Specifications = new List<SpecificationDto>();
-						dto.Images = new List<string>();
-						lookup.Add(dto.ProductId, dto);
-					}
+            var lookup = new Dictionary<int, ProdProductQueryDto>();
 
-					if (spec != null && !dto.Specifications.Any(x => x.SpecId == spec.SpecId))
-						dto.Specifications.Add(spec);
+            var result = await conn.QueryAsync<dynamic>(
+                sql,
+                new { ProductId = productId == 0 ? (int?)null : productId }, // 0 = 查全部
+                transaction: tx
+            );
 
-					if (!string.IsNullOrEmpty(img) && !dto.Images.Contains(img))
-						dto.Images.Add(img);
+            foreach (var row in result)
+            {
+                int pid = row.ProductId;
+                if (!lookup.TryGetValue(pid, out var dto))
+                {
+                    dto = new ProdProductQueryDto
+                    {
+                        ProductId = pid,
+                        ProductName = row.ProductName,
+                        ShortDesc = row.ShortDesc,
+                        Weight = row.Weight,
+                        VolumeCubicMeter = row.VolumeCubicMeter,
+                        VolumeUnit = row.VolumeUnit,
+                        BrandId = row.BrandId,
+                        //BrandName = row.BrandName,
+                        //BrandDisCntRate = row.BrandDisCntRate,
+                        //BrandDisCntActive = row.BrandDisCntActive,
+                        //SupId = row.SupId,
+                        //SupName = row.SupName,
+                        //SupContact = row.SupContact,
+                        //SupPhone = row.SupPhone,
+                        //SupEmail = row.SupEmail,
+                        //ProductTypeName = row.ProductTypeName,
+                        Skus = new List<ProdProductSkuDto>(),
+                        Images = new List<ProdProductImageDto>(),
+                        Types = new List<ProdProductTypeDto>(),
+                        SpecConfigs = new List<ProdSpecificationConfigDto>(),
+                        SpecOptions = new List<ProdSpecificationOptionDto>(),
+                        AttributeOptions = new List<ProdAttributeOptionDto>(),
+                        BundleItems = new List<ProdBundleItemDto>(),
+                        Ingredients = new List<ProdProductIngredientDto>()
+                    };
+                    lookup.Add(pid, dto);
+                }
 
-					dto.StockQty = stock;
-					return dto;
-				},
-				new { ProductId = productId },
-				splitOn: "SpecId,ImageUrl,StockQty"
-			);
+                // SKU
+                if (row.SkuId != null && !dto.Skus.Any(x => x.SkuId == row.SkuId))
+                    dto.Skus.Add(new ProdProductSkuDto { SkuId = row.SkuId, SkuCode = row.SkuCode, Barcode = row.Barcode });
 
-			return lookup.Values.FirstOrDefault();
-		}
+                // 規格 Config
+                if (row.SpecificationConfigId != null && !dto.SpecConfigs.Any(x => x.SpecificationConfigId == row.SpecificationConfigId))
+                    dto.SpecConfigs.Add(new ProdSpecificationConfigDto { SpecificationConfigId = row.SpecificationConfigId, GroupName = row.SpecGroup });
+
+                // 規格 Option
+                if (row.SpecificationOptionId != null && !dto.SpecOptions.Any(x => x.SpecificationOptionId == row.SpecificationOptionId))
+                    dto.SpecOptions.Add(new ProdSpecificationOptionDto { SpecificationOptionId = row.SpecificationOptionId, OptionName = row.SpecName });
+
+                // 屬性 Option
+                if (row.AttributeOptionId != null && !dto.AttributeOptions.Any(x => x.AttributeOptionId == row.AttributeOptionId))
+                    dto.AttributeOptions.Add(new ProdAttributeOptionDto { AttributeOptionId = row.AttributeOptionId, OptionName = row.AttributeOptionName });
+
+                //// BundleItem
+                //if (row.BundleItemId != null && !dto.BundleItems.Any(x => x.BundleItemId == row.BundleItemId))
+                //    dto.BundleItems.Add(new ProdBundleItemDto { BundleItemId = row.BundleItemId, Quantity = row.BundleQty });
+
+                //// Ingredient
+                //if (row.IngredientId != null && !dto.Ingredients.Any(x => x.IngredientId == row.IngredientId))
+                //    dto.Ingredients.Add(new ProdProductIngredientDto { IngredientId = row.IngredientId, IngredientName = row.IngredientName });
+            }
+
+            if (needDispose) conn.Dispose();
+
+            return lookup.Values.ToList();
+        }
 	}
 }

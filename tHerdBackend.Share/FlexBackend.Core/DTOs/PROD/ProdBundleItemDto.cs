@@ -6,17 +6,22 @@ using System.Collections.Generic;
 namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
-/// 商品的分類明細表，一個商品可對應多個分類
+/// 套組明細表：記錄套組內有哪些子商品
 /// </summary>
-public partial class ProdProductTypeDto
+public partial class ProdBundleItemDto
 {
     /// <summary>
-    /// 商品ID（外鍵）
+    /// 套組ID (FK)
+    /// </summary>
+    public int BundleId { get; set; }
+
+    /// <summary>
+    /// 商品ID (FK)
     /// </summary>
     public int ProductId { get; set; }
 
     /// <summary>
-    /// 分類ID（外鍵）
+    /// 套組名稱
     /// </summary>
-    public int ProductTypeId { get; set; }
+    public string BundleName { get; set; }
 }
