@@ -1315,7 +1315,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.PaymentConfigId, "IX_Payment_PaymentConfigId");
 
-            entity.HasIndex(e => new { e.RetuenRequestId, e.CreatedDate }, "IX_Payment_RetuenRequestId_CreatedDate");
+            entity.HasIndex(e => new { e.ReturnRequestId, e.CreatedDate }, "IX_Payment_RetuenRequestId_CreatedDate");
 
             entity.HasIndex(e => e.MerchantTradeNo, "UX_Pay_MerchantTradeNo")
                 .IsUnique()
@@ -1340,7 +1340,7 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("對外交易編號；允許NULL");
             entity.Property(e => e.OrderId).HasComment("訂單編號（FK）; YYYYMMDD#######");
             entity.Property(e => e.PaymentConfigId).HasComment("付款方式（FK）");
-            entity.Property(e => e.RetuenRequestId).HasComment("退款型交易才填；一般授權/請款為 NULL（FK→ORD_ReturnRequest）");
+            entity.Property(e => e.ReturnRequestId).HasComment("退款型交易才填；一般授權/請款為 NULL（FK→ORD_ReturnRequest）");
             entity.Property(e => e.RtnCode).HasComment("回傳代碼");
             entity.Property(e => e.RtnMsg)
                 .HasMaxLength(200)
@@ -1367,9 +1367,9 @@ public partial class tHerdDBContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ORD_Payment_PaymentConfigId");
 
-            entity.HasOne(d => d.RetuenRequest).WithMany(p => p.OrdPayments)
-                .HasForeignKey(d => d.RetuenRequestId)
-                .HasConstraintName("FK_ORD_Payment_RetuenRequestId");
+            entity.HasOne(d => d.ReturnRequest).WithMany(p => p.OrdPayments)
+                .HasForeignKey(d => d.ReturnRequestId)
+                .HasConstraintName("FK_ORD_Payment_ReturnRequestId");
         });
 
         modelBuilder.Entity<OrdPaymentConfig>(entity =>
@@ -1412,9 +1412,9 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => new { e.OrderId, e.OrderItemId }, "IX_ReturnItem_Order_OrderItem");
 
-            entity.HasIndex(e => e.RetuenRequestId, "IX_ReturnItem_RetuenRequestId");
+            entity.HasIndex(e => e.ReturnRequestId, "IX_ReturnItem_RetuenRequestId");
 
-            entity.HasIndex(e => new { e.RetuenRequestId, e.OrderItemId }, "UQ_ReturnItem_RetuenRequestId_OrderItemId").IsUnique();
+            entity.HasIndex(e => new { e.ReturnRequestId, e.OrderItemId }, "UQ_ReturnItem_RetuenRequestId_OrderItemId").IsUnique();
 
             entity.Property(e => e.RmaItemId).HasComment("退貨明細編號");
             entity.Property(e => e.ApprovedQty).HasComment("核准數量；CHECK：>= 0");
@@ -1429,7 +1429,7 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("退款單價")
                 .HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ReshipQty).HasComment("補寄數量（僅 reship 使用；0~ApprovedQty）");
-            entity.Property(e => e.RetuenRequestId).HasComment("申請單編號（FK）");
+            entity.Property(e => e.ReturnRequestId).HasComment("申請單編號（FK）");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrdReturnItems)
@@ -1442,15 +1442,15 @@ public partial class tHerdDBContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ORD_ReturnItem_OrderItemId");
 
-            entity.HasOne(d => d.RetuenRequest).WithMany(p => p.OrdReturnItems)
-                .HasForeignKey(d => d.RetuenRequestId)
+            entity.HasOne(d => d.ReturnRequest).WithMany(p => p.OrdReturnItems)
+                .HasForeignKey(d => d.ReturnRequestId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ORD_ReturnItem_RetuenRequestId");
+                .HasConstraintName("FK_ORD_ReturnItem_ReturnRequestId");
         });
 
         modelBuilder.Entity<OrdReturnRequest>(entity =>
         {
-            entity.HasKey(e => e.RetuenRequestId).HasName("PK__ORD_Retu__401EA6DF50BF02F9");
+            entity.HasKey(e => e.ReturnRequestId).HasName("PK__ORD_Retu__401EA6DF50BF02F9");
 
             entity.ToTable("ORD_ReturnRequest", tb =>
                 {
@@ -1464,7 +1464,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.Reviewer, "IX_ReturnRequest_Reviewer");
 
-            entity.Property(e => e.RetuenRequestId).HasComment("申請單編號");
+            entity.Property(e => e.ReturnRequestId).HasComment("申請單編號");
             entity.Property(e => e.AttachmentUrlId).HasComment("附件網址");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -1813,6 +1813,7 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasOne(d => d.Brand).WithMany(p => p.ProdProducts)
                 .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PROD_Product_BrandId");
 
             entity.HasOne(d => d.Seo).WithMany(p => p.ProdProducts)
@@ -2136,6 +2137,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.CostPrice)
                 .HasComment("成本價")
                 .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.EndDate).HasComment("下架時間（NULL=無限期）");
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasComment("是否啟用");
@@ -2150,6 +2152,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.SalePrice)
                 .HasComment("優惠價")
                 .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ShelfLifeDays).HasComment("有效天數");
             entity.Property(e => e.SkuCode)
                 .IsRequired()
                 .HasMaxLength(50)
@@ -2160,7 +2163,9 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasComment("規格碼");
-            entity.Property(e => e.StartDate).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.StartDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("上架開始時間");
             entity.Property(e => e.StockQty).HasComment("目前庫存");
             entity.Property(e => e.UnitPrice)
                 .HasComment("單價")
@@ -3129,12 +3134,14 @@ public partial class tHerdDBContext : DbContext
                     tb.HasTrigger("TR_USER_RoleModule_ModuleIdCheck");
                 });
 
+            entity.HasIndex(e => e.AdminRoleId, "IX_USER_RoleModule_AdminRoleId");
+
             entity.HasIndex(e => e.ModuleId, "IX_USER_RoleModule_ModuleId");
 
-            entity.HasIndex(e => new { e.AdminRoleId, e.ModuleId }, "UQ_USER_RoleModule_AdminRoleId_ModuleId").IsUnique();
-
             entity.Property(e => e.RoleModuleId).HasComment("主鍵 ID");
-            entity.Property(e => e.AdminRoleId).HasComment("管理員角色 ID (FK)");
+            entity.Property(e => e.AdminRoleId)
+                .IsRequired()
+                .HasComment("管理員角色 ID (FK)");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建立時間 (UTC)");

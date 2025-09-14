@@ -78,11 +78,11 @@ public partial class OrdPayment
     /// <summary>
     /// 退款型交易才填；一般授權/請款為 NULL（FK→ORD_ReturnRequest）
     /// </summary>
-    public int? RetuenRequestId { get; set; }
+    public int? ReturnRequestId { get; set; }
 
     public virtual OrdOrder Order { get; set; }
 
     public virtual OrdPaymentConfig PaymentConfig { get; set; }
 
-    public virtual OrdReturnRequest RetuenRequest { get; set; }
+    public virtual OrdReturnRequest ReturnRequest { get; set; }
 }
