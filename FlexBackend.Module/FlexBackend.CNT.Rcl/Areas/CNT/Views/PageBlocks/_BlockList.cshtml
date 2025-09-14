@@ -2,56 +2,105 @@
 @{
     int pageId = Model.FirstOrDefault()?.PageId ?? (ViewBag.PageId ?? 0);
 }
+<small class="text-muted">PageId: @pageId（來自 Model / ViewBag）</small>
 
-<table class="table table-hover align-middle">
-    <thead>
-        <tr>
-            <th style="width:80px">順序</th>
-            <th style="width:120px">類型</th>
-            <th>內容預覽</th>
-            <th style="width:260px"></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var b in Model)
-        {
-            <tr>
-                <td>@b.OrderSeq</td>
-                <td><span class="badge bg-secondary">@b.BlockType</span></td>
-                <td>
-                    @if (b.BlockType == "richtext")
+
+<div class="row row-cols-1 g-3" id="sortable-blocks">
+    @foreach (var b in Model)
+    {
+        <div class="col" data-id="@b.PageBlockId">
+            <div class="card shadow-sm h-100">
+                <!-- 卡片頭 -->
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="drag-handle text-muted" style="cursor:grab;">⋮⋮</span>
+                        <span class="badge bg-primary">@b.BlockType</span>
+                        <small class="text-muted">排序：<span class="order-col">@b.OrderSeq</span></small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Edit" asp-route-id="@b.PageBlockId" class="btn btn-outline-warning">✏️ 編輯</a>
+                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Delete" asp-route-id="@b.PageBlockId" class="btn btn-outline-danger">🗑 刪除</a>
+                    </div>
+                </div>
+
+                <!-- 卡片內容 -->
+                <div class="card-body">
+                    @switch (b.BlockType?.ToLower())
                     {
-                        @Html.Raw((b.Content ?? "").Length > 80 ? b.Content!.Substring(0, 80) + "..." : b.Content)
+                        case "richtext":
+                @Html.Raw((b.Content ?? "").Length > 120
+                                ? b.Content!.Substring(0, 120) + "..."
+                                : b.Content)
+                                break;
+
+                        case "image":
+                            if (!string.IsNullOrWhiteSpace(b.Content) && b.Content.StartsWith("/"))
+                            {
+                                <img src="@b.Content" class="img-fluid rounded" style="max-height:160px;" />
+                            }
+                            else if (b.ImgId.HasValue)
+                            {
+                                <img src="/uploads/@b.ImgId" class="img-fluid rounded" style="max-height:160px;" />
+                            }
+                            else
+                            {
+                                <span class="text-muted">（尚無圖片）</span>
+                            }
+                            break;
+
+                        case "video":
+                            if (!string.IsNullOrWhiteSpace(b.Content))
+                            {
+                                <video src="@b.Content" controls style="max-width:100%;max-height:160px;" class="rounded"></video>
+                            }
+                            else
+                            {
+                                <span class="text-muted">（尚無影片）</span>
+                            }
+                            break;
+
+                        case "cta":
+                            {
+                                try
+                                {
+                                    if (!string.IsNullOrWhiteSpace(b.Content))
+                                    {
+                                        var cta = System.Text.Json.JsonSerializer
+                                        .Deserialize<Dictionary<string, string>>(b.Content);
+
+                                        string url = "#";
+                                        string text = "未命名 CTA";
+
+                                        if (cta != null)
+                                        {
+                                            if (cta.TryGetValue("url", out var u)) url = u;
+                                            if (cta.TryGetValue("text", out var t)) text = t;
+                                        }
+
+                                        <a href="@url" class="btn btn-success btn-sm mt-2" target="_blank">@text</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">（CTA 尚未設定）</span>
+                                    }
+                                }
+                                catch
+                                {
+                                    <span class="text-danger">（CTA 格式錯誤，請檢查 JSON）</span>
+                                }
+                            }
+                            break;
+
+                        default:
+                            <span class="text-muted">（未知區塊類型）</span>
+                            break;
                     }
-                    else if (b.BlockType == "image")
-                    {
-                        if (!string.IsNullOrWhiteSpace(b.Content) && b.Content!.StartsWith("/"))
-                        {
-                            <img src="@b.Content" style="max-height:60px" />
-                        }
-                        else if (b.ImgId.HasValue)
-                        {
-                            <img src="/uploads/@b.ImgId" style="max-height:60px" />
-                        }
-                        else
-                        {
-                            <span class="text-muted">（尚無圖片）</span>
-                        }
-                    }
-                </td>
-                <td class="text-end">
-                    <form asp-area="CNT" asp-controller="PageBlocks" asp-action="MoveUp" asp-route-id="@b.PageBlockId" method="post" class="d-inline">
-                        <button class="btn btn-sm btn-outline-secondary" type="submit">↑ 上移</button>
-                        @Html.AntiForgeryToken()
-                    </form>
-                    <form asp-area="CNT" asp-controller="PageBlocks" asp-action="MoveDown" asp-route-id="@b.PageBlockId" method="post" class="d-inline ms-1">
-                        <button class="btn btn-sm btn-outline-secondary" type="submit">↓ 下移</button>
-                        @Html.AntiForgeryToken()
-                    </form>
-                    <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Edit" asp-route-id="@b.PageBlockId" class="btn btn-sm btn-warning ms-2">編輯</a>
-                    <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Delete" asp-route-id="@b.PageBlockId" class="btn btn-sm btn-danger ms-1">刪除</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <!-- 這裡之後可以加排序 JS 或其他互動功能 -->
+}

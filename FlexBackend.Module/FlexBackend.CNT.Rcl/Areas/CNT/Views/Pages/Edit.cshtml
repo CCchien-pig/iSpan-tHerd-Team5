@@ -6,9 +6,38 @@
 @section Styles {
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">@* 浮動按鈕樣式*@
 
-   
+    <style>
+        .fab-btn {
+            position: fixed;
+            bottom: 36px;
+            right: 36px;
+            width: 108px; /* 基本大小 */
+            height: 108px;
+            font-size: 36px; /* icon 放大 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+            border: none;
+            z-index: 1000; /* 確保浮在最上層 */
+        }
+        .fab-icon {
+            color: #f8f9fa; /* 預設淡白 */
+            transition: color 0.25s ease, transform 0.25s ease;
+        }
+        .fab-btn:hover .fab-icon {
+            color: #ffffff; /* icon 變純白 */
+            transform: rotate(180deg);
+        }
+        /* Hover 時放大 */
+        .fab-btn:hover {
+            background-color: mediumspringgreen;
+            transform: scale(1.4); /* 放大到 140% */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+    </style>
     
 }
 
@@ -58,40 +87,46 @@
         </form>
     </div>
     <!-- 區塊清單 -->
-        <hr />
-        <h3>內容區塊</h3>
-        @foreach (var block in Model.Blocks)
-        {
-            <div class="card mb-3 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <span class="badge bg-primary">@block.BlockType</span>
-                            <small class="text-muted ms-2">排序: @block.OrderSeq</small>
-                        </div>
-                        <div>
-                            <a asp-controller="PageBlocks" asp-action="Edit" asp-route-id="@block.PageBlockId"
-                               class="btn btn-sm btn-outline-secondary me-2">✏️ 編輯</a>
-                            <a asp-controller="PageBlocks" asp-action="Delete" asp-route-id="@block.PageBlockId"
-                               class="btn btn-sm btn-outline-danger">🗑 刪除</a>
-                        </div>
-                    </div>
-                    <div class="mt-2">@Html.Raw(block.Content)</div>
-                </div>
-            </div>
-        }    
-
+    <hr />
+    <h3>內容區塊</h3>
+    @await Component.InvokeAsync("PageBlockList", new { pageId = Model.PageId })
+    <!-- 浮動新增按鈕 -->
+    <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Add" asp-route-pageId="@Model.PageId"
+       class="btn btn-success rounded-circle shadow-lg fab-btn"
+       data-bs-toggle="tooltip" data-bs-placement="left" title="新增內容區塊">
+        <i class="bi bi-file-earmark-plus fab-icon"></i>
+    </a>
 </div>
-@* 直接用 Partial 顯示（Model 裡已帶 Blocks） *@
-@* @await Html.PartialAsync("~/Areas/CNT/Views/PageBlocks/_BlockList.cshtml", Model.CntPageBlocks)
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-} *@
+<!-- ✅ 排序更新 Toast -->
+<!-- ✅ 成功提示 -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
+    <div id="successToast"
+         class="toast align-items-center text-bg-success border-0"
+         role="alert" aria-live="assertive" aria-atomic="true"
+         data-bs-delay="2000">
+        <div class="d-flex">
+            <div class="toast-body">✅ 排序已更新</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    <!-- ❌ 失敗提示 -->
+    <div id="errorToast"
+         class="toast align-items-center text-bg-danger border-0"
+         role="alert" aria-live="assertive" aria-atomic="true"
+         data-bs-delay="3000">
+        <div class="d-flex">
+            <div class="toast-body">❌ 排序更新失敗，請重試</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <!-- 載入驗證所需 script -->
     <partial name="_ValidationScriptsPartial" />
+    <partial name="_BlockListScripts" />
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -105,5 +140,11 @@
         });
     </script>
 
-   
+    <script>
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>    
+  
 }
