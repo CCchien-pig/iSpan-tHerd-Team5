@@ -206,10 +206,18 @@
                 var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
 
                 // 如果增加，不能超過最大庫存
-                if (isAdd && currentStock + changeQty > maxStock) {
-                    changeQty = maxStock - currentStock;
-                    if(changeQty < 0) changeQty = 0;
-                    $('#ChangeQtyInput').val(changeQty);
+                if (isAdd) {
+                    if (currentStock + changeQty > maxStock) {
+                        changeQty = maxStock - currentStock;
+                        if (changeQty < 0) changeQty = 0;
+                        $('#ChangeQtyInput').val(changeQty);
+                    }
+                } else {
+                    // 減少時不能超過庫存
+                    if (changeQty > currentStock) {
+                        changeQty = currentStock;
+                        $('#ChangeQtyInput').val(changeQty);
+                    }
                 }
 
                 // 計算預計庫存

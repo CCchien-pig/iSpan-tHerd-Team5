@@ -86,11 +86,11 @@
                 <label class="form-check-label" for="Decrease">減少</label>
             </div>
 
-            <!-- 變動庫存量 -->
+            <!-- 異動數量 -->
             <div class="form-floating mb-2">
-                <input asp-for="ChangeQty" type="number" class="form-control" min="0"
+                <input asp-for="ChangeQty" type="number" class="form-control" min="1"
                        max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
-                <label>變動庫存量</label>
+                <label>異動庫存量</label>
                 <small id="ChangeQtyHelp" class="text-muted"></small>
             </div>
         </div>
