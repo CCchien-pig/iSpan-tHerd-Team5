@@ -16,6 +16,11 @@ public partial class ProdSpecificationOptionDto
     public int SpecificationOptionId { get; set; }
 
     /// <summary>
+    /// SKU ID（外鍵）
+    /// </summary>
+    public int SkuId { get; set; }
+
+    /// <summary>
     /// 規格群組ID（外鍵）
     /// </summary>
     public int SpecificationConfigId { get; set; }
@@ -24,13 +29,4 @@ public partial class ProdSpecificationOptionDto
     /// 規格選項名稱（例如：250ml、巧克力）
     /// </summary>
     public string OptionName { get; set; }
-
-    /// <summary>
-    /// 顯示順序
-    /// </summary>
-    public int OrderSeq { get; set; }
-
-    public virtual ProdSpecificationConfigDto SpecificationConfig { get; set; }
-
-    public virtual ICollection<ProdProductSku> Skus { get; set; } = new List<ProdProductSku>();
 }

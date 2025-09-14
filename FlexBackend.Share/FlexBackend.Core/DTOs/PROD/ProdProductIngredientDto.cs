@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Infra.Models;
+namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
 /// 商品成分明細；一個商品可對應多個成分
@@ -29,8 +29,4 @@ public partial class ProdProductIngredientDto
     /// 劑量、產地或其他備註
     /// </summary>
     public string Note { get; set; }
-
-    public virtual ProdIngredient Ingredient { get; set; }
-
-    public virtual ProdProduct Product { get; set; }
 }

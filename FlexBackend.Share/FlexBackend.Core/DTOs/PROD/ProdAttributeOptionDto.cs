@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Infra.Models;
+namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
 /// 屬性選項
@@ -21,6 +21,11 @@ public partial class ProdAttributeOptionDto
     public int AttributeId { get; set; }
 
     /// <summary>
+    /// 屬性名稱（如：性別、年齡區間）
+    /// </summary>
+    public string AttributeName { get; set; }
+    
+    /// <summary>
     /// 選項名稱（如：男性、女性、18-25歲）
     /// </summary>
     public string OptionName { get; set; }
@@ -29,13 +34,4 @@ public partial class ProdAttributeOptionDto
     /// 選項值（用於儲存額外代碼或數值）
     /// </summary>
     public string OptionValue { get; set; }
-
-    /// <summary>
-    /// 顯示順序
-    /// </summary>
-    public int OrderSeq { get; set; }
-
-    public virtual ProdAttribute Attribute { get; set; }
-
-    public virtual ICollection<ProdProductAttribute> ProdProductAttributes { get; set; } = new List<ProdProductAttribute>();
 }

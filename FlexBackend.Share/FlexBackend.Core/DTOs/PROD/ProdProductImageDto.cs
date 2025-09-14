@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Infra.Models;
+namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
 /// 商品與SKU的圖片管理；主圖唯一；順序可控
@@ -34,20 +34,4 @@ public partial class ProdProductImageDto
     /// 是否為主圖（1=主圖）
     /// </summary>
     public bool IsMain { get; set; }
-
-    /// <summary>
-    /// 顯示順序
-    /// </summary>
-    public int OrderSeq { get; set; }
-
-    /// <summary>
-    /// 上傳時間
-    /// </summary>
-    public DateTime CreatedDate { get; set; }
-
-    public virtual SysAssetFile Img { get; set; }
-
-    public virtual ProdProduct Product { get; set; }
-
-    public virtual ProdProductSku Sku { get; set; }
 }

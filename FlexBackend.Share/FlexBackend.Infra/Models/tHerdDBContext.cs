@@ -93,6 +93,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<ProdBundle> ProdBundles { get; set; }
 
+    public virtual DbSet<ProdBundleItem> ProdBundleItems { get; set; }
+
     public virtual DbSet<ProdIngredient> ProdIngredients { get; set; }
 
     public virtual DbSet<ProdProduct> ProdProducts { get; set; }
@@ -1706,27 +1708,33 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("是否啟用");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.Reviser).HasComment("異動人員");
+        });
 
-            entity.HasMany(d => d.Products).WithMany(p => p.Bundles)
-                .UsingEntity<Dictionary<string, object>>(
-                    "ProdBundleItem",
-                    r => r.HasOne<ProdProduct>().WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK_PROD_BundleItem_ProductId"),
-                    l => l.HasOne<ProdBundle>().WithMany()
-                        .HasForeignKey("BundleId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK_PROD_BundleItem_BundleId"),
-                    j =>
-                    {
-                        j.HasKey("BundleId", "ProductId").HasName("UQ_BundleItem");
-                        j.ToTable("PROD_BundleItem", tb => tb.HasComment("套組明細表：記錄套組內有哪些子商品"));
-                        j.HasIndex(new[] { "BundleId" }, "IX_BundleItem_BundleId");
-                        j.HasIndex(new[] { "ProductId" }, "IX_BundleItem_ProductId");
-                        j.IndexerProperty<int>("BundleId").HasComment("套組ID (FK)");
-                        j.IndexerProperty<int>("ProductId").HasComment("商品ID (FK)");
-                    });
+        modelBuilder.Entity<ProdBundleItem>(entity =>
+        {
+            entity.HasKey(e => new { e.BundleId, e.ProductId }).HasName("UQ_BundleItem");
+
+            entity.ToTable("PROD_BundleItem", tb => tb.HasComment("套組明細表：記錄套組內有哪些子商品"));
+
+            entity.HasIndex(e => e.BundleId, "IX_BundleItem_BundleId");
+
+            entity.HasIndex(e => e.ProductId, "IX_BundleItem_ProductId");
+
+            entity.Property(e => e.BundleId).HasComment("套組ID (FK)");
+            entity.Property(e => e.ProductId).HasComment("商品ID (FK)");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+
+            entity.HasOne(d => d.Bundle).WithMany(p => p.ProdBundleItems)
+                .HasForeignKey(d => d.BundleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_BundleItem_BundleId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdBundleItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_BundleItem_ProductId");
         });
 
         modelBuilder.Entity<ProdIngredient>(entity =>
@@ -2278,7 +2286,7 @@ public partial class tHerdDBContext : DbContext
 
         modelBuilder.Entity<ProdSpecificationOption>(entity =>
         {
-            entity.HasKey(e => e.SpecificationOptionId).HasName("PK__PROD_Spe__50608ED5A3564B2B");
+            entity.HasKey(e => e.SpecificationOptionId).HasName("PK__PROD_Spe__50608ED5F075AC0B");
 
             entity.ToTable("PROD_SpecificationOption", tb => tb.HasComment("商品的規格設定的選項"));
 
@@ -3138,7 +3146,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
             entity.Property(e => e.Reviser).HasComment("異動人員");
         });
-        modelBuilder.HasSequence<int>("UserNumberSequence");
+        modelBuilder.HasSequence<int>("UserNumberSequence").StartsAt(1001L);
 
         OnModelCreatingPartial(modelBuilder);
     }

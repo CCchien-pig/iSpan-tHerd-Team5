@@ -8,12 +8,35 @@ namespace FlexBackend.Services.PROD
     public class ProductService : IProductService
     {
         private readonly IProdProductRepository _repo;
+        private readonly IProdProductQueryRepository _qrepo;
 
-        public ProductService(IProdProductRepository repo)
+        public ProductService(IProdProductRepository repo, IProdProductQueryRepository qrepo)
         {
             _repo = repo;
+            _qrepo = qrepo;
         }
 
+        /// <summary>
+        /// 商品完整資料清單
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<ProdProductQueryDto>> GetAllProductQueryListAsync(int ProductId)
+        {
+            try
+            {
+                return await _qrepo.GetAllProductQueryListAsync(ProductId);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 商品基本資料清單
+        /// </summary>
+        /// <returns></returns>
         public async Task<IEnumerable<ProdProductDto>> GetAllAsync()
         {
             try
