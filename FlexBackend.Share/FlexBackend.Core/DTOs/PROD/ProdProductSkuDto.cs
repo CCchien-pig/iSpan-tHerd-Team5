@@ -3,12 +3,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace FlexBackend.Infra.Models;
+namespace FlexBackend.Core.DTOs.PROD;
 
 /// <summary>
 /// SKU層級與即時庫存(支援多規格)
 /// </summary>
-public partial class ProdProductSku
+public partial class ProdProductSkuDto
 {
     /// <summary>
     /// SKU ID（主鍵）
@@ -85,21 +85,4 @@ public partial class ProdProductSku
     public DateTime StartDate { get; set; }
 
     public DateTime? EndDate { get; set; }
-
-    /// <summary>
-    /// 是否啟用
-    /// </summary>
-    public bool IsActive { get; set; }
-
-    public virtual ICollection<OrdOrderItem> OrdOrderItems { get; set; } = new List<OrdOrderItem>();
-
-    public virtual ICollection<ProdProductImageDto> ProdProductImages { get; set; } = new List<ProdProductImageDto>();
-
-    public virtual ICollection<ProdProductReview> ProdProductReviews { get; set; } = new List<ProdProductReview>();
-
-    public virtual ProdProduct Product { get; set; }
-
-    public virtual ICollection<SupStockBatch> SupStockBatches { get; set; } = new List<SupStockBatch>();
-
-    public virtual ICollection<ProdSpecificationOptionDto> SpecificationOptions { get; set; } = new List<ProdSpecificationOptionDto>();
 }

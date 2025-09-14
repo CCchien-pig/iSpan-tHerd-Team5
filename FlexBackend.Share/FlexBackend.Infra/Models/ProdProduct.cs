@@ -91,6 +91,8 @@ public partial class ProdProduct
 
     public virtual ICollection<OrdShoppingCartItem> OrdShoppingCartItems { get; set; } = new List<OrdShoppingCartItem>();
 
+    public virtual ICollection<ProdBundleItem> ProdBundleItems { get; set; } = new List<ProdBundleItem>();
+
     public virtual ICollection<ProdProductAttribute> ProdProductAttributes { get; set; } = new List<ProdProductAttribute>();
 
     public virtual ICollection<ProdProductFavorite> ProdProductFavorites { get; set; } = new List<ProdProductFavorite>();
@@ -112,6 +114,4 @@ public partial class ProdProduct
     public virtual ICollection<ProdSpecificationConfig> ProdSpecificationConfigs { get; set; } = new List<ProdSpecificationConfig>();
 
     public virtual SysSeoMetum Seo { get; set; }
-
-    public virtual ICollection<ProdBundle> Bundles { get; set; } = new List<ProdBundle>();
 }

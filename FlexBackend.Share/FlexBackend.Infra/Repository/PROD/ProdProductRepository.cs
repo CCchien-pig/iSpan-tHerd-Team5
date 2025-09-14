@@ -142,7 +142,7 @@ namespace FlexBackend.Infra.Repository.PROD
             entity.Weight = dto.Weight;
             entity.VolumeCubicMeter = dto.VolumeCubicMeter;
             entity.VolumeUnit = dto.VolumeUnit;
-            entity.Reviser = dto.Reviser;
+            //entity.Reviser = dto.Reviser;
             entity.RevisedDate = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
