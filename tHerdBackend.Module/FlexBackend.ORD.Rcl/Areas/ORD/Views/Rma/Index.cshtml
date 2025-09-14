@@ -1,0 +1,253 @@
+﻿@{
+    ViewData["Title"] = "RMA售後處理";
+}
+
+<!-- ★ 不用 section：直接在頁面插入 DataTables 所需 CSS -->
+<link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<style>
+    .dataTables_wrapper .dataTables_filter {
+        float: right;
+        text-align: right;
+    }
+
+    .dt-nowrap {
+        white-space: nowrap;
+    }
+</style>
+
+<div class="card shadow">
+    <div class="card-header"><h5 class="m-0">RMA 售後處理</h5></div>
+    <div class="card-body">
+
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-req" type="button">退貨申請（待審核）</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-list" type="button">RMA 清單（已核准流程）</button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+            <!-- 分頁①：待審核 -->
+            <div class="tab-pane fade show active" id="tab-req">
+                <table id="dt-req" class="table table-striped table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th class="dt-nowrap">操作</th>
+                            <th class="dt-nowrap">申請單ID</th>
+                            <th class="dt-nowrap">RMA Id</th>
+                            <th class="dt-nowrap">訂單編號</th>
+                            <th>申請類型</th>
+                            <th>退款範圍</th>
+                            <th>原因</th>
+                            <th>原因說明</th>
+                            <th class="dt-nowrap">建立者</th>
+                            <th class="dt-nowrap">建立時間</th>
+                            <th>品項數</th>
+                            <th>退款紀錄</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+
+            <!-- 分頁②：已核准流程 -->
+            <div class="tab-pane fade" id="tab-list">
+                <table id="dt-rma" class="table table-striped table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th class="dt-nowrap">申請單ID</th>
+                            <th class="dt-nowrap">RMA Id</th>
+                            <th class="dt-nowrap">訂單編號</th>
+                            <th>狀態</th>
+                            <th>審核者</th>
+                            <th class="dt-nowrap">審核時間</th>
+                            <th>備註</th>
+                            <th>品項數</th>
+                            <th>退款紀錄</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ★ 不用 section：直接在頁面尾插入 JS（含 jQuery 安全載入） -->
+<script>
+    // 若主站沒載 jQuery 才載 CDN，避免重複
+    if (typeof window.jQuery === "undefined") {
+      var s = document.createElement("script");
+      s.src = "https://code.jquery.com/jquery-3.7.1.min.js";
+      document.head.appendChild(s);
+    }
+</script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    const urlGetReq   = '@Url.Action("GetRequests", "Rma", new { area = "ORD" })';
+    const urlGetList  = '@Url.Action("GetRmaList", "Rma", new { area = "ORD" })';
+    const urlDecide   = '@Url.Action("Decide", "Rma", new { area = "ORD" })';
+    const urlGetItems = '@Url.Action("GetRequestItems", "Rma", new { area = "ORD" })';
+
+    function ready(fn){             // 確保 jQuery 與 DOM 都可用
+      if (window.jQuery) jQuery(fn);
+      else setTimeout(()=>ready(fn), 30);
+    }
+
+    ready(function(){
+      // 分頁①：待審核
+      const dtReq = $('#dt-req').DataTable({
+        ajax: { url: urlGetReq, dataSrc: 'data' },
+        deferRender: true, processing: true, autoWidth: false,
+        columns: [
+          {
+            data: null, orderable:false, className:'dt-nowrap',
+            render: (r) => `
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary btn-approve" data-id="${r.returnRequestId}">核准</button>
+                <button class="btn btn-outline-danger  btn-reject"  data-id="${r.returnRequestId}">駁回</button>
+                <button class="btn btn-outline-secondary btn-items" data-id="${r.returnRequestId}">明細</button>
+              </div>`
+          },
+          { data: 'returnRequestId' },
+          { data: 'rmaId', defaultContent: '-' },
+          { data: 'orderNo' },
+          { data: 'requestTypeName' },
+          { data: 'refundScopeName' },
+          { data: 'reasonName' },
+          { data: 'reasonText' },
+          { data: 'creatorName', render: v => v || '' },
+          { data: 'createdDate', render: v => v ? new Date(v).toLocaleString() : '' },
+          { data: 'itemCount' },
+          { data: 'hasRefundPayment', render: v => v ? 'Y' : '' }
+        ]
+      });
+
+      // 分頁②：RMA 清單
+      const dtRma = $('#dt-rma').DataTable({
+        ajax: { url: urlGetList, dataSrc: 'data' },
+        deferRender: true, processing: true, autoWidth: false,
+        columns: [
+          { data: 'returnRequestId' },
+          { data: 'rmaId', defaultContent: '-' },
+          { data: 'orderNo' },
+          { data: 'statusName' },
+          { data: 'reviewerName' },
+          { data: 'reviewedDate', render: v => v ? new Date(v).toLocaleString() : '' },
+          { data: 'reviewComment', defaultContent: '' },
+          { data: 'itemCount' },
+          {
+            data: 'refundPayments', orderable:false,
+            render: (list) => {
+              if (!list || !list.length) return '';
+              return list.map(p => `#${p.paymentId} $${p.amount} (${p.statusName || p.status})`).join('<br/>');
+            }
+          }
+        ]
+      });
+
+      // 切換 tab 時調整欄寬
+      document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn=>{
+        btn.addEventListener('shown.bs.tab', ()=>{
+          $.fn.dataTable.tables({visible:true, api:true}).columns.adjust();
+        });
+      });
+
+      // 審核 Modal
+      const $decisionModal = new bootstrap.Modal('#decisionModal');
+      $('#dt-req').on('click', '.btn-approve,.btn-reject', function(){
+        const id = this.dataset.id;
+        const approve = this.classList.contains('btn-approve');
+        $('#dm-requestId').val(id);
+        $('#dm-approve').val(approve ? 'true' : 'false');
+        $('#dm-note').val('');
+        $decisionModal.show();
+      });
+
+      $('#decisionForm').on('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(this);
+        fetch(urlDecide, { method:'POST', body: fd })
+          .then(r=>r.json())
+          .then(res=>{
+            if(res.success){
+              $decisionModal.hide();
+              dtReq.ajax.reload(null,false);
+              dtRma.ajax.reload(null,false);
+            }else{
+              alert(res.message || '處理失敗');
+            }
+          })
+          .catch(()=> alert('連線失敗'));
+      });
+
+      // 展開明細
+      $('#dt-req').on('click', '.btn-items', function(){
+        const tr  = $(this).closest('tr');
+        const row = dtReq.row(tr);
+        const id  = this.dataset.id;
+
+        if(row.child.isShown()){ row.child.hide(); tr.removeClass('shown'); return; }
+
+        fetch(`${urlGetItems}?requestId=${id}`)
+          .then(r=>r.json()).then(res=>{
+            const rows = (res.data || []).map(x => `
+              <tr>
+                <td>${x.orderItemId}</td>
+                <td class="text-end">${x.qty}</td>
+                <td class="text-end">${x.approvedQty ?? ''}</td>
+                <td class="text-end">${x.refundQty ?? ''}</td>
+                <td class="text-end">${x.reshipQty ?? ''}</td>
+                <td class="text-end">${x.refundUnitAmount ?? ''}</td>
+                <td class="text-end">${x.subtotal}</td>
+              </tr>`).join('');
+
+            const html = `
+              <div class="p-2">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead>
+                    <tr>
+                      <th>OrderItemId</th>
+                      <th class="text-end">申請數</th>
+                      <th class="text-end">核准數</th>
+                      <th class="text-end">退款數</th>
+                      <th class="text-end">補寄數</th>
+                      <th class="text-end">退款單價</th>
+                      <th class="text-end">小計</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows || '<tr><td colspan="7" class="text-center">無明細</td></tr>'}</tbody>
+                </table>
+              </div>`;
+            row.child(html).show(); tr.addClass('shown');
+          })
+          .catch(()=> alert('讀取明細失敗'));
+      });
+    });
+</script>
+
+<!-- 決議 Modal（原本有的，留在頁面下方也可以） -->
+<div class="modal fade" id="decisionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="decisionForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">審核退貨申請</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="dm-requestId" name="requestId" />
+                <input type="hidden" id="dm-approve" name="approve" />
+                <div class="mb-3">
+                    <label class="form-label">備註</label>
+                    <textarea class="form-control" id="dm-note" name="note" rows="3"></textarea>
+                </div>
+                <div class="alert alert-secondary small mb-0">核准後會移到「RMA 清單」。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" type="submit">送出</button>
+            </div>
+        </form>
+        <
