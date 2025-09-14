@@ -1,18 +1,33 @@
 ﻿@{
-    ViewBag.Title = "Dashboard";
+    // 可依你的專案調整 Layout；若本檔交由 RCL 使用自己 Layout，可拿掉下一行
+    // Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Dashboard";
 }
 
 <div class="container-fluid">
 
-    <!-- Page Heading -->
+    <!-- 標題列 -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-        <a id="btn-generate" href="javascript:void(0)" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
-        </a>
+
+        <!-- 右側：報表/重整、時間範圍切換 -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- 天數選單：會觸發重新載入 API -->
+            <select id="rangeSelect" class="custom-select custom-select-sm mr-2" style="width: 140px">
+                <option value="7">最近 7 天</option>
+                <option value="30" selected>最近 30 天</option>
+                <option value="90">最近 90 天</option>
+            </select>
+
+            <!-- 重新載入按鈕（不真的產報表，單純 refresh） -->
+            <a href="javascript:void(0)" id="btnRefresh"
+               class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-sync-alt fa-sm text-white-50"></i> Refresh
+            </a>
+        </div>
     </div>
 
-    <!-- Content Row -->
+    <!-- KPI Cards 列 -->
     <div class="row">
 
         <!-- Earnings (Monthly) -->
@@ -24,7 +39,8 @@
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Earnings (Monthly)
                             </div>
-                            <div id="kpi-monthly" class="h5 mb-0 font-weight-bold text-gray-800">$40,000</div>
+                            <!-- 將由 JS 寫入 -->
+                            <div id="kpi-monthly" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-calendar fa-2x text-gray-300"></i>
@@ -43,7 +59,7 @@
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Earnings (Annual)
                             </div>
-                            <div id="kpi-annual" class="h5 mb-0 font-weight-bold text-gray-800">$215,000</div>
+                            <div id="kpi-annual" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
@@ -62,12 +78,13 @@
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks</div>
                             <div class="row no-gutters align-items-center">
                                 <div class="col-auto">
-                                    <div id="kpi-task" class="h5 mb-0 mr-3 font-weight-bold text-gray-800">50%</div>
+                                    <div id="kpi-task" class="h5 mb-0 mr-3 font-weight-bold text-gray-800">--%</div>
                                 </div>
                                 <div class="col">
                                     <div class="progress progress-sm mr-2">
-                                        <div id="kpi-task-bar" class="progress-bar bg-info" role="progressbar"
-                                             style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div id="kpi-taskbar" class="progress-bar bg-info" role="progressbar"
+                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0"
+                                             aria-valuemax="100"></div>
                                     </div>
                                 </div>
                             </div>
@@ -89,7 +106,7 @@
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Pending Requests
                             </div>
-                            <div id="kpi-pending" class="h5 mb-0 font-weight-bold text-gray-800">18</div>
+                            <div id="kpi-pending" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-comments fa-2x text-gray-300"></i>
@@ -98,38 +115,27 @@
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Charts Row -->
+    <!-- 圖表列 -->
     <div class="row">
 
-        <!-- Area Chart -->
+        <!-- 折線/面積圖：Earnings Overview -->
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Earnings Overview</h6>
-                    <div class="dropdown no-arrow">
-                        <a class="dropdown-toggle" href="#" role="button" data-toggle="dropdown"
-                           aria-haspopup="true" aria-expanded="false">
-                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
-                            <div class="dropdown-header">Quick Range</div>
-                            <a class="dropdown-item js-range" data-days="7" href="#">Last 7 days</a>
-                            <a class="dropdown-item js-range" data-days="30" href="#">Last 30 days</a>
-                            <a class="dropdown-item js-range" data-days="90" href="#">Last 90 days</a>
-                        </div>
-                    </div>
                 </div>
                 <div class="card-body">
                     <div class="chart-area">
-                        <canvas id="myAreaChart"></canvas>
+                        <canvas id="myAreaChart" height="120"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Pie Chart -->
+        <!-- 甜甜圈圖：Revenue Sources -->
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -140,22 +146,18 @@
                         <canvas id="myPieChart"></canvas>
                     </div>
                     <div class="mt-4 text-center small">
-                        <span class="mr-2">
-                            <i class="fas fa-circle text-primary"></i> Direct
-                        </span>
-                        <span class="mr-2">
-                            <i class="fas fa-circle text-success"></i> Social
-                        </span>
-                        <span class="mr-2">
-                            <i class="fas fa-circle text-info"></i> Referral
-                        </span>
+                        <!-- 標題色與 Chart.js 顏色不一定 1:1；純展示 -->
+                        <span class="mr-2"><i class="fas fa-circle text-primary"></i> Direct</span>
+                        <span class="mr-2"><i class="fas fa-circle text-success"></i> Social</span>
+                        <span class="mr-2"><i class="fas fa-circle text-info"></i> Referral</span>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Dummy content below (原模板保留) -->
+    <!-- 其他內容（示範） -->
     <div class="row">
         <div class="col-lg-6 mb-4">
             <div class="card shadow mb-4">
@@ -164,245 +166,202 @@
                 </div>
                 <div class="card-body">
                     <h4 class="small font-weight-bold">Server Migration <span class="float-right">20%</span></h4>
-                    <div class="progress mb-4"><div class="progress-bar bg-danger" style="width:20%"></div></div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: 20%"
+                             aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                     <h4 class="small font-weight-bold">Sales Tracking <span class="float-right">40%</span></h4>
-                    <div class="progress mb-4"><div class="progress-bar bg-warning" style="width:40%"></div></div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 40%"
+                             aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                     <h4 class="small font-weight-bold">Customer Database <span class="float-right">60%</span></h4>
-                    <div class="progress mb-4"><div class="progress-bar" style="width:60%"></div></div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar" role="progressbar" style="width: 60%"
+                             aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                     <h4 class="small font-weight-bold">Payout Details <span class="float-right">80%</span></h4>
-                    <div class="progress mb-4"><div class="progress-bar bg-info" style="width:80%"></div></div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 80%"
+                             aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                     <h4 class="small font-weight-bold">Account Setup <span class="float-right">Complete!</span></h4>
-                    <div class="progress"><div class="progress-bar bg-success" style="width:100%"></div></div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-primary text-white shadow"><div class="card-body">Primary<div class="text-white-50 small">#4e73df</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-success text-white shadow"><div class="card-body">Success<div class="text-white-50 small">#1cc88a</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-info text-white shadow"><div class="card-body">Info<div class="text-white-50 small">#36b9cc</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-warning text-white shadow"><div class="card-body">Warning<div class="text-white-50 small">#f6c23e</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-danger text-white shadow"><div class="card-body">Danger<div class="text-white-50 small">#e74a3b</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-secondary text-white shadow"><div class="card-body">Secondary<div class="text-white-50 small">#858796</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-light text-black shadow"><div class="card-body">Light<div class="text-black-50 small">#f8f9fc</div></div></div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="card bg-dark text-white shadow"><div class="card-body">Dark<div class="text-white-50 small">#5a5c69</div></div></div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%"
+                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- 說明卡 -->
         <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Illustrations</h6>
-                </div>
-                <div class="card-body">
-                    <div class="text-center">
-                        <img class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 25rem;"
-                             src="img/undraw_posting_photo.svg" alt="...">
-                    </div>
-                    <p>
-                        Add some quality, svg illustrations to your project courtesy of
-                        <a target="_blank" rel="nofollow" href="https://undraw.co/">unDraw</a>.
-                    </p>
-                    <a target="_blank" rel="nofollow" href="https://undraw.co/">Browse Illustrations on unDraw &rarr;</a>
-                </div>
-            </div>
-
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Development Approach</h6>
                 </div>
                 <div class="card-body">
-                    <p>SB Admin 2 makes extensive use of Bootstrap 4 utility classes…</p>
-                    <p class="mb-0">Before working with this theme, get familiar with Bootstrap utilities.</p>
+                    <p>此 Dashboard 以 Chart.js 呈現，資料由後端 API 提供。</p>
+                    <p class="mb-0">你可以在 `DashboardApiController.Overview` 直接改為讀資料庫的彙總。</p>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 
-@section Scripts {
-    <!-- Chart.js (CDN) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- Chart.js CDN（也可改用本機檔） -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
-    <script>
-        // ========= helpers =========
-        const $ = sel => document.querySelector(sel);
-        const $$ = sel => Array.from(document.querySelectorAll(sel));
-        const fmtMoney = n => '$' + n.toLocaleString();
+<script>
+    // ====== 全域變數（避免重複建立圖表）======
+    let areaChart = null;
+    let pieChart  = null;
 
-        // 字型/顏色（貼近 SB Admin 2）
-        Chart.defaults.color = '#858796';
-        Chart.defaults.font.family =
-            'Nunito, -apple-system, system-ui, Segoe UI, Roboto, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"';
+    // ====== Utils：數字轉 $1,234 形式 =======
+    const toMoney = n => '$' + (n ?? 0).toLocaleString();
 
-        // 產生假資料
-        function makeDates(days) {
-            const arr = [];
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                arr.push(d.toISOString().slice(0, 10));
-            }
-            return arr;
-        }
-        function genData(days = 30) {
-            const labels = makeDates(days);
+    // ====== 更新四個 KPI 卡片 =======
+    function updateKpis(k) {
+        // 月營收
+        document.getElementById('kpi-monthly').textContent = toMoney(k.monthly);
+        // 年營收
+        document.getElementById('kpi-annual').textContent  = toMoney(k.annual);
+        // Tasks 進度條與文字
+        document.getElementById('kpi-task').textContent    = (k.task ?? 0) + '%';
+        const bar = document.getElementById('kpi-taskbar');
+        bar.style.width = (k.task ?? 0) + '%';
+        bar.setAttribute('aria-valuenow', k.task ?? 0);
+        // 待處理數
+        document.getElementById('kpi-pending').textContent = k.pending ?? 0;
+    }
 
-            // 讓營收有一點點趨勢 & 隨機波動
-            let base = 30000 + Math.random() * 30000;
-            const net = labels.map((_, i) => {
-                base *= (1 + (Math.random() - 0.48) * 0.02); // 微幅上下
-                return Math.round(base + Math.random() * 10000);
-            });
+    // ====== 建立/重建 折線圖（營收 & 訂單量）======
+    function buildAreaChart(labels, net, orders) {
+        const ctx = document.getElementById('myAreaChart');
+        if (!ctx) return;
 
-            const orders = labels.map(() => Math.floor(60 + Math.random() * 120));
+        // 已存在則先銷毀，避免重複疊加
+        if (areaChart) areaChart.destroy();
 
-            // 通路占比三者合計 100
-            const d = Math.random() * 40 + 35; // 35~75
-            const s = Math.random() * Math.min(30, 100 - d - 10) + 10; // 10~(<=30)
-            const r = 100 - d - s;
-            const channelShare = { Direct: Math.round(d), Social: Math.round(s), Referral: Math.round(r) };
-
-            // KPI
-            const monthly = net.reduce((a, b) => a + b, 0);
-            const annual = Math.round(monthly * 12 * (0.92 + Math.random() * 0.16)); // +-8%
-            const task = Math.floor(30 + Math.random() * 60); // 30~90
-            const pending = Math.floor(8 + Math.random() * 24);
-
-            return { labels, net, orders, channelShare, kpi: { monthly, annual, task, pending } };
-        }
-
-        // ========= chart instances =========
-        let areaChart, pieChart;
-
-        function buildAreaChart(labels, net, orders) {
-            const ctx = document.getElementById('myAreaChart').getContext('2d');
-            const grad = ctx.createLinearGradient(0, 0, 0, 230);
-            grad.addColorStop(0, 'rgba(78,115,223,0.35)'); // primary
-            grad.addColorStop(1, 'rgba(78,115,223,0.00)');
-
-            if (areaChart) areaChart.destroy();
-            areaChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: 'Net Revenue',
-                            data: net,
-                            borderColor: 'rgba(78,115,223,1)',
-                            backgroundColor: grad,
-                            borderWidth: 2,
-                            tension: .35,
-                            yAxisID: 'y1',
-                            pointRadius: 0,
-                            fill: true
-                        },
-                        {
-                            label: 'Orders',
-                            data: orders,
-                            borderColor: 'rgba(28,200,138,1)',
-                            backgroundColor: 'rgba(28,200,138,0.08)',
-                            borderWidth: 2,
-                            tension: .35,
-                            yAxisID: 'y2',
-                            pointRadius: 0,
-                            fill: false
-                        }
-                    ]
+        areaChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: net,
+                        // fill: true 會有面積感
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Orders',
+                        data: orders,
+                        yAxisID: 'y1',
+                        borderWidth: 2,
+                        borderDash: [6,4],
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    tooltip: { callbacks: { label: (ctx) =>
+                        ctx.dataset.label === 'Revenue'
+                            ? `${ctx.dataset.label}: ${toMoney(ctx.parsed.y)}`
+                            : `${ctx.dataset.label}: ${ctx.parsed.y}`
+                    } }
                 },
-                options: {
-                    interaction: { mode: 'index', intersect: false },
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: {
-                        y1: {
-                            type: 'linear',
-                            position: 'left',
-                            ticks: {
-                                callback: v => '$' + (v / 1000).toFixed(0) + 'k'
-                            },
-                            grid: { drawBorder: false }
-                        },
-                        y2: {
-                            type: 'linear',
-                            position: 'right',
-                            grid: { drawOnChartArea: false, drawBorder: false }
-                        },
-                        x: { grid: { display: false } }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '$' + v.toLocaleString() }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        function buildPieChart(share) {
-            const ctx = document.getElementById('myPieChart').getContext('2d');
-            const labels = Object.keys(share);
-            const values = Object.values(share);
+    // ====== 建立/重建 甜甜圈圖（流量/收入來源）======
+    function buildPieChart(share) {
+        const ctx = document.getElementById('myPieChart');
+        if (!ctx) return;
 
-            if (pieChart) pieChart.destroy();
-            pieChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-                        hoverOffset: 4
-                    }]
+        if (pieChart) pieChart.destroy();
+
+        pieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Direct', 'Social', 'Referral'],
+                datasets: [{
+                    data: [share.Direct, share.Social, share.Referral],
+                    // 顏色可由主題決定，這裡使用 Chart.js 預設配色
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: (ctx) =>
+                        `${ctx.label}: ${ctx.parsed}%`
+                    } }
                 },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed}%` } }
-                    },
-                    cutout: '65%'
-                }
-            });
-        }
+                cutout: '65%'
+            }
+        });
+    }
 
-        function updateKpis(k) {
-            $('#kpi-monthly').textContent = fmtMoney(k.monthly);
-            $('#kpi-annual').textContent = fmtMoney(k.annual);
-            $('#kpi-task').textContent = k.task + '%';
-            $('#kpi-task-bar').style.width = k.task + '%';
-            $('#kpi-task-bar').setAttribute('aria-valuenow', k.task);
-            $('#kpi-pending').textContent = k.pending;
-        }
+    // ====== 向後端取資料並更新圖表/KPI =======
+    async function refresh(days = 30) {
+        // 以 Url.Content 產生正確根路徑，避免虛擬目錄問題
+        const url = '@Url.Content("~/api/cs/dashboard/overview")' + '?days=' + encodeURIComponent(days);
+        try {
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' }});
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const d = await resp.json();
 
-        function refresh(days = 30) {
-            const d = genData(days);
+            // 1) 更新圖表
             buildAreaChart(d.labels, d.net, d.orders);
             buildPieChart(d.channelShare);
-            updateKpis(d.kpi);
-        }
 
-        // 初始載入
+            // 2) 更新 KPI
+            updateKpis(d.kpi);
+        } catch (err) {
+            console.error('Dashboard API 錯誤：', err);
+
+            // 簡易降級：顯示 0、清空圖表，頁面仍可互動
+            updateKpis({ monthly: 0, annual: 0, task: 0, pending: 0 });
+            buildAreaChart([], [], []);
+            buildPieChart({ Direct: 0, Social: 0, Referral: 0 });
+        }
+    }
+
+    // ====== 綁定 UI 事件並初次載入 =======
+    (function init() {
+        // 初次載入（預設 30 天）
         refresh(30);
 
-        // 快速切換區間
-        $$('.js-range').forEach(a => a.addEventListener('click', e => {
-            e.preventDefault();
-            const days = parseInt(a.dataset.days || '30', 10);
-            refresh(days);
-        }));
+        // 時間範圍切換
+        document.getElementById('rangeSelect').addEventListener('change', e => {
+            refresh(parseInt(e.target.value, 10));
+        });
 
-        // 重新產生（右上角按鈕）
-        $('#btn-generate').addEventListener('click', () => refresh());
-    </script>
-}
+        // Refresh 按鈕
+        document.getElementById('btnRefresh').addEventListener('click', () => {
+            const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+            refresh(days);
+        });
+    })();
+</script>
