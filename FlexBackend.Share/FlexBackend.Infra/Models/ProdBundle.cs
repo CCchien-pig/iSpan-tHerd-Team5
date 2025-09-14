@@ -45,5 +45,5 @@ public partial class ProdBundle
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
-    public virtual ICollection<ProdProduct> Products { get; set; } = new List<ProdProduct>();
+    public virtual ICollection<ProdBundleItem> ProdBundleItems { get; set; } = new List<ProdBundleItem>();
 }

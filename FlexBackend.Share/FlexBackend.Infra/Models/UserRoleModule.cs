@@ -18,7 +18,7 @@ public partial class UserRoleModule
     /// <summary>
     /// 管理員角色 ID (FK)
     /// </summary>
-    public int AdminRoleId { get; set; }
+    public string AdminRoleId { get; set; }
 
     /// <summary>
     /// 模組代號

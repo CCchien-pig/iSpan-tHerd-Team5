@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Composition;
+using FlexBackend.CS.Rcl.Areas.CS.Controllers;
 using FlexBackend.Infra;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
@@ -8,6 +9,7 @@ using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -74,14 +76,21 @@ namespace FlexBackend.Admin
 				options.SlidingExpiration = true;
 			});
 
-			// 全站預設需要登入 
-			var mvc = builder.Services.AddControllersWithViews(options => {
-				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
-				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
-			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly);
-			//----------------------------------------
+            // 全站預設需要登入 
+            builder.Services
+                .AddControllersWithViews(options =>
+                {
+                    var policy = new AuthorizationPolicyBuilder()
+                        .RequireAuthenticatedUser()
+                        .Build();
 
-			var app = builder.Build();
+                    options.Filters.Add(new AuthorizeFilter(policy));
+                })
+                .AddApplicationPart(typeof(UiKitRclMarker).Assembly)
+                .AddApplicationPart(typeof(DashboardController).Assembly);
+            //----------------------------------------
+
+            var app = builder.Build();
 
 			//Create a scope to run the initialization(只有第一次執行帶入假資料用到)
 			//using (var scope = app.Services.CreateScope())
@@ -122,9 +131,12 @@ namespace FlexBackend.Admin
 
 			app.UseAuthorization();
 
+            // 讓屬性路由（含 API）生效
+            app.MapControllers();
+
             app.MapControllerRoute(
             name: "areas",
-            pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+            pattern: "{area=CS}/{controller=Dashboard}/{action=Index}/{id?}");
 
             app.MapControllerRoute(
                 name: "default",
