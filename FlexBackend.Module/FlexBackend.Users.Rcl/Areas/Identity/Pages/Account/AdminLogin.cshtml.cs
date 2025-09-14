@@ -88,7 +88,32 @@ namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+		private string NormalizeReturnUrl(string returnUrl)
+		{
+			if (string.IsNullOrWhiteSpace(returnUrl))
+				return Url.Content("~/");
+
+			// 避免登入後導去登出頁、或導回登入頁造成困擾
+			var badTargets = new[]
+			{
+		"/Identity/Account/Logout",
+		"/Identity/Account/AdminLogin"
+	};
+
+			foreach (var bad in badTargets)
+			{
+				if (returnUrl.StartsWith(bad, StringComparison.OrdinalIgnoreCase))
+					return Url.Content("~/");
+			}
+
+			// 只允許站內網址，避免 open redirect
+			if (!Url.IsLocalUrl(returnUrl))
+				return Url.Content("~/");
+
+			return returnUrl;
+		}
+
+		public async Task OnGetAsync(string returnUrl = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
@@ -102,8 +127,9 @@ namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
-            ReturnUrl = returnUrl;
-        }
+			//ReturnUrl = returnUrl;
+			ReturnUrl = NormalizeReturnUrl(returnUrl);
+		}
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
@@ -118,9 +144,12 @@ namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("User logged in.");
-                    return LocalRedirect(returnUrl);
-                }
+					//_logger.LogInformation("User logged in.");
+					//return LocalRedirect(returnUrl);
+					_logger.LogInformation("User logged in. RememberMe={Remember}", Input.RememberMe);
+					return LocalRedirect(returnUrl);
+
+				}
                 if (result.RequiresTwoFactor)
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
