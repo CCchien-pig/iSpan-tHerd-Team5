@@ -5,8 +5,10 @@ using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
 using FlexBackend.USER.Rcl.Data;
 using FlexBackend.USER.Rcl.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.Admin
@@ -40,10 +42,6 @@ namespace FlexBackend.Admin
             // 註冊方案級服務 (Composition: 各模組的 Service + Repository)
             builder.Services.AddFlexBackend(builder.Configuration);
 
-            var mvc = builder.Services
-	            .AddControllersWithViews()
-	            .AddApplicationPart(typeof(UiKitRclMarker).Assembly);
-
 			//secrets.json 的設定綁定到 SmtpSettings 類別
 			builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 
@@ -71,11 +69,16 @@ namespace FlexBackend.Admin
 				options.Cookie.HttpOnly = true;
 				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 				options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
-				options.LoginPath = "/Identity/Account/Login";
+				options.LoginPath = "/Identity/Account/AdminLogin";
 				options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 				options.SlidingExpiration = true;
 			});
 
+			// 全站預設需要登入 
+			var mvc = builder.Services.AddControllersWithViews(options => {
+				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
+				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
+			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly);
 			//----------------------------------------
 
 			var app = builder.Build();
