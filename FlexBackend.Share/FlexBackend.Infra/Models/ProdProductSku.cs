@@ -80,10 +80,19 @@ public partial class ProdProductSku
     /// </summary>
     public bool IsAllowBackorder { get; set; }
 
+    /// <summary>
+    /// 有效天數
+    /// </summary>
     public int ShelfLifeDays { get; set; }
 
+    /// <summary>
+    /// 上架開始時間
+    /// </summary>
     public DateTime StartDate { get; set; }
 
+    /// <summary>
+    /// 下架時間（NULL=無限期）
+    /// </summary>
     public DateTime? EndDate { get; set; }
 
     /// <summary>
