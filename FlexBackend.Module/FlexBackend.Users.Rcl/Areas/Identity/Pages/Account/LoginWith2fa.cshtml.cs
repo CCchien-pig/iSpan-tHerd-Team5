@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using FlexBackend.USER.Rcl.Data;
+using FlexBackend.Core.DTOs.USER;
 using Microsoft.AspNetCore.Identity;
 
 namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
