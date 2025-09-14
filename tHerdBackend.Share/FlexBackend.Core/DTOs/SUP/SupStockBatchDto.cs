@@ -8,59 +8,25 @@ namespace FlexBackend.Core.DTOs.SUP;
 /// <summary>
 /// 庫存批次
 /// </summary>
-public partial class SupStockBatch
+public partial class SupStockBatchDto
 {
-	/// <summary>
-	/// 主鍵
-	/// </summary>
 	public int StockBatchId { get; set; }
-
-	/// <summary>
-	/// SKU ID (FK)
-	/// </summary>
 	public int SkuId { get; set; }
-
-	/// <summary>
-	/// 批號，唯一，非空
-	/// </summary>
-	public string BatchNumber { get; set; }
-
-	/// <summary>
-	/// 數量（CK ? 0）
-	/// </summary>
-	public int Qty { get; set; }
-
-	/// <summary>
-	/// 效期
-	/// </summary>
-	public DateOnly? ExpireDate { get; set; }
-
-	public DateTime? ManufactureDate { get; set; }
-
-	/// <summary>
-	/// 是否可銷售
-	/// </summary>
+	public string? SkuCode { get; set; }
+	public string? ProductName { get; set; }
+	public string? BrandName { get; set; }
+	public string? BatchNumber { get; set; }
 	public bool IsSellable { get; set; }
-
-	/// <summary>
-	/// 建檔人員
-	/// </summary>
+	public DateTime? ManufactureDate { get; set; }
+	public DateTime? ExpireDate { get; set; }
+	public int Qty { get; set; }
+	public int SafetyStockQty { get; set; }
+	public int ReorderPoint { get; set; }
+	public int MaxStockQty { get; set; }
 	public int? Creator { get; set; }
-
-	/// <summary>
-	/// 建檔時間
-	/// </summary>
 	public DateTime CreatedDate { get; set; }
-
-	/// <summary>
-	/// 異動人員
-	/// </summary>
 	public int? Reviser { get; set; }
-
-	/// <summary>
-	/// 異動時間
-	/// </summary>
 	public DateTime? RevisedDate { get; set; }
 
-	
+
 }

@@ -1,0 +1,44 @@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.TagEditVM
+@{
+    ViewData["Title"] = "編輯標籤";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-warning text-dark fw-bold">
+        ✏️ 編輯標籤
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="TagId" />
+
+            <!-- 🔴 新增錯誤摘要 -->
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+
+            <div class="mb-3">
+                <label asp-for="TagName" class="form-label">標籤名稱</label>
+                <input asp-for="TagName" class="form-control" />
+                <span asp-validation-for="TagName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">啟用</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">異動人員</label>
+                <input asp-for="Revisor" class="form-control" readonly />
+            </div>
+
+            <div class="card-footer d-flex gap-3">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回列表</a>
+            <button type="submit" class="btn btn-outline-warning btn-lg">💾 更新</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
