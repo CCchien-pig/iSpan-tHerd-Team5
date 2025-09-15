@@ -7,6 +7,7 @@ using FlexBackend.Infra.Models;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Linq;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
@@ -89,42 +90,45 @@ namespace FlexBackend.Infra.Repository.PROD
                             JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
                                 WHERE p.ProductId=@ProductId;";
 
-            var seoSql = @"SELECT SeoId, RefTable, RefId, SeoSlug, 
-                              SeoTitle, SeoDesc, CreatedDate, RevisedDate
-                              FROM SEO_SeoConfig WHERE SeoId = @seoId;";
+            //         var seoSql = @"SELECT SeoId, RefTable, RefId, SeoSlug, 
+            //                           SeoTitle, SeoDesc, CreatedDate, RevisedDate
+            //                           FROM SEO_SeoConfig WHERE SeoId = @seoId;";
 
-			var skuSql = @"SELECT SkuId, SpecCode, SkuCode, Barcode, 
-                            CostPrice, ListPrice, UnitPrice, SalePrice,
-                            StockQty, SafetyStockQty, ReorderPoint,
-                            MaxStockQty, IsAllowBackorder, ShelfLifeDays,
-                            StartDate, EndDate, IsActive
-                            FROM PROD_ProductSku
-                            WHERE ProductId=@ProductId";
+            //var skuSql = @"SELECT SkuId, SpecCode, SkuCode, Barcode, 
+            //                         CostPrice, ListPrice, UnitPrice, SalePrice,
+            //                         StockQty, SafetyStockQty, ReorderPoint,
+            //                         MaxStockQty, IsAllowBackorder, ShelfLifeDays,
+            //                         StartDate, EndDate, IsActive
+            //                         FROM PROD_ProductSku
+            //                         WHERE ProductId=@ProductId";
 
-			var specSql = @"SELECT v.SkuId, v.SpecificationOptionId,
-                            o.SpecificationConfigId, o.OptionName,
-                            o.OrderSeq AS OptionOrderSeq, c.GroupName AS ConfigGroup, c.OrderSeq AS ConfigOrderSeq
-                            FROM PROD_SkuSpecificationValue v
-                            JOIN PROD_SpecificationOption o ON o.SpecificationOptionId=v.SpecificationOptionId
-                            JOIN PROD_SpecificationConfig c ON c.SpecificationConfigId=o.SpecificationConfigId
-                            WHERE ";
+            //var specSql = @"SELECT SkuId, SpecificationOptionId, CreatedDate
+            //                             FROM PROD_SkuSpecificationValue";
 
-            var specOptionSql = @"SELECT v.SkuId, v.SpecificationOptionId,
-                o.SpecificationConfigId, o.OptionName,
-                o.OrderSeq AS OptionOrderSeq, c.GroupName AS ConfigGroup, c.OrderSeq AS ConfigOrderSeq
-                FROM PROD_SkuSpecificationValue v
-                JOIN PROD_SpecificationOption o ON o.SpecificationOptionId=v.SpecificationOptionId
-                JOIN PROD_SpecificationConfig c ON c.SpecificationConfigId=o.SpecificationConfigId;";
+            //         var specOptionSql = @"";
 
-			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            //         var specOptionSql = @"SELECT v.SkuId, v.SpecificationOptionId,
+            //             o.SpecificationConfigId, o.OptionName,
+            //             o.OrderSeq AS OptionOrderSeq, c.GroupName AS ConfigGroup, c.OrderSeq AS ConfigOrderSeq
+            //             FROM PROD_SkuSpecificationValue v
+            //             JOIN PROD_SpecificationOption o ON o.SpecificationOptionId=v.SpecificationOptionId
+            //             JOIN PROD_SpecificationConfig c ON c.SpecificationConfigId=o.SpecificationConfigId;";
+
+             
+
+
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
                 var cmd = new CommandDefinition(sql, new { ProductId }, tx, cancellationToken: ct);
                 var item = await conn.QueryFirstOrDefaultAsync<ProdProductDto>(cmd);
 
-				var seocmd = new CommandDefinition(seoSql, new { Id = item.SeoId }, tx, cancellationToken: ct);
-				var seo = await conn.QueryFirstOrDefaultAsync<PRODSeoConfigDto>(cmd);
-				item.Seo = new PRODSeoConfigDto
+                //var seocmd = new CommandDefinition(seoSql, new { Id = item.SeoId }, tx, cancellationToken: ct);
+                //var seo = await conn.QueryFirstOrDefaultAsync<PRODSeoConfigDto>(cmd);
+
+                var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId);
+
+                item.Seo = new PRODSeoConfigDto
                 {
                     SeoId = seo.SeoId,
                     RefTable = seo.RefTable,
@@ -136,9 +140,8 @@ namespace FlexBackend.Infra.Repository.PROD
                     RevisedDate = seo.RevisedDate
                 };
 
-				// 取得 SKU 清單
-				var skucmd = new CommandDefinition(skuSql, new { item.ProductId }, tx, cancellationToken: ct);
-				var sku = await conn.QueryFirstOrDefaultAsync<ProdProductSkuDto>(cmd);
+                // 取得 SKU 清單
+                var sku = await _db.ProdProductSkus.FirstOrDefaultAsync(s => s.ProductId == item.ProductId);
 
 				if (sku != null) {
 					item.Sku = new ProdProductSkuDto
@@ -161,22 +164,34 @@ namespace FlexBackend.Infra.Repository.PROD
 						EndDate = sku.EndDate,
 						IsActive = sku.IsActive
 					};
+                    var specValue = _db.ProdSkuSpecificationValues.Where(s => s.SkuId == item.Sku.SkuId);
+                    var specOptionArr = specValue==null ? null : specValue.Select(s => s.SpecificationOptionId).ToArray();
+                    var specOption = specOptionArr == null ? null : _db.ProdSpecificationOptions.Where(s => specOptionArr.Contains(s.SpecificationOptionId));
+                    var specConfigArr = specOption == null ? null : specOption.Select(s => s.SpecificationConfigId).ToArray();
+                    var specConfig = specConfigArr == null ? null : _db.ProdSpecificationConfigs.Where(s => specConfigArr.Contains(s.SpecificationConfigId));
 
-					// 取得 SPEC 清單
-					var specConfigcmd = new CommandDefinition(skuSql, new { item.ProductId }, tx, cancellationToken: ct);
-					var specConfig = await conn.QueryAsync<IEnumerable<dynamic>>(cmd);
+                    item.SpecConfig = specConfig==null ? null : specConfig.Select(c => new ProdSpecificationConfigDto
+                    {
+                        SpecificationConfigId = c.SpecificationConfigId,
+                        GroupName = c.GroupName,
+                        OrderSeq = c.OrderSeq
+                    }).ToList();
 
-                    item.SpecConfig = specConfig != null ? new List<ProdSpecificationConfigDto>(
-                        specConfig.Select(v => new ProdSpecificationConfigDto {
-                            c => c.SpecificationConfigId = v.SpecificationConfigId,
-					}
-                        
-                        : new List<ProdSpecificationConfigDto>();
+                    item.Sku.SpecOption = specOption==null ? null : specOption.Select(o => new ProdSpecificationOptionDto
+                    {
+                        SpecificationOptionId = o.SpecificationOptionId,
+                        SpecificationConfigId = o.SpecificationConfigId,
+                        OptionName = o.OptionName,
+                        OrderSeq = o.OrderSeq
+                    }).ToList();
 
-					item.Sku.SpecOption = specConfig != null ? specConfig.ToList() : new List<ProdSpecificationOptionDto>();
-					item.Sku.SpecValue = specConfig != null ? specConfig.ToList() : new List<ProdSkuSpecificationValueDto>();
-
-				}
+                    item.Sku.SpecValue = specValue==null ? null : specValue.Select(v => new ProdSkuSpecificationValueDto
+                    {
+                        SkuId = v.SkuId,
+                        SpecificationOptionId = v.SpecificationOptionId,
+                        CreatedDate = v.CreatedDate
+                    }).ToList();
+                }
 
 				return item;
 			}
