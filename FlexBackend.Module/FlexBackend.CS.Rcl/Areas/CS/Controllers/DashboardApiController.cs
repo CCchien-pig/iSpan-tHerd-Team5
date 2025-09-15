@@ -20,6 +20,9 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
     {
         private readonly string _connStr;
 
+        /// <summary>
+        /// 連線字串：優先 THerdDB，找不到就用 DefaultConnection
+        /// </summary>
         public DashboardApiController(IConfiguration cfg)
         {
             _connStr =
@@ -45,7 +48,8 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
                                    .Select(i => start.AddDays(i).ToString("yyyy-MM-dd"))
                                    .ToArray();
 
-            // 依天彙總淨額與訂單數（欄位若為 nvarchar 用 TRY_CONVERT 避免拋例外）
+            // 依天彙總淨額與訂單數
+            // ※ 欄位若為 nvarchar 用 TRY_CONVERT 避免拋例外
             const string sql = @"
 SELECT
   CAST(o.CreatedDate AS date) AS Dte,
@@ -76,14 +80,21 @@ ORDER BY Dte;";
                 while (await rd.ReadAsync())
                 {
                     var dte = rd.GetDateTime(rd.GetOrdinal("Dte")).Date;
-                    var netVal = rd.IsDBNull(rd.GetOrdinal("Net")) ? 0m : rd.GetDecimal(rd.GetOrdinal("Net"));
-                    var orderCnt = rd.IsDBNull(rd.GetOrdinal("Orders")) ? 0 : rd.GetInt32(rd.GetOrdinal("Orders"));
+
+                    var netVal = rd.IsDBNull(rd.GetOrdinal("Net"))
+                        ? 0m
+                        : rd.GetDecimal(rd.GetOrdinal("Net"));
+
+                    var orderCnt = rd.IsDBNull(rd.GetOrdinal("Orders"))
+                        ? 0
+                        : rd.GetInt32(rd.GetOrdinal("Orders"));
+
                     netMap[dte] = netVal;
                     orderMap[dte] = orderCnt;
                 }
             }
 
-            // 依 labels 補 0
+            // 依 labels 補 0（避免時間斷層造成圖表缺值）
             var netSeries = new decimal[days];
             var ordersSeries = new int[days];
             for (int i = 0; i < days; i++)
@@ -93,6 +104,7 @@ ORDER BY Dte;";
                 ordersSeries[i] = orderMap.TryGetValue(d, out var o) ? o : 0;
             }
 
+            // KPI（本期總額、年化、日均訂單）
             var monthly = netSeries.Sum();
             var annual = monthly * 12m;
             var avgDailyOrders = ordersSeries.Length == 0 ? 0 : ordersSeries.Average();
@@ -112,7 +124,7 @@ ORDER BY Dte;";
         }
 
         /// <summary>
-        /// Top 熱銷與品類彙總（目前不依賴分類表，皆以「未分類」回傳）
+        /// Top 熱銷與品類彙總（真資料；帶入主分類，若無則回「未分類」）
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> Tops([FromQuery] int days = 30, [FromQuery] int top = 10)
@@ -120,16 +132,29 @@ ORDER BY Dte;";
             if (days < 1) days = 1;
             if (top < 1) top = 10;
 
-            var end = DateTime.Today;
-            var start = end.AddDays(-(days - 1));
-            var endPlusOne = end.AddDays(1);
+            var end = DateTime.Today;            // 含當天
+            var start = end.AddDays(-(days - 1));  // 起日（含）
+            var endPlusOne = end.AddDays(1);            // < end+1
 
+            // 說明：
+            // 1) #valid_orders：取最近 N 天且 PaymentStatus='paid' 的有效訂單
+            // 2) #item_adj    ：彙總每個 OrderItem 的調整金額（避免重複相加）
+            // 3) KPI          ：訂單數 / 銷量 / 營收
+            // 4) Top 產品     ：串接商品與「主分類」，沒有主分類就取排序最前的一個，再沒有就回「未分類」
+            // 5) 分類彙總     ：同樣以主分類（或最前的一個）計入，並回傳各分類的數量與營收
+            //
+            // ※ 這裡用「暫存表」(#valid_orders / #item_adj) 讓多個查詢結果共用條件；
+            //   若用 CTE，作用域只限緊接的那一個查詢，會出現 invalid object name 的錯。
             const string sql = @"
-DECLARE @start datetime2 = @p_start;
+DECLARE @start      datetime2 = @p_start;
 DECLARE @endPlusOne datetime2 = @p_endPlusOne;
-DECLARE @top int = @p_top;
+DECLARE @top        int       = @p_top;
 
--- 有效訂單（付款完成）
+-- 保險：若先前遺留就先移除
+IF OBJECT_ID('tempdb..#valid_orders') IS NOT NULL DROP TABLE #valid_orders;
+IF OBJECT_ID('tempdb..#item_adj')     IS NOT NULL DROP TABLE #item_adj;
+
+-- 1) 有效訂單（付款完成）
 SELECT o.OrderId
 INTO #valid_orders
 FROM dbo.ORD_Order o
@@ -137,19 +162,20 @@ WHERE o.PaymentStatus = 'paid'
   AND o.CreatedDate >= @start
   AND o.CreatedDate <  @endPlusOne;
 
--- 每筆 OrderItem 的調整金額彙總
-SELECT oi.OrderItemId,
-       SUM(COALESCE(TRY_CONVERT(decimal(20,2), oia.Amount), 0)) AS AdjAmount
+-- 2) 每筆 OrderItem 的調整金額彙總
+SELECT
+    oi.OrderItemId,
+    SUM(COALESCE(TRY_CONVERT(decimal(20,2), oia.Amount), 0)) AS AdjAmount
 INTO #item_adj
 FROM dbo.ORD_OrderItem oi
 LEFT JOIN dbo.ORD_OrderItemAdjustment oia ON oia.OrderItemId = oi.OrderItemId
 GROUP BY oi.OrderItemId;
 
--- 1) KPI
+-- 3) KPI：訂單 / 銷量 / 營收
 SELECT
-    COUNT(DISTINCT vo.OrderId) AS TotalOrders,
-    SUM(oi.Qty)               AS UnitsSold,
-    SUM(
+    COUNT(DISTINCT vo.OrderId) AS TotalOrders,         -- 訂單數
+    SUM(oi.Qty)               AS UnitsSold,           -- 銷量
+    SUM(                                             -- 營收（單價*數量 + 調整）
         COALESCE(TRY_CONVERT(decimal(20,2), oi.UnitPrice), 0) * oi.Qty
       + COALESCE(ia.AdjAmount, 0)
     ) AS TotalRevenue
@@ -157,12 +183,12 @@ FROM dbo.ORD_OrderItem oi
 JOIN #valid_orders vo ON vo.OrderId = oi.OrderId
 LEFT JOIN #item_adj ia ON ia.OrderItemId = oi.OrderItemId;
 
--- 2) Top 產品（先固定為未分類）
+-- 4) Top 產品（帶主分類；若沒有就取排序最前的一個，最後以 '未分類' 補）
 SELECT TOP (@top)
     p.ProductId,
     p.ProductCode,
     p.ProductName,
-    N'未分類' AS Category,
+    COALESCE(cat.ProductTypeName, N'未分類') AS Category,  -- 分類名稱
     SUM(oi.Qty) AS Qty,
     SUM(
         COALESCE(TRY_CONVERT(decimal(20,2), oi.UnitPrice), 0) * oi.Qty
@@ -171,13 +197,20 @@ SELECT TOP (@top)
 FROM dbo.ORD_OrderItem oi
 JOIN #valid_orders vo ON vo.OrderId = oi.OrderId
 LEFT JOIN #item_adj ia ON ia.OrderItemId = oi.OrderItemId
-LEFT JOIN dbo.PROD_Product p ON p.ProductId = oi.ProductId
-GROUP BY p.ProductId, p.ProductCode, p.ProductName
+JOIN dbo.PROD_Product p ON p.ProductId = oi.ProductId
+OUTER APPLY (                                            -- 取主分類（IsPrimary=1），若沒有就取排序最前的一個
+    SELECT TOP(1) ptc.ProductTypeName
+    FROM dbo.PROD_ProductType       pt
+    JOIN dbo.PROD_ProductTypeConfig ptc ON pt.ProductTypeId = ptc.ProductTypeId
+    WHERE pt.ProductId = p.ProductId
+    ORDER BY pt.IsPrimary DESC, ptc.OrderSeq ASC, ptc.ProductTypeName
+) AS cat
+GROUP BY p.ProductId, p.ProductCode, p.ProductName, cat.ProductTypeName
 ORDER BY Revenue DESC;
 
--- 3) 品類彙總（皆視為未分類；此段不需要 GROUP BY，避免 164 錯誤）
+-- 5) 依分類彙總（同樣以主分類/排序最前者為準，沒有就 '未分類'）
 SELECT
-    N'未分類' AS Category,
+    COALESCE(cat.ProductTypeName, N'未分類') AS Category,
     SUM(oi.Qty) AS Qty,
     SUM(
         COALESCE(TRY_CONVERT(decimal(20,2), oi.UnitPrice), 0) * oi.Qty
@@ -185,8 +218,18 @@ SELECT
     ) AS Revenue
 FROM dbo.ORD_OrderItem oi
 JOIN #valid_orders vo ON vo.OrderId = oi.OrderId
-LEFT JOIN #item_adj ia ON ia.OrderItemId = oi.OrderItemId;
+LEFT JOIN #item_adj ia ON ia.OrderItemId = oi.OrderItemId
+OUTER APPLY (                                            -- 以每筆項目所屬商品，找出其主分類/排序最前的一個
+    SELECT TOP(1) ptc.ProductTypeName
+    FROM dbo.PROD_ProductType       pt
+    JOIN dbo.PROD_ProductTypeConfig ptc ON pt.ProductTypeId = ptc.ProductTypeId
+    WHERE pt.ProductId = oi.ProductId
+    ORDER BY pt.IsPrimary DESC, ptc.OrderSeq ASC, ptc.ProductTypeName
+) AS cat
+GROUP BY cat.ProductTypeName
+ORDER BY Revenue DESC;
 
+-- 清掉暫存表
 DROP TABLE #item_adj;
 DROP TABLE #valid_orders;
 ";
@@ -206,7 +249,7 @@ DROP TABLE #valid_orders;
                 await cn.OpenAsync();
                 using var rd = await cmd.ExecuteReaderAsync();
 
-                // 1) KPI
+                // 3) KPI
                 if (await rd.ReadAsync())
                 {
                     var totalOrders = rd.IsDBNull(0) ? 0 : rd.GetInt32(0);
@@ -223,61 +266,53 @@ DROP TABLE #valid_orders;
                     };
                 }
 
-                // 2) Top 產品
+                // 4) Top 產品
                 await rd.NextResultAsync();
                 while (await rd.ReadAsync())
                 {
-                    var code = rd.IsDBNull(rd.GetOrdinal("ProductCode")) ? "" : rd.GetString(rd.GetOrdinal("ProductCode"));
-                    var name = rd.IsDBNull(rd.GetOrdinal("ProductName")) ? "" : rd.GetString(rd.GetOrdinal("ProductName"));
-                    var cat = rd.GetString(rd.GetOrdinal("Category")); // 未分類
-                    var qty = rd.IsDBNull(rd.GetOrdinal("Qty")) ? 0 : rd.GetInt32(rd.GetOrdinal("Qty"));
-                    var revenue = rd.IsDBNull(rd.GetOrdinal("Revenue")) ? 0m : rd.GetDecimal(rd.GetOrdinal("Revenue"));
+                    string sku = rd.IsDBNull(rd.GetOrdinal("ProductCode")) ? "" : rd.GetString(rd.GetOrdinal("ProductCode"));
+                    string name = rd.IsDBNull(rd.GetOrdinal("ProductName")) ? "" : rd.GetString(rd.GetOrdinal("ProductName"));
+                    string cat = rd.IsDBNull(rd.GetOrdinal("Category")) ? "未分類" : rd.GetString(rd.GetOrdinal("Category"));
+                    int qty = rd.IsDBNull(rd.GetOrdinal("Qty")) ? 0 : rd.GetInt32(rd.GetOrdinal("Qty"));
+                    decimal rev = rd.IsDBNull(rd.GetOrdinal("Revenue")) ? 0m : rd.GetDecimal(rd.GetOrdinal("Revenue"));
 
-                    topProducts.Add(new
-                    {
-                        Sku = code,
-                        Name = name,
-                        Category = cat,
-                        Qty = qty,
-                        Revenue = Math.Round(revenue, 0)
-                    });
+                    topProducts.Add(new { Sku = sku, Name = name, Category = cat, Qty = qty, Revenue = Math.Round(rev, 0) });
                 }
 
-                // 3) 分類彙總
+                // 5) 分類彙總
                 await rd.NextResultAsync();
                 while (await rd.ReadAsync())
                 {
-                    var cat = rd.GetString(rd.GetOrdinal("Category"));
-                    var qty = rd.IsDBNull(rd.GetOrdinal("Qty")) ? 0 : rd.GetInt32(rd.GetOrdinal("Qty"));
-                    var revenue = rd.IsDBNull(rd.GetOrdinal("Revenue")) ? 0m : rd.GetDecimal(rd.GetOrdinal("Revenue"));
-                    catRows.Add((cat, qty, revenue));
+                    string cat = rd.IsDBNull(rd.GetOrdinal("Category")) ? "未分類" : rd.GetString(rd.GetOrdinal("Category"));
+                    int qty = rd.IsDBNull(rd.GetOrdinal("Qty")) ? 0 : rd.GetInt32(rd.GetOrdinal("Qty"));
+                    decimal rev = rd.IsDBNull(rd.GetOrdinal("Revenue")) ? 0m : rd.GetDecimal(rd.GetOrdinal("Revenue"));
+                    catRows.Add((cat, qty, rev));
                 }
 
+                // 計算 Top 產品的占比（以分類彙總的 totalRevenue 當分母）
                 var totalRev = catRows.Sum(x => x.Revenue);
-                var topProductsWithShare = topProducts
-                    .Select((x, i) =>
+                var withShare = topProducts.Select((x, i) =>
+                {
+                    dynamic d = x;
+                    decimal r = d.Revenue;
+                    return new
                     {
-                        dynamic d = x;
-                        decimal rev = d.Revenue;
-                        return new
-                        {
-                            Rank = i + 1,
-                            Sku = (string)d.Sku,
-                            Name = (string)d.Name,
-                            Category = (string)d.Category,
-                            Qty = (int)d.Qty,
-                            Revenue = rev,
-                            Share = totalRev == 0 ? 0m : Math.Round(rev / totalRev * 100m, 1)
-                        };
-                    })
-                    .ToList();
+                        Rank = i + 1,
+                        Sku = (string)d.Sku,
+                        Name = (string)d.Name,
+                        Category = (string)d.Category,
+                        Qty = (int)d.Qty,
+                        Revenue = r,
+                        Share = totalRev == 0 ? 0m : Math.Round(r / totalRev * 100m, 1)
+                    };
+                }).ToList();
 
                 return Ok(new
                 {
                     days,
                     top,
                     kpi,
-                    topProducts = topProductsWithShare,
+                    topProducts = withShare,
                     categories = new
                     {
                         labels = catRows.Select(x => x.Category).ToArray(),
@@ -288,9 +323,10 @@ DROP TABLE #valid_orders;
             }
             catch (Exception ex)
             {
-                // 開發期保留，方便排查 500；上線可移除
+                // 開發期方便查 500 錯誤來源；上線前可移除或改為統一錯誤訊息
                 return Problem(title: "Tops failed", detail: ex.ToString(), statusCode: 500);
             }
         }
     }
+}
 }
