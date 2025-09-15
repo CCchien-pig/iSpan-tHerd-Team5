@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using FlexBackend.USER.Rcl.Data;
+using FlexBackend.Core.DTOs.USER;
 
 namespace FlexBackend.USER.Rcl.Services
 {
