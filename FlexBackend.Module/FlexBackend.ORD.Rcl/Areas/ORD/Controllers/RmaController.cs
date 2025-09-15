@@ -71,105 +71,127 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             return View("Index", vm);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetReturnDetail(int id)
-        {
-            if (id <= 0) return Json(new { ok = false, message = "id 無效" });
+		[HttpGet]
+		public async Task<IActionResult> GetReturnDetail(int id)
+		{
+			if (id <= 0) return Json(new { ok = false, message = "id 無效" });
 
-            await using var cn = new SqlConnection(_cnStr);
-            await cn.OpenAsync();
+			await using var cn = new SqlConnection(_cnStr);
+			await cn.OpenAsync();
 
-            // --- Master with CodeDesc ---
-            const string m = @"
-                SELECT 
-                  rr.ReturnRequestId, rr.RmaId, rr.OrderId, o.OrderNo,
-                  rr.RequestType, ct.CodeDesc  AS RequestTypeName,
-                  rr.RefundScope, cs.CodeDesc  AS RefundScopeName,
-                  rr.Status,      ISNULL(cst.CodeDesc, rr.Status) AS StatusName,
-                  rr.CreatedDate, rr.ReasonText
-                FROM dbo.ORD_ReturnRequest rr
-                JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
-                LEFT JOIN dbo.SYS_Code ct  ON ct.ModuleId=@mod AND ct.CodeId=@cid_type  AND ct.CodeNo=rr.RequestType
-                LEFT JOIN dbo.SYS_Code cs  ON cs.ModuleId=@mod AND cs.CodeId=@cid_scope AND cs.CodeNo=rr.RefundScope
-                LEFT JOIN dbo.SYS_Code cst ON cst.ModuleId=@mod AND cst.CodeId=@cid_status AND cst.CodeNo=rr.Status
-                WHERE rr.ReturnRequestId = @id;";
+			// --- Master with CodeDesc (你原本的那段保留不變) ---
+			const string m = @"
+        SELECT 
+          rr.ReturnRequestId, rr.RmaId, rr.OrderId, o.OrderNo,
+          rr.RequestType, ct.CodeDesc  AS RequestTypeName,
+          rr.RefundScope, cs.CodeDesc  AS RefundScopeName,
+          rr.Status,      ISNULL(cst.CodeDesc, rr.Status) AS StatusName,
+          rr.CreatedDate, rr.ReasonText
+        FROM dbo.ORD_ReturnRequest rr
+        JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
+        LEFT JOIN dbo.SYS_Code ct  ON ct.ModuleId=@mod AND ct.CodeId=@cid_type  AND ct.CodeNo=rr.RequestType
+        LEFT JOIN dbo.SYS_Code cs  ON cs.ModuleId=@mod AND cs.CodeId=@cid_scope AND cs.CodeNo=rr.RefundScope
+        LEFT JOIN dbo.SYS_Code cst ON cst.ModuleId=@mod AND cst.CodeId=@cid_status AND cst.CodeNo=rr.Status
+        WHERE rr.ReturnRequestId = @id;";
 
-            var rma = new
-            {
-                ReturnRequestId = 0,
-                RmaId = "",
-                OrderId = 0,
-                OrderNo = "",
-                RequestType = "",
-                RequestTypeName = "",
-                RefundScope = "",
-                RefundScopeName = "",
-                Status = "",
-                StatusName = "",
-                CreatedDate = DateTime.MinValue,
-                ReasonText = (string?)null
-            };
+			var rma = new
+			{
+				ReturnRequestId = 0,
+				RmaId = "",
+				OrderId = 0,
+				OrderNo = "",
+				RequestType = "",
+				RequestTypeName = "",
+				RefundScope = "",
+				RefundScopeName = "",
+				Status = "",
+				StatusName = "",
+				CreatedDate = DateTime.MinValue,
+				ReasonText = (string?)null
+			};
 
-            await using (var cmd = new SqlCommand(m, cn))
-            {
-                cmd.Parameters.Add(new SqlParameter("@id", SqlDbType.Int) { Value = id });
-                cmd.Parameters.Add(new SqlParameter("@mod", SqlDbType.NVarChar, 10) { Value = MOD });
-                cmd.Parameters.Add(new SqlParameter("@cid_type", SqlDbType.NVarChar, 10) { Value = CID_RR_TYPE });
-                cmd.Parameters.Add(new SqlParameter("@cid_scope", SqlDbType.NVarChar, 10) { Value = CID_RR_SCOPE });
-                cmd.Parameters.Add(new SqlParameter("@cid_status", SqlDbType.NVarChar, 10) { Value = CID_RR_STATUS });
+			await using (var cmd = new SqlCommand(m, cn))
+			{
+				cmd.Parameters.Add(new SqlParameter("@id", SqlDbType.Int) { Value = id });
+				cmd.Parameters.Add(new SqlParameter("@mod", SqlDbType.NVarChar, 10) { Value = MOD });
+				cmd.Parameters.Add(new SqlParameter("@cid_type", SqlDbType.NVarChar, 10) { Value = CID_RR_TYPE });
+				cmd.Parameters.Add(new SqlParameter("@cid_scope", SqlDbType.NVarChar, 10) { Value = CID_RR_SCOPE });
+				cmd.Parameters.Add(new SqlParameter("@cid_status", SqlDbType.NVarChar, 10) { Value = CID_RR_STATUS });
 
-                using var rd = await cmd.ExecuteReaderAsync();
-                if (!await rd.ReadAsync()) return Json(new { ok = false, message = "資料不存在" });
+				using var rd = await cmd.ExecuteReaderAsync();
+				if (!await rd.ReadAsync()) return Json(new { ok = false, message = "資料不存在" });
 
-                rma = new
-                {
-                    ReturnRequestId = rd.GetInt32(0),
-                    RmaId = rd.IsDBNull(1) ? "" : rd.GetString(1),
-                    OrderId = rd.GetInt32(2),
-                    OrderNo = rd.GetString(3),
-                    RequestType = rd.GetString(4),
-                    RequestTypeName = rd.IsDBNull(5) ? rd.GetString(4) : rd.GetString(5),
-                    RefundScope = rd.GetString(6),
-                    RefundScopeName = rd.IsDBNull(7) ? rd.GetString(6) : rd.GetString(7),
-                    Status = rd.GetString(8),
-                    StatusName = rd.IsDBNull(9) ? rd.GetString(8) : rd.GetString(9),
-                    CreatedDate = rd.GetDateTime(10),
-                    ReasonText = rd.IsDBNull(11) ? null : rd.GetString(11)
-                };
-            }
+				rma = new
+				{
+					ReturnRequestId = rd.GetInt32(0),
+					RmaId = rd.IsDBNull(1) ? "" : rd.GetString(1),
+					OrderId = rd.GetInt32(2),
+					OrderNo = rd.GetString(3),
+					RequestType = rd.GetString(4),
+					RequestTypeName = rd.IsDBNull(5) ? rd.GetString(4) : rd.GetString(5),
+					RefundScope = rd.GetString(6),
+					RefundScopeName = rd.IsDBNull(7) ? rd.GetString(6) : rd.GetString(7),
+					Status = rd.GetString(8),
+					StatusName = rd.IsDBNull(9) ? rd.GetString(8) : rd.GetString(9),
+					CreatedDate = rd.GetDateTime(10),
+					ReasonText = rd.IsDBNull(11) ? null : rd.GetString(11)
+				};
+			}
 
-            // --- Return items  ---
-            const string itemsSql = @"
-                SELECT RmaItemId, OrderItemId, Qty, ApprovedQty, RefundQty, ReshipQty, RefundUnitAmount
-                FROM dbo.ORD_ReturnItem
-                WHERE ReturnRequestId = @id
-                ORDER BY RmaItemId;";
-            var items = new List<object>();
-            await using (var ci = new SqlCommand(itemsSql, cn))
-            {
-                ci.Parameters.Add(new SqlParameter("@id", SqlDbType.Int) { Value = id });
-                using var rd = await ci.ExecuteReaderAsync();
-                while (await rd.ReadAsync())
-                {
-                    items.Add(new
-                    {
-                        RmaItemId = rd.GetInt32(0),
-                        OrderItemId = rd.GetInt32(1),
-                        Qty = rd.GetInt32(2),
-                        ApprovedQty = rd.GetInt32(3),
-                        RefundQty = rd.GetInt32(4),
-                        ReshipQty = rd.GetInt32(5),
-                        RefundUnitAmount = rd.IsDBNull(6) ? (decimal?)null : rd.GetDecimal(6)
-                    });
-                }
-            }
+			// --- Return items：加入商品/規格/原始數量；並把 RefundUnitAmount 強制轉 decimal 避免 int/decimal 衝突 ---
+			const string itemsSql = @"
+        SELECT 
+            ri.RmaItemId,
+            ri.OrderItemId,
+            oi.Qty                           AS OriginalQty,   -- 訂單原始數量
+            ri.Qty                           AS RequestQty,    -- 申請數
+            ri.ApprovedQty,
+            ri.RefundQty,
+            ri.ReshipQty,
+            TRY_CONVERT(decimal(18,2), ri.RefundUnitAmount) AS RefundUnitAmount, -- 強制 decimal
+            p.ProductName,
+            s.SpecCode
+        FROM dbo.ORD_ReturnItem ri
+        JOIN dbo.ORD_OrderItem oi ON oi.OrderItemId = ri.OrderItemId
+        JOIN dbo.PROD_Product p    ON p.ProductId   = oi.ProductId
+        JOIN dbo.PROD_ProductSku s ON s.SkuId       = oi.SkuId
+        WHERE ri.ReturnRequestId = @id
+        ORDER BY ri.RmaItemId;";
 
-            return Json(new { ok = true, rma, items });
-        }
+			var items = new List<object>();
+			await using (var ci = new SqlCommand(itemsSql, cn))
+			{
+				ci.Parameters.Add(new SqlParameter("@id", SqlDbType.Int) { Value = id });
+				using var rd = await ci.ExecuteReaderAsync();
+				while (await rd.ReadAsync())
+				{
+					// 逐欄位對應索引（對應上面 SELECT 的順序）
+					var refundUnit = rd.IsDBNull(7) ? (decimal?)null
+													: rd.GetDecimal(7); // 這裡已被 SQL TRY_CONVERT 成 decimal，可直讀
+
+					items.Add(new
+					{
+						RmaItemId = rd.GetInt32(0),
+						OrderItemId = rd.GetInt32(1),
+						OriginalQty = rd.GetInt32(2),
+						Qty = rd.GetInt32(3),
+						ApprovedQty = rd.GetInt32(4),
+						RefundQty = rd.GetInt32(5),
+						ReshipQty = rd.GetInt32(6),
+						RefundUnitAmount = refundUnit,
+						ProductName = rd.GetString(8),
+						SkuSpec = rd.GetString(9)
+					});
+				}
+			}
+
+			return Json(new { ok = true, rma, items });
+		}
 
 
-        // POST: /ORD/Rma/Approve 
-        [HttpPost]
+
+		// POST: /ORD/Rma/Approve 
+		[HttpPost]
         public async Task<IActionResult> Approve(int id, string nextStatus)
         {
             if (id <= 0) return Json(new { ok = false, message = "id 無效" });
@@ -398,76 +420,91 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             return (where, ps);
         }
 
-        // 取 CodeDesc → 對應到 *Name 三欄
-        private static async Task FillListAsync(SqlConnection cn, ReturnListPageVM vm)
-        {
-            var (where, ps) = BuildWhere(vm);
+		// 取 CodeDesc → 對應到 *Name 三欄
+		private static async Task FillListAsync(SqlConnection cn, ReturnListPageVM vm)
+		{
+			var (where, ps) = BuildWhere(vm);
 
-            var countSql = $@"
-                SELECT COUNT(*)
-                FROM dbo.ORD_ReturnRequest rr
-                JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
-                {where};";
+			// 先算總筆數
+			var countSql = $@"
+        SELECT COUNT(*)
+        FROM dbo.ORD_ReturnRequest rr
+        JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
+        JOIN dbo.ORD_ReturnItem ri ON ri.ReturnRequestId = rr.ReturnRequestId
+        JOIN dbo.ORD_OrderItem oi ON oi.OrderItemId = ri.OrderItemId
+        {where};";
 
-            await using (var cmdCount = new SqlCommand(countSql, cn))
-            {
-                AddParametersCloned(cmdCount, ps);
-                vm.Total = Convert.ToInt32(await cmdCount.ExecuteScalarAsync());
-            }
+			await using (var cmdCount = new SqlCommand(countSql, cn))
+			{
+				AddParametersCloned(cmdCount, ps);
+				vm.Total = Convert.ToInt32(await cmdCount.ExecuteScalarAsync());
+			}
 
-            var listSql = $@"
-                SELECT 
-                  rr.ReturnRequestId, rr.RmaId, rr.OrderId, o.OrderNo,
+			// 撈列表資料（包含商品名稱、規格、原始數量）
+			var listSql = $@"
+        SELECT 
+          rr.ReturnRequestId, rr.RmaId, rr.OrderId, o.OrderNo,
 
-                  rr.RequestType, ct.CodeDesc  AS RequestTypeName,
-                  rr.RefundScope, cs.CodeDesc  AS RefundScopeName,
-                  rr.Status,      ISNULL(cst.CodeDesc, rr.Status) AS StatusName,
+          rr.RequestType, ct.CodeDesc  AS RequestTypeName,
+          rr.RefundScope, cs.CodeDesc  AS RefundScopeName,
+          rr.Status,      ISNULL(cst.CodeDesc, rr.Status) AS StatusName,
 
-                  rr.CreatedDate, rr.ReasonText
-                FROM dbo.ORD_ReturnRequest rr
-                JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
-                LEFT JOIN dbo.SYS_Code ct  ON ct.ModuleId=@mod AND ct.CodeId=@cid_type  AND ct.CodeNo=rr.RequestType
-                LEFT JOIN dbo.SYS_Code cs  ON cs.ModuleId=@mod AND cs.CodeId=@cid_scope AND cs.CodeNo=rr.RefundScope
-                LEFT JOIN dbo.SYS_Code cst ON cst.ModuleId=@mod AND cst.CodeId=@cid_status AND cst.CodeNo=rr.Status
-                {where}
-                ORDER BY rr.ReturnRequestId DESC
-                OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+          rr.CreatedDate, rr.ReasonText,
+          p.ProductName, s.SpecCode, oi.Qty AS OriginalQty
 
-            await using var cmdList = new SqlCommand(listSql, cn);
-            AddParametersCloned(cmdList, ps);
-            cmdList.Parameters.Add(new SqlParameter("@mod", SqlDbType.NVarChar, 10) { Value = MOD });
-            cmdList.Parameters.Add(new SqlParameter("@cid_type", SqlDbType.NVarChar, 10) { Value = CID_RR_TYPE });
-            cmdList.Parameters.Add(new SqlParameter("@cid_scope", SqlDbType.NVarChar, 10) { Value = CID_RR_SCOPE });
-            cmdList.Parameters.Add(new SqlParameter("@cid_status", SqlDbType.NVarChar, 10) { Value = CID_RR_STATUS });
-            cmdList.Parameters.Add(new SqlParameter("@offset", SqlDbType.Int) { Value = (vm.Page - 1) * vm.PageSize });
-            cmdList.Parameters.Add(new SqlParameter("@take", SqlDbType.Int) { Value = vm.PageSize });
+        FROM dbo.ORD_ReturnRequest rr
+        JOIN dbo.ORD_Order o ON o.OrderId = rr.OrderId
+        JOIN dbo.ORD_ReturnItem ri ON ri.ReturnRequestId = rr.ReturnRequestId
+        JOIN dbo.ORD_OrderItem oi ON oi.OrderItemId = ri.OrderItemId
+        JOIN dbo.PROD_Product p ON p.ProductId = oi.ProductId
+        JOIN dbo.PROD_ProductSku s ON s.SkuId = oi.SkuId
+        LEFT JOIN dbo.SYS_Code ct  ON ct.ModuleId=@mod AND ct.CodeId=@cid_type  AND ct.CodeNo=rr.RequestType
+        LEFT JOIN dbo.SYS_Code cs  ON cs.ModuleId=@mod AND cs.CodeId=@cid_scope AND cs.CodeNo=rr.RefundScope
+        LEFT JOIN dbo.SYS_Code cst ON cst.ModuleId=@mod AND cst.CodeId=@cid_status AND cst.CodeNo=rr.Status
+        {where}
+        ORDER BY rr.ReturnRequestId DESC
+        OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
 
-            await using var rd = await cmdList.ExecuteReaderAsync();
-            var list = new List<ReturnListItemVM>();
-            while (await rd.ReadAsync())
-            {
-                list.Add(new ReturnListItemVM
-                {
-                    ReturnRequestId = rd.GetInt32(0),
-                    RmaId = rd.IsDBNull(1) ? "" : rd.GetString(1),
-                    OrderId = rd.GetInt32(2),
-                    OrderNo = rd.GetString(3),
+			await using var cmdList = new SqlCommand(listSql, cn);
+			AddParametersCloned(cmdList, ps);
+			cmdList.Parameters.Add(new SqlParameter("@mod", SqlDbType.NVarChar, 10) { Value = MOD });
+			cmdList.Parameters.Add(new SqlParameter("@cid_type", SqlDbType.NVarChar, 10) { Value = CID_RR_TYPE });
+			cmdList.Parameters.Add(new SqlParameter("@cid_scope", SqlDbType.NVarChar, 10) { Value = CID_RR_SCOPE });
+			cmdList.Parameters.Add(new SqlParameter("@cid_status", SqlDbType.NVarChar, 10) { Value = CID_RR_STATUS });
+			cmdList.Parameters.Add(new SqlParameter("@offset", SqlDbType.Int) { Value = (vm.Page - 1) * vm.PageSize });
+			cmdList.Parameters.Add(new SqlParameter("@take", SqlDbType.Int) { Value = vm.PageSize });
 
-                    RequestType = rd.GetString(4),                           // 原碼
-                    RequestTypeName = rd.IsDBNull(5) ? rd.GetString(4) : rd.GetString(5),
-                    RefundScope = rd.GetString(6),
-                    RefundScopeName = rd.IsDBNull(7) ? rd.GetString(6) : rd.GetString(7),
-                    Status = rd.GetString(8),
-                    StatusName = rd.IsDBNull(9) ? rd.GetString(8) : rd.GetString(9),
+			await using var rd = await cmdList.ExecuteReaderAsync();
+			var list = new List<ReturnListItemVM>();
+			while (await rd.ReadAsync())
+			{
+				list.Add(new ReturnListItemVM
+				{
+					ReturnRequestId = rd.GetInt32(0),
+					RmaId = rd.IsDBNull(1) ? "" : rd.GetString(1),
+					OrderId = rd.GetInt32(2),
+					OrderNo = rd.GetString(3),
 
-                    CreatedDate = rd.GetDateTime(10),
-                    ReasonText = rd.IsDBNull(11) ? null : rd.GetString(11)
-                });
-            }
-            vm.Items = list;
-        }
+					RequestType = rd.GetString(4),
+					RequestTypeName = rd.IsDBNull(5) ? rd.GetString(4) : rd.GetString(5),
+					RefundScope = rd.GetString(6),
+					RefundScopeName = rd.IsDBNull(7) ? rd.GetString(6) : rd.GetString(7),
+					Status = rd.GetString(8),
+					StatusName = rd.IsDBNull(9) ? rd.GetString(8) : rd.GetString(9),
 
-        private static async Task<string> GenerateRmaIdAsync(SqlConnection cn, SqlTransaction tx)
+					CreatedDate = rd.GetDateTime(10),
+					ReasonText = rd.IsDBNull(11) ? null : rd.GetString(11),
+
+					ProductName = rd.GetString(12),
+					SkuSpec = rd.GetString(13),
+					OriginalQty = rd.GetInt32(14)
+				});
+			}
+			vm.Items = list;
+		}
+
+
+		private static async Task<string> GenerateRmaIdAsync(SqlConnection cn, SqlTransaction tx)
         {
             var today = DateTime.UtcNow;
             var prefix = "RMA" + today.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
