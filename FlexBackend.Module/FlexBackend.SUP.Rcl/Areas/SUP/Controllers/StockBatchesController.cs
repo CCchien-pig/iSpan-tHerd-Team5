@@ -67,6 +67,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 							sku.ReorderPoint,
 							sb.IsSellable,
 
+							CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
+														  
 							// 展開要的
 							ProductName = p.ProductName,
 							BrandName = b.BrandName,
@@ -84,12 +86,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						};
 
 			// 如果有傳 SupplierId，就過濾對應品牌
-			if (!string.IsNullOrEmpty(supplierId))
+			if (!string.IsNullOrEmpty(supplierId) && int.TryParse(supplierId, out int sId))
 			{
-				if (int.TryParse(supplierId, out int sId))
-				{
-					query = query.Where(x => x.SupplierId == sId);
-				}
+				query = query.Where(x => x.SupplierId == sId);
 			}
 
 			// 搜尋功能
@@ -111,12 +110,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			query = sortColumnIndex switch
 			{
 				0 => sortDirection == "asc" ? query.OrderBy(s => s.SkuCode) : query.OrderByDescending(s => s.SkuCode),
-				1 => sortDirection == "asc" ? query.OrderBy(s => s.BatchNumber) : query.OrderByDescending(s => s.BatchNumber),
-				2 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
-				3 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
-				4 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
-				5 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
-				_ => query.OrderBy(s => s.StockBatchId),
+				// 點 BatchNumber 時改用 CreatedDate（或 ManufactureDate）排序，讓「按批號日期排序」正確
+				1 => sortDirection == "asc" ? query.OrderBy(s => s.CreatedDate) : query.OrderByDescending(s => s.CreatedDate),
+				2 => sortDirection == "asc" ? query.OrderBy(s => s.BrandName) : query.OrderByDescending(s => s.BrandName),
+				3 => sortDirection == "asc" ? query.OrderBy(s => s.ProductName) : query.OrderByDescending(s => s.ProductName),
+				4 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
+				5 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
+				6 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
+				7 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
+				_ => sortDirection == "asc" ? query.OrderBy(s => s.StockBatchId) : query.OrderByDescending(s => s.StockBatchId),
 			};
 
 			// 分頁
@@ -140,6 +142,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				// 展開列需要的
 				d.BrandName,
 				d.ProductName,
+
 				// 字串版規格，用斜線分隔
 				//Specifications = string.Join(" / ", d.Specifications),
 				// 陣列版規格
@@ -150,7 +153,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					OptionName = s.OptionName ?? ""
 				}).ToArray() ?? Array.Empty<object>(),
 				// 新增：允許的操作類型
-				AllowedActions = new[] { "ADJUST" } // 已有批號庫存，只允許手動調整	
+				AllowedActions = new[] { "ADJUST" }, // 已有批號庫存，只允許手動調整
+
+				CreatedDate = d.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")
+
 			}).ToList();
 
 			// ====== 測試輸出 JSON 到 Debug ======
@@ -215,6 +221,44 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if ((vm.ChangeQty ?? 0) <= 0)
 				return Json(new { success = false, message = "異動數量必須大於 0" });
 
+			// 上限
+			int requestedQty = vm.ChangeQty.Value;
+
+			// 非Adjust視為增加 (例如 Purchase)
+			bool isAdd = vm.MovementType != "Adjust" ? true : vm.IsAdd;
+
+			// 計算上限
+			int maxAllowed;
+			if (isAdd)
+			{
+				// 採購入庫及手動調整(增加)
+				maxAllowed = sku.MaxStockQty - sku.StockQty;
+				if (maxAllowed < 0) maxAllowed = 0;
+			}
+			else
+			{
+				// 手動調整(減少)
+				maxAllowed = sku.StockQty;
+				if (maxAllowed < 0) maxAllowed = 0;
+			}
+
+			// 如果 requestedQty 超過上限，直接矯正為上限（後端保險）
+			if (requestedQty > maxAllowed)
+				requestedQty = maxAllowed;
+
+			// 如果矯正後為 0，代表沒有可操作數量 -> 回傳錯誤
+			if (requestedQty <= 0)
+			{
+				string errMsg = isAdd
+					? "已達最大庫存，無法再增加。"
+					: "庫存不足，無法執行減少。";
+				return Json(new { success = false, message = errMsg });
+			}
+
+			// 把 vm.ChangeQty 換成實際套用值（或直接傳 requestedQty 到 Service）
+			vm.ChangeQty = requestedQty;
+
+
 			string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
 
 			var stockBatch = new SupStockBatch
@@ -243,7 +287,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					var result = await _stockService.AdjustStockAsync(
 						stockBatch.StockBatchId,
 						sku.SkuId,
-						vm.ChangeQty.Value,
+						requestedQty,   // <-- 已被上限限制判斷過的正整數
 						vm.IsAdd,
 						vm.MovementType, // 新增傳入異動類型
 						vm.UserId,
@@ -261,11 +305,11 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					return Json(new
 					{
 						success = true,
-						batchMovements = result.BatchMovements,
+						batchMovements = batchMovements,
 						batchNumber = stockBatch.BatchNumber,
 						newQty = stockBatch.Qty,
-						adjustedQty = result.AdjustedQty,
-						totalStockQty = result.TotalStock
+						appliedChangeQty = result.AdjustedQty,  // 實際套用數量
+						totalStockQty = result.TotalStock       // 實際總庫存
 					});
 				}
 				catch (NotImplementedException ex)
