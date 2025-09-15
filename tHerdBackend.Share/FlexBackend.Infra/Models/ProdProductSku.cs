@@ -106,9 +106,9 @@ public partial class ProdProductSku
 
     public virtual ICollection<ProdProductReview> ProdProductReviews { get; set; } = new List<ProdProductReview>();
 
-    public virtual ICollection<ProdSkuSpecificationValue> ProdSkuSpecificationValues { get; set; } = new List<ProdSkuSpecificationValue>();
-
     public virtual ProdProduct Product { get; set; }
 
     public virtual ICollection<SupStockBatch> SupStockBatches { get; set; } = new List<SupStockBatch>();
+
+    public virtual ICollection<ProdSpecificationOption> SpecificationOptions { get; set; } = new List<ProdSpecificationOption>();
 }
