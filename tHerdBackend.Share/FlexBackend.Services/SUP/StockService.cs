@@ -21,53 +21,84 @@ namespace FlexBackend.Services.SUP
 		/// 同效期則先建檔先出
 		/// 更新異動紀錄(SupStockHistory)
 		/// 更新SKU總庫存(ProdProductSkus.StockQty)
+		/// 
+		/// 目前只處理 Purchase（採購入庫） 與 Adjust（手動調整）
 		/// </summary>
 		public async Task<StockAdjustResultDto> AdjustStockAsync(
 			int batchId,
 			int skuId,
 			int changeQty,        // 前端正整數
-			bool isAdd,           // 是否增加
+			bool isAdd,           // 是否增加 (手動調整專用)
+			string movementType,  // 異動類型: "Purchase", "Adjust", "Order", etc.
 			int? reviserId,
-			string remark,
-			bool isAllowBackorder = false)
+			string remark)
 		{
 			if (changeQty <= 0)
 				throw new InvalidOperationException("異動數量必須大於 0");
 
 			var result = new StockAdjustResultDto { SkuId = skuId };
 
-			// 取得批號
-			var batch = await _context.SupStockBatches.FirstOrDefaultAsync(b => b.StockBatchId == batchId);
-			if (batch == null)
-			{
-				result.Success = false;
-				result.Message = "找不到批號資料";
-				return result;
-			}
-
 			// 取得 SKU
 			var sku = await _context.ProdProductSkus.FirstOrDefaultAsync(s => s.SkuId == skuId);
-			if (sku == null)
-			{
-				result.Success = false;
-				result.Message = "找不到 SKU 資料";
-				return result;
-			}
+			if (sku == null) return new StockAdjustResultDto { Success = false, Message = "找不到 SKU 資料" };
 
-			int beforeQtyBatch = batch.Qty;
 			int beforeQtySku = sku.StockQty;
 
-			// 依增加/減少計算實際變動
-			int actualChange = isAdd ? changeQty : -changeQty;
+			// 取得批號
+			var batch = await _context.SupStockBatches.FirstOrDefaultAsync(b => b.StockBatchId == batchId);
+			if (batch == null) return new StockAdjustResultDto { Success = false, Message = "找不到批號資料" };
 
-			// 計算新庫存
-			int newBatchQty = isAdd ? beforeQtyBatch + changeQty : Math.Max(0, beforeQtyBatch - changeQty);
-			int newSkuQty = isAdd ? beforeQtySku + changeQty : Math.Max(0, beforeQtySku - changeQty);
+			int newSkuQty = beforeQtySku;
 
-			// 更新批號
-			batch.Qty = newBatchQty;
-			batch.Reviser = reviserId;
-			batch.RevisedDate = DateTime.Now;
+			switch (movementType)
+			{
+				case "Purchase":
+					// 採購入庫 → 永遠增加
+					newSkuQty += changeQty;
+					batch.Qty = changeQty; // 永遠存正數
+					break;
+
+				case "Adjust":
+					if (isAdd)
+					{
+						// 手動增加庫存
+						newSkuQty += changeQty;
+						batch.Qty = changeQty; // 永遠正數
+					}
+					else
+					{
+						// 手動減少 → FIFO 扣庫
+						int remaining = changeQty;
+						bool allowBackorder = sku.IsAllowBackorder;
+
+						var batches = await _context.SupStockBatches
+							.Where(b => b.SkuId == skuId && b.Qty > 0)
+							.OrderBy(b => b.ExpireDate ?? DateTime.MaxValue)
+							.ThenBy(b => b.CreatedDate)
+							.ToListAsync();
+
+						foreach (var b in batches)
+						{
+							if (remaining <= 0) break;
+
+							int deduct = Math.Min(b.Qty, remaining);
+							b.Qty -= deduct;
+							remaining -= deduct;
+						}
+
+						if (remaining > 0 && allowBackorder)
+							newSkuQty -= changeQty; // 允許負庫存
+						else
+							newSkuQty = Math.Max(0, beforeQtySku - changeQty);
+
+						batch.Qty = changeQty; // 永遠正數
+					}
+					break;
+
+				default:
+					// TODO: 其他異動類型邏輯（例如訂單、退貨等）將來再實作
+					throw new NotImplementedException($"尚未實作異動類型: {movementType}");
+			}
 
 			// 更新 SKU 總庫存
 			sku.StockQty = newSkuQty;
@@ -76,27 +107,31 @@ namespace FlexBackend.Services.SUP
 			var history = new SupStockHistory
 			{
 				StockBatchId = batchId,
-				ChangeType = isAdd ? "Adjust" : "Adjust",  // 或可再加判斷是出庫/入庫
-				ChangeQty = changeQty * (isAdd ? 1 : -1), // 儲存正/負數
+				ChangeType = movementType,
+				ChangeQty = (movementType == "Adjust" && !isAdd) ? -changeQty : changeQty,
+				BeforeQty = beforeQtySku,
+				AfterQty = newSkuQty,
 				Reviser = reviserId,
 				RevisedDate = DateTime.Now,
-				BeforeQty = beforeQtyBatch,
-				AfterQty = newBatchQty,
 				Remark = remark
 			};
 			_context.SupStockHistories.Add(history);
 
+			// 更新批號修改者
+			batch.Reviser = reviserId;
+			batch.RevisedDate = DateTime.Now;
+
 			await _context.SaveChangesAsync();
 
-			result.Success = true;
-			result.TotalStock = newSkuQty;
-			result.AdjustedQty = actualChange;
-			result.Message = "庫存調整成功";
-			result.PredictedQty = newSkuQty;
-
-			return result;
+			return new StockAdjustResultDto
+			{
+				Success = true,
+				TotalStock = newSkuQty,
+				AdjustedQty = changeQty,
+				PredictedQty = newSkuQty,
+				Message = "庫存調整成功"
+			};
 		}
-
 
 
 
