@@ -45,7 +45,7 @@ public partial class OrdReturnRequest
     /// <summary>
     /// 附件網址
     /// </summary>
-    public int AttachmentUrlId { get; set; }
+    public int? AttachmentUrlId { get; set; }
 
     /// <summary>
     /// 流程：pending/review/refunding/done/rejected（建議CHECK）
