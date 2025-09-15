@@ -31,9 +31,14 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public IEnumerable<SelectListItem> TagOptions { get; set; }
 
 
-		// ⭐ 區塊列表
-		public List<CntPageBlock> Blocks { get; set; }
+		// ⭐ 區塊列表 ⭐ 預設給一個空集合
+		public List<CntPageBlock> Blocks { get; set; } = new();
 
+		// 🔑 用來保留回列表的查詢條件
+		public int? Page { get; set; }
+		public int PageSize { get; set; } = 8;
+		public string? Keyword { get; set; }
+		public string? StatusFilter { get; set; }
 
 		// 狀態中文顯示
 		public string StatusText =>

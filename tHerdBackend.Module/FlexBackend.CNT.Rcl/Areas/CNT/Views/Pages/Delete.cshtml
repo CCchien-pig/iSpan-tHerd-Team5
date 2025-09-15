@@ -24,6 +24,12 @@
         <form asp-action="Delete" method="post">
             <input type="hidden" asp-for="PageId" />
 
+            <!-- 🔑 保留查詢狀態 -->
+            <input type="hidden" asp-for="Page" />
+            <input type="hidden" asp-for="PageSize" />
+            <input type="hidden" asp-for="Keyword" />
+            <input type="hidden" asp-for="StatusFilter" />
+
             <div class="d-flex gap-3 mt-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
                 <button type="submit" class="btn btn-outline-danger btn-lg">🗑 確認刪除</button>

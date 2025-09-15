@@ -47,7 +47,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			{
 				items.Insert(0, new SelectListItem("全部狀態", "", selected == null));
 			}
-
 			return items;
 		}
 
@@ -57,6 +56,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		public IActionResult Index(int? page, string keyword, string status, int pageSize = 8)
 		{
 			int pageNumber = page ?? 1;
+			pageSize = (pageSize <= 0) ? 8 : pageSize; // 避免傳 0
 
 			var query = _db.CntPages.Where(p => p.Status != ((int)PageStatus.Deleted).ToString());
 
@@ -95,7 +95,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 
 			// 每頁筆數下拉
-			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100 }, pageSize);
+			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100}, pageSize);
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
@@ -114,7 +114,8 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				TagOptions = new MultiSelectList(
 				_db.CntTags.Where(t => t.IsActive == true).ToList(),
 			"TagId", "TagName"
-				)
+				),
+				Blocks = new List<CntPageBlock>() 
 			};
 			return View(vm);
 		}
@@ -122,7 +123,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public IActionResult Create(PageEditVM model)
+		public IActionResult Create(PageEditVM model, int? page, int pageSize = 8)
 		{
 			if (!ModelState.IsValid)
 			{
@@ -131,10 +132,11 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					_db.CntTags.Where(t => t.IsActive == true).ToList(),
 					"TagId", "TagName", model.SelectedTagIds
 				);
+				model.Blocks ??= new List<CntPageBlock>();
 				return View(model);
 			}
 
-			var page = new CntPage
+			var pageEntity = new CntPage
 			{
 				Title = model.Title,
 				Status = ((int)model.Status).ToString(),
@@ -142,28 +144,32 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				RevisedDate = DateTime.Now
 			};
 
-			_db.CntPages.Add(page);
-			_db.SaveChanges(); // ⭐ 先存，確保 PageId 產生
+			_db.CntPages.Add(pageEntity);
+			_db.SaveChanges();
 
-			// ⭐ 新增 CNT_PageTag 關聯
 			if (model.SelectedTagIds?.Any() == true)
 			{
 				foreach (var tagId in model.SelectedTagIds)
 				{
 					_db.CntPageTags.Add(new CntPageTag
 					{
-						PageId = page.PageId,
+						PageId = pageEntity.PageId,
 						TagId = tagId,
 						CreatedDate = DateTime.Now
 					});
 				}
 				_db.SaveChanges();
 			}
+
 			TempData["Msg"] = "文章已建立";
-			return RedirectToAction(nameof(Edit), new { id = page.PageId });
+			return RedirectToAction(nameof(Index), new
+			{
+				page = model.Page,
+				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,   // ⭐ 保險一層
+				keyword = model.Keyword,
+				status = model.StatusFilter
+			});
 		}
-
-
 		// ================================
 		// 編輯 (Edit)
 		// ================================
@@ -204,7 +210,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public IActionResult Edit(PageEditVM model)
+		public IActionResult Edit(PageEditVM model, int? page, int pageSize = 8)
 		{
 			if (!ModelState.IsValid)
 			{
@@ -213,25 +219,20 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					_db.CntTags.Where(t => t.IsActive == true).ToList(),
 					"TagId", "TagName", model.SelectedTagIds
 				);
-
-				// 重新載入 Blocks
 				model.Blocks = _db.CntPageBlocks
 					.Where(b => b.PageId == model.PageId)
 					.OrderBy(b => b.OrderSeq).ToList();
-
 				return View(model);
 			}
 
-			var page = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
-			if (page == null) return NotFound();
+			var pageEntity = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
+			if (pageEntity == null) return NotFound();
 
-			// 更新 Page 基本資料
-			page.Title = model.Title;
-			page.Status = ((int)model.Status).ToString();
-			page.RevisedDate = DateTime.Now;
+			pageEntity.Title = model.Title;
+			pageEntity.Status = ((int)model.Status).ToString();
+			pageEntity.RevisedDate = DateTime.Now;
 
-			// ⭐ 更新 CNT_PageTag 關聯
-			var oldTags = _db.CntPageTags.Where(pt => pt.PageId == page.PageId);
+			var oldTags = _db.CntPageTags.Where(pt => pt.PageId == pageEntity.PageId);
 			_db.CntPageTags.RemoveRange(oldTags);
 
 			if (model.SelectedTagIds != null)
@@ -240,7 +241,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				{
 					_db.CntPageTags.Add(new CntPageTag
 					{
-						PageId = page.PageId,
+						PageId = pageEntity.PageId,
 						TagId = tagId,
 						CreatedDate = DateTime.Now
 					});
@@ -250,7 +251,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			_db.SaveChanges();
 			TempData["Msg"] = "文章修改成功";
 
-			return RedirectToAction(nameof(Edit), new { id = model.PageId });
+			return RedirectToAction(nameof(Index), new
+			{
+				page = model.Page,
+				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,   // ⭐ 保險一層
+				keyword = model.Keyword,
+				status = model.StatusFilter
+			});
 		}
 
 
@@ -258,10 +265,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 詳細頁面 (Details)
 		// ================================
-		public IActionResult Details(int id)
+		public IActionResult Details(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 		{
-			var page = _db.CntPages.Find(id);
-			if (page == null) return NotFound();
+			var pageEntity = _db.CntPages.Find(id);
+			if (pageEntity == null) return NotFound();
 
 			var tagNames = (from pt in _db.CntPageTags
 							join t in _db.CntTags on pt.TagId equals t.TagId
@@ -270,18 +277,22 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			var vm = new PageDetailVM
 			{
-				PageId = page.PageId,
-				Title = page.Title,
-				Status = (PageStatus)int.Parse(page.Status),
-				CreatedDate = page.CreatedDate,
-				RevisedDate = page.RevisedDate,
-				TagNames = tagNames
+				PageId = pageEntity.PageId,
+				Title = pageEntity.Title,
+				Status = (PageStatus)int.Parse(pageEntity.Status),
+				CreatedDate = pageEntity.CreatedDate,
+				RevisedDate = pageEntity.RevisedDate,
+				TagNames = tagNames,
+
+				// ⭐ 把路由參數傳回 VM
+				Page = page,
+				PageSize = pageSize,
+				Keyword = keyword,
+				StatusFilter = status
 			};
 
 			return View(vm);
 		}
-
-
 
 		// ================================
 		// 刪除 (軟刪除 → 回收桶)
@@ -304,17 +315,23 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public IActionResult Delete(PageEditVM model)
+		public IActionResult Delete(PageEditVM model, int? page, int pageSize = 8)
 		{
-			var page = _db.CntPages.Find(model.PageId);
-			if (page == null) return NotFound();
+			var pageEntity = _db.CntPages.Find(model.PageId);
+			if (pageEntity == null) return NotFound();
 
-			page.Status = ((int)PageStatus.Deleted).ToString();
-			page.RevisedDate = DateTime.Now;
+			pageEntity.Status = ((int)PageStatus.Deleted).ToString();
+			pageEntity.RevisedDate = DateTime.Now;
 
 			_db.SaveChanges();
 			TempData["Msg"] = "文章已移到回收桶";
-			return RedirectToAction(nameof(Index));
+			return RedirectToAction(nameof(Index), new
+			{
+				page = model.Page,
+				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,   // ⭐ 保險一層
+				keyword = model.Keyword,
+				status = model.StatusFilter
+			});
 		}
 
 		// ================================
@@ -347,7 +364,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				});
 
 			ViewBag.Keyword = keyword;
-			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 20 }, pageSize);
+			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100 }, pageSize);
 
 			return View(deletedPages.ToPagedList(pageNumber, pageSize));
 		}
@@ -355,34 +372,44 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 復原 (Restore)
 		// ================================
-		public IActionResult Restore(int id)
+		public IActionResult Restore(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 		{
-			var page = _db.CntPages.Find(id);
-			if (page == null) return NotFound();
+			var pageEntity = _db.CntPages.Find(id);
+			if (pageEntity == null) return NotFound();
 
-			page.Status = ((int)PageStatus.Draft).ToString();
-			page.RevisedDate = DateTime.Now;
+			pageEntity.Status = ((int)PageStatus.Draft).ToString();
+			pageEntity.RevisedDate = DateTime.Now;
 
 			_db.SaveChanges();
 			TempData["Msg"] = "文章已復原";
-			return RedirectToAction(nameof(RecycleBin));
-		}
 
-		// ================================
-		// 永久刪除 (Destroy) → POST 才能執行
-		// ================================
+			return RedirectToAction(nameof(Index), new
+			{
+				page,
+				pageSize,
+				keyword,
+				status
+			});
+		}
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public IActionResult Destroy(int id)
+		public IActionResult Destroy(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 		{
-			var page = _db.CntPages.Find(id);
-			if (page == null) return NotFound();
+			var pageEntity = _db.CntPages.Find(id);
+			if (pageEntity == null) return NotFound();
 
-			_db.CntPages.Remove(page);
+			_db.CntPages.Remove(pageEntity);
 			_db.SaveChanges();
 
 			TempData["Msg"] = "文章已永久刪除";
-			return RedirectToAction(nameof(RecycleBin));
+
+			return RedirectToAction(nameof(Index), new
+			{
+				page,
+				pageSize,
+				keyword,
+				status
+			});
 		}
 	}
 }

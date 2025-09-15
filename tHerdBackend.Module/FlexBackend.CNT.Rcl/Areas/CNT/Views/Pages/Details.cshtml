@@ -61,7 +61,15 @@
         </dl>
     </div>
     <div class="card-footer d-flex gap-3">
-        <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+
+        <a asp-action="Index"
+           asp-route-page="@Model.Page"
+           asp-route-pageSize="@Model.PageSize"
+           asp-route-keyword="@Model.Keyword"
+           asp-route-status="@Model.StatusFilter"
+
+           class="btn btn-outline-secondary">🔙 返回列表</a>
+
         <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
     </div>
 
