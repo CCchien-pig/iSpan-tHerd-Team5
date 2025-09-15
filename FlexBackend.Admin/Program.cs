@@ -116,7 +116,7 @@ namespace FlexBackend.Admin
 			//{
 			//	var sp = scope.ServiceProvider;
 
-			//	// ★ 先套遷移，確保表存在
+			//	// 先套遷移，確保表存在
 			//	var db = sp.GetRequiredService<ApplicationDbContext>();
 			//	await db.Database.MigrateAsync();
 
