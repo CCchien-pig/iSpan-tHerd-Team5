@@ -24,7 +24,7 @@
 }
 
 #btnTop:hover {
-    transform: translateX(-50%) scale(1.4);
+    transform: translateX(-50%) scale(1.6);
     box-shadow: 0 12px 28px rgba(0,0,0,0.4);
 }
 

@@ -25,6 +25,6 @@
 /* Hover 時放大 */
 .fab-btn:hover {
     background-color: mediumspringgreen;
-    transform: scale(1.4); /* 放大到 140% */
+    transform: scale(1.5); /* 放大到 140% */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
 }

@@ -96,7 +96,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 
 			// 每頁筆數下拉
-			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100}, pageSize);
+			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100}, pageSize);
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
