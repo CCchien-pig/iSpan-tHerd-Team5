@@ -4,42 +4,24 @@
 }
 @section Styles
 {
-    <style>
-        .preview-title {
-            all: unset;
-            font-size: 24px;
-            font-weight: bold;
-        }
 
-        .preview-box {
-            border: 3px solid #ccc;
-            border-radius: 12px;
-            padding: 0 28px 0 28px;
-            height: 720px;
-            background: #f9f9f9;
-            white-space: pre-wrap; /* 保留換行符號 */
-            overflow-y: auto; /* 超過高度時出現捲軸 */
-            overflow-wrap: break-word; /* 新版推薦 */
-            position: sticky;
-            top: 12px;
-        }
-
-        .preview-content {
-            border-radius: 8px;
-            border: 2px solid #ccc;
-            background-color: rgb(255, 255, 255);
-            height: 540px;
-            overflow-y: auto; /* 超過就出現捲軸 */
-            padding: 12px
-        }
-
-    </style>
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/preview.css" asp-append-version="true" />@* 預覽樣式 *@      
 
 }
-
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@err.ErrorMessage</div>
+        }
+    </div>
+}
 <h3 class="mb-3">新增區塊</h3>
 
-<form asp-area="CNT" asp-controller="PageBlocks" asp-action="Add" method="post" enctype="multipart/form-data">
+<form asp-area="CNT" asp-controller="PageBlocks" asp-action="Add"
+      method="post" enctype="multipart/form-data"
+      onsubmit="tinymce.triggerSave()">
     <input type="hidden" asp-for="PageId" />
     @Html.AntiForgeryToken()
 
@@ -235,46 +217,40 @@
               // Emoji（表情符號）
               // 只要有 emoticons 外掛與工具列按鈕，就能插入 emoji
 
-            setup: (editor) => {
+        setup: function (editor) {
+            // 1) 自動同步到 <textarea>
+            editor.on('change keyup', function () {
+                editor.save();
+            });
 
+            // 2) 字數統計
             const box = document.getElementById('editor-word-count');
-
             const render = () => {
-                // 取純文字、去掉前後空白
                 const text = (editor.getContent({ format: 'text' }) || '').trim();
-
-                // 1) 中文字元：使用 Unicode Script=Han 抓取中日韓統一表意文字（常用中文字）
                 const zhMatches = text.match(/[\p{Script=Han}]/gu) || [];
                 const zhCount = zhMatches.length;
-
-                // 2) 英文字母（A–Z / a–z）
                 const enMatches = text.match(/[A-Za-z]/g) || [];
                 const enCount = enMatches.length;
-
-                // 3) 總字元數（不含任何空白）
                 const total = text.replace(/\s/g, '').length;
-
-                // 4) 其他字元 = 總字元數 − 中文 − 英文（包含數字、標點、符號、emoji…）
                 const otherCount = Math.max(total - zhCount - enCount, 0);
-                // 輸出到下方區塊（你也可以改成單行顯示）
-                    box.innerHTML = `
-                        <ul style="list-style:none;padding:0;margin:0;">
-                          <li>🀄 中文字元：<strong>${zhCount}</strong></li>
-                          <li>🔤 英文字母：<strong>${enCount}</strong></li>
-                          <li>✨ 其他字元：<strong>${otherCount}</strong></li>
-                          <li>📊 總字元（不含空白）：<strong>${total}</strong></li>
-                        </ul>
-                    `;
-                    };
 
-                // 初始化與變更時都更新
-                editor.on('init keyup change setcontent', render);
-                // 即時預覽：監聽編輯器變動
-                editor.on('init keyup change setcontent', () => {
+                box.innerHTML = `
+                    <ul style="list-style:none;padding:0;margin:0;">
+                      <li>🀄 中文字元：<strong>${zhCount}</strong></li>
+                      <li>🔤 英文字母：<strong>${enCount}</strong></li>
+                      <li>✨ 其他字元：<strong>${otherCount}</strong></li>
+                      <li>📊 總字元（不含空白）：<strong>${total}</strong></li>
+                    </ul>
+                `;
+            };
+
+            editor.on('init keyup change setcontent', render);
+
+            // 3) 即時預覽
+            editor.on('init keyup change setcontent', () => {
                 document.getElementById('live-preview').innerHTML = editor.getContent();
-                 });
-            }
-        });
-
+            });
+        }
+      });
     </script>
 }
