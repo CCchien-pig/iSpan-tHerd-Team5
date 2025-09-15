@@ -1,4 +1,4 @@
-﻿using FlexBackend.USER.Rcl.Data;
+﻿using FlexBackend.Core.DTOs.USER;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

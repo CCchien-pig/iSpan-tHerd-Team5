@@ -4,9 +4,11 @@ using FlexBackend.Infra;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
-using FlexBackend.USER.Rcl.Data;
+using FlexBackend.Infra.Models;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -31,6 +33,14 @@ namespace FlexBackend.Admin
             builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
 				.AddRoles<ApplicationRole>()
 				.AddEntityFrameworkStores<ApplicationDbContext>();
+
+			//確保預設驗證方案是 Identity Cookie（避免被其他套件改成 JWT）
+			builder.Services.AddAuthentication(options =>
+			{
+				options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme; // "Identity.Application"
+				options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+				options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+			});
 
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
@@ -68,36 +78,45 @@ namespace FlexBackend.Admin
 			});
 			builder.Services.ConfigureApplicationCookie(options =>
 			{
-				options.Cookie.HttpOnly = true;
-				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-				options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+				options.Cookie.HttpOnly = false;
+				options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+				options.ExpireTimeSpan = TimeSpan.FromMinutes(14);
 				options.LoginPath = "/Identity/Account/AdminLogin";
 				options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 				options.SlidingExpiration = true;
 			});
 
-            // 全站預設需要登入 
-            builder.Services
-                .AddControllersWithViews(options =>
-                {
-                    var policy = new AuthorizationPolicyBuilder()
-                        .RequireAuthenticatedUser()
-                        .Build();
 
-                    options.Filters.Add(new AuthorizeFilter(policy));
-                })
-                .AddApplicationPart(typeof(UiKitRclMarker).Assembly)
-                .AddApplicationPart(typeof(DashboardController).Assembly);
-            //----------------------------------------
+			//Data Protection 金鑰持久化（避免重啟就讓 Cookie 失效）
+			builder.Services.AddDataProtection()
+				.PersistKeysToFileSystem(new DirectoryInfo(
+					Path.Combine(builder.Environment.ContentRootPath, "dp-keys")))
+				.SetApplicationName("FlexBackend");
 
-            var app = builder.Build();
+			// 全站預設需要登入 
+			var mvc = builder.Services.AddControllersWithViews(options => {
+				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
+				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
+			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly)
+			  .AddApplicationPart(typeof(DashboardController).Assembly);
+			//----------------------------------------
 
+			//新增Razor Pages 規約，允許特定頁面匿名
+			builder.Services.AddRazorPages(options =>
+			{
+				options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/AdminLogin");
+				options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPassword");
+				options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResendEmailConfirmation");
+				options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResetPassword");
+			});
+
+			var app = builder.Build();
 			//Create a scope to run the initialization(只有第一次執行帶入假資料用到)
 			//using (var scope = app.Services.CreateScope())
 			//{
 			//	var sp = scope.ServiceProvider;
 
-			//	// ★ 先套遷移，確保表存在
+			//	// 先套遷移，確保表存在
 			//	var db = sp.GetRequiredService<ApplicationDbContext>();
 			//	await db.Database.MigrateAsync();
 
