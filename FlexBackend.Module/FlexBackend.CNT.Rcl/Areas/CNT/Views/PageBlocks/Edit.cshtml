@@ -3,36 +3,8 @@
 @{
     ViewData["Title"] = "編輯區塊";
 }
-@section Styles{    
-    <style>
-        .preview-title {
-            all: unset;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .preview-box {
-            border: 3px solid #ccc;
-            border-radius: 12px;
-            padding: 0 28px 0 28px;
-            height: 720px;
-            background: #f9f9f9;
-            white-space: pre-wrap; /* 保留換行符號 */
-            overflow-y: auto; /* 超過高度時出現捲軸 */
-            overflow-wrap: break-word; /* 新版推薦 */
-            position: sticky;
-            top: 12px;
-        }
-
-        .preview-content {
-            border-radius: 8px;
-            border: 2px solid #ccc;
-            background-color: rgb(255, 255, 255);
-            height: 540px;
-            overflow-y: auto; /* 超過就出現捲軸 */
-            padding: 12px
-        }
-    </style>
+@section Styles{
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/preview.css" asp-append-version="true" />@* 預覽樣式 *@     
 }
 
 <h3 class="mb-3">編輯區塊</h3>
@@ -91,7 +63,6 @@
             }
         </div>
         <!-- CTA -->
-        <!-- CTA -->
         <div class="col-md-6 d-none" data-blocktype="cta">
             <label class="form-label">按鈕文字</label>
             <input type="text" asp-for="CtaText" class="form-control" />
@@ -116,8 +87,8 @@
     </div>
     <!-- 動作列 -->
     <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-outline-success" type="submit">💾 保存變更</button>
-        <a asp-area="CNT" asp-controller="Pages" asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-secondary">🔙 回文章</a>
+        <button class="btn btn-outline-success btn-lg" type="submit">💾 保存變更</button>
+        <a asp-area="CNT" asp-controller="Pages" asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-secondary btn-lg">🔙 回文章</a>
     </div>
 
 </form>
