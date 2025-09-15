@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using FlexBackend.USER.Rcl.Data;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
