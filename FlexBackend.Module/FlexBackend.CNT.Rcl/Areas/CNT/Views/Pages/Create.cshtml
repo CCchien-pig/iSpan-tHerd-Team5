@@ -38,6 +38,12 @@
                 </select>
                 <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
             </div>
+
+            <!-- 🔑 保留查詢狀態 -->
+            <input type="hidden" asp-for="Page" />
+            <input type="hidden" asp-for="PageSize" />
+            <input type="hidden" asp-for="Keyword" />
+            <input type="hidden" asp-for="StatusFilter" />
             
             <div class="d-flex gap-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
