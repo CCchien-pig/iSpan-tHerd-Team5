@@ -126,9 +126,11 @@ namespace FlexBackend.Infra.Repository.PROD
                 //var seocmd = new CommandDefinition(seoSql, new { Id = item.SeoId }, tx, cancellationToken: ct);
                 //var seo = await conn.QueryFirstOrDefaultAsync<PRODSeoConfigDto>(cmd);
 
+                if (item == null) return null;
+
                 var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId);
 
-                item.Seo = new PRODSeoConfigDto
+                item.Seo = seo == null ? null : new PRODSeoConfigDto
                 {
                     SeoId = seo.SeoId,
                     RefTable = seo.RefTable,
@@ -140,60 +142,71 @@ namespace FlexBackend.Infra.Repository.PROD
                     RevisedDate = seo.RevisedDate
                 };
 
-                // 取得 SKU 清單
-                var sku = await _db.ProdProductSkus.FirstOrDefaultAsync(s => s.ProductId == item.ProductId);
+                var skus = await _db.ProdProductSkus
+                    .Include(s => s.SpecificationOptions)
+                    .Where(s => s.ProductId == item.ProductId)
+                    .ToListAsync();
 
-				if (sku != null) {
-					item.Sku = new ProdProductSkuDto
-					{
-						SkuId = sku.SkuId,
-						SpecCode = sku.SpecCode,
-						SkuCode = sku.SkuCode,
-						Barcode = sku.Barcode,
-						CostPrice = sku.CostPrice,
-						ListPrice = sku.ListPrice,
-						UnitPrice = sku.UnitPrice,
-						SalePrice = sku.SalePrice,
-						StockQty = sku.StockQty,
-						SafetyStockQty = sku.SafetyStockQty,
-						ReorderPoint = sku.ReorderPoint,
-						MaxStockQty = sku.MaxStockQty,
-						IsAllowBackorder = sku.IsAllowBackorder,
-						ShelfLifeDays = sku.ShelfLifeDays,
-						StartDate = sku.StartDate,
-						EndDate = sku.EndDate,
-						IsActive = sku.IsActive
-					};
-                    var specValue = _db.ProdSkuSpecificationValues.Where(s => s.SkuId == item.Sku.SkuId);
-                    var specOptionArr = specValue==null ? null : specValue.Select(s => s.SpecificationOptionId).ToArray();
-                    var specOption = specOptionArr == null ? null : _db.ProdSpecificationOptions.Where(s => specOptionArr.Contains(s.SpecificationOptionId));
-                    var specConfigArr = specOption == null ? null : specOption.Select(s => s.SpecificationConfigId).ToArray();
-                    var specConfig = specConfigArr == null ? null : _db.ProdSpecificationConfigs.Where(s => specConfigArr.Contains(s.SpecificationConfigId));
+                if (skus != null && skus.Any())
+                {
+                    item.Skus = skus.Select(_sku => new ProdProductSkuDto
+                    {
+                        SkuId = _sku.SkuId,
+                        SpecCode = _sku.SpecCode,
+                        SkuCode = _sku.SkuCode,
+                        Barcode = _sku.Barcode,
+                        CostPrice = _sku.CostPrice,
+                        ListPrice = _sku.ListPrice,
+                        UnitPrice = _sku.UnitPrice,
+                        SalePrice = _sku.SalePrice,
+                        StockQty = _sku.StockQty,
+                        SafetyStockQty = _sku.SafetyStockQty,
+                        ReorderPoint = _sku.ReorderPoint,
+                        MaxStockQty = _sku.MaxStockQty,
+                        IsAllowBackorder = _sku.IsAllowBackorder,
+                        ShelfLifeDays = _sku.ShelfLifeDays,
+                        StartDate = _sku.StartDate,
+                        EndDate = _sku.EndDate,
+                        IsActive = _sku.IsActive,
+                            SpecOptions = _sku.SpecificationOptions.Select(o => new ProdSpecificationOptionDto
+                            {
+                                SpecificationOptionId = o.SpecificationOptionId,
+                                SpecificationConfigId = o.SpecificationConfigId,
+                                OptionName = o.OptionName,
+                                OrderSeq = o.OrderSeq
+                            }).ToList()
+                    }).ToList();
+                }
+                else
+                {
+                    item.Skus = new List<ProdProductSkuDto>(); // 沒有的話給空集合，避免 null reference
+                }
+                // 找出所有該商品用到的「規格群組」
+                var specConfigIds = item.Skus
+                    .SelectMany(s => s.SpecOptions)
+                    .Select(o => o.SpecificationConfigId)
+                    .Distinct()
+                    .ToList();
 
-                    item.SpecConfig = specConfig==null ? null : specConfig.Select(c => new ProdSpecificationConfigDto
+                if (specConfigIds.Any())
+                {
+                    var specConfigs = await _db.ProdSpecificationConfigs
+                        .Where(c => specConfigIds.Contains(c.SpecificationConfigId))
+                        .ToListAsync();
+
+                    item.SpecConfigs = specConfigs.Select(c => new ProdSpecificationConfigDto
                     {
                         SpecificationConfigId = c.SpecificationConfigId,
                         GroupName = c.GroupName,
                         OrderSeq = c.OrderSeq
                     }).ToList();
-
-                    item.Sku.SpecOption = specOption==null ? null : specOption.Select(o => new ProdSpecificationOptionDto
-                    {
-                        SpecificationOptionId = o.SpecificationOptionId,
-                        SpecificationConfigId = o.SpecificationConfigId,
-                        OptionName = o.OptionName,
-                        OrderSeq = o.OrderSeq
-                    }).ToList();
-
-                    item.Sku.SpecValue = specValue==null ? null : specValue.Select(v => new ProdSkuSpecificationValueDto
-                    {
-                        SkuId = v.SkuId,
-                        SpecificationOptionId = v.SpecificationOptionId,
-                        CreatedDate = v.CreatedDate
-                    }).ToList();
+                }
+                else
+                {
+                    item.SpecConfigs = new List<ProdSpecificationConfigDto>();
                 }
 
-				return item;
+                return item;
 			}
             finally
             {
