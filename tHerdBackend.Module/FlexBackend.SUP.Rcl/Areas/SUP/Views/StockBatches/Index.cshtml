@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
 }
 
+<!-- 主庫存表格區塊 (.stockbatch-card) -->
 <div class="stockbatch-card">
     <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
     <div class="legend">
@@ -33,7 +34,7 @@
     </table>
 </div>
 
-<!-- Modal -->
+<!-- 庫存操作 Modal (#stockBatchModal)（模態視窗） -->
 <div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content bg-white container">
@@ -51,23 +52,25 @@
     </div>
 </div>
 
-<!-- 批次異動明細表格 -->
+<!-- 批次異動明細 Modal (#batchMovementModal) -->
 <div id="batchMovementModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bg-white container">
-            <table id="batchMovementTable" border="1" style="width:100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th>批號</th>
-                        <th>變動類型</th>
-                        <th>增加/減少</th>
-                        <th>異動前庫存</th>
-                        <th>異動後庫存</th>
-                        <th>預計庫存</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <div class="modal-content bg-white container p-3" style="background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px #40558c;">
+            <div class="card-body">
+                <table id="batchMovementTable" border="1" class="table table-bordered text-center" style="width:95%; margin: 0 auto; border-collapse: separate; border-spacing: 0 4px;">
+                    <thead>
+                        <tr>
+                            <th>批號</th>
+                            <th>變動類型</th>
+                            <th>增加/減少</th>
+                            <th>異動前庫存</th>
+                            <th>異動後庫存</th>
+                            @* <th>預計庫存</th> *@
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -75,6 +78,7 @@
 
 @section Scripts {
     <script>
+        // 初始化庫存操作表單
         function initStockBatchForm(selectedBrandId = null, selectedProductId = null, selectedSkuId = null, options = {}) {
             options = options || {};
             var isEdit = options.isEdit || false;
@@ -356,6 +360,7 @@
             });
         }
 
+        // 初始化庫存 DataTable 與按鈕事件
         $(document).ready(function () {
 
             // ======= 從 sessionStorage 拿到初始品牌名稱 =======
@@ -554,6 +559,9 @@
                         'RequestVerificationToken': $('input[name="__RequestVerificationToken"]', form).val()
                     },
                     success: function (res) {
+                        console.log("後端回傳完整資料:", res); // 查看完整 JSON
+                        console.log("batchMovements:", res.batchMovements); // 確認 batchMovements
+
                         if (res.success) {
                             $('#stockBatchModal').modal('hide');
 
@@ -568,38 +576,37 @@
                             // 更新 DataTable（保持當前頁）
                             stockBatchTable.ajax.reload(null, false);
 
-                            // 顯示批次異動明細
-                            console.log("BatchMovements:", res.BatchMovements);
-
-                            if(res.BatchMovements && res.BatchMovements.length > 0){
-                                showBatchMovements(res.BatchMovements);
+                            if(res.batchMovements && res.batchMovements.length > 0){
+                                showbatchMovements(res.batchMovements);
+                                console.log("有異動紀錄:", res.batchMovements);
                             }
 
                         } else {
                             Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
                         }
                     },
-                    error: function () {
+                    error: function (xhr, status, error) {
                         Swal.fire('操作失敗', '伺服器發生錯誤', 'error');
+                        console.error("AJAX 發生錯誤:", status, error);
                     }
                 });
             });
         });
 
         // 異動後浮現批次明細表格
-        function showBatchMovements(batchMovements) {
+        function showbatchMovements(batchMovements) {
             const tbody = $('#batchMovementTable tbody');
             tbody.empty();
 
             batchMovements.forEach(m => {
                 const changeSign = m.IsAdd ? '+' : '-';
                 const row = `<tr>
-                    <td>${m.BatchNumber || '-'}</td>
-                    <td>${m.MovementType}</td>
-                    <td>${changeSign}${Math.abs(m.ChangeQty)}</td>
-                    <td>${m.CurrentQty}</td>
-                    <td>${m.AfterQty}</td>
-                    <td>${m.PredictedQty}</td>
+                    <td>${m.batchNumber || '-'}</td>
+                    <td>${m.movementType}</td>
+                    <td>${changeSign}${Math.abs(m.changeQty)}</td>
+                    <td>${m.currentQty}</td>
+                    <td>${m.afterQty}</td>
+                    <td>${m.predictedQty}</td>
                 </tr>`;
                 tbody.append(row);
             });
