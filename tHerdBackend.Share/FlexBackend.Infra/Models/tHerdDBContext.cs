@@ -3134,7 +3134,11 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.MemberRankId).HasName("PK__USER_Mem__DE307E3479CEB5B5");
 
-            entity.ToTable("USER_MemberRank", tb => tb.HasComment("會員等級設定"));
+            entity.ToTable("USER_MemberRank", tb =>
+                {
+                    tb.HasComment("會員等級設定");
+                    tb.HasTrigger("tr_MemberRankId");
+                });
 
             entity.HasIndex(e => e.RankName, "UQ_USER_MemberRank_RankName").IsUnique();
 
@@ -3265,6 +3269,7 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.AdminRoleId)
                 .HasConstraintName("FK_USER_RoleModule_Role");
         });
+        modelBuilder.HasSequence("MemberRankIdSequence");
         modelBuilder.HasSequence<int>("UserNumberSequence").StartsAt(1001L);
 
         OnModelCreatingPartial(modelBuilder);
