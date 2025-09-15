@@ -188,7 +188,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-		// +異動紀錄
 		// 批號建立(Controller),異動處理(StockService.AdjustStockAsync)
 		// POST: /SUP/StockBatches/CreateStockBatch
 		// To protect from overposting attacks, enable the specific properties you want to bind to.
@@ -203,7 +202,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				return Json(new { success = false, message = "資料格式錯誤", errors });
 			}
 
-			// 1. 找 SKU（含產品 & 品牌）
 			var sku = await _context.ProdProductSkus
 				.Include(s => s.Product)
 					.ThenInclude(p => p.Brand)
@@ -212,15 +210,14 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (sku == null)
 				return Json(new { success = false, message = "找不到 SKU" });
 
-			// 2. 驗證製造日期
 			if (!vm.ManufactureDate.HasValue)
 				return Json(new { success = false, message = "請選擇製造日期" });
 
-			int changeQty = vm.ChangeQty ?? 0;
-			if (changeQty <= 0)
+			if ((vm.ChangeQty ?? 0) <= 0)
 				return Json(new { success = false, message = "異動數量必須大於 0" });
 
 			string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
+
 			var stockBatch = new SupStockBatch
 			{
 				SkuId = sku.SkuId,
@@ -237,52 +234,41 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_context.SupStockBatches.Add(stockBatch);
 			await _context.SaveChangesAsync(); // 確保 BatchNumber 已存入 DB
 
-			// 3. 處理異動
+			// 處理異動
 			if (!string.IsNullOrEmpty(vm.MovementType))
 			{
-				if (vm.MovementType != "Purchase" && vm.MovementType != "Adjust")
-					return Json(new { success = false, message = "此批號只允許採購入庫或手動調整" });
-
-				bool isAdd = vm.MovementType == "Purchase" || vm.IsAdd;
-
-				// 計算批號及 SKU 新庫存
-				int newBatchQty = isAdd ? stockBatch.Qty + changeQty : Math.Max(0, stockBatch.Qty - changeQty);
-				int newSkuQty = isAdd ? sku.StockQty + changeQty : Math.Max(0, sku.StockQty - changeQty);
-
-				// 更新批號
-				stockBatch.Qty = newBatchQty;
-				stockBatch.Reviser = vm.UserId ?? 0;
-				stockBatch.RevisedDate = DateTime.Now;
-
-				// 更新 SKU 總庫存
-				sku.StockQty = newSkuQty;
-
-				// 建立庫存異動紀錄
-				_context.SupStockHistories.Add(new SupStockHistory
+				try
 				{
-					StockBatchId = stockBatch.StockBatchId,
-					ChangeType = vm.MovementType,
-					ChangeQty = isAdd ? changeQty : -changeQty,
-					Reviser = vm.UserId ?? 0,
-					RevisedDate = DateTime.Now,
-					BeforeQty = stockBatch.Qty - (isAdd ? changeQty : -changeQty),
-					AfterQty = newBatchQty,
-					Remark = vm.Remark
-				});
+					var result = await _stockService.AdjustStockAsync(
+						stockBatch.StockBatchId,
+						sku.SkuId,
+						vm.ChangeQty.Value,
+						vm.IsAdd,
+						vm.MovementType, // 新增傳入異動類型
+						vm.UserId,
+						vm.Remark
+					);
 
-				await _context.SaveChangesAsync();
+					if (!result.Success)
+					{
+						return Json(new { success = false, message = result.Message });
+					}
 
-				return Json(new
+					return Json(new
+					{
+						success = true,
+						batchNumber = stockBatch.BatchNumber,
+						newQty = stockBatch.Qty,
+						adjustedQty = result.AdjustedQty,
+						totalStockQty = result.TotalStock
+					});
+				}
+				catch (NotImplementedException ex)
 				{
-					success = true,
-					batchNumber = stockBatch.BatchNumber,
-					newQty = newBatchQty,
-					adjustedQty = changeQty,
-					totalStockQty = newSkuQty
-				});
+					return Json(new { success = false, message = ex.Message });
+				}
 			}
 
-			// 若沒有異動
 			return Json(new
 			{
 				success = true,
@@ -290,51 +276,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				newQty = stockBatch.Qty,
 				totalStockQty = sku.StockQty
 			});
-		}
-
-
-		//
-
-		// +庫存，ProdProductSku的StockQty
-		// 呼叫 StockService.AdjustStockAsync
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> AdjustStock(int skuId, int changeQty, string changeType, string remark = "")
-		{
-			if (changeQty == 0)
-				return Json(new { success = false, message = "變動庫存量不可為 0" });
-
-			var userId = 1; // TODO: 改成登入者 ID
-
-			try
-			{
-				var result = await _stockService.AdjustStockAsync(
-					batchId: 0,              // 單純調整庫存時可以傳 0 或 Service 自動選批次
-					skuId: skuId,
-					changeQty: changeQty,
-					isAdd: true,              // 或依前端選擇增加/減少
-					reviserId: userId,
-					remark: remark,
-					isAllowBackorder: false   // 或依前端設定
-				);
-
-				return Json(new
-				{
-					success = result.Success,
-					message = result.Success ? "庫存更新成功" : "操作失敗",
-					newStock = result.TotalStock,
-					adjustedQty = result.AdjustedQty,
-					remainingQty = result.RemainingQty
-				});
-			}
-			catch (InvalidOperationException ex)
-			{
-				return Json(new { success = false, message = ex.Message });
-			}
-			catch (Exception ex)
-			{
-				return Json(new { success = false, message = "儲存資料時發生錯誤：" + ex.Message });
-			}
 		}
 
 

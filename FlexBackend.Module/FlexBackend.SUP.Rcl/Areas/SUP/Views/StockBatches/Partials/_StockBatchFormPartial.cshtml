@@ -75,6 +75,7 @@
             <label>異動類型</label>
         </div>
 
+        <!-- 只有「加/減」選項要受 Adjust 控制 -->
         <div id="AdjustOptions" style="display:none;">
             <!-- 手動調整類型，選加/減 -->
             <div class="form-check form-check-inline">
@@ -86,13 +87,14 @@
                 <label class="form-check-label" for="Decrease">減少</label>
             </div>
 
-            <!-- 異動數量 -->
-            <div class="form-floating mb-2">
-                <input asp-for="ChangeQty" type="number" class="form-control" min="1"
-                       max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
-                <label>異動庫存量</label>
-                <small id="ChangeQtyHelp" class="text-muted"></small>
-            </div>
+        </div>
+
+        <!-- 異動數量 -->
+        <div class="form-floating mb-2">
+            <input asp-for="ChangeQty" type="number" class="form-control" min="1"
+                   max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
+            <label>異動庫存量</label>
+            <small id="ChangeQtyHelp" class="text-muted"></small>
         </div>
 
 

@@ -101,13 +101,15 @@
                 });
             });
 
-            // 商品 change → 載入 SKU
+            // 商品 change → 載入 SKU，並清空下階
             productSelect.off('change').on('change', function() {
                 var productId = $(this).val();
-                if(!productId) {
-                    skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
-                    return;
-                }
+
+                // 清空下階層
+                skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
+                resetStockInfo();
+
+                if (!productId) return;
 
                 $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
                     skuSelect.empty().append('<option value="">請選 SKU</option>');
@@ -144,20 +146,40 @@
                     $('#SafetyStockQty').text(info.safetyStockQty);
                     $('#IsAllowBackorderText').text(info.isAllowBackorder ? '允許預購' : '不允許預購');
 
-                    // 計算變動庫存量上限
-                    var maxChange = maxStock - currentStock;
-                    if(maxChange < 0) maxChange = 0;
+                    // 根據異動類型計算可輸入上限
+                    var movementType = $('#MovementTypeSelect').val();
+                    var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                    var isAllowBackorder = info.isAllowBackorder;
+
+                    var maxChange = 0;
+
+                    if (movementType === 'Adjust') {
+                        // 調整型 → 不限制，交給使用者
+                        maxChange = Number.MAX_SAFE_INTEGER;
+                    } else {
+                        if (isAdd) {
+                            // 入庫：不能超過最大庫存
+                            maxChange = maxStock - currentStock;
+                            if (maxChange < 0) maxChange = 0;
+                        } else {
+                            // 出庫：不能超過現有庫存（若允許預購就不限制）
+                            maxChange = isAllowBackorder ? Number.MAX_SAFE_INTEGER : currentStock;
+                        }
+                    }
 
                     $('#ChangeQtyInput').prop('max', maxChange);
                     if(parseInt($('#ChangeQtyInput').val()) > maxChange){
                         $('#ChangeQtyInput').val(maxChange);
                     }
 
+                    // 預計庫存
+                    updatePredictedStock();
+
                     // 預計庫存初始值
                     var predictedStock = currentStock + (parseInt($('#ChangeQtyInput').val()) || 0);
-                    if(!info.isAllowBackorder && predictedStock < 0){
-                        predictedStock = 0;
-                    }
+                    
+                    if (!isAllowBackorder && !isAdd && predictedStock < 0) predictedStock = 0;
+
                     $('#PredictedQty').text(predictedStock);
                 });
             });
@@ -176,24 +198,29 @@
                     if(isEdit) {
                         movementTypeSelect.val('Adjust').prop('disabled', true);
                         $('#AdjustOptions').show();
-                        $('#ChangeQtyInput').closest('.form-floating').show();
+                        // $('#ChangeQtyInput').closest('.form-floating').show();
                     } else {
                         movementTypeSelect.prop('disabled', false);
                         $('#AdjustOptions').hide();
-                        $('#ChangeQtyInput').closest('.form-floating').hide();
+                        // $('#ChangeQtyInput').closest('.form-floating').hide();
                     }
+
+                    // 異動庫存量欄位永遠顯示
+                    $('#ChangeQtyInput').closest('.form-floating').show();
                 });
 
                 // 異動類型選擇事件
                 movementTypeSelect.on('change', function(){
-                    if($(this).val() === 'Adjust'){
+                    if ($(this).val() === 'Adjust') {
                         $('#AdjustOptions').show();
-                        $('#ChangeQtyInput').closest('.form-floating').show();
                     } else {
                         $('#AdjustOptions').hide();
-                        $('#ChangeQtyInput').closest('.form-floating').hide();
                     }
+
+                    // 異動類型切換時，立即刷新數量上限與預計庫存
+                    updatePredictedStock();
                 });
+
             });
 
 
@@ -204,24 +231,36 @@
                 var maxStock = parseInt($('#MaxStockQty').text()) || 0;
                 var isAllowBackorder = $('#IsAllowBackorderText').text() === '允許預購';
                 var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                var movementType = $('#MovementTypeSelect').val();    
 
-                // 如果增加，不能超過最大庫存
-                if (isAdd) {
-                    if (currentStock + changeQty > maxStock) {
-                        changeQty = maxStock - currentStock;
-                        if (changeQty < 0) changeQty = 0;
-                        $('#ChangeQtyInput').val(changeQty);
-                    }
-                } else {
-                    // 減少時不能超過庫存
-                    if (changeQty > currentStock) {
-                        changeQty = currentStock;
-                        $('#ChangeQtyInput').val(changeQty);
+                // 調整型 → 允許正負數
+                if (movementType !== 'Adjust') {
+                    if (isAdd) {
+                        // 入庫：不能超過 max
+                        if (currentStock + changeQty > maxStock) {
+                            changeQty = maxStock - currentStock;
+                            if (changeQty < 0) changeQty = 0;
+                            $('#ChangeQtyInput').val(changeQty);
+                        }
+                    } else {
+                        // 出庫：不能超過現有庫存（若允許預購就跳過）
+                        if (!isAllowBackorder && changeQty > currentStock) {
+                            changeQty = currentStock;
+                            $('#ChangeQtyInput').val(changeQty);
+                        }
                     }
                 }
 
-                // 計算預計庫存
-                var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
+                // 計算預計庫存：入庫 +，出庫 -
+                var predictedStock;
+
+                // 如果是手動調整，依 isAdd 判斷加減
+                if (movementType === 'Adjust') {
+                    predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
+                } else {
+                    // 其他異動類型一律加
+                    predictedStock = currentStock + changeQty;
+                }
 
                 // 非允許預購不能為負
                 if (!isAllowBackorder && predictedStock < 0) {
@@ -232,13 +271,67 @@
             }
 
             // 當變動數量輸入時即時更新
-            $('#ChangeQtyInput').off('input').on('input', function() {
+            $('#ChangeQtyInput').off('input').on('input', function () {
+                let changeQty = parseInt($(this).val()) || 0;
+
+                // 取得當前異動類型
+                var movementType = $('#MovementTypeSelect').val();
+
+                if (movementType !== 'Adjust') {
+                    // 非Adjust，一律強制為正數
+                    if (changeQty < 0) {
+                        changeQty = Math.abs(changeQty);
+                        $(this).val(changeQty);
+                    }
+                }
+
+                // 預計庫存
                 updatePredictedStock();
             });
 
-            // 當加/減 radio 改變時也即時更新
+            // 共用：清空庫存顯示
+            function resetStockInfo() {
+                $('#CurrentQty, #PredictedQty, #MaxStockQty, #ReorderPoint, #SafetyStockQty, #IsAllowBackorderText')
+                    .text('0');
+                $('#ChangeQtyInput').val(0).prop('max', 0);
+            }
+
+            // 當加/減 radio 改變時，即時更新預計庫存
             $('input[name="IsAdd"]').off('change').on('change', function() {
+                var isAdd = $(this).val() === 'true';
+                var currentStock = parseInt($('#CurrentQty').text()) || 0;
+                var maxStock = parseInt($('#MaxStockQty').text()) || 0;
+                var isAllowBackorder = $('#IsAllowBackorderText').text() === '允許預購';
+
+                var changeQtyInput = $('#ChangeQtyInput');
+                var changeQty = parseInt(changeQtyInput.val()) || 0;
+
+                if (isAdd) {
+                    // 增加時上限 = 最大庫存 - 當前庫存
+                    var maxChange = maxStock - currentStock;
+                    if (maxChange < 0) maxChange = 0;
+                    changeQtyInput.prop('max', maxChange);
+
+                    // 超過上限自動切換到上限
+                    if (changeQty > maxChange) changeQtyInput.val(maxChange);
+                } else {
+                    // 減少時上限 = 當前庫存（不可超賣）
+                    var maxChange = isAllowBackorder ? Number.MAX_SAFE_INTEGER : currentStock;
+                    changeQtyInput.prop('max', maxChange);
+
+                    // 超過上限自動切換到上限
+                    if (changeQty > maxChange) changeQtyInput.val(maxChange);
+                }
+
+                // 更新預計庫存
                 updatePredictedStock();
+            });
+
+
+            $(document).ready(function() {
+                // 異動日期預設今天
+                var today = new Date().toISOString().split('T')[0]; // yyyy-MM-dd
+                $('#ManufactureDate').val(today);
             });
 
         }
