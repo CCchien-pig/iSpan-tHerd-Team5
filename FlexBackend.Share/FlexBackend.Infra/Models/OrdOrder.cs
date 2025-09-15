@@ -105,6 +105,12 @@ public partial class OrdOrder
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    public DateTime? DeliveredDate { get; set; }
+
+    public DateTime? CompletedDate { get; set; }
+
+    public string TrackingNumber { get; set; }
+
     public virtual MktCoupon Coupon { get; set; }
 
     public virtual SupLogistic Logistics { get; set; }
