@@ -6,6 +6,7 @@
     ViewData["Title"] = isEdit ? "修改商品" : "新增商品";
     var brands = ViewBag.BrandDtos as IEnumerable<LoadBrandOptionDto>
              ?? Enumerable.Empty<LoadBrandOptionDto>();
+    var index = 0;
 }
 
 @section Styles {
@@ -139,6 +140,27 @@
             color: #6c757d;
         }
 
+        .group-box {
+            border: 2px solid #652D77;
+            border-radius: 0.5rem;
+            padding: 1.5rem 1rem 1rem 1rem;
+            margin-top: 2rem;
+            position: relative;
+        }
+
+            .group-box legend {
+                font-weight: bold;
+                color: #652D77;
+                font-size: 1rem;
+                padding: 0 8px;
+                position: absolute;
+                top: -0.7em; /* 把文字拉到邊框上 */
+                left: 1rem; /* 從左邊縮一點 */
+                background: #fff; /* 白底，讓字浮在線上 */
+                width: 100px;
+
+                text-align: center;
+            }
     </style>
 }
 
@@ -178,113 +200,239 @@
                     <a asp-area="PROD" asp-controller="Products" asp-action="Index"
                        class="btn btn-outline-secondary btn-sm">取消</a>
                 </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
-                    <select asp-for="BrandId" class="form-select">
-                    <option value="">請選擇品牌</option>
-                    @foreach (var b in brands)
-                    {
-                        <option value="@b.BrandId">@b.BrandName (@b.SupplierName)</option>
-                    }
-                    </select>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">供應商</label>
-                    <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
-                </div>
-
-                <div class="col-12 mb-3">
-                    <label class="form-label fw-bold required">商品名稱</label>
-                    <input asp-for="ProductName" class="form-control" />
-                    <span asp-validation-for="ProductName" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold required">商品簡碼</label>
-                    <input asp-for="ProductCode" class="form-control" />
-                    <span asp-validation-for="ProductCode" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold required">重量</label>
-                    <input asp-for="Weight" class="form-control" />
-                    <span asp-validation-for="Weight" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold required">體積</label>
-                    <input asp-for="VolumeCubicMeter" class="form-control" />
-                    <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold invisible">占位</label>
-                    <input asp-for="VolumeUnit" class="form-control" />
-                    <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
-                </div>
-
-                <div class="col-12 mb-3">
-                    <label class="form-label fw-bold required">商品簡述</label>
-                    <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
-                    <span asp-validation-for="ShortDesc" class="text-danger small"></span>
-                </div>
-
-                <div class="col-12 mb-3">
-                    <label class="form-label fw-bold required">商品說明</label>
-                    <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
-                    <span asp-validation-for="FullDesc" class="text-danger small"></span>
-                </div>
-
-                <div class="col-md-4 mb-3 d-flex align-items-center">
-                    <div class="form-check form-switch">
-                        <input asp-for="IsPublished" class="form-check-input publish-toggle" />
-                        <label class="form-check-label fw-bold ms-2">上架</label>
+                <div class="row pl-3 pr-3 m-0">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
+                        <select asp-for="BrandId" class="form-select">
+                            <option value="">請選擇品牌</option>
+                            @foreach (var b in brands)
+                            {
+                                <option value="@b.BrandId">@b.BrandName (@b.SupplierName)</option>
+                            }
+                        </select>
                     </div>
-                </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-bold">建檔人員</label>
-                    <input asp-for="CreatorNm" class="form-control" disabled />
-                </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">供應商</label>
+                        <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
+                    </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-bold">建檔時間</label>
-                    <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
-                </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold required">商品名稱</label>
+                        <input asp-for="ProductName" class="form-control" />
+                        <span asp-validation-for="ProductName" class="text-danger small"></span>
+                    </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-bold text-danger">商品編號</label>
-                    <input asp-for="ProductId" class="form-control" disabled />
-                </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold required">商品簡碼</label>
+                        <input asp-for="ProductCode" class="form-control" />
+                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
+                    </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-bold">異動人員</label>
-                    <input asp-for="ReviserNm" class="form-control" disabled />
-                </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold required">重量</label>
+                        <input asp-for="Weight" class="form-control" />
+                        <span asp-validation-for="Weight" class="text-danger small"></span>
+                    </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label fw-bold">異動時間</label>
-                    <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold required">體積</label>
+                        <input asp-for="VolumeCubicMeter" class="form-control" />
+                        <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold invisible">占位</label>
+                        <input asp-for="VolumeUnit" class="form-control" />
+                        <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold required">商品簡述</label>
+                        <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="ShortDesc" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold required">商品說明</label>
+                        <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="FullDesc" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-3 d-flex justify-content-center align-items-center">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                            <label class="form-check-label fw-bold ms-2">上架</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">建檔人員</label>
+                        <input asp-for="CreatorNm" class="form-control" disabled />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">建檔時間</label>
+                        <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold text-danger">商品編號</label>
+                        <input asp-for="ProductId" class="form-control" disabled />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">異動人員</label>
+                        <input asp-for="ReviserNm" class="form-control" disabled />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">異動時間</label>
+                        <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
+                    </div>
                 </div>
             </div>
         </div>
-
+        <!-- SKU -->
         <div id="cardContainer" class="p-6 p-md-6">
-            <!-- 產品基本資料：初始收起 -->
             <div class="card shadow mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background:#9873B9">
                     <h6 class="m-0 fw-bold">SKU 設定</h6>
                     <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseBasic"
-                            aria-expanded="false" aria-controls="collapseBasic">
+                            data-bs-toggle="collapse" data-bs-target="#collapseSku"
+                            aria-expanded="false" aria-controls="collapseSku">
                         <i class="fas fa-chevron-up chevron"></i>
                     </button>
                 </div>
-                <div id="collapseBasic" class="collapse">
+                <div id="collapseSku" class="collapse show">
                     <div class="card-body">
-                        <p>這裡放基本資料表單...</p>
+                        <div class="row p-3">
+                            <div id="specCards" class="row m-0">
+                                @foreach (var sku in (Model?.Skus ?? new List<ProdProductSkuDto>()))
+                                {
+                                    <div class="col-md-4 spec-card" data-index="@index">
+                                        <div class="card shadow-sm">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <span class="fw-bold">規格群組</span>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-2">
+                                                    <label class="form-label fw-bold">名稱</label>
+                                                    <input name="Skus[@index].SpecCode" value="@sku.SpecCode" class="form-control" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    index++;
+                                }
+                            </div>
+                            <!-- 左邊跨 3 欄 & 4 列 -->
+                            <div class="col-md-12 mb-3 d-flex flex-column" style="min-height: 300px;">
+                                <button type="button" class="btn btn-sm btn-success mt-3" onclick="addCard()">
+                                    <i class="fas fa-plus"></i> 新增規格
+                                </button>
+                            </div>
+
+                            @* <!-- 右邊正常分成 1 欄 + 多列 -->
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-danger required">SKU 代碼</label>
+                                    <input asp-for="Skus.SkuCode" class="form-control" disabled />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold required">規格碼</label>
+                                    <input asp-for="Skus.SpecCode" class="form-control" />
+                                    <span asp-validation-for="Skus.SpecCode" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">條碼</label>
+                                    <input asp-for="Skus.Barcode" class="form-control" />
+                                    <span asp-validation-for="Skus.Barcode" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3 d-flex justify-content-center align-items-center">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                                        <input class="form-check-input publish-toggle" asp-for="Skus.IsActive" />
+                                        <label class="form-check-label fw-bold" for="Sku_IsActive">啟用</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 庫存管理 -->
+                            <fieldset class="group-box mb-3">
+                                <legend>價格設定</legend>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">成本價</label>
+                                        <input asp-for="Skus.CostPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">原價</label>
+                                        <input asp-for="Skus.ListPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">單價</label>
+                                        <input asp-for="Skus.UnitPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold required">優惠價</label>
+                                        <input asp-for="Skus.SalePrice" class="form-control" type="number" step="0.01" />
+                                        <span asp-validation-for="Skus.SalePrice" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- 庫存管理 -->
+                            <fieldset class="group-box mb-3">
+                                <legend>庫存控管</legend>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">目前庫存</label>
+                                        <input asp-for="Skus.StockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">安全庫存量</label>
+                                        <input asp-for="Skus.SafetyStockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">再訂購點</label>
+                                        <input asp-for="Skus.ReorderPoint" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">最大庫存量</label>
+                                        <input asp-for="Skus.MaxStockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input publish-toggle" asp-for="Skus.IsAllowBackorder" />
+                                            <label class="form-check-label fw-bold" for="Skus.IsAllowBackorder">允許缺貨預購</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">有效天數</label>
+                                        <input asp-for="Skus.ShelfLifeDays" class="form-control" type="number" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">上架時間</label>
+                                        <input asp-for="Skus.StartDate" class="form-control" type="datetime-local" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">下架時間</label>
+                                        <input asp-for="Skus.EndDate" class="form-control" type="datetime-local" />
+                                    </div>
+                                </div>
+                            </fieldset> *@
+                        </div>
                     </div>
                 </div>
             </div>
@@ -394,6 +542,152 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
+            // 讓卡片可拖曳
+        new Sortable(document.getElementById("specCards"), {
+            animation: 150,
+            handle: ".card-header",  // 只能拖 header
+            onEnd: function (evt) {
+                refreshIndexes();
+            }
+        });
+
+        function addCard() {
+            const container = document.getElementById("specCards");
+            const index = container.children.length;
+
+            const card = document.createElement("div");
+            card.classList.add("col-md-12", "spec-card");
+            card.setAttribute("data-index", index);
+
+            card.innerHTML = `
+                <div class="card shadow-sm mt-3 mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Sku 代碼</span>
+                        <div class="col-md-9 mb-0 justify-content-start">
+                            <input name="Skus[${index}].SkuCode" class="form-control" disabled />
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label fw-bold required">規格碼</label>
+                                    <input asp-for="Sku.SpecCode" class="form-control" />
+                                    <span asp-validation-for="Skus.SpecCode" class="text-danger small"></span>
+                                </div>
+
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label fw-bold">條碼</label>
+                                    <input asp-for="Skus.Barcode" class="form-control" />
+                                    <span asp-validation-for="Skus.Barcode" class="text-danger small"></span>
+                                </div>
+
+                                <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                                        <input class="form-check-input publish-toggle" asp-for="Skus.IsActive" />
+                                        <label class="form-check-label fw-bold" for="Sku_IsActive">啟用</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 庫存管理 -->
+                            <fieldset class="group-box mb-3">
+                                <legend>價格設定</legend>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">成本價</label>
+                                        <input asp-for="Skus.CostPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">原價</label>
+                                        <input asp-for="Skus.ListPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">單價</label>
+                                        <input asp-for="Skus.UnitPrice" class="form-control" type="number" step="0.01" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold required">優惠價</label>
+                                        <input asp-for="Skus.SalePrice" class="form-control" type="number" step="0.01" />
+                                        <span asp-validation-for="Skus.SalePrice" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- 庫存管理 -->
+                            <fieldset class="group-box mb-3">
+                                <legend>庫存控管</legend>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">目前庫存</label>
+                                        <input asp-for="Skus.StockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">安全庫存量</label>
+                                        <input asp-for="Skus.SafetyStockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">再訂購點</label>
+                                        <input asp-for="Skus.ReorderPoint" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">最大庫存量</label>
+                                        <input asp-for="Skus.MaxStockQty" class="form-control" type="number" />
+                                    </div>
+                                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input publish-toggle" asp-for="Skus.IsAllowBackorder" />
+                                            <label class="form-check-label fw-bold" for="Skus.IsAllowBackorder">允許缺貨預購</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">有效天數</label>
+                                        <input asp-for="Skus.ShelfLifeDays" class="form-control" type="number" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">上架時間</label>
+                                        <input asp-for="Skus.StartDate" class="form-control" type="datetime-local" />
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label fw-bold">下架時間</label>
+                                        <input asp-for="Skus.EndDate" class="form-control" type="datetime-local" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        function removeCard(button) {
+            button.closest(".spec-card").remove();
+            refreshIndexes();
+        }
+
+        // 重新整理 index，確保後端 Model Binding 正確
+        function refreshIndexes() {
+            document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
+                card.setAttribute("data-index", i);
+                card.querySelectorAll("input").forEach(input => {
+                    if (input.name.includes("GroupName")) {
+                        input.name = `Configs[${i}].GroupName`;
+                    }
+                    if (input.name.includes("OrderSeq")) {
+                        input.name = `Configs[${i}].OrderSeq`;
+                    }
+                });
+            });
+        }
+
+        // 品牌下拉選項
         $(document).ready(function () {
             $("#BrandId").change(function () {
                 var supplier = $(this).find(":selected").data("supplier") || "";

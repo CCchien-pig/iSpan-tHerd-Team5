@@ -139,10 +139,10 @@ public partial class ProdProductDto
 	/// </summary>
 	public List<string> ProductTypeDesc { get; set; }
 
-	public PRODSeoConfigDto Seo { get; set; }
-	public ProdProductSkuDto Sku { get; set; }
+	public PRODSeoConfigDto? Seo { get; set; }
 
-	public IEnumerable<ProdSpecificationConfigDto>? SpecConfig { get; set; }
+	public IEnumerable<ProdProductSkuDto>? Skus { get; set; }
+	public IEnumerable<ProdSpecificationConfigDto>? SpecConfigs { get; set; }
 }
 
 /// <summary>
@@ -243,12 +243,7 @@ public partial class ProdProductSkuDto
 	/// <summary>
 	/// 規格選項
 	/// </summary>
-	public List<ProdSpecificationOptionDto>? SpecOption { get; set; }
-
-	/// <summary>
-	/// 規格選項值
-	/// </summary>
-	public List<ProdSkuSpecificationValueDto>? SpecValue { get; set; }
+	public List<ProdSpecificationOptionDto>? SpecOptions { get; set; }
 }
 
 /// <summary>
@@ -343,28 +338,6 @@ public partial class ProdSpecificationOptionDto
 	/// </summary>
 	public int OrderSeq { get; set; }
 }
-
-/// <summary>
-/// SKU 與多個規格選項的對應
-/// </summary>
-public partial class ProdSkuSpecificationValueDto
-{
-	/// <summary>
-	/// SKU ID（外鍵）
-	/// </summary>
-	public int SkuId { get; set; }
-
-	/// <summary>
-	/// 規格選項ID（外鍵）
-	/// </summary>
-	public int SpecificationOptionId { get; set; }
-
-	/// <summary>
-	/// 建立時間
-	/// </summary>
-	public DateTime? CreatedDate { get; set; }
-}
-
 
 /// <summary>
 ///  SEO 設定

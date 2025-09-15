@@ -1,9 +1,6 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {
