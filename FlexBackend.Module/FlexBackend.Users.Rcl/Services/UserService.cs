@@ -1,6 +1,7 @@
-﻿using FlexBackend.USER.Rcl.Data;
+﻿using FlexBackend.Core.DTOs.USER;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using FlexBackend.Infra.Models;
 
 namespace FlexBackend.USER.Rcl.Services
 {
