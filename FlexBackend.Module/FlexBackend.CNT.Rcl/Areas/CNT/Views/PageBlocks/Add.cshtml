@@ -39,7 +39,7 @@
 
 <h3 class="mb-3">新增區塊</h3>
 
-<form asp-action="Add" method="post" enctype="multipart/form-data">
+<form asp-area="CNT" asp-controller="PageBlocks" asp-action="Add" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="PageId" />
     @Html.AntiForgeryToken()
 

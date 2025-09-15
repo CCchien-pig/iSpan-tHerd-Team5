@@ -34,6 +34,10 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		// ⭐ 區塊列表 ⭐ 預設給一個空集合
 		public List<CntPageBlock> Blocks { get; set; } = new();
 
+		// PageEditVM.cs
+		public int PageTypeId { get; set; }
+
+
 		// 🔑 用來保留回列表的查詢條件
 		public int? Page { get; set; }
 		public int PageSize { get; set; } = 8;

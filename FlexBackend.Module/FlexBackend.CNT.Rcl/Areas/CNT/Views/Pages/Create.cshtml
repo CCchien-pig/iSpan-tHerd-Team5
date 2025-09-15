@@ -1,6 +1,11 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
 @{
     ViewData["Title"] = "新增文章";
+    const int HomePageId = 1000;
+    bool isHome = Model.PageId == HomePageId;
+}
+@{
+    ViewData["Title"] = "新增文章";
 }
 @section Styles {
     <!-- Select2 CSS -->
@@ -22,6 +27,13 @@
                 <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
+            <!-- 分類 -->
+            <div class="mb-3">
+                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <select asp-for="PageTypeId" asp-items="ViewBag.PageTypeList" class="form-select"></select>
+                <span asp-validation-for="PageTypeId" class="text-danger"></span>
+            </div>
+
             <!-- 狀態 -->
             <div class="mb-3">
                 <label asp-for="Status" class="form-label">狀態</label>
@@ -31,12 +43,28 @@
             <!-- 標籤 -->
             <div class="mb-3">
                 <label class="form-label">標籤</label>
-                <select asp-for="SelectedTagIds"
-                        asp-items="Model.TagOptions"
-                        multiple="multiple"
-                        class="tag-selector w-100">
-                </select>
-                <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+
+                @if (isHome)
+                {
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            data-val="false">
+                        <!-- 關閉驗證 -->
+                    </select>
+                    <small class="text-muted">首頁不需要標籤。</small>
+                }
+                else
+                {
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            required>
+                    </select>
+                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                }
             </div>
 
             <!-- 🔑 保留查詢狀態 -->
@@ -54,10 +82,8 @@
     </div>
 </div>
 
-@section Scripts {
-    
+@section Scripts {    
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -69,10 +95,7 @@
                     width: '100%'
                 });
             });
-        </script>
-
-   
-    
+        </script>      
 }
 
 
