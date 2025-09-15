@@ -17,6 +17,8 @@ namespace FlexBackend.Services.PROD
             services.AddScoped<IProdProductRepository, ProdProductRepository>();
             services.AddScoped<IProdProductQueryRepository, ProductQueryRepository>();
 
+            MapsterConfig.Register();
+
             return services;
         }
     }
