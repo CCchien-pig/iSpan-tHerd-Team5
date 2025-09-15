@@ -8,12 +8,22 @@ namespace FlexBackend.Infra.Models;
 
 public partial class tHerdDBContext : DbContext
 {
-
-
-	public tHerdDBContext(DbContextOptions<tHerdDBContext> options)
+    public tHerdDBContext(DbContextOptions<tHerdDBContext> options)
         : base(options)
     {
     }
+
+    public virtual DbSet<AspNetRole> AspNetRoles { get; set; }
+
+    public virtual DbSet<AspNetRoleClaim> AspNetRoleClaims { get; set; }
+
+    public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
+
+    public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
+
+    public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
+
+    public virtual DbSet<AspNetUserToken> AspNetUserTokens { get; set; }
 
     public virtual DbSet<CntMedium> CntMedia { get; set; }
 
@@ -179,6 +189,101 @@ public partial class tHerdDBContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AspNetRole>(entity =>
+        {
+            entity.HasIndex(e => e.NormalizedName, "RoleNameIndex")
+                .IsUnique()
+                .HasFilter("([NormalizedName] IS NOT NULL)");
+
+            entity.Property(e => e.Description).HasMaxLength(100);
+            entity.Property(e => e.Name).HasMaxLength(256);
+            entity.Property(e => e.NormalizedName).HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<AspNetRoleClaim>(entity =>
+        {
+            entity.HasIndex(e => e.RoleId, "IX_AspNetRoleClaims_RoleId");
+
+            entity.Property(e => e.RoleId).IsRequired();
+
+            entity.HasOne(d => d.Role).WithMany(p => p.AspNetRoleClaims).HasForeignKey(d => d.RoleId);
+        });
+
+        modelBuilder.Entity<AspNetUser>(entity =>
+        {
+            entity.HasIndex(e => e.NormalizedEmail, "EmailIndex");
+
+            entity.HasIndex(e => e.NormalizedUserName, "UserNameIndex")
+                .IsUnique()
+                .HasFilter("([NormalizedUserName] IS NOT NULL)");
+
+            entity.Property(e => e.Address).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.FirstName)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.Gender)
+                .IsRequired()
+                .HasMaxLength(10);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LastName)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.MemberRankId)
+                .IsRequired()
+                .HasMaxLength(10);
+            entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
+            entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
+            entity.Property(e => e.ReferralCode).HasMaxLength(20);
+            entity.Property(e => e.UsedReferralCode).HasMaxLength(20);
+            entity.Property(e => e.UserName).HasMaxLength(256);
+            entity.Property(e => e.UserNumberId).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[UserNumberSequence])");
+
+            entity.HasMany(d => d.Roles).WithMany(p => p.Users)
+                .UsingEntity<Dictionary<string, object>>(
+                    "AspNetUserRole",
+                    r => r.HasOne<AspNetRole>().WithMany().HasForeignKey("RoleId"),
+                    l => l.HasOne<AspNetUser>().WithMany().HasForeignKey("UserId"),
+                    j =>
+                    {
+                        j.HasKey("UserId", "RoleId");
+                        j.ToTable("AspNetUserRoles");
+                        j.HasIndex(new[] { "RoleId" }, "IX_AspNetUserRoles_RoleId");
+                    });
+        });
+
+        modelBuilder.Entity<AspNetUserClaim>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_AspNetUserClaims_UserId");
+
+            entity.Property(e => e.UserId).IsRequired();
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserClaims).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<AspNetUserLogin>(entity =>
+        {
+            entity.HasKey(e => new { e.LoginProvider, e.ProviderKey });
+
+            entity.HasIndex(e => e.UserId, "IX_AspNetUserLogins_UserId");
+
+            entity.Property(e => e.LoginProvider).HasMaxLength(128);
+            entity.Property(e => e.ProviderKey).HasMaxLength(128);
+            entity.Property(e => e.UserId).IsRequired();
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserLogins).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<AspNetUserToken>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.LoginProvider, e.Name });
+
+            entity.Property(e => e.LoginProvider).HasMaxLength(128);
+            entity.Property(e => e.Name).HasMaxLength(128);
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserTokens).HasForeignKey(d => d.UserId);
+        });
+
         modelBuilder.Entity<CntMedium>(entity =>
         {
             entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF3998BBEF");
@@ -1141,6 +1246,9 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Subtotal)
                 .HasComment("小計金額")
                 .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.TrackingNumber)
+                .HasMaxLength(50)
+                .IsUnicode(false);
             entity.Property(e => e.UserNumberId).HasComment("會員編號（FK）");
 
             entity.HasOne(d => d.Coupon).WithMany(p => p.OrdOrders)
@@ -3152,6 +3260,10 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("模組代號");
             entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
             entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.AdminRole).WithMany(p => p.UserRoleModules)
+                .HasForeignKey(d => d.AdminRoleId)
+                .HasConstraintName("FK_USER_RoleModule_Role");
         });
         modelBuilder.HasSequence<int>("UserNumberSequence").StartsAt(1001L);
 
