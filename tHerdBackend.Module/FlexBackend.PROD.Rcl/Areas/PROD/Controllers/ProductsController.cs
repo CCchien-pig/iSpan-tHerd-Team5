@@ -22,6 +22,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             var products = await _repo.GetAllAsync();
 
             //var products = await _qrepo.GetAllProductQueryListAsync(1000);
+            await LoadBrandOptionsAsync();
             return View(products);
         }
 
@@ -73,7 +74,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 
                 // 先用 Debug/Console 看
                 System.Diagnostics.Debug.WriteLine(System.Text.Json.JsonSerializer.Serialize(errors));
-
+                await LoadBrandOptionsAsync();
                 return View("Upsert", dto);   // ← 用視圖名稱，不要用絕對路徑
             }
             if (dto.ProductId > 0) { await _repo.UpdateAsync(dto); } else { await _repo.CreateAsync(dto); }
