@@ -25,7 +25,6 @@
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.SUP.Rcl\FlexBackend.SUP.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.Users.Rcl\FlexBackend.USER.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Composition\FlexBackend.Composition.csproj" />
-    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Core\FlexBackend.Core.csproj" />
     <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
     <ProjectReference Include="..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>

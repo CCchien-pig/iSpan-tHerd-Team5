@@ -1,0 +1,162 @@
+﻿<!-- Modal Partial: 編輯優惠券 -->
+<div class="modal fade" id="editCouponModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editCouponForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">編輯優惠券</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>優惠券ID</label>
+                        <input type="text" id="editCouponId" class="form-control" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label>活動ID</label>
+                        <input type="number" id="editCampaignId" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>規則ID</label>
+                        <input type="number" id="editRuleId" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>優惠券名稱</label>
+                        <input type="text" id="editCouponName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>優惠碼</label>
+                        <input type="text" id="editCouponCode" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>優惠券類型</label>
+                        <select id="editStatus" class="form-select">
+                            <option value="pInactive">未啟用</option>
+                            <option value="pActive">啟用</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>開始時間</label>
+                        <input type="datetime-local" id="editStartDate" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>結束時間</label>
+                        <input type="datetime-local" id="editEndDate" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>折扣金額</label>
+                        <input type="number" id="editDiscountAmount" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>折扣百分比</label>
+                        <input type="number" id="editDiscountPercent" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>總數量</label>
+                        <input type="number" id="editTotQty" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>每人限領</label>
+                        <input type="number" id="editUserLimit" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>有效時數</label>
+                        <input type="number" id="editValidHours" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>是否啟用</label><br />
+                        <div class="form-check form-check-inline">
+                            <input type="radio" name="editIsActive" value="true" class="form-check-input" />
+                            <label class="form-check-label">啟用</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="radio" name="editIsActive" value="false" class="form-check-input" />
+                            <label class="form-check-label">停用</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label>建立者</label>
+                        <input type="text" id="editCreater" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>建立時間</label>
+                        <input type="datetime-local" id="editCreatedDate" class="form-control" disabled />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="saveCouponBtn" class="btn btn-primary">儲存</button>
+                    <button type="button" id="deleteCouponBtn" class="btn btn-danger">刪除</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    $("#saveCouponBtn").on("click", function(e){
+        e.preventDefault();
+        var form = $("#editCouponForm");
+
+        var startDate = form.find("#editStartDate").val();
+        var endDate = form.find("#editEndDate").val();
+
+        if (!startDate || !endDate) {
+            Swal.fire("錯誤","請填寫開始時間與結束時間","error");
+            return;
+        }
+
+        var start = new Date(startDate);
+        var end = new Date(endDate);
+        var today = new Date();
+        today.setHours(0,0,0,0);
+
+        if (start < today) {
+            Swal.fire("錯誤","開始時間必須在今天之後","error");
+            return;
+        }
+        if (end <= start) {
+            Swal.fire("錯誤","結束時間必須在開始時間之後","error");
+            return;
+        }
+
+        var data = {
+            couponId: parseInt(form.find("#editCouponId").val()),
+            campaignId: parseInt(form.find("#editCampaignId").val()),
+            ruleId: parseInt(form.find("#editRuleId").val()),
+            couponName: form.find("#editCouponName").val(),
+            couponCode: form.find("#editCouponCode").val(),
+            status: form.find("#editStatus").val(),
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            discountAmount: parseFloat(form.find("#editDiscountAmount").val()) || 0,
+            discountPercent: parseFloat(form.find("#editDiscountPercent").val()) || 0,
+            totQty: parseInt(form.find("#editTotQty").val()) || 0,
+            userLimit: parseInt(form.find("#editUserLimit").val()) || 0,
+            validHours: parseInt(form.find("#editValidHours").val()) || 0,
+            isActive: form.find("input[name='editIsActive']:checked").val() === "true",
+            creater: form.find("#editCreater").val()
+        };
+
+        $.ajax({
+            url: '@Url.Action("UpdateCoupon", "Coupons", new { area = "MKT" })',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res){
+                if(res.success){
+                    Swal.fire("成功","優惠券已更新！","success").then(()=>{
+                        $("#editCouponModal").modal("hide");
+                        if(typeof calendar !== "undefined") calendar.refetchEvents();
+                    });
+                } else {
+                    Swal.fire("錯誤","更新失敗：" + res.message,"error");
+                }
+            },
+            error: function(err){
+                console.error("UpdateCoupon failed:", err);
+                Swal.fire("錯誤","更新失敗，請檢查控制台","error");
+            }
+        });
+    });
+</script>

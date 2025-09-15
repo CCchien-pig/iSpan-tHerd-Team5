@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace FlexBackend.MKT.Rcl.Areas.MKT.Views.Campaigns
+namespace FlexBackend.ORD.Rcl.Areas.ORD.Views.Orders
 {
-    public class creatCampaignModel : PageModel
+    public class Index1Model : PageModel
     {
         public void OnGet()
         {

@@ -1,0 +1,62 @@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
+@{
+    ViewData["Title"] = "新增文章";
+}
+@section Styles {
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-success text-white fw-bold">
+        ➕ 新增文章
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">標題</label>
+                <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label">狀態</label>
+                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">標籤</label>
+                <select asp-for="SelectedTagIds"
+                        asp-items="Model.TagOptions"
+                        multiple="multiple"
+                        class="tag-selector w-100">
+                </select>
+                <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+            </div>
+            <div class="d-flex gap-3">
+                <a asp-action="Index" class="btn btn-outline-secondary">🔙 返回列表</a>
+                <button type="submit" class="btn btn-outline-success">💾 儲存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                $('.tag-selector').select2({
+                    placeholder: "請選擇標籤",
+                    allowClear: true,
+                    width: '100%'
+                });
+            });
+        </script>
+    
+}
+
+
