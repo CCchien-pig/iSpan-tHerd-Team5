@@ -89,9 +89,10 @@
 @section Scripts {
     <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
     <script>
-                        const dt = new DataTable('#tblRoles', {
+                                const dt = new DataTable('#tblRoles', {
           processing: true, serverSide: true,
           ajax: { url: '/USER/UserPermissions/Roles', type: 'GET', dataSrc: 'data' },
+          searchDelay: 400, // ← 可選
           columns: [
             { data: 'name' },
             { data: 'description' },
@@ -107,13 +108,6 @@
           ],
           order: [[2,'desc']]
         });
-
-                // 方便共用：取任何一個表單裡的 Anti-Forgery Token
-        function getAntiForgeryToken(){
-          const t1 = document.querySelector('#frmRoleModules input[name="__RequestVerificationToken"]');
-          const t2 = document.querySelector('#frmCreateRole input[name="__RequestVerificationToken"]');
-          return (t1?.value || t2?.value || '');
-        }
 
         // 刪除角色
         document.addEventListener('click', async (e)=>{
