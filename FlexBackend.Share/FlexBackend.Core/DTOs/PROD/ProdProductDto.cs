@@ -142,7 +142,7 @@ public partial class ProdProductDto
 	public PRODSeoConfigDto Seo { get; set; }
 	public ProdProductSkuDto Sku { get; set; }
 
-	public IEnumerable<ProdSpecificationConfigDto> SpecConfig { get; set; }
+	public IEnumerable<ProdSpecificationConfigDto>? SpecConfig { get; set; }
 }
 
 /// <summary>
@@ -243,12 +243,12 @@ public partial class ProdProductSkuDto
 	/// <summary>
 	/// 規格選項
 	/// </summary>
-	public List<ProdSpecificationOptionDto> SpecOption { get; set; }
+	public List<ProdSpecificationOptionDto>? SpecOption { get; set; }
 
 	/// <summary>
 	/// 規格選項值
 	/// </summary>
-	public List<ProdSkuSpecificationValueDto> SpecValue { get; set; }
+	public List<ProdSkuSpecificationValueDto>? SpecValue { get; set; }
 }
 
 /// <summary>
@@ -317,8 +317,6 @@ public partial class ProdProductTypeConfig
 	/// </summary>
 	public bool IsActive { get; set; }
 }
-
-
 
 /// <summary>
 /// 商品的規格設定的選項
