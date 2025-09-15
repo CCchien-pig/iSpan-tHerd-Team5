@@ -1,7 +1,7 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
 @section Styles{
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
 }
 @{
     ViewData["Title"] = "文章詳情";
@@ -67,7 +67,7 @@
                asp-route-pageSize="@Model.PageSize"
                asp-route-keyword="@Model.Keyword"
                asp-route-status="@Model.StatusFilter"
-               class="btn btn-outline-secondary">🔙 返回列表</a>
+               class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
 
             <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
         </div>
@@ -161,7 +161,6 @@
                 btn.classList.remove("show");
             }
         });
-
     </script>
 }
 

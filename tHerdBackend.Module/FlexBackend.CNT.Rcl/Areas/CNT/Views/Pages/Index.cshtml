@@ -1,10 +1,8 @@
 ﻿@* Index.cshtml → 文章列表 *@
 @model X.PagedList.IPagedList<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageListVM>
-@section Styles{
-
-    
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+@section Styles{       
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@       
 }
 
 <div class="card shadow-sm border-0">
@@ -21,7 +19,7 @@
                 <div class="d-flex align-items-center">
                     <a asp-action="Create"
                        class="btn btn-outline-secondary btn-lg  me-2">
-                        ➕ 發表文章
+                        ➕ 建立文章資訊
                     </a>
                     <a asp-action="RecycleBin"
                        class="btn btn-outline-secondary btn-lg text-danger fw-bold ">
@@ -175,6 +173,5 @@
                 btn.classList.remove("show");
             }
         });
-
     </script>
 }
