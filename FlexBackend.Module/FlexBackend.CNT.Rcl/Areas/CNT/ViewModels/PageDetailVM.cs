@@ -15,6 +15,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		// ⭐ 顯示標籤名稱（不是 Id）
 		public List<string> TagNames { get; set; } = new();
 
+		// 🔑 新增：用來保留分頁與篩選狀態
+		public int? Page { get; set; }
+		public int PageSize { get; set; } = 8;
+		public string? Keyword { get; set; }
+		public string? StatusFilter { get; set; }
+
 		// ⭐ 額外：讓 Razor 直接顯示中文狀態，不用再寫判斷
 		public string StatusText =>
 			Status switch
