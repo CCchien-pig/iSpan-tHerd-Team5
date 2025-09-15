@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace FlexBackend.USER.Rcl.Data
+namespace FlexBackend.Core.DTOs.USER
 {
 	public class ApplicationRole:IdentityRole
 	{

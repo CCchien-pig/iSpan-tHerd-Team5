@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     @* DataTables套件 *@
     <link href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" rel="stylesheet" />
-    <link href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" />
+    <link rel="stylesheet" href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" />
 
     @* 不准放自訂 *@
     <link rel="stylesheet" href="~/css/site.css">
@@ -187,9 +187,13 @@
                 <div class="modal-body">如果你已經準備好結束目前的工作階段，請點擊下方的「登出」。</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">取消</button>
-                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                    @* <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
                         <button type="submit" class="btn btn-primary">登出</button>
-                    </form>
+                    </form> *@
+                    <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/Identity/Account/AdminLogin"
+                    class="m-0">
+                    <button type="submit" class="btn btn-primary">登出</button>
+                </form>
                 </div>
             </div>
         </div>
