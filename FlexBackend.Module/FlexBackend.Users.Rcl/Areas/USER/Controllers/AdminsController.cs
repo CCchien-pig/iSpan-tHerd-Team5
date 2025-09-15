@@ -57,7 +57,11 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			kw = kw?.Trim();
 
 			// 有非 Member 角色的使用者
-			var nonMemberRoleIds = _roleMgr.Roles.Where(r => r.Name != "Member").Select(r => r.Id);
+			var nonMemberRoleIds = await _roleMgr.Roles
+				.Where(r => r.Name != "Member")
+				.Select(r => r.Id)
+				.ToListAsync();
+
 			var userIdsWithNonMember = _app.UserRoles
 				.Where(ur => nonMemberRoleIds.Contains(ur.RoleId))
 				.Select(ur => ur.UserId);
@@ -378,6 +382,29 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			var addRoleRes = await _userMgr.AddToRoleAsync(user, role.Name!);
 			if (!addRoleRes.Succeeded)
 				return BadRequest(new { ok = false, message = string.Join("; ", addRoleRes.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
+		}
+
+		// NEW: 修改密碼（管理員重設）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ChangePassword([FromForm] string userId, [FromForm] string newPassword)
+		{
+			// 前端已檢核，後端仍再檢一次
+			var strong = System.Text.RegularExpressions.Regex.IsMatch(
+				newPassword ?? "",
+				@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
+			);
+			if (!strong) return BadRequest(new { ok = false, message = "密碼需至少 8 碼，且含大小寫與數字。" });
+
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null) return NotFound(new { ok = false, message = "使用者不存在" });
+
+			var token = await _userMgr.GeneratePasswordResetTokenAsync(user);
+			var res = await _userMgr.ResetPasswordAsync(user, token, newPassword);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
 
 			return Json(new { ok = true });
 		}
