@@ -58,9 +58,9 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 
 			// 有非 Member 角色的使用者
 			var nonMemberRoleIds = await _roleMgr.Roles
-				.Where(r => r.Name != "Member")
-				.Select(r => r.Id)
-				.ToListAsync();
+	.Where(r => r.Name != "Member")
+	.Select(r => r.Id)
+	.ToListAsync();                         // ★ 新增
 
 			var userIdsWithNonMember = _app.UserRoles
 				.Where(ur => nonMemberRoleIds.Contains(ur.RoleId))
@@ -85,43 +85,59 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 
 			var recordsFiltered = await q.CountAsync();
 
-			// 排序（0:員編, 1:姓, 2:名, 3:Email, 4:電話, 5:角色[不排序], 6:啟用, 7:建立時間）
-			if (dt?.Order?.Count > 0)
+			// ---- 排序（以 DataTables columns[n][data] 名稱為準；若缺就預設 CreatedDate DESC）----
+			string? orderColIdxStr = Request.Query["order[0][column]"];
+			string? orderDir = Request.Query["order[0][dir]"];
+			bool desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
+
+			IOrderedQueryable<ApplicationUser> ordered; // 外層宣告
+
+			if (int.TryParse(orderColIdxStr, out var orderIdx))
 			{
-				var o = dt.Order[0];
-				var desc = o.Dir.Equals("desc", StringComparison.OrdinalIgnoreCase);
-				q = o.Column switch
+				// e.g. number / lastName / firstName / email / phoneNumber / isActive / createdDate / (空字串為操作欄)
+				var colDataKey = Request.Query[$"columns[{orderIdx}][data]"].ToString();
+
+				ordered = colDataKey switch
 				{
-					0 => desc ? q.OrderByDescending(u => u.UserNumberId).ThenByDescending(u => u.LastName)
-							  : q.OrderBy(u => u.UserNumberId).ThenBy(u => u.LastName),
-					1 => desc ? q.OrderByDescending(u => u.LastName).ThenByDescending(u => u.FirstName)
-							  : q.OrderBy(u => u.LastName).ThenBy(u => u.FirstName),
-					2 => desc ? q.OrderByDescending(u => u.FirstName) : q.OrderBy(u => u.FirstName),
-					3 => desc ? q.OrderByDescending(u => u.Email) : q.OrderBy(u => u.Email),
-					4 => desc ? q.OrderByDescending(u => u.PhoneNumber) : q.OrderBy(u => u.PhoneNumber),
-					6 => desc ? q.OrderByDescending(u => u.IsActive) : q.OrderBy(u => u.IsActive),
-					7 => desc ? q.OrderByDescending(u => u.CreatedDate) : q.OrderBy(u => u.CreatedDate),
-					_ => q.OrderByDescending(u => u.CreatedDate)
+					"number" => desc ? q.OrderByDescending(u => u.UserNumberId).ThenByDescending(u => u.LastName)
+										  : q.OrderBy(u => u.UserNumberId).ThenBy(u => u.LastName),
+					"lastName" => desc ? q.OrderByDescending(u => u.LastName).ThenByDescending(u => u.FirstName)
+										  : q.OrderBy(u => u.LastName).ThenBy(u => u.FirstName),
+					"firstName" => desc ? q.OrderByDescending(u => u.FirstName)
+										  : q.OrderBy(u => u.FirstName),
+					"email" => desc ? q.OrderByDescending(u => u.Email)
+										  : q.OrderBy(u => u.Email),
+					"phoneNumber" => desc ? q.OrderByDescending(u => u.PhoneNumber)
+										  : q.OrderBy(u => u.PhoneNumber),
+					"isActive" => desc ? q.OrderByDescending(u => u.IsActive)
+										  : q.OrderBy(u => u.IsActive),
+					"createdDate" => desc ? q.OrderByDescending(u => u.CreatedDate)
+										  : q.OrderBy(u => u.CreatedDate),
+					_ => desc ? q.OrderByDescending(u => u.CreatedDate)   // roleId / 操作欄 或未知欄位
+										  : q.OrderBy(u => u.CreatedDate),
 				};
 			}
 			else
 			{
-				q = q.OrderByDescending(u => u.CreatedDate);
+				// 沒給排序參數 → 預設
+				ordered = q.OrderByDescending(u => u.CreatedDate);
 			}
 
-			var page = await q
-				.Skip(start).Take(length)
-				.Select(u => new
-				{
-					u.Id,
-					u.UserNumberId,
-					u.LastName,
-					u.FirstName,
-					u.Email,
-					u.PhoneNumber,
-					u.IsActive,
-					u.CreatedDate
-				}).ToListAsync();
+			// ↓ 之後用 ordered 取頁
+			var page = await ordered
+	.Skip(start).Take(length)
+	.Select(u => new
+	{
+		u.Id,
+		u.UserNumberId,
+		u.LastName,
+		u.FirstName,
+		u.Email,
+		u.PhoneNumber,
+		u.IsActive,
+		u.CreatedDate
+	})
+	.ToListAsync();
 
 			var ids = page.Select(p => p.Id).ToList();
 
@@ -391,11 +407,8 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> ChangePassword([FromForm] string userId, [FromForm] string newPassword)
 		{
-			// 前端已檢核，後端仍再檢一次
 			var strong = System.Text.RegularExpressions.Regex.IsMatch(
-				newPassword ?? "",
-				@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
-			);
+				newPassword ?? "", @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$");
 			if (!strong) return BadRequest(new { ok = false, message = "密碼需至少 8 碼，且含大小寫與數字。" });
 
 			var user = await _userMgr.FindByIdAsync(userId);
