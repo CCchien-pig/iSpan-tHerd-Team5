@@ -1,0 +1,472 @@
+﻿@using FlexBackend.Core.DTOs.PROD
+@model FlexBackend.Core.DTOs.PROD.ProdProductDto
+
+@{
+    var isEdit = Model != null && Model.ProductId > 0;   // 這行用來判斷模式
+    ViewData["Title"] = isEdit ? "修改商品" : "新增商品";
+    var brands = ViewBag.BrandDtos as IEnumerable<LoadBrandOptionDto>
+             ?? Enumerable.Empty<LoadBrandOptionDto>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <style>
+        /* === 全站一致：紫色主題 === */
+        .card-header {
+            background-color: #652D77;
+            color: #fff;
+        }
+
+            .card-header .btn {
+                color: #fff;
+                border-color: rgba(255,255,255,.35);
+            }
+
+                .card-header .btn:hover {
+                    background: rgba(255,255,255,.1);
+                    color: #fff;
+                }
+
+        .text-purple2 {
+            color: #652D77 !important;
+        }
+
+        /* 表單聚焦同色系 */
+        .form-control:focus, .form-select:focus {
+            border-color: #652D77;
+            box-shadow: 0 0 0 .2rem rgba(101,45,119,.15);
+        }
+
+        label.form-label.fw-bold {
+            color: #4d4d4d;
+        }
+
+        /* 滑動開關：開啟綠、關閉灰，與清單一致 */
+        .form-check-input.publish-toggle:checked {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+
+        .form-check-input.publish-toggle:focus {
+            box-shadow: 0 0 0 .2rem rgba(40,167,69,.25);
+        }
+
+        /* 必填星號（可選） */
+        .required:after {
+            content: " *";
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        /* 卡片內距與欄距微調，與清單頁同樣緊湊 */
+        .card-body .mb-3 {
+            margin-bottom: .85rem !important;
+        }
+
+        .btn-sm {
+            padding: .25rem .5rem;
+            font-size: .85rem;
+        }
+
+        /* 平滑旋轉動畫 */
+        .chevron {
+            transition: transform .2s ease;
+        }
+
+        /* 當按鈕是關閉狀態（aria-expanded="false"）就把箭頭轉 180 度 = 朝下 */
+        [data-bs-toggle="collapse"][aria-expanded="false"] .chevron {
+            transform: rotate(180deg);
+        }
+
+        .cb {
+            max-width: 1200px !important;
+        }
+
+        .p-6 {
+            max-width: 1200px !important;
+            padding: 15px 1rem !important;
+        }
+        /* 自訂你想要的值 */
+        @@media (min-width: 1200px) {
+            .p-md-6 {
+                padding: 3rem !important;
+            }
+        }
+
+        /* 讓這顆 select2 一定吃滿寬 */
+        #BrandId + .select2-container {
+            width: 100% !important;
+        }
+
+        /* 下拉面板白底（保持清楚對比） */
+        .select2-container--default .select2-dropdown {
+            background: #fff;
+            border-color: #ced4da;
+        }
+
+        /* 清單項目：一般狀態字色 */
+        .select2-container--default .select2-results__option {
+            color: #212529;
+        }
+
+        /* 滑鼠/鍵盤「反白」中的項目（hover/arrow 移動到的項目） */
+        .select2-container--default
+        .select2-results__option--highlighted[aria-selected] {
+            background: #7a3e8f !important; /* 亮一點的紫 */
+            color: #fff !important;
+        }
+
+        /* 已經「被選取」的項目（Select2 會把它變灰，這裡改成紫底白字） */
+        .select2-container--default
+        .select2-results__option[aria-selected="true"] {
+            background: #652D77 !important; /* 主紫 */
+            color: #fff !important;
+            font-weight: 600;
+        }
+
+        /* 下拉中的搜尋框樣式（字色/邊框別太淡） */
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            color: #212529;
+            border-color: #ced4da;
+        }
+
+        /* 上方選擇框中的字色/placeholder（避免看起來太淺） */
+        #BrandId + .select2-container .select2-selection__rendered {
+            color: #212529;
+        }
+
+        #BrandId + .select2-container .select2-selection__placeholder {
+            color: #6c757d;
+        }
+
+    </style>
+}
+
+<div class="card shadow mb-4 cb mx-auto w-100">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold">
+            <i class="fas @(isEdit ? "fa-pen-to-square" : "fa-plus") me-2"></i>
+            @(isEdit ? "修改商品基本資料" : "新增商品基本資料")
+        </h6>
+
+        <!-- 頂部工具列：返回、儲存（與清單上的工具列視覺一致） -->
+        <div class="d-flex gap-2">
+            <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+               class="btn btn-sm btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> 返回清單
+            </a>
+        </div>
+    </div>
+    <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
+        <div class="card-body">
+
+            @Html.AntiForgeryToken()
+
+            @* 編輯模式下帶 Id *@
+            @if (isEdit)
+            {
+                <input type="hidden" asp-for="ProductId" />
+            }
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="valSummary"></div>
+
+            <div class="row">
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-success btn-sm me-2">
+                        <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+                    </button>
+                    <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                       class="btn btn-outline-secondary btn-sm">取消</a>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold required" asp-for="BrandId">品牌：@brands.Count()</label>
+                    <select asp-for="BrandId" id="BrandId" class="form-select">
+                        <option value="">請選擇品牌</option>
+                        @foreach (var b in brands)
+                        {
+                            <option value="@b.BrandId">@b.BrandName（@b.BrandId）</option>
+                        }
+                    </select>
+                    <span asp-validation-for="BrandId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">供應商</label>
+                    <input asp-for="SupplierName" class="form-control" disabled />
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label class="form-label fw-bold required">商品名稱</label>
+                    <input asp-for="ProductName" class="form-control" />
+                    <span asp-validation-for="ProductName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">商品簡碼</label>
+                    <input asp-for="ProductCode" class="form-control" />
+                    <span asp-validation-for="ProductCode" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">重量</label>
+                    <input asp-for="Weight" class="form-control" />
+                    <span asp-validation-for="Weight" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">體積</label>
+                    <input asp-for="VolumeCubicMeter" class="form-control" />
+                    <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold invisible">占位</label>
+                    <input asp-for="VolumeUnit" class="form-control" />
+                    <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label class="form-label fw-bold required">商品簡述</label>
+                    <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="ShortDesc" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label class="form-label fw-bold required">商品說明</label>
+                    <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="FullDesc" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4 mb-3 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                        <label class="form-check-label fw-bold ms-2">上架</label>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">建檔人員</label>
+                    <input asp-for="CreatorNm" class="form-control" disabled />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">建檔時間</label>
+                    <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">異動人員</label>
+                    <input asp-for="ReviserNm" class="form-control" disabled />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">異動時間</label>
+                    <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
+                </div>
+            </div>
+        </div>
+
+        <div id="cardContainer" class="p-6 p-md-6">
+            <!-- 產品基本資料：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9873B9">
+                    <h6 class="m-0 fw-bold">SKU 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseBasic"
+                            aria-expanded="false" aria-controls="collapseBasic">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseBasic" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放基本資料表單...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEO 設定：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                    <h6 class="m-0 fw-bold">SEO 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseSEO"
+                            aria-expanded="false" aria-controls="collapseSEO">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseSEO" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放 SEO 相關欄位...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖片 設定：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                    <h6 class="m-0 fw-bold">圖片 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseImg"
+                            aria-expanded="false" aria-controls="collapseImg">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseImg" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放 照片 相關欄位...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 屬性設定：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                    <h6 class="m-0 fw-bold">屬性 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseAttribute"
+                            aria-expanded="false" aria-controls="collapseAttribute">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseAttribute" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放其他進階欄位...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分類設定：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                    <h6 class="m-0 fw-bold">分類 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseType"
+                            aria-expanded="false" aria-controls="collapseType">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseType" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放其他進階欄位...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成分設定：初始收起 -->
+            <div class="card shadow mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                    <h6 class="m-0 fw-bold">成分 設定</h6>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseIngredient"
+                            aria-expanded="false" aria-controls="collapseIngredient">
+                        <i class="fas fa-chevron-up chevron"></i>
+                    </button>
+                </div>
+                <div id="collapseIngredient" class="collapse">
+                    <div class="card-body">
+                        <p>這裡放其他進階欄位...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 底部操作區：與清單的按鈕尺寸/距離一致 -->
+        <div class="d-flex justify-content-end m-3">
+            <button type="submit" class="btn btn-success btn-sm me-2">
+                <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+            </button>
+            <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+               class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        $(function(){
+          const $sel = $('#BrandId');
+
+          // 初始化
+          $sel.select2({
+            placeholder: '輸入品牌名稱或代碼…',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0     // 一展開就能看到清單，同時可打字
+            // 若放在 Bootstrap Modal 裡，請加：dropdownParent: $('#yourModalId')
+          })
+          // 聚焦自動展開 + 聚焦搜尋框（就能直接打）
+          .on('focus', function(){ $(this).select2('open'); })
+          .on('select2:open', function(){
+            const $search = $('.select2-container--open .select2-search__field');
+            if ($search.length) { $search[0].focus(); }
+          })
+          // 變更時觸發驗證（若有用 jQuery Validate）
+          .on('change', function(){ $(this).valid && $(this).valid(); });
+
+          // 偵錯：console 確認 Select2 是否掛上
+          console.debug('select2 ready?', typeof $.fn.select2 === 'function');
+        });
+
+                $(function () {
+          $('#BrandId').select2({
+            placeholder: '輸入品牌名稱或代碼…',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0 // 一點就能看清單，同時可打字搜尋
+            // 若在 modal 裡面，解除遮擋請加：dropdownParent: $('#yourModalId')
+          })
+          .on('change', function(){ $(this).valid && $(this).valid(); });
+        });
+
+        // 頂部工具列「儲存」直接提交表單（與清單工具列互動一致）
+        document.getElementById('btnHeaderSubmit')
+            ?.addEventListener('click', function () {
+                document.getElementById('productCreateForm').submit();
+            });
+
+        // 顯示 MVC 驗證摘要（若有錯）
+        (function () {
+            const summary = document.getElementById('valSummary');
+            if (summary && summary.innerText.trim().length > 0) {
+                summary.classList.remove('d-none');
+            }
+        })();
+
+        // 讓容器內的卡片可以拖曳排序
+        new Sortable(document.getElementById('cardContainer'), {
+            animation: 150,          // 拖曳動畫毫秒數
+            handle: '.card-header',  // 只能抓 header 拖動
+            ghostClass: 'dragging',  // 拖曳時的 CSS class
+            onEnd: function (evt) {
+                console.log(`從 ${evt.oldIndex} 拖到 ${evt.newIndex}`);
+                // 這裡你可以用 AJAX 把新排序傳回後端
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+          // 展開完成後自動捲到卡片
+          document.querySelectorAll('.collapse').forEach(function (target) {
+            target.addEventListener('shown.bs.collapse', function () {
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+          });
+
+          // 讓 aria-expanded 跟著狀態更新（Bootstrap 會自動處理）
+          // 若動態改 show/hidden，也可在這裡手動同步按鈕屬性：
+          document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(btn){
+            const sel = btn.getAttribute('data-bs-target');
+            const tgt = document.querySelector(sel);
+            if (!tgt) return;
+            // 初始強制同步一次（避免第一次點要按兩次）
+            btn.setAttribute('aria-expanded', tgt.classList.contains('show') ? 'true' : 'false');
+          });
+        });
+    </script>
+}

@@ -9,5 +9,7 @@ namespace FlexBackend.Core.Interfaces.PROD
         Task<int> CreateAsync(ProdProductDto dto);
         Task UpdateAsync(ProdProductDto dto);
         Task DeleteAsync(int productId);
+
+        Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync();
     }
 }

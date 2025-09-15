@@ -50,14 +50,14 @@ namespace FlexBackend.Services.PROD
             }
         }
 
-        public async Task<ProdProductDto?> GetByIdAsync(int productId)
+        public async Task<ProdProductDto?> GetByIdAsync(int Id)
         {
             try
             {
-                if (productId <= 0)
+                if (Id <= 0)
                     throw new ArgumentException("ProductId must be greater than zero.");
 
-                return await _repo.GetByIdAsync(productId);
+                return await _repo.GetByIdAsync(Id);
             }
             catch (Exception ex)
             {
@@ -112,6 +112,11 @@ namespace FlexBackend.Services.PROD
                 ErrorHandler.HandleErrorMsg(ex);
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync()
+        {
+            return await _repo.LoadBrandOptionsAsync();
         }
     }
 }

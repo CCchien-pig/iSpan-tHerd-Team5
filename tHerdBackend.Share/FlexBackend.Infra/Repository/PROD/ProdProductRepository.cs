@@ -4,7 +4,6 @@ using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Infra.DBSetting;
 using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
-using ISpan.eMiniHR.DataAccess.Helpers;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,7 +31,8 @@ namespace FlexBackend.Infra.Repository.PROD
                 JOIN SUP_Brand s ON s.BrandId=p.BrandId 
                 LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
                 LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
-                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId;";
+                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
+                ORDER BY ProductId DESC;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
@@ -96,15 +96,34 @@ namespace FlexBackend.Infra.Repository.PROD
             }
         }
 
+        // 新增
         public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
         {
             var entity = dto.Adapt<ProdProduct>(MapsterConfig.Default);
 
+            // 自動帶建立/異動者與時間（或放到 DbContext.SaveChangesAsync 統一處理）
+            var now = DateTime.Now;
+            var uid = 1003;
+
+            entity.Creator = uid;
+            entity.CreatedDate = now;
+            entity.Reviser = uid;
+            entity.RevisedDate = now;
+
+            _db.ProdProducts.Add(entity);
+
             // 部分更新（PATCH：忽略 null）
             dto.Adapt(entity, MapsterConfig.Patch);
-            await _db.SaveChangesAsync(ct);
+            //await _db.SaveChangesAsync(ct);
 
-            return entity.ProductId;            // 不用 await
+            var entry = _db.Entry(entity);
+            System.Diagnostics.Debug.WriteLine($"BEFORE save: State={entry.State}, TempKey={entry.Property(p => p.ProductId).IsTemporary}");
+            await _db.SaveChangesAsync(ct);
+            entry = _db.Entry(entity);
+            System.Diagnostics.Debug.WriteLine($"AFTER save:  State={entry.State}, TempKey={entry.Property(p => p.ProductId).IsTemporary}, Id={entity.ProductId}");
+
+
+            return entity.ProductId;
         }
 
         public async Task<PagedResult<ProdProductDto>> QueryAsync(ProductQuery query, CancellationToken ct = default)
@@ -190,6 +209,25 @@ namespace FlexBackend.Infra.Repository.PROD
             _db.ProdProducts.Remove(entity);
             await _db.SaveChangesAsync(ct);
             return true;
+        }
+
+        public async Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync(CancellationToken ct = default)
+        {
+            const string sql = @"SELECT b.BrandId, b.BrandName, b.BrandCode,
+                                b.SupplierId, s.SupplierName
+                                FROM SUP_Brand b
+                                JOIN SUP_Supplier s ON s.SupplierId = b.SupplierId";
+
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var cmd = new CommandDefinition(sql, tx, cancellationToken: ct);
+                return conn.Query<LoadBrandOptionDto>(cmd);
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
         }
     }
 }
