@@ -15,6 +15,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 	public class PagesController : Controller
 	{
 		private readonly tHerdDBContext _db;
+		private const int HomePageId = 1000; // 統一首頁 PageId	
 
 		public PagesController(tHerdDBContext db)
 		{
@@ -117,6 +118,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				),
 				Blocks = new List<CntPageBlock>() 
 			};
+			ViewBag.PageTypeList = new SelectList(_db.CntPageTypes, "PageTypeId", "TypeName");
 			return View(vm);
 		}
 
@@ -127,19 +129,28 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		{
 			if (!ModelState.IsValid)
 			{
+				// 🔄 驗證失敗要重建下拉清單，否則回傳 View 會爆空
 				model.StatusList = GetStatusSelectList(model.Status);
+
 				model.TagOptions = new MultiSelectList(
 					_db.CntTags.Where(t => t.IsActive == true).ToList(),
 					"TagId", "TagName", model.SelectedTagIds
 				);
+
 				model.Blocks ??= new List<CntPageBlock>();
+
+				// ⭐ PageTypeList 要補回去
+				ViewBag.PageTypeList = new SelectList(_db.CntPageTypes, "PageTypeId", "TypeName", model.PageTypeId);
+
 				return View(model);
 			}
 
+			// ✅ 建立 Page 實體
 			var pageEntity = new CntPage
 			{
 				Title = model.Title,
 				Status = ((int)model.Status).ToString(),
+				PageTypeId = model.PageTypeId, // ⭐ 使用者選的分類
 				CreatedDate = DateTime.Now,
 				RevisedDate = DateTime.Now
 			};
@@ -147,6 +158,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			_db.CntPages.Add(pageEntity);
 			_db.SaveChanges();
 
+			// ✅ 建立關聯的 Tags
 			if (model.SelectedTagIds?.Any() == true)
 			{
 				foreach (var tagId in model.SelectedTagIds)
@@ -162,10 +174,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			}
 
 			TempData["Msg"] = "文章已建立";
+
+			// ✅ 保留查詢條件（返回列表）
 			return RedirectToAction(nameof(Index), new
 			{
 				page = model.Page,
-				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,   // ⭐ 保險一層
+				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,
 				keyword = model.Keyword,
 				status = model.StatusFilter
 			});
@@ -212,6 +226,26 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		[ValidateAntiForgeryToken]
 		public IActionResult Edit(PageEditVM model, int? page, int pageSize = 8)
 		{
+			// ===============================
+			// 標籤驗證邏輯
+			// ===============================
+			if (model.PageId == HomePageId) // ✅ 首頁例外：允許沒有標籤
+			{
+				model.SelectedTagIds ??= new List<int>();
+				ModelState.Remove(nameof(model.SelectedTagIds)); // 移掉可能的驗證錯誤
+			}
+			else
+			{
+				// ✅ 其他文章：必須至少有 1 個標籤
+				if (model.SelectedTagIds == null || !model.SelectedTagIds.Any())
+				{
+					ModelState.AddModelError(nameof(model.SelectedTagIds), "請至少選一個標籤");
+				}
+			}
+
+			// ===============================
+			// 驗證失敗 → 回傳原本畫面
+			// ===============================
 			if (!ModelState.IsValid)
 			{
 				model.StatusList = GetStatusSelectList(model.Status);
@@ -222,9 +256,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				model.Blocks = _db.CntPageBlocks
 					.Where(b => b.PageId == model.PageId)
 					.OrderBy(b => b.OrderSeq).ToList();
+
 				return View(model);
 			}
 
+			// ===============================
+			// 更新資料庫
+			// ===============================
 			var pageEntity = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
 			if (pageEntity == null) return NotFound();
 
@@ -232,10 +270,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			pageEntity.Status = ((int)model.Status).ToString();
 			pageEntity.RevisedDate = DateTime.Now;
 
+			// 清掉舊的標籤
 			var oldTags = _db.CntPageTags.Where(pt => pt.PageId == pageEntity.PageId);
 			_db.CntPageTags.RemoveRange(oldTags);
 
-			if (model.SelectedTagIds != null)
+			// 重新寫入標籤（如果有選）
+			if (model.SelectedTagIds != null && model.SelectedTagIds.Any())
 			{
 				foreach (var tagId in model.SelectedTagIds)
 				{
@@ -260,14 +300,15 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			});
 		}
 
-
-
 		// ================================
 		// 詳細頁面 (Details)
 		// ================================
 		public IActionResult Details(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 		{
-			var pageEntity = _db.CntPages.Find(id);
+			var pageEntity = _db.CntPages
+				.Include(p => p.CntPageBlocks)               // 撈文章區塊
+				.FirstOrDefault(p => p.PageId == id);
+
 			if (pageEntity == null) return NotFound();
 
 			var tagNames = (from pt in _db.CntPageTags
@@ -284,7 +325,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				RevisedDate = pageEntity.RevisedDate,
 				TagNames = tagNames,
 
-				// ⭐ 把路由參數傳回 VM
+				// ⭐ 新增：文章內容區塊
+				Blocks = pageEntity.CntPageBlocks
+						  .OrderBy(b => b.OrderSeq)
+						  .ToList(),
+
+				// ⭐ 保留查詢參數
 				Page = page,
 				PageSize = pageSize,
 				Keyword = keyword,

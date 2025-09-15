@@ -1,4 +1,5 @@
 ﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using FlexBackend.Infra.Models;
 using System;
 using System.Collections.Generic;
 
@@ -14,6 +15,9 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 
 		// ⭐ 顯示標籤名稱（不是 Id）
 		public List<string> TagNames { get; set; } = new();
+
+		// ⭐ 加上 Blocks
+		public List<CntPageBlock> Blocks { get; set; } = new();
 
 		// 🔑 新增：用來保留分頁與篩選狀態
 		public int? Page { get; set; }

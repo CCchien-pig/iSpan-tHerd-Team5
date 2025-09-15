@@ -3,6 +3,12 @@
     ViewData["Title"] = "標籤詳情";
 }
 
+@section Styles {
+
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+}
+
 <div class="card shadow-sm border-0">
     <div class="card-header bg-info text-white fw-bold">
         🔎 標籤詳情
@@ -55,7 +61,31 @@
                 沒有文章綁定此標籤
             </div>
         }
-
         <a asp-action="Index" class="btn btn-outline-secondary mt-3 btn-lg">↩ 返回列表</a>
     </div>
+    <!-- ⬆️ 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop"
+            class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
 </div>
+
+@section Scripts {
+    <script>
+              function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+
+    </script>
+}
+

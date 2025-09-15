@@ -165,10 +165,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			return View(vm);
 		}
 
-
-
-
-
 		// POST: /CNT/PageBlocks/Edit/1001
 		[HttpPost]
 		[ValidateAntiForgeryToken]
@@ -222,8 +218,23 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			return RedirectToAction("Edit", "Pages", new { area = "CNT", id = block.PageId });
 		}
+		// GET: /CNT/PageBlocks/Detail/1001
+		public IActionResult Details(int id)
+		{
+			var page = _db.CntPages
+						.Include(p => p.CntPageBlocks)
+						.FirstOrDefault(p => p.PageId == id);
 
+			if (page == null) return NotFound();
 
+			// ⚡ 在後端排序，避免 View 去跑 LINQ
+			page.CntPageBlocks = page.CntPageBlocks
+				.OrderBy(b => b.OrderSeq)
+				.ToList();
+
+			return View(page);
+
+		}
 
 		// GET: /CNT/PageBlocks/Delete/1001
 		public IActionResult Delete(int id)

@@ -1,0 +1,30 @@
+﻿.fab-btn {
+    position: fixed;
+    bottom: 36px;
+    right: 36px;
+    width: 108px; /* 基本大小 */
+    height: 108px;
+    font-size: 36px; /* icon 放大 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+    border: none;
+    z-index: 1000; /* 確保浮在最上層 */
+}
+
+.fab-icon {
+    color: #f8f9fa; /* 預設淡白 */
+    transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.fab-btn:hover .fab-icon {
+    color: #ffffff; /* icon 變純白 */
+    transform: rotate(180deg);
+}
+/* Hover 時放大 */
+.fab-btn:hover {
+    background-color: mediumspringgreen;
+    transform: scale(1.4); /* 放大到 140% */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
