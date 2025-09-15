@@ -35,7 +35,8 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             ViewBag.BrandDtos = brands.Select(b => new LoadBrandOptionDto
             {
                 BrandId = b.BrandId,
-                BrandName = b.BrandName
+                BrandName = b.BrandName,
+                SupplierName = b.SupplierName,
             }).ToList();
         }
 
@@ -57,8 +58,9 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
                      nameof(dto.ReviserNm),
                      nameof(dto.SupplierName),
                      nameof(dto.ProductTypeDesc),
-                     nameof(dto.BrandName)
-                 })
+                     nameof(dto.BrandName),
+					 nameof(dto.Seo)
+				 })
                 ModelState.Remove(k);
 
             if (!ModelState.IsValid)
@@ -77,8 +79,12 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 
                 return View("Upsert", dto);   // ← 用視圖名稱，不要用絕對路徑
             }
-            if (dto.ProductId > 0) { /* Update */ } else { await _repo.CreateAsync(dto); }
-            return RedirectToAction("Index");
+            if (dto.ProductId > 0) { await _repo.UpdateAsync(dto); } else { await _repo.CreateAsync(dto); }
+
+			// 成功訊息
+			TempData["SuccessMessage"] = "商品已成功儲存！";
+
+			return RedirectToAction("Index");
         }
     }
 }
