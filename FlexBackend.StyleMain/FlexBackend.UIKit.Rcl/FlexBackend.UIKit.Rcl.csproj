@@ -22,7 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Core\FlexBackend.Core.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Infra\FlexBackend.Infra.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
   </ItemGroup>
