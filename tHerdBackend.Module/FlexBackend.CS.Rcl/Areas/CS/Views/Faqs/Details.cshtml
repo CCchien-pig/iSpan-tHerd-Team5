@@ -1,6 +1,10 @@
 ﻿@model FlexBackend.Infra.Models.CsFaq
 @{
     ViewData["Title"] = "FAQ 詳細";
+    // 這兩個就是你下面要用的變數
+    var back = ViewBag.ReturnUrl as string; // 從 Controller 帶進來的 returnUrl
+    var fallback = Url.Action("Index", "Faqs", new { area = "CS" }); // 沒有 back 時的預設
+    var goBackUrl = (!string.IsNullOrWhiteSpace(back) && Url.IsLocalUrl(back)) ? back : fallback;
 }
 @section Styles {
     <style>
@@ -30,8 +34,17 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
     <h1 class="h4 mb-0">@ViewData["Title"]</h1>
     <div class="btn-group">
-        <a asp-action="Index" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> 返回列表</a>
-        <a asp-action="Edit" asp-route-id="@Model.FaqId" class="btn btn-primary"><i class="fa-solid fa-pen"></i> 編輯</a>
+        <!-- 返回：用 goBackUrl -->
+        <a class="btn btn-outline-secondary" href="@goBackUrl">
+            <i class="fa-solid fa-arrow-left"></i> 返回列表
+        </a>
+        <!-- 編輯：把 goBackUrl 帶進去 -->
+        <a class="btn btn-primary"
+           asp-action="Edit"
+           asp-route-id="@Model.FaqId"
+           asp-route-returnUrl="@goBackUrl">
+            <i class="fa-solid fa-pen"></i> 編輯
+        </a>
     </div>
 </div>
 

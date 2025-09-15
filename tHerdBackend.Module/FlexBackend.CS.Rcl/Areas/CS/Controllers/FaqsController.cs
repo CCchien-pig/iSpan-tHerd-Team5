@@ -44,7 +44,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         // ========== Views (CRUD) ==========
 
         // GET: CS/Faqs/Details/1001
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, string? returnUrl)
         {
             if (id == null) return NotFound();
 
@@ -54,6 +54,9 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
                 .FirstOrDefaultAsync(m => m.FaqId == id);
 
             if (faq == null) return NotFound();
+               // 帶回跳網址（避免 open redirect）
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                ViewBag.ReturnUrl = returnUrl;
 
             return View(faq);
         }
@@ -90,7 +93,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         }
 
         // GET: CS/Faqs/Edit/1001
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int? id, string? returnUrl)
         {
             if (id == null) return NotFound();
 
@@ -98,6 +101,8 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             if (csFaq == null) return NotFound();
 
             ViewData["CategoryId"] = new SelectList(_context.CsFaqCategories.AsNoTracking(), "CategoryId", "CategoryName", csFaq.CategoryId);
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            ViewBag.ReturnUrl = returnUrl;
             return View(csFaq);
         }
 
@@ -108,7 +113,8 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             int id,
             [Bind("FaqId,Title,AnswerHtml,Status,CategoryId,OrderSeq,LastPublishedTime,IsActive,CreatedDate")]
             CsFaq input,
-            bool publishNow = false
+           bool publishNow = false,
+           string? returnUrl = null
         )
         {
             if (id != input.FaqId) return NotFound();
@@ -116,6 +122,8 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             if (!ModelState.IsValid)
             {
                 ViewData["CategoryId"] = new SelectList(_context.CsFaqCategories.AsNoTracking(), "CategoryId", "CategoryName", input.CategoryId);
+                // ⬇️ 這行很重要：讓 View 知道回去哪裡
+                ViewBag.ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
                 return View(input);
             }
 
@@ -158,8 +166,10 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
                 if (!CsFaqExists(input.FaqId)) return NotFound();
                 throw;
             }
+             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                     return Redirect(returnUrl);
+             return RedirectToAction(nameof(Index));
 
-            return RedirectToAction(nameof(Index));
         }
 
         // GET: CS/Faqs/Delete/1001（保留）
