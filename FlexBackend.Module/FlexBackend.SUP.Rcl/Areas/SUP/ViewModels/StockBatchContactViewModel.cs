@@ -32,8 +32,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		public DateTime? RevisedDate { get; set; }
 
 
-		// 異動數量，Create/Edit 使用
-		[Display(Name = "異動數量")]
+		
+		[Display(Name = "該批次剩餘數量")]
 		public int? Qty { get; set; }  // 改成可空，由 ChangeQty 控制
 
 		[Display(Name = "異動類型")]
