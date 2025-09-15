@@ -16,8 +16,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns
         public string RequestTypeName { get; set; } = "";
         public string RefundScopeName { get; set; } = "";
         public string StatusName { get; set; } = "";
+		public string ProductName { get; set; } = "";
+		public string SkuSpec { get; set; } = "";
+		public int OriginalQty { get; set; }
 
-        public DateTime CreatedDate { get; set; }
+		public DateTime CreatedDate { get; set; }
         public string? ReasonText { get; set; }
     }
 
@@ -35,7 +38,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns
         public string? Group { get; set; }     // null / pending / approved / rejected
         public string? Keyword { get; set; }
 
-        public int Page { get; set; } = 1;
+		public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
         public int Total { get; set; }
         public int Pages => Math.Max(1, (int)Math.Ceiling(Total / (double)PageSize));
