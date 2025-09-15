@@ -1,57 +1,171 @@
 ﻿@model FlexBackend.Infra.Models.CsFaq
-
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "新增 FAQ";
 }
 
-<h1>Create</h1>
+@section Styles {
+    <!-- Summernote Lite -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
+    <style>
+        .page-actions.sticky-top {
+            z-index: 1020;
+        }
 
-<h4>CsFaq</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Title" class="control-label"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="AnswerHtml" class="control-label"></label>
-                <input asp-for="AnswerHtml" class="form-control" />
-                <span asp-validation-for="AnswerHtml" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CategoryId" class="control-label"></label>
-                <select asp-for="CategoryId" class ="form-control" asp-items="ViewBag.CategoryId"></select>
-            </div>
-            <div class="form-group">
-                <label asp-for="OrderSeq" class="control-label"></label>
-                <input asp-for="OrderSeq" class="form-control" />
-                <span asp-validation-for="OrderSeq" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="LastPublishedTime" class="control-label"></label>
-                <input asp-for="LastPublishedTime" class="form-control" />
-                <span asp-validation-for="LastPublishedTime" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="RevisedDate" class="control-label"></label>
-                <input asp-for="RevisedDate" class="form-control" />
-                <span asp-validation-for="RevisedDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+        .card {
+            border-radius: 1rem;
+        }
+
+        .card-header {
+            background: #fff;
+            font-weight: 600;
+        }
+
+        .form-text {
+            color: #6c757d;
+        }
+
+        .btn-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        :root {
+            --cat-bg: #f3e8ff;
+            --cat-bd: #e9d5ff;
+            --cat-fg: #6d28d9;
+        }
+
+        .badge-category {
+            display: inline-block;
+            padding: .28rem .5rem;
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--cat-fg);
+            background: var(--cat-bg);
+            border: 1px solid var(--cat-bd);
+            border-radius: .3rem;
+            line-height: 1.1;
+        }
+    </style>
+}
+
+<div class="page-actions sticky-top bg-white pt-3 pb-2 mb-3 border-bottom">
+    <div class="d-flex align-items-center justify-content-between">
+        <h1 class="h4 mb-0">@ViewData["Title"]</h1>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left"></i> 返回列表
+            </a>
+            <button type="submit" form="faqForm" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> 儲存
+            </button>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+<form id="faqForm" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        <!-- 左：主要內容 -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">標題</label>
+                        <input asp-for="Title" class="form-control" maxlength="300" />
+                        <div class="form-text"><span id="titleCount">0</span>/300</div>
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">答案內容</label>
+                        <textarea asp-for="AnswerHtml" id="answerEditor" class="form-control"></textarea>
+                        <span asp-validation-for="AnswerHtml" class="text-danger"></span>
+                    </div>
+                    <div class="small text-muted">可使用粗體、連結、清單等格式；儲存時以 HTML 存入。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右：設定/中繼資訊 -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header">顯示與分類</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">分類</label>
+                        <select asp-for="CategoryId" asp-items="@(ViewBag.CategoryId as SelectList)" class="form-select"></select>
+                        <span asp-validation-for="CategoryId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">排序</label>
+                        <input asp-for="OrderSeq" type="number" min="0" class="form-control" />
+                        <span asp-validation-for="OrderSeq" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" asp-for="IsActive" />
+                            <label class="form-check-label" for="IsActive">啟用</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">最近發布時間</label>
+                        <div class="input-group">
+                            <input asp-for="LastPublishedTime" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                            <button class="btn btn-outline-secondary" type="button" id="btnNow">現在</button>
+                        </div>
+                        <div class="form-text">留空代表未發布；或按「現在」。</div>
+                        <span asp-validation-for="LastPublishedTime" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <script>
+        // 標題字數
+        const $title = document.querySelector('[name="Title"]');
+        const $titleCount = document.getElementById('titleCount');
+        function syncCount(){ $titleCount.textContent = ($title.value || '').length; }
+        $title.addEventListener('input', syncCount); syncCount();
+
+        // Summernote
+        $('#answerEditor').summernote({
+            placeholder: '輸入 FAQ 的解答內容…',
+            height: 280,
+            toolbar: [
+                ['style', ['bold','italic','underline','clear']],
+                ['para', ['ul','ol','paragraph']],
+                ['insert', ['link']],
+                ['view', ['codeview']]
+            ]
+        });
+
+        // 「現在」快捷
+        document.getElementById('btnNow')?.addEventListener('click', function(){
+            const now = new Date();
+            const pad = n => String(n).padStart(2,'0');
+            const v = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            document.querySelector('[name="LastPublishedTime"]').value = v;
+        });
+
+        // 提交前把編輯器內容寫回 textarea
+        document.getElementById('faqForm').addEventListener('submit', function(){
+            const html = $('#answerEditor').summernote('code');
+            document.getElementById('answerEditor').value = html;
+        });
+    </script>
 }

@@ -1,0 +1,29 @@
+﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using System;
+using System.Collections.Generic;
+
+namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
+{
+	public class PageDetailVM
+	{
+		public int PageId { get; set; }
+		public string Title { get; set; }
+		public PageStatus Status { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime? RevisedDate { get; set; }
+
+		// ⭐ 顯示標籤名稱（不是 Id）
+		public List<string> TagNames { get; set; } = new();
+
+		// ⭐ 額外：讓 Razor 直接顯示中文狀態，不用再寫判斷
+		public string StatusText =>
+			Status switch
+			{
+				PageStatus.Draft => "草稿",
+				PageStatus.Published => "已發佈",
+				PageStatus.Archived => "封存",
+				PageStatus.Deleted => "刪除",
+				_ => "未知"
+			};
+	}
+}
