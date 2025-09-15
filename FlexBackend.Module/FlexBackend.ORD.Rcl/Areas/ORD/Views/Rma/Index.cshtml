@@ -71,7 +71,6 @@
             <table class="table table-bordered align-middle">
                 <thead>
                     <tr>
-                        <td>-</td>
                         <th>#</th>
                         <th>RMA</th>
                         <th>訂單號</th>
@@ -87,7 +86,6 @@
                     {
                         var canApprove = it.Status == "pending" || it.Status == "review";
                         <tr data-id="@it.ReturnRequestId" data-orderid="@it.OrderId">
-                            <td class="text-muted">-</td>
                             <td><a href="javascript:;" class="rma-detail">#@it.ReturnRequestId</a></td>
                             <td>@(string.IsNullOrEmpty(it.RmaId) ? "-" : it.RmaId)</td>
                             <td>@it.OrderNo</td>
@@ -191,6 +189,20 @@
             refundUnitAmount: get(it,'refundUnitAmount','RefundUnitAmount')
           });
 
+          function normRIItem(y) {
+          return {
+            ProductName: y.ProductName,
+            SkuSpec: y.SkuSpec,
+            OriginalQty: y.OriginalQty,
+            Qty: y.Qty,
+            ApprovedQty: y.ApprovedQty,
+            RefundQty: y.RefundQty,
+            ReshipQty: y.ReshipQty,
+            RefundUnitAmount: y.RefundUnitAmount
+          };
+        }
+
+
           // 渲染明細＋右上角動作
           function renderDetail($body, order, items, rma, rItems){
             const idx={}; (items||[]).map(normItem).forEach(x=>idx[x.orderItemId]=x);
@@ -230,21 +242,20 @@
               <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                   <thead class="table-light">
-                    <tr><th>#</th><th>商品</th><th>規格</th><th>原始數量</th><th>申請</th><th>核可</th><th>退款</th><th>補寄</th><th>退款單價</th></tr>
+                    <tr><th>商品</th><th>規格</th><th>原始數量</th><th>申請</th><th>核可</th><th>退款</th><th>補寄</th><th>退款單價</th></tr>
                   </thead>
                   <tbody>
-                    ${(rItems||[]).map(y=>{const x=normRItem(y);const m=idx[x.orderItemId]||{};
-                      return `<tr>
-                        <td>${x.rmaItemId??'-'}</td>
-                        <td>${fmt(m.productName)}</td>
-                        <td>${fmt(m.skuSpec)}</td>
-                        <td>${m.qty??'-'}</td>
-                        <td>${x.qty??'-'}</td>
-                        <td>${x.approvedQty??'-'}</td>
-                        <td>${x.refundQty??'-'}</td>
-                        <td>${x.reshipQty??'-'}</td>
-                        <td>${x.refundUnitAmount==null?'-':Number(x.refundUnitAmount).toLocaleString('zh-TW',{maximumFractionDigits:2})}</td>
-                      </tr>`;}).join('')}
+                     ${(rItems||[]).map(y=>{
+                          const x = normRIItem(y);
+                          const m = idx[x.orderItemId]||{};
+                          return `<tr>
+                              <td>${x.productName}</td>
+                              <td>${x.skuSpec}</td>
+                              <td>${x.originalQty}</td>
+                              <td>${x.qty ?? '-'}</td>
+                              <td>${x.approvedQty ?? '-'}</td>
+                           </tr>`;
+                        }).join('')}
                   </tbody>
                 </table>
               </div>`;

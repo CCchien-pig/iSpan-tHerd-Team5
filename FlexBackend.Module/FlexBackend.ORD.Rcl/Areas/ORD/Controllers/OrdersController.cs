@@ -90,7 +90,10 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 				OrderId = o.OrderId,
 				OrderNo = o.OrderNo,
 				UserNumberId = o.UserNumberId,
-				UserName = $"{o.UserNumberId}",
+				UserName = _db.AspNetUsers
+					.Where(m => m.UserNumberId == o.UserNumberId)
+					.Select(m => m.LastName + m.FirstName)   // ← 組合成 FullName
+					.FirstOrDefault(),
 				PaymentStatus = o.PaymentStatus,
 				PaymentStatusName = GetSysCodeDesc(o.PaymentStatus, sysPaymentStatus),
 				OrderStatusId = o.OrderStatusId,
