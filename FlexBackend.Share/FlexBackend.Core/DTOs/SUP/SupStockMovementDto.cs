@@ -1,5 +1,9 @@
 ﻿namespace FlexBackend.Core.DTOs.SUP
 {
+	/// <summary>
+	/// 用於每筆異動紀錄
+	/// 包含 SKU、批次、異動類型、數量、前後庫存、操作人、顯示資訊等
+	/// </summary>
 	public class SupStockMovementDto
 	{
 		public int SkuId { get; set; }					// 影響哪個 SKU

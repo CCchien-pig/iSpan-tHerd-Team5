@@ -8,7 +8,7 @@
 }
 
 <div class="stockbatch-card">
-    <button id="createStockBatchBtn" class="btn btn-outline-success">新增庫存</button>
+    <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
     <div class="legend">
         <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
         <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
@@ -50,6 +50,28 @@
         </div>
     </div>
 </div>
+
+<!-- 批次異動明細表格 -->
+<div id="batchMovementModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <table id="batchMovementTable" border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th>批號</th>
+                        <th>變動類型</th>
+                        <th>增加/減少</th>
+                        <th>異動前庫存</th>
+                        <th>異動後庫存</th>
+                        <th>預計庫存</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
     <script>
@@ -327,13 +349,11 @@
                 updatePredictedStock();
             });
 
-
             $(document).ready(function() {
                 // 異動日期預設今天
                 var today = new Date().toISOString().split('T')[0]; // yyyy-MM-dd
                 $('#ManufactureDate').val(today);
             });
-
         }
 
         $(document).ready(function () {
@@ -505,6 +525,7 @@
                 window.location.href = `/SUP/StockBatches/History?brandCode=${brandCode}`;
             });
 
+            // ===== submit =====
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
             .on('submit', '#stockBatchForm', function (e) {
@@ -546,6 +567,14 @@
 
                             // 更新 DataTable（保持當前頁）
                             stockBatchTable.ajax.reload(null, false);
+
+                            // 顯示批次異動明細
+                            console.log("BatchMovements:", res.BatchMovements);
+
+                            if(res.BatchMovements && res.BatchMovements.length > 0){
+                                showBatchMovements(res.BatchMovements);
+                            }
+
                         } else {
                             Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
                         }
@@ -556,5 +585,28 @@
                 });
             });
         });
+
+        // 異動後浮現批次明細表格
+        function showBatchMovements(batchMovements) {
+            const tbody = $('#batchMovementTable tbody');
+            tbody.empty();
+
+            batchMovements.forEach(m => {
+                const changeSign = m.IsAdd ? '+' : '-';
+                const row = `<tr>
+                    <td>${m.BatchNumber || '-'}</td>
+                    <td>${m.MovementType}</td>
+                    <td>${changeSign}${Math.abs(m.ChangeQty)}</td>
+                    <td>${m.CurrentQty}</td>
+                    <td>${m.AfterQty}</td>
+                    <td>${m.PredictedQty}</td>
+                </tr>`;
+                tbody.append(row);
+            });
+
+            // 顯示 modal
+            $('#batchMovementModal').modal('show');
+        }
+
     </script>
 }
