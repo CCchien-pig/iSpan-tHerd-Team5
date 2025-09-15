@@ -36,16 +36,14 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			var start = Math.Max(0, dt?.Start ?? 0);
 			var length = (dt?.Length ?? 10) > 0 ? dt!.Length : 10;
 
-			// 兼容：ModelBinding 取不到時，直接從 Query 拿 search[value]
+			// ---- 搜尋 fallback ----
 			var kw = dt?.Search?.Value;
 			if (string.IsNullOrWhiteSpace(kw))
 				kw = Request.Query["search[value]"].ToString();
 			kw = kw?.Trim();
 
-			// 來源：Identity 的 Roles；排除 Member
-			var q = _app.Roles.AsNoTracking()
-							  .Where(r => r.Name != "Member");
-
+			// 來源：Identity Roles（排除 Member）
+			var q = _app.Roles.AsNoTracking().Where(r => r.Name != "Member");
 			var recordsTotal = await q.CountAsync();
 
 			if (!string.IsNullOrEmpty(kw))
@@ -53,28 +51,37 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 
 			var recordsFiltered = await q.CountAsync();
 
-			// 依 DataTables 排序（0:名稱、1:描述、2:建立時間），預設建立時間 DESC
-			if (dt?.Order?.Count > 0)
+			// ---- 排序 fallback（優先用 columns[x][data] 名稱）----
+			// DataTables 會送：order[0][column]=<idx>、order[0][dir]=asc/desc、columns[idx][data]=<欄位名>
+			string? orderColIdxStr = Request.Query["order[0][column]"];
+			string? orderDir = Request.Query["order[0][dir]"];
+			bool desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
+
+			IOrderedQueryable<ApplicationRole> ordered;
+			if (int.TryParse(orderColIdxStr, out var orderIdx))
 			{
-				var col = dt.Order[0].Column;
-				var desc = string.Equals(dt.Order[0].Dir, "desc", StringComparison.OrdinalIgnoreCase);
-				q = col switch
+				var colDataKey = Request.Query[$"columns[{orderIdx}][data]"].ToString(); // e.g. "name" / "description" / "createdDate"
+				ordered = colDataKey switch
 				{
-					0 => (desc ? q.OrderByDescending(r => r.Name) : q.OrderBy(r => r.Name)),
-					1 => (desc ? q.OrderByDescending(r => r.Description) : q.OrderBy(r => r.Description)),
-					2 => (desc ? q.OrderByDescending(r => r.CreatedDate) : q.OrderBy(r => r.CreatedDate)),
+					"name" => (desc ? q.OrderByDescending(r => r.Name) : q.OrderBy(r => r.Name)),
+					"description" => (desc ? q.OrderByDescending(r => r.Description) : q.OrderBy(r => r.Description)),
+					"createdDate" => (desc ? q.OrderByDescending(r => r.CreatedDate) : q.OrderBy(r => r.CreatedDate)),
 					_ => q.OrderByDescending(r => r.CreatedDate)
 				};
 			}
 			else
 			{
-				q = q.OrderByDescending(r => r.CreatedDate);
+				// 如果沒有帶排序參數，就用預設：建立時間 DESC
+				ordered = q.OrderByDescending(r => r.CreatedDate);
 			}
 
-			var page = await q.Skip(start).Take(length)
-							  .Select(r => new { r.Id, r.Name, r.Description, r.CreatedDate })
-							  .ToListAsync();
+			// 先把頁面資料拉出來（只用 _app）
+			var page = await ordered
+				.Skip(start).Take(length)
+				.Select(r => new { r.Id, r.Name, r.Description, r.CreatedDate })
+				.ToListAsync();
 
+			// 再用 _db 算該頁面角色的 moduleCount（獨立查詢，不混 DbContext）
 			var roleIds = page.Select(p => p.Id).ToList();
 			var moduleCounts = await _db.UserRoleModules
 				.Where(x => roleIds.Contains(x.AdminRoleId))
@@ -82,7 +89,6 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 				.Select(g => new { RoleId = g.Key, Count = g.Count() })
 				.ToDictionaryAsync(x => x.RoleId, x => x.Count);
 
-			// 小駝峰屬性名，前端 columns: name/description/createdDate/moduleCount 才對得上
 			var data = page.Select(r => new
 			{
 				id = r.Id,
@@ -94,7 +100,6 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 
 			return Json(new { draw, recordsTotal, recordsFiltered, data });
 		}
-
 		// ★ 新增角色
 		[HttpPost]
 		[ValidateAntiForgeryToken]
