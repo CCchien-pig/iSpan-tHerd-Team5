@@ -64,7 +64,7 @@
             <div>當前庫存: <span id="CurrentQty">0</span> &nbsp;|&nbsp; 預計庫存: <span id="PredictedQty">0</span></div>
             <div>最大庫存量: <span id="MaxStockQty">@Model.MaxStockQty</span></div>
             <div>再訂購點: <span id="ReorderPoint">@Model.ReorderPoint</span> &nbsp;|&nbsp; 安全庫存量: <span id="SafetyStockQty">@Model.SafetyStockQty</span></div>
-            <div>是否可缺貨預購: <span id="IsAllowBackorderText"></span></div>
+            @* <div>是否可缺貨預購: <span id="IsAllowBackorderText"></span></div> *@
         </div>
 
         <!-- 異動類型 -->
@@ -91,8 +91,8 @@
 
         <!-- 異動數量 -->
         <div class="form-floating mb-2">
-            <input asp-for="ChangeQty" type="number" class="form-control" min="1"
-                   max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
+            <input asp-for="ChangeQty" type="number" class="form-control" min="1" max="@Model.MaxStockQty"
+                   step="1" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
             <label>異動庫存量</label>
             <small id="ChangeQtyHelp" class="text-muted"></small>
         </div>
