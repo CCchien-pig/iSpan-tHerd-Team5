@@ -1,12 +1,19 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
 @{
+    const int HomePageId = 1000;  // 設定首頁 ID
+    bool isHome = Model.PageId == HomePageId;
+}
+@{
     ViewData["Title"] = "編輯文章";
 }
+
 
 @section Styles {
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">@* 浮動按鈕樣式*@
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+
 
     <style>
         .fab-btn {
@@ -23,10 +30,12 @@
             border: none;
             z-index: 1000; /* 確保浮在最上層 */
         }
+
         .fab-icon {
             color: #f8f9fa; /* 預設淡白 */
             transition: color 0.25s ease, transform 0.25s ease;
         }
+
         .fab-btn:hover .fab-icon {
             color: #ffffff; /* icon 變純白 */
             transform: rotate(180deg);
@@ -37,8 +46,7 @@
             transform: scale(1.4); /* 放大到 140% */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
         }
-    </style>
-    
+    </style>    
 }
 
 <div class="card shadow-sm border-0">
@@ -67,12 +75,31 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">標籤</label>
-                <select asp-for="SelectedTagIds"
-                        asp-items="Model.TagOptions"
-                        multiple="multiple"
-                        class="tag-selector w-100">
-                </select>
-                <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+
+                @if (isHome)
+                {
+                    <!-- 首頁：允許空，關閉驗證 -->
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            data-val="false">
+                        <!-- 🚫 關閉 unobtrusive 驗證 -->
+                    </select>
+                    <small class="text-muted">首頁不需要標籤。</small>
+                    <!-- ❌ 不要渲染 asp-validation-for -->
+                }
+                else
+                {
+                    <!-- 其他文章：必填 -->
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            required>
+                    </select>
+                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                }
             </div>
 
             <div class="mb-3">
@@ -91,6 +118,13 @@
                 <button type="submit" class="btn btn-outline-warning text-dark btn-lg">💾 儲存修改</button>
             </div>
         </form>
+        <!-- ⬆️ 回頂部 -->
+        <button onclick="scrollToTop()" id="btnTop"
+                class="btn rounded-circle shadow-lg"
+                data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+            <i class="bi bi-arrow-up-short fs-2"></i>
+        </button>
+
     </div>
     <!-- 區塊清單 -->
     <hr />
@@ -151,6 +185,21 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
-    </script>    
-  
+    </script>
+
+    <script>
+              function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+
+    </script>
 }

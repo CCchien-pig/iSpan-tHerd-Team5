@@ -1,6 +1,8 @@
-﻿
-@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
-
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
+@section Styles{
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+}
 @{
     ViewData["Title"] = "文章詳情";
 }
@@ -21,13 +23,14 @@
             <dd class="col-sm-9">
                 <span class="badge
                     @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
-                        Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
-                        Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
-                        Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
-                                                 "bg-light text-dark")">
+                                              Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
+                                              Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
+                                              Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
+                                                                       "bg-light text-dark")">
                     @Model.StatusText
                 </span>
             </dd>
+
             <dt class="col-sm-3">標籤</dt>
             <dd class="col-sm-9">
                 @if (Model.TagNames.Any())
@@ -42,7 +45,6 @@
                     <span class="text-muted">（尚未設定標籤）</span>
                 }
             </dd>
-
 
             <dt class="col-sm-3">建立時間</dt>
             <dd class="col-sm-9">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</dd>
@@ -59,18 +61,107 @@
                 }
             </dd>
         </dl>
-    </div>
-    <div class="card-footer d-flex gap-3">
+        <div class="card-footer d-flex gap-3">
+            <a asp-action="Index"
+               asp-route-page="@Model.Page"
+               asp-route-pageSize="@Model.PageSize"
+               asp-route-keyword="@Model.Keyword"
+               asp-route-status="@Model.StatusFilter"
+               class="btn btn-outline-secondary">🔙 返回列表</a>
 
-        <a asp-action="Index"
-           asp-route-page="@Model.Page"
-           asp-route-pageSize="@Model.PageSize"
-           asp-route-keyword="@Model.Keyword"
-           asp-route-status="@Model.StatusFilter"
+            <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
+        </div>
+        <!-- 文章內容區塊 -->
+        <h4 class="mb-3">📑 文章內容</h4>
+        @if (Model.Blocks.Any())
+        {
+            foreach (var block in Model.Blocks)
+            {
+                <div class="content-block mb-4 p-3 border rounded bg-light">
+                    @* 每一個 block 各自一個 div *@
 
-           class="btn btn-outline-secondary">🔙 返回列表</a>
+                    @if (block.BlockType == "richtext")
+                    {
+                        @Html.Raw(block.Content)
+                    }
+                    else if (block.BlockType == "image")
+                    {
+                        if (!string.IsNullOrWhiteSpace(block.Content) &&
+                        (block.Content.StartsWith("http") ||
+                        block.Content.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                        block.Content.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <img src="@block.Content" class="img-fluid rounded shadow-sm" />
+                        }
+                        else
+                        {
+                            <div class="text-danger mb-2">⚠ 圖片格式錯誤</div>
+                        }
+                    }
+                    else if (block.BlockType == "video")
+                    {
+                        if (!string.IsNullOrWhiteSpace(block.Content) && block.Content.StartsWith("http"))
+                        {
+                            <div class="ratio ratio-16x9">
+                                <iframe src="@block.Content" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-danger mb-2">⚠ 影片格式錯誤</div>
+                        }
+                    }
+                    else if (block.BlockType == "cta")
+                    {
+                        try
+                        {
+                            var cta = System.Text.Json.JsonSerializer
+                            .Deserialize<Dictionary<string, string>>(block.Content ?? "{}");
 
-        <a asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
-    </div>
+                            <div class="text-center">
+                                <a href="@cta?.GetValueOrDefault("url", "#")"
+                                   class="btn btn-lg btn-success px-4 shadow-sm">
+                                    @cta?.GetValueOrDefault("text", "未命名 CTA")
+                                </a>
+                            </div>
+                        }
+                        catch
+                        {
+                            <div class="text-danger mb-2">⚠ CTA 格式錯誤</div>
+                        }
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">（尚未新增任何內容區塊）</p>
+        }
 
+    </div>    
+    <!-- ⬆️ 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop"
+            class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
 </div>
+
+@section Scripts {
+    <script>
+              function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+
+    </script>
+}
+

@@ -17,10 +17,16 @@
                         <span class="badge bg-primary">@b.BlockType</span>
                         <small class="text-muted">排序：<span class="order-col">@b.OrderSeq</span></small>
                     </div>
-                    <div class="btn-group btn-group-sm">
-                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Edit" asp-route-id="@b.PageBlockId" class="btn btn-outline-warning">✏️ 編輯</a>
-                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Delete" asp-route-id="@b.PageBlockId" class="btn btn-outline-danger">🗑 刪除</a>
+                    <div class="d-flex gap-2">
+                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Edit"
+                           asp-route-id="@b.PageBlockId"
+                           class="btn btn-outline-warning btn-lg">✏️ 編輯</a>
+
+                        <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Delete"
+                           asp-route-id="@b.PageBlockId"
+                           class="btn btn-outline-danger btn-lg">🗑 刪除</a>
                     </div>
+
                 </div>
 
                 <!-- 卡片內容 -->
