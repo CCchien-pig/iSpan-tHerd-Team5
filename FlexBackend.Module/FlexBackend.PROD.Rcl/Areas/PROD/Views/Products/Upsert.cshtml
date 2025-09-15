@@ -180,20 +180,19 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold required" asp-for="BrandId">品牌：@brands.Count()</label>
-                    <select asp-for="BrandId" id="BrandId" class="form-select">
-                        <option value="">請選擇品牌</option>
-                        @foreach (var b in brands)
-                        {
-                            <option value="@b.BrandId">@b.BrandName（@b.BrandId）</option>
-                        }
+                    <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
+                    <select asp-for="BrandId" class="form-select">
+                    <option value="">請選擇品牌</option>
+                    @foreach (var b in brands)
+                    {
+                        <option value="@b.BrandId">@b.BrandName (@b.SupplierName)</option>
+                    }
                     </select>
-                    <span asp-validation-for="BrandId" class="text-danger small"></span>
                 </div>
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label fw-bold">供應商</label>
-                    <input asp-for="SupplierName" class="form-control" disabled />
+                    <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
                 </div>
 
                 <div class="col-12 mb-3">
@@ -253,6 +252,11 @@
                 <div class="col-md-4 mb-3">
                     <label class="form-label fw-bold">建檔時間</label>
                     <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold text-danger">商品編號</label>
+                    <input asp-for="ProductId" class="form-control" disabled />
                 </div>
 
                 <div class="col-md-4 mb-3">
@@ -390,6 +394,13 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
+        $(document).ready(function () {
+            $("#BrandId").change(function () {
+                var supplier = $(this).find(":selected").data("supplier") || "";
+                $("#SupplierName").val(supplier);
+            });
+        });
+
         $(function(){
           const $sel = $('#BrandId');
 

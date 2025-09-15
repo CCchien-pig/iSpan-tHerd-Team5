@@ -135,6 +135,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<ProdProductTypeConfig> ProdProductTypeConfigs { get; set; }
 
+    public virtual DbSet<ProdSkuSpecificationValue> ProdSkuSpecificationValues { get; set; }
+
     public virtual DbSet<ProdSpecificationConfig> ProdSpecificationConfigs { get; set; }
 
     public virtual DbSet<ProdSpecificationOption> ProdSpecificationOptions { get; set; }
@@ -2283,27 +2285,6 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PROD_ProductSku_ProductId");
-
-            entity.HasMany(d => d.SpecificationOptions).WithMany(p => p.Skus)
-                .UsingEntity<Dictionary<string, object>>(
-                    "ProdSkuSpecificationValue",
-                    r => r.HasOne<ProdSpecificationOption>().WithMany()
-                        .HasForeignKey("SpecificationOptionId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK_PROD_SkuSpecificationValue_SpecificationOptionId"),
-                    l => l.HasOne<ProdProductSku>().WithMany()
-                        .HasForeignKey("SkuId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK_PROD_SkuSpecificationValue_SkuId"),
-                    j =>
-                    {
-                        j.HasKey("SkuId", "SpecificationOptionId");
-                        j.ToTable("PROD_SkuSpecificationValue", tb => tb.HasComment("SKU 與多個規格選項的對應"));
-                        j.HasIndex(new[] { "SkuId" }, "IX_PROD_SkuSpecificationValue_SkuId");
-                        j.HasIndex(new[] { "SpecificationOptionId" }, "IX_PROD_SkuSpecificationValue_SpecificationOptionId");
-                        j.IndexerProperty<int>("SkuId").HasComment("SKU ID（外鍵）");
-                        j.IndexerProperty<int>("SpecificationOptionId").HasComment("規格選項ID（外鍵）");
-                    });
         });
 
         modelBuilder.Entity<ProdProductType>(entity =>
@@ -2371,6 +2352,33 @@ public partial class tHerdDBContext : DbContext
             entity.HasOne(d => d.Seo).WithMany(p => p.ProdProductTypeConfigs)
                 .HasForeignKey(d => d.SeoId)
                 .HasConstraintName("FK_PROD_ProductTypeConfig_SeoId");
+        });
+
+        modelBuilder.Entity<ProdSkuSpecificationValue>(entity =>
+        {
+            entity.HasKey(e => new { e.SkuId, e.SpecificationOptionId });
+
+            entity.ToTable("PROD_SkuSpecificationValue", tb => tb.HasComment("SKU 與多個規格選項的對應"));
+
+            entity.HasIndex(e => e.SkuId, "IX_PROD_SkuSpecificationValue_SkuId");
+
+            entity.HasIndex(e => e.SpecificationOptionId, "IX_PROD_SkuSpecificationValue_SpecificationOptionId");
+
+            entity.Property(e => e.SkuId).HasComment("SKU ID（外鍵）");
+            entity.Property(e => e.SpecificationOptionId).HasComment("規格選項ID（外鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.ProdSkuSpecificationValues)
+                .HasForeignKey(d => d.SkuId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_SkuSpecificationValue_SkuId");
+
+            entity.HasOne(d => d.SpecificationOption).WithMany(p => p.ProdSkuSpecificationValues)
+                .HasForeignKey(d => d.SpecificationOptionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_SkuSpecificationValue_SpecificationOptionId");
         });
 
         modelBuilder.Entity<ProdSpecificationConfig>(entity =>

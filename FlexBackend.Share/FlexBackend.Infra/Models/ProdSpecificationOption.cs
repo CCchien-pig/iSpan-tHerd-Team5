@@ -30,7 +30,7 @@ public partial class ProdSpecificationOption
     /// </summary>
     public int OrderSeq { get; set; }
 
-    public virtual ProdSpecificationConfig SpecificationConfig { get; set; }
+    public virtual ICollection<ProdSkuSpecificationValue> ProdSkuSpecificationValues { get; set; } = new List<ProdSkuSpecificationValue>();
 
-    public virtual ICollection<ProdProductSku> Skus { get; set; } = new List<ProdProductSku>();
+    public virtual ProdSpecificationConfig SpecificationConfig { get; set; }
 }
