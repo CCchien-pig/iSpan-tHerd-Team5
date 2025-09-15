@@ -10,6 +10,8 @@ namespace FlexBackend.Core.Interfaces.Products
         Task<bool> UpdateAsync(ProdProductDto product, CancellationToken ct = default);
         Task<bool> DeleteAsync(int id, CancellationToken ct = default);
         Task<PagedResult<ProdProductDto>> QueryAsync(ProductQuery query, CancellationToken ct = default);
+
+        Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync(CancellationToken ct = default);
     }
 
     // 簡化的查詢模型與分頁結果
