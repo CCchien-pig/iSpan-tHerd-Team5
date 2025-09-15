@@ -141,8 +141,8 @@ public partial class ProdProductDto
 
 	public PRODSeoConfigDto? Seo { get; set; }
 
-	public IEnumerable<ProdProductSkuDto>? Skus { get; set; }
-	public IEnumerable<ProdSpecificationConfigDto>? SpecConfigs { get; set; }
+	public List<ProdProductSkuDto>? Skus { get; set; }
+    public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
 }
 
 /// <summary>
@@ -321,12 +321,12 @@ public partial class ProdSpecificationOptionDto
 	/// <summary>
 	/// 規格選項ID（主鍵）
 	/// </summary>
-	public int SpecificationOptionId { get; set; }
+	public int? SpecificationOptionId { get; set; }
 
 	/// <summary>
 	/// 規格群組ID（外鍵）
 	/// </summary>
-	public int SpecificationConfigId { get; set; }
+	public int? SpecificationConfigId { get; set; }
 
 	/// <summary>
 	/// 規格選項名稱（例如：250ml、巧克力）
