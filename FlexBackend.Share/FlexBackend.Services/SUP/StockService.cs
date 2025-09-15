@@ -36,34 +36,103 @@ namespace FlexBackend.Services.SUP
 			if (changeQty <= 0)
 				throw new InvalidOperationException("異動數量必須大於 0");
 
-			var result = new StockAdjustResultDto { SkuId = skuId };
+			var result = new StockAdjustResultDto { SkuId = skuId, BatchMovements = new List<SupStockMovementDto>() };
 
 			// 取得 SKU
 			var sku = await _context.ProdProductSkus.FirstOrDefaultAsync(s => s.SkuId == skuId);
 			if (sku == null) return new StockAdjustResultDto { Success = false, Message = "找不到 SKU 資料" };
 
 			int beforeQtySku = sku.StockQty;
+			int newSkuQty = beforeQtySku;
 
 			// 取得批號
 			var batch = await _context.SupStockBatches.FirstOrDefaultAsync(b => b.StockBatchId == batchId);
 			if (batch == null) return new StockAdjustResultDto { Success = false, Message = "找不到批號資料" };
-
-			int newSkuQty = beforeQtySku;
 
 			switch (movementType)
 			{
 				case "Purchase":
 					// 採購入庫 → 永遠增加
 					newSkuQty += changeQty;
-					batch.Qty = changeQty; // 永遠存正數
+
+					if (batch != null)
+					{
+						// 更新批號
+						batch.Qty = changeQty;
+
+						// 建立異動紀錄
+						_context.SupStockHistories.Add(new SupStockHistory
+						{
+							StockBatchId = batch.StockBatchId,
+							ChangeType = movementType,
+							ChangeQty = changeQty,
+							BeforeQty = beforeQtySku,
+							AfterQty = newSkuQty,
+							Reviser = reviserId,
+							RevisedDate = DateTime.Now,
+							Remark = remark
+						});
+
+						// 加入 BatchMovements
+						result.BatchMovements.Add(new SupStockMovementDto
+						{
+							SkuId = skuId,
+							StockBatchId = batch.StockBatchId,
+							MovementType = movementType,
+							ChangeQty = changeQty,
+							IsAdd = true,
+							CurrentQty = beforeQtySku,
+							AfterQty = newSkuQty,
+							SkuCode = sku.SkuCode,
+							ProductName = sku.Product.ProductName,
+							BrandName = sku.Product.Brand.BrandName,
+							BatchNumber = batch.BatchNumber,
+							PredictedQty = newSkuQty
+						});
+					}
 					break;
 
 				case "Adjust":
 					if (isAdd)
 					{
-						// 手動增加庫存
+						// 手動增加
 						newSkuQty += changeQty;
-						batch.Qty = changeQty; // 永遠正數
+
+						if (batch != null)
+						{
+							// 更新批號
+							batch.Qty = changeQty;
+
+							// 建立異動紀錄
+							_context.SupStockHistories.Add(new SupStockHistory
+							{
+								StockBatchId = batch.StockBatchId,
+								ChangeType = movementType,
+								ChangeQty = changeQty,
+								BeforeQty = beforeQtySku,
+								AfterQty = newSkuQty,
+								Reviser = reviserId,
+								RevisedDate = DateTime.Now,
+								Remark = remark
+							});
+
+							// 加入 BatchMovements
+							result.BatchMovements.Add(new SupStockMovementDto
+							{
+								SkuId = skuId,
+								StockBatchId = batch.StockBatchId,
+								MovementType = movementType,
+								ChangeQty = changeQty,
+								IsAdd = true,
+								CurrentQty = beforeQtySku,
+								AfterQty = newSkuQty,
+								SkuCode = sku.SkuCode,
+								ProductName = sku.Product.ProductName,
+								BrandName = sku.Product.Brand.BrandName,
+								BatchNumber = batch.BatchNumber,
+								PredictedQty = newSkuQty
+							});
+						}
 					}
 					else
 					{
@@ -81,17 +150,50 @@ namespace FlexBackend.Services.SUP
 						{
 							if (remaining <= 0) break;
 
+							int beforeQtyBatch = b.Qty;
 							int deduct = Math.Min(b.Qty, remaining);
 							b.Qty -= deduct;
 							remaining -= deduct;
+
+							// 每批次都建立一筆異動紀錄
+							_context.SupStockHistories.Add(new SupStockHistory
+							{
+								StockBatchId = b.StockBatchId,
+								ChangeType = movementType,
+								ChangeQty = -deduct,
+								BeforeQty = beforeQtyBatch,
+								AfterQty = b.Qty,
+								Reviser = reviserId,
+								RevisedDate = DateTime.Now,
+								Remark = remark
+							});
+
+							// 加入每個批次的扣庫明細
+							result.BatchMovements.Add(new SupStockMovementDto
+							{
+								SkuId = skuId,
+								StockBatchId = b.StockBatchId,
+								MovementType = movementType,
+								ChangeQty = -deduct,
+								IsAdd = false,
+								CurrentQty = beforeQtyBatch,
+								AfterQty = b.Qty,
+								SkuCode = sku.SkuCode,
+								ProductName = sku.Product.ProductName,
+								BrandName = sku.Product.Brand.BrandName,
+								BatchNumber = b.BatchNumber,
+								PredictedQty = newSkuQty
+							});
+
 						}
 
 						if (remaining > 0 && allowBackorder)
 							newSkuQty -= changeQty; // 允許負庫存
 						else
-							newSkuQty = Math.Max(0, beforeQtySku - changeQty);
+							newSkuQty = beforeQtySku - (changeQty - remaining);
 
-						batch.Qty = changeQty; // 永遠正數
+
+						if (batch != null) batch.Qty = changeQty; // 原始批號記錄總量
 					}
 					break;
 
@@ -103,34 +205,23 @@ namespace FlexBackend.Services.SUP
 			// 更新 SKU 總庫存
 			sku.StockQty = newSkuQty;
 
-			// 建立庫存異動紀錄
-			var history = new SupStockHistory
-			{
-				StockBatchId = batchId,
-				ChangeType = movementType,
-				ChangeQty = (movementType == "Adjust" && !isAdd) ? -changeQty : changeQty,
-				BeforeQty = beforeQtySku,
-				AfterQty = newSkuQty,
-				Reviser = reviserId,
-				RevisedDate = DateTime.Now,
-				Remark = remark
-			};
-			_context.SupStockHistories.Add(history);
-
 			// 更新批號修改者
-			batch.Reviser = reviserId;
-			batch.RevisedDate = DateTime.Now;
+			if (batch != null)
+			{
+				batch.Reviser = reviserId;
+				batch.RevisedDate = DateTime.Now;
+			}
 
 			await _context.SaveChangesAsync();
 
-			return new StockAdjustResultDto
-			{
-				Success = true,
-				TotalStock = newSkuQty,
-				AdjustedQty = changeQty,
-				PredictedQty = newSkuQty,
-				Message = "庫存調整成功"
-			};
+			// 最後直接 return result
+			result.Success = true;
+			result.TotalStock = newSkuQty;
+			result.AdjustedQty = changeQty;
+			result.PredictedQty = newSkuQty;
+			result.Message = "庫存調整成功";
+
+			return result;
 		}
 
 

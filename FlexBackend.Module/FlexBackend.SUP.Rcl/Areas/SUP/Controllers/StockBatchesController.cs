@@ -188,7 +188,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-		// 批號建立(Controller),異動處理(StockService.AdjustStockAsync)
 		// POST: /SUP/StockBatches/CreateStockBatch
 		// To protect from overposting attacks, enable the specific properties you want to bind to.
 		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -234,6 +233,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_context.SupStockBatches.Add(stockBatch);
 			await _context.SaveChangesAsync(); // 確保 BatchNumber 已存入 DB
 
+			List<SupStockMovementDto> batchMovements = new(); // 用於回傳
+
 			// 處理異動
 			if (!string.IsNullOrEmpty(vm.MovementType))
 			{
@@ -254,9 +255,13 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						return Json(new { success = false, message = result.Message });
 					}
 
+					// 使用服務回傳的 BatchMovements
+					batchMovements = result.BatchMovements ?? new List<SupStockMovementDto>();
+
 					return Json(new
 					{
 						success = true,
+						batchMovements = result.BatchMovements,
 						batchNumber = stockBatch.BatchNumber,
 						newQty = stockBatch.Qty,
 						adjustedQty = result.AdjustedQty,
@@ -272,6 +277,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Json(new
 			{
 				success = true,
+				batchMovements = new List<SupStockMovementDto>(), // 空陣列
 				batchNumber = stockBatch.BatchNumber,
 				newQty = stockBatch.Qty,
 				totalStockQty = sku.StockQty
