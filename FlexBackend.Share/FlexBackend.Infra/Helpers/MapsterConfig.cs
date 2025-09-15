@@ -31,5 +31,18 @@ public static class MapsterConfig
             .Ignore(d => d.CreatedDate)
             .Ignore(d => d.Reviser)
             .Ignore(d => d.RevisedDate);
+
+
+        // ========== DTO -> Entity：Create 用 ==========
+        Default.NewConfig<ProdProductSkuDto, ProdProductSku>()
+            .Ignore(d => d.SkuCode);
+
+        // ========== Entity -> DTO ==========
+        Default.NewConfig<ProdProductSku, ProdProductSkuDto>();
+
+        // ========== DTO -> Entity：PATCH 用（忽略 null）==========
+        Patch.NewConfig<ProdProductSkuDto, ProdProductSku>()
+            .IgnoreNullValues(true)
+            .Ignore(d => d.SkuCode);
     }
 }
