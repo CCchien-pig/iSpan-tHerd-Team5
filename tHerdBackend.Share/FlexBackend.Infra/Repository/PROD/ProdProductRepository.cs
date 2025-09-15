@@ -6,6 +6,7 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace FlexBackend.Infra.Repository.PROD
 {
@@ -76,20 +77,109 @@ namespace FlexBackend.Infra.Repository.PROD
             }
         }
 
-		public async Task<ProdProductDto?> GetByIdAsync(int id, CancellationToken ct = default)
+		public async Task<ProdProductDto?> GetByIdAsync(int ProductId, CancellationToken ct = default)
         {
-            const string sql = @"
-                SELECT ProductId, BrandId, SeoId, ProductName, ShortDesc, FullDesc, IsPublished,
-                       Weight, VolumeCubicMeter, VolumeUnit, Creator, CreatedDate, Reviser, RevisedDate
-                FROM   PROD_Product WITH (NOLOCK)
-                WHERE  ProductId = @Id;";
+            var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, p.SeoId, 
+                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
+                            p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
+                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
+                            p.CreatedDate, p.Reviser, p.RevisedDate
+                            FROM PROD_Product p
+                            JOIN SUP_Brand b ON b.BrandId=p.BrandId
+                            JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
+                                WHERE p.ProductId=@ProductId;";
 
-            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            var seoSql = @"SELECT SeoId, RefTable, RefId, SeoSlug, 
+                              SeoTitle, SeoDesc, CreatedDate, RevisedDate
+                              FROM SEO_SeoConfig WHERE SeoId = @seoId;";
+
+			var skuSql = @"SELECT SkuId, SpecCode, SkuCode, Barcode, 
+                            CostPrice, ListPrice, UnitPrice, SalePrice,
+                            StockQty, SafetyStockQty, ReorderPoint,
+                            MaxStockQty, IsAllowBackorder, ShelfLifeDays,
+                            StartDate, EndDate, IsActive
+                            FROM PROD_ProductSku
+                            WHERE ProductId=@ProductId";
+
+			var specSql = @"SELECT v.SkuId, v.SpecificationOptionId,
+                            o.SpecificationConfigId, o.OptionName,
+                            o.OrderSeq AS OptionOrderSeq, c.GroupName AS ConfigGroup, c.OrderSeq AS ConfigOrderSeq
+                            FROM PROD_SkuSpecificationValue v
+                            JOIN PROD_SpecificationOption o ON o.SpecificationOptionId=v.SpecificationOptionId
+                            JOIN PROD_SpecificationConfig c ON c.SpecificationConfigId=o.SpecificationConfigId
+                            WHERE ";
+
+            var specOptionSql = @"SELECT v.SkuId, v.SpecificationOptionId,
+                o.SpecificationConfigId, o.OptionName,
+                o.OrderSeq AS OptionOrderSeq, c.GroupName AS ConfigGroup, c.OrderSeq AS ConfigOrderSeq
+                FROM PROD_SkuSpecificationValue v
+                JOIN PROD_SpecificationOption o ON o.SpecificationOptionId=v.SpecificationOptionId
+                JOIN PROD_SpecificationConfig c ON c.SpecificationConfigId=o.SpecificationConfigId;";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
-                var cmd = new CommandDefinition(sql, new { Id = id }, tx, cancellationToken: ct);
-                return await conn.QueryFirstOrDefaultAsync<ProdProductDto>(cmd);
-            }
+                var cmd = new CommandDefinition(sql, new { ProductId }, tx, cancellationToken: ct);
+                var item = await conn.QueryFirstOrDefaultAsync<ProdProductDto>(cmd);
+
+				var seocmd = new CommandDefinition(seoSql, new { Id = item.SeoId }, tx, cancellationToken: ct);
+				var seo = await conn.QueryFirstOrDefaultAsync<PRODSeoConfigDto>(cmd);
+				item.Seo = new PRODSeoConfigDto
+                {
+                    SeoId = seo.SeoId,
+                    RefTable = seo.RefTable,
+                    RefId = seo.RefId,
+                    SeoSlug = seo.SeoSlug,
+                    SeoTitle = seo.SeoTitle,
+                    SeoDesc = seo.SeoDesc,
+                    CreatedDate = seo.CreatedDate,
+                    RevisedDate = seo.RevisedDate
+                };
+
+				// 取得 SKU 清單
+				var skucmd = new CommandDefinition(skuSql, new { item.ProductId }, tx, cancellationToken: ct);
+				var sku = await conn.QueryFirstOrDefaultAsync<ProdProductSkuDto>(cmd);
+
+				if (sku != null) {
+					item.Sku = new ProdProductSkuDto
+					{
+						SkuId = sku.SkuId,
+						SpecCode = sku.SpecCode,
+						SkuCode = sku.SkuCode,
+						Barcode = sku.Barcode,
+						CostPrice = sku.CostPrice,
+						ListPrice = sku.ListPrice,
+						UnitPrice = sku.UnitPrice,
+						SalePrice = sku.SalePrice,
+						StockQty = sku.StockQty,
+						SafetyStockQty = sku.SafetyStockQty,
+						ReorderPoint = sku.ReorderPoint,
+						MaxStockQty = sku.MaxStockQty,
+						IsAllowBackorder = sku.IsAllowBackorder,
+						ShelfLifeDays = sku.ShelfLifeDays,
+						StartDate = sku.StartDate,
+						EndDate = sku.EndDate,
+						IsActive = sku.IsActive
+					};
+
+					// 取得 SPEC 清單
+					var specConfigcmd = new CommandDefinition(skuSql, new { item.ProductId }, tx, cancellationToken: ct);
+					var specConfig = await conn.QueryAsync<IEnumerable<dynamic>>(cmd);
+
+                    item.SpecConfig = specConfig != null ? new List<ProdSpecificationConfigDto>(
+                        specConfig.Select(v => new ProdSpecificationConfigDto {
+                            c => c.SpecificationConfigId = v.SpecificationConfigId,
+					}
+                        
+                        : new List<ProdSpecificationConfigDto>();
+
+					item.Sku.SpecOption = specConfig != null ? specConfig.ToList() : new List<ProdSpecificationOptionDto>();
+					item.Sku.SpecValue = specConfig != null ? specConfig.ToList() : new List<ProdSkuSpecificationValueDto>();
+
+				}
+
+				return item;
+			}
             finally
             {
                 if (needDispose) conn.Dispose();
@@ -181,21 +271,21 @@ namespace FlexBackend.Infra.Repository.PROD
 
         public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var entity = await _db.ProdProducts.FirstOrDefaultAsync(x => x.ProductId == dto.ProductId, ct);
-            if (entity == null) return false;
+            var item = await _db.ProdProducts.FirstOrDefaultAsync(x => x.ProductId == dto.ProductId, ct);
+            if (item == null) return false;
 
             // 映射更新欄位
-            entity.BrandId = dto.BrandId;
-            entity.SeoId = dto.SeoId;
-            entity.ProductName = dto.ProductName;
-            entity.ShortDesc = dto.ShortDesc;
-            entity.FullDesc = dto.FullDesc;
-            entity.IsPublished = dto.IsPublished;
-            entity.Weight = dto.Weight;
-            entity.VolumeCubicMeter = dto.VolumeCubicMeter;
-            entity.VolumeUnit = dto.VolumeUnit;
+            item.BrandId = dto.BrandId;
+            item.SeoId = dto.SeoId;
+            item.ProductName = dto.ProductName;
+            item.ShortDesc = dto.ShortDesc;
+            item.FullDesc = dto.FullDesc;
+            item.IsPublished = dto.IsPublished;
+            item.Weight = dto.Weight;
+            item.VolumeCubicMeter = dto.VolumeCubicMeter;
+            item.VolumeUnit = dto.VolumeUnit;
             //entity.Reviser = dto.Reviser;
-            entity.RevisedDate = DateTime.UtcNow;
+            item.RevisedDate = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(ct);
             return true;
