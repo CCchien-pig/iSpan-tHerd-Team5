@@ -1,0 +1,55 @@
+diff a/FlexBackend.Module/FlexBackend.Users.Rcl/Areas/USER/Controllers/UserPermissionsController.cs b/FlexBackend.Module/FlexBackend.Users.Rcl/Areas/USER/Controllers/UserPermissionsController.cs	(rejected hunks)
+@@ -30,24 +30,46 @@
+ 
+ 		// DataTables 角色清單（排除 Member）
+ 		[HttpGet]
+-		public async Task<IActionResult> Roles([FromQuery] DataTableRequest dt)
++		public async Task<IActionResult> Roles([FromQuery] DataTableRequest? dt)
+ 		{
++			var draw = dt?.Draw ?? 0;
+ 			var start = Math.Max(0, dt?.Start ?? 0);
+ 			var length = (dt?.Length ?? 10) > 0 ? dt!.Length : 10;
+-			var kw = dt?.Search?.Value?.Trim();
+ 
+-			var q = _app.Roles
+-						.AsNoTracking()
+-						.Where(r => r.Name != "Member");   // ★ 排除 Member
++			// 兼容：ModelBinding 取不到時，直接從 Query 拿 search[value]
++			var kw = dt?.Search?.Value;
++			if (string.IsNullOrWhiteSpace(kw))
++				kw = Request.Query["search[value]"].ToString();
++			kw = kw?.Trim();
++
++			// 來源：Identity 的 Roles；排除 Member
++			var q = _app.Roles.AsNoTracking()
++							  .Where(r => r.Name != "Member");
+ 
+ 			var recordsTotal = await q.CountAsync();
+ 
+-			if (!string.IsNullOrWhiteSpace(kw))
++			if (!string.IsNullOrEmpty(kw))
+ 				q = q.Where(r => r.Name!.Contains(kw) || (r.Description ?? "").Contains(kw));
+ 
+ 			var recordsFiltered = await q.CountAsync();
+ 
+-			q = q.OrderByDescending(r => r.CreatedDate);
++			// 依 DataTables 排序（0:名稱、1:描述、2:建立時間），預設建立時間 DESC
++			if (dt?.Order?.Count > 0)
++			{
++				var col = dt.Order[0].Column;
++				var desc = string.Equals(dt.Order[0].Dir, "desc", StringComparison.OrdinalIgnoreCase);
++				q = col switch
++				{
++					0 => (desc ? q.OrderByDescending(r => r.Name) : q.OrderBy(r => r.Name)),
++					1 => (desc ? q.OrderByDescending(r => r.Description) : q.OrderBy(r => r.Description)),
++					2 => (desc ? q.OrderByDescending(r => r.CreatedDate) : q.OrderBy(r => r.CreatedDate)),
++					_ => q.OrderByDescending(r => r.CreatedDate)
++				};
++			}
++			else
++			{
++				q = q.OrderByDescending(r => r.CreatedDate);
++			}
+ 
+ 			var page = await q.Skip(start).Take(length)
+ 							  .Select(r => new { r.Id, r.Name, r.Description, r.CreatedDate })

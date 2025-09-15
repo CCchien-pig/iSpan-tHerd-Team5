@@ -1,0 +1,10 @@
+diff a/FlexBackend.Admin/Program.cs b/FlexBackend.Admin/Program.cs	(rejected hunks)
+@@ -146,7 +146,7 @@
+ 
+ 			app.UseAuthorization();
+ 
+-            app.MapControllerRoute(
++			app.MapControllerRoute(
+             name: "areas",
+             pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+ 

@@ -24,7 +24,6 @@
     <Folder Include="DTOs\CNT\" />
     <Folder Include="DTOs\CS\" />
     <Folder Include="DTOs\ORD\" />
-    <Folder Include="DTOs\USER\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\MKT\" />
@@ -41,8 +40,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.19" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.19" />
   </ItemGroup>
 
 </Project>
