@@ -2,8 +2,9 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
+using FlexBackend.Core.DTOs.USER;
 
-namespace FlexBackend.USER.Rcl.Data
+namespace FlexBackend.Infra.Models
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
 	{
