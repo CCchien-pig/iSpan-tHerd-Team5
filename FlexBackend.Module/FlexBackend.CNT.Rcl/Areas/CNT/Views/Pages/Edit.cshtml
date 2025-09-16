@@ -65,29 +65,30 @@
             <!-- tags-->
             <div class="mb-3">
                 <label class="form-label">標籤</label>
-                  @if (Model.IsHomePage)
-                    {
-                        <!-- 首頁：允許空，關閉驗證 -->
-                        <select asp-for="SelectedTagIds"
-                                asp-items="Model.TagOptions"
-                                multiple="multiple"
-                                class="tag-selector w-100"
-                                data-val="false">
-                        </select>
-                        <small class="text-muted">首頁不需要標籤。</small>
-                        <!-- ❌ 不要渲染 asp-validation-for -->
-                    }
-                    else
-                    {
-                        <!-- 其他文章：必填 -->
-                        <select asp-for="SelectedTagIds"
-                                asp-items="Model.TagOptions"
-                                multiple="multiple"
-                                class="tag-selector w-100"
-                                required>
-                        </select>
-                        <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
-                    }
+
+                @if (Model.IsHomePage)
+                {
+                    <!-- 首頁：不驗證 -->
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            data-val="false">
+                    </select>
+                    <small class="text-muted">首頁不需要標籤。</small>
+                    <!-- ❌ 不要渲染 asp-validation-for -->
+                }
+                else
+                {
+                    <!-- 非首頁：必填驗證 -->
+                    <select asp-for="SelectedTagIds"
+                            asp-items="Model.TagOptions"
+                            multiple="multiple"
+                            class="tag-selector w-100"
+                            required>
+                    </select>
+                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                }
             </div>
             <!-- 排程時間 -->
             <div class="mb-3">
@@ -117,11 +118,13 @@
             <input type="hidden" asp-for="PageSize" />
             <input type="hidden" asp-for="Keyword" />
             <input type="hidden" asp-for="StatusFilter" />
-
-            <div class="card-footer d-flex gap-3">
+            <hr />
+           <!-- 返回 / 儲存（避免 card-footer 灰底） -->
+            <div class="d-flex gap-3 mt-4 mb-4">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
                 <button type="submit" class="btn btn-outline-warning text-dark btn-lg">💾 儲存修改</button>
             </div>
+            <hr />
         </form>
         <!-- ⬆️ 回頂部 -->
         <button onclick="scrollToTop()" id="btnTop"
@@ -131,10 +134,11 @@
         </button>
 
     </div>
-    <!-- 區塊清單 -->
-    <hr />
-    <h3>內容區塊</h3>
-    @await Component.InvokeAsync("PageBlockList", new { pageId = Model.PageId })
+   <!-- 區塊清單 -->
+    <h3 class="px-3">內容區塊</h3>
+    <div class="px-3 pb-4">
+        @await Component.InvokeAsync("PageBlockList", new { pageId = Model.PageId })
+    </div>
     <!-- 浮動新增按鈕 -->
     <a asp-area="CNT" asp-controller="PageBlocks" asp-action="Add" asp-route-pageId="@Model.PageId"
        class="btn btn-success rounded-circle shadow-lg fab-btn"
@@ -169,31 +173,16 @@
 </div>
 
 @section Scripts {
-    <!-- 載入驗證所需 script -->
-    <partial name="_ValidationScriptsPartial" />
+     <partial name="_ValidationScriptsPartial" />   @* 必須先載入 jQuery Validate *@
+    <partial name="_Select2ValidationPartial" model="Model.IsHomePage" />  @* 再載入 Select2 驗證邏輯 *@
     <partial name="_BlockListScripts" />
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('.tag-selector').select2({
-                placeholder: "請選擇標籤",
-                allowClear: true,
-                width: '100%'
-            });
-        });
-    </script>
-
     <script>
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
-    </script>
 
-    <script>
-              function scrollToTop() {
+        function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -207,3 +196,4 @@
         });
     </script>
 }
+
