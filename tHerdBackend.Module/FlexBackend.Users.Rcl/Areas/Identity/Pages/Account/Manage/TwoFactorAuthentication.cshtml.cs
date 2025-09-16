@@ -5,6 +5,7 @@
 using System;
 using System.Threading.Tasks;
 using FlexBackend.Core.DTOs.USER;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -12,7 +13,8 @@ using Microsoft.Extensions.Logging;
 
 namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account.Manage
 {
-    public class TwoFactorAuthenticationModel : PageModel
+	[AllowAnonymous]
+	public class TwoFactorAuthenticationModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
