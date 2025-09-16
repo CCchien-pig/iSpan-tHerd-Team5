@@ -10,9 +10,12 @@ public static class MapsterConfig
 
     public static void Register()
     {
-        if (_inited) return; _inited = true;
+        if (_inited) return;
+        _inited = true;
 
-        // ========== DTO -> Entity：Create 用 ==========
+        // ========== ProdProduct ==========
+
+        // Create: DTO -> Entity
         Default.NewConfig<ProdProductDto, ProdProduct>()
             .Ignore(d => d.ProductId)
             .Ignore(d => d.Creator)
@@ -20,10 +23,10 @@ public static class MapsterConfig
             .Ignore(d => d.Reviser)
             .Ignore(d => d.RevisedDate);
 
-        // ========== Entity -> DTO ==========
+        // Entity -> DTO
         Default.NewConfig<ProdProduct, ProdProductDto>();
 
-        // ========== DTO -> Entity：PATCH 用（忽略 null）==========
+        // Patch: DTO -> Entity
         Patch.NewConfig<ProdProductDto, ProdProduct>()
             .IgnoreNullValues(true)
             .Ignore(d => d.ProductId)
@@ -32,17 +35,20 @@ public static class MapsterConfig
             .Ignore(d => d.Reviser)
             .Ignore(d => d.RevisedDate);
 
+        // ========== ProdProductSku ==========
 
-        // ========== DTO -> Entity：Create 用 ==========
+        // Create: DTO -> Entity
         Default.NewConfig<ProdProductSkuDto, ProdProductSku>()
-            .Ignore(d => d.SkuCode);
+            .Ignore(d => d.SkuId)    // PK 通常由 DB identity 產生
+            .Ignore(d => d.SkuCode); // 如果 SkuCode 要後端自動生成
 
-        // ========== Entity -> DTO ==========
+        // Entity -> DTO
         Default.NewConfig<ProdProductSku, ProdProductSkuDto>();
 
-        // ========== DTO -> Entity：PATCH 用（忽略 null）==========
+        // Patch: DTO -> Entity
         Patch.NewConfig<ProdProductSkuDto, ProdProductSku>()
             .IgnoreNullValues(true)
+            .Ignore(d => d.SkuId)
             .Ignore(d => d.SkuCode);
     }
 }
