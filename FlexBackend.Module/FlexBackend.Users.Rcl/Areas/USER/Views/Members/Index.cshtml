@@ -2,4 +2,380 @@
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
 @{
+    ViewData["Title"] = "會員管理";
 }
+
+@section Styles {
+    <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
+}
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#dlgCreate">
+        新增會員
+    </button>
+</div>
+
+<div class="card shadow">
+    <div class="card-header">會員列表</div>
+    <div class="card-body">
+        <table id="tblUsers" class="table table-striped w-100">
+            <thead>
+                <tr>
+                    <th>會員編號</th>
+                    <th>姓</th>
+                    <th>名</th>
+                    <th>Email</th>
+                    <th>電話</th>
+                    <th>啟用</th>
+                    <th>黑名單</th>
+                    <th>建立時間</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- 新增會員 Modal -->
+<div class="modal fade" id="dlgCreate" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增會員</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmCreate" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">姓</label>
+                            <input name="lastName" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">名</label>
+                            <input name="firstName" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email</label>
+                            <input name="email" type="email" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">電話</label>
+                            <input name="phone" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text">新增會員的等級 Rank 會自動設定為 <b>MR001</b>；密碼使用系統預設值。</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">建立</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 詳細資料 Modal -->
+<div class="modal fade" id="dlgDetails" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">會員詳細資料</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmDetails" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="det_id" />
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">會員編號</label>
+                            <input id="det_number" class="form-control" disabled />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">姓</label>
+                            <input name="lastName" id="det_lastName" class="form-control" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">名</label>
+                            <input name="firstName" id="det_firstName" class="form-control" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Rank</label>
+                            <input id="det_rank" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input name="email" id="det_email" type="email" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">電話</label>
+                            <input name="phoneNumber" id="det_phone" class="form-control" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">性別</label>
+                            <select name="gender" id="det_gender" class="form-select">
+                                <option value="N/A">N/A</option>
+                                <option value="Male">男</option>
+                                <option value="Female">女</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">生日</label>
+                            <input name="birthDate" id="det_birth" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">地址</label>
+                            <input name="address" id="det_addr" class="form-control" />
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="det_active">
+                                <label class="form-check-label" for="det_active">啟用</label>
+                            </div>
+                            <input type="hidden" name="isActive" id="det_active_hidden" />
+                        </div>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <!-- 黑名單設定 -->
+                    <div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="det_isBlack">
+                            <label class="form-check-label" for="det_isBlack">此會員列入黑名單</label>
+                        </div>
+
+                        <div id="blk_panel" class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">原因</label>
+                                <input id="blk_reason" name="block_reason" class="form-control" placeholder="必填（勾選時）" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">範圍</label>
+                                <input id="blk_scope" name="block_scope" class="form-control" placeholder="選填，例如：門市、線上" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">開始日期</label>
+                                <input id="blk_start" name="block_startDate" type="date" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">結束日期</label>
+                                <input id="blk_end" name="block_endDate" type="date" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="form-text mt-1">取消勾選將結束所有現行黑名單紀錄（EndDate 設為今日、Status=Closed）。</div>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <!-- 重設密碼 -->
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" id="btnResetPwd" class="btn btn-outline-warning">重設密碼為預設值</button>
+                        <span class="text-muted">會員密碼不開放自訂，僅能重設為系統預設值。</span>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">儲存</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
+    <script>
+        // 工具
+        function escapeHtml(s){ return (s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+        function getAntiForgeryToken(){ return document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''; }
+
+        // 黑名單面板顯示控制
+        function toggleBlkPanel(){
+            const on = document.getElementById('det_isBlack').checked;
+            document.getElementById('blk_panel').style.display = on ? '' : 'none';
+        }
+
+        // DataTables
+        const dt = new DataTable('#tblUsers', {
+            processing: true,
+            serverSide: true,
+            searchDelay: 400,
+            ajax: {
+                url: '/USER/Members/Users',
+                type: 'GET',
+                dataSrc: 'data'
+            },
+            columns: [
+                { data: 'number' }, // 0
+                { data: 'lastName',
+                  render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="lastName" contenteditable="false">${escapeHtml(d)}</span>` }, //1
+                { data: 'firstName',
+                  render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="firstName" contenteditable="false">${escapeHtml(d)}</span>` }, //2
+                { data: 'email',
+                  render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="email" contenteditable="false">${escapeHtml(d)}</span>` }, //3
+                { data: 'phoneNumber',
+                  render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="phoneNumber" contenteditable="false">${escapeHtml(d)}</span>` }, //4
+                { data: 'isActive',
+                  render: (d, t, row)=> `<input type="checkbox" class="form-check-input form-switch is-active" data-id="${row.id}" ${d?'checked':''}>`,
+                  className:'text-center' }, //5
+                { data: 'blackStatus',
+                  render: (d)=> d === '黑名單' ? '<span class="badge bg-danger">黑名單</span>' : '<span class="badge bg-success">白名單</span>',
+                  className:'text-center' }, //6
+                { data: 'createdDate' }, //7
+                { data: null, orderable:false, searchable:false,
+                  render: (d,t,row)=> `<button class="btn btn-outline-primary btn-sm btn-detail" data-id="${row.id}">詳細</button>` } //8
+            ],
+            order: [[7,'desc']],
+            columnDefs: [
+                { targets: [8], orderable: false }
+            ]
+        });
+
+        // 就地編輯（雙擊啟用、Enter/blur儲存）
+        document.addEventListener('dblclick', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            el.setAttribute('contenteditable','true'); el.focus();
+            const rng = document.createRange(); rng.selectNodeContents(el); rng.collapse(false);
+            const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+        });
+        async function saveEditable(el){
+            const fd = new FormData();
+            fd.append('userId', el.dataset.id);
+            fd.append('field', el.dataset.field);
+            fd.append('value', el.textContent.trim());
+            el.setAttribute('contenteditable','false');
+            const res = await fetch('/USER/Members/UpdateField', {
+                method:'POST', body: fd,
+                headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(!(res.ok && json.ok)){ alert(json.message || '更新失敗'); dt.ajax.reload(null, false); }
+        }
+        document.addEventListener('keydown', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            if(e.key==='Enter'){ e.preventDefault(); saveEditable(el); }
+        });
+        document.addEventListener('blur', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            if(el.getAttribute('contenteditable')==='true') saveEditable(el);
+        }, true);
+
+        // 啟用切換
+        document.addEventListener('change', async (e)=>{
+            const sw = e.target.closest('.is-active'); if(!sw) return;
+            const fd = new FormData();
+            fd.append('userId', sw.dataset.id);
+            fd.append('field', 'isActive');
+            fd.append('value', sw.checked ? 'true' : 'false');
+            const res = await fetch('/USER/Members/UpdateField', {
+                method:'POST', body: fd,
+                headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(!(res.ok && json.ok)){ alert(json.message || '更新失敗'); dt.ajax.reload(null, false); }
+        });
+
+        // 詳細：開啟並載入
+        document.addEventListener('click', async (e)=>{
+            const btn = e.target.closest('.btn-detail'); if(!btn) return;
+            const id = btn.dataset.id;
+            const res = await fetch(`/USER/Members/Details?id=${encodeURIComponent(id)}`);
+            if(!res.ok){ alert('讀取詳細資料失敗'); return; }
+            const d = await res.json();
+
+            // 基本
+            document.getElementById('det_id').value = d.id;
+            document.getElementById('det_number').value = d.number ?? '';
+            document.getElementById('det_lastName').value = d.lastName ?? '';
+            document.getElementById('det_firstName').value = d.firstName ?? '';
+            document.getElementById('det_email').value = d.email ?? '';
+            document.getElementById('det_phone').value = d.phoneNumber ?? '';
+            document.getElementById('det_gender').value = d.gender ?? 'N/A';
+            document.getElementById('det_birth').value = d.birthDate ?? '';
+            document.getElementById('det_addr').value = d.address ?? '';
+            document.getElementById('det_active').checked = !!d.isActive;
+            document.getElementById('det_rank').value = d.rank ?? 'MR001';
+
+            // 黑名單
+            document.getElementById('det_isBlack').checked = !!d.isBlacklisted;
+            document.getElementById('blk_reason').value = d.block?.reason ?? '';
+            document.getElementById('blk_scope').value = d.block?.scope ?? '';
+            document.getElementById('blk_start').value = d.block?.startDate ?? '';
+            document.getElementById('blk_end').value = d.block?.endDate ?? '';
+            toggleBlkPanel();
+
+            new bootstrap.Modal(document.getElementById('dlgDetails')).show();
+        });
+        document.getElementById('det_isBlack').addEventListener('change', toggleBlkPanel);
+
+        // 詳細：儲存
+        document.getElementById('frmDetails').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            document.getElementById('det_active_hidden').value = document.getElementById('det_active').checked ? 'true' : 'false';
+
+            const fd = new FormData(e.target);
+            fd.append('isBlacklisted', document.getElementById('det_isBlack').checked ? 'true' : 'false');
+
+            const res = await fetch('/USER/Members/UpdateDetails', {
+                method:'POST', body: fd,
+                headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+                bootstrap.Modal.getInstance(document.getElementById('dlgDetails')).hide();
+                dt.ajax.reload(null, false);
+            }else{
+                alert(json.message || '儲存失敗');
+            }
+        });
+
+        // 重設密碼
+        document.getElementById('btnResetPwd').addEventListener('click', async ()=>{
+            const id = document.getElementById('det_id').value;
+            if(!confirm('確定要將此會員的密碼重設為預設值？')) return;
+            const fd = new FormData(); fd.append('userId', id);
+            const res = await fetch('/USER/Members/ResetPassword', {
+                method:'POST', body: fd,
+                headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){ alert('已重設為預設密碼'); }
+            else{ alert(json.message || '重設失敗'); }
+        });
+
+        // 新增會員
+        document.getElementById('frmCreate').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const form = e.target;
+            const fd = new FormData(form);
+            const res = await fetch('/USER/Members/Create', {
+                method:'POST', body: fd,
+                headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+                bootstrap.Modal.getInstance(document.getElementById('dlgCreate')).hide();
+                form.reset();
+                dt.ajax.reload(null, false);
+            }else{
+                alert(json.message || '建立失敗');
+            }
+        });
+    </script>
+}
+

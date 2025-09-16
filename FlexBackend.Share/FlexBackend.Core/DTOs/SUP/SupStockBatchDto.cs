@@ -27,6 +27,5 @@ public partial class SupStockBatchDto
 	public DateTime CreatedDate { get; set; }
 	public int? Reviser { get; set; }
 	public DateTime? RevisedDate { get; set; }
-
-
+	public bool IsAllowBackorder { get; set; }
 }
