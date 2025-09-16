@@ -51,10 +51,15 @@ public partial class ProdProductDto
 	/// </summary>
 	public string BrandName { get; set; }
 
-	/// <summary>
-	/// Seo設定
-	/// </summary>
-	public int? SeoId { get; set; }
+    /// <summary>
+    /// 品牌簡碼，唯一，非空，英文
+    /// </summary>
+    public string BrandCode { get; set; }
+
+    /// <summary>
+    /// Seo設定
+    /// </summary>
+    public int? SeoId { get; set; }
 
 	/// <summary>
 	/// 商品簡短描述，常用於列表展示
@@ -138,9 +143,14 @@ public partial class ProdProductDto
 	public string FormateRevisedDate => DateTimeHelper.ToDateTimeString(RevisedDate);
 
 	/// <summary>
-	/// 分類敘述
+	/// 主分類簡碼
 	/// </summary>
-	public List<string> ProductTypeDesc { get; set; }
+	public string ProductTypeCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 分類敘述
+    /// </summary>
+    public List<string> ProductTypeDesc { get; set; }
 
 	public PRODSeoConfigDto? Seo { get; set; }
 

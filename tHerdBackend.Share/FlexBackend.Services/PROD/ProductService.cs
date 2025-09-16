@@ -1,7 +1,9 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.DTOs.SYS;
 using FlexBackend.Core.Exceptions;
 using FlexBackend.Core.Interfaces.PROD;
 using FlexBackend.Core.Interfaces.Products;
+using FlexBackend.Core.Interfaces.SYS;
 
 namespace FlexBackend.Services.PROD
 {
@@ -9,11 +11,13 @@ namespace FlexBackend.Services.PROD
     {
         private readonly IProdProductRepository _repo;
         private readonly IProdProductQueryRepository _qrepo;
+        private readonly ISysCodeRepository _srepo;
 
-        public ProductService(IProdProductRepository repo, IProdProductQueryRepository qrepo)
+        public ProductService(IProdProductRepository repo, IProdProductQueryRepository qrepo, ISysCodeRepository srepo)
         {
             _repo = repo;
             _qrepo = qrepo;
+            _srepo = srepo;
         }
 
         /// <summary>
@@ -117,6 +121,11 @@ namespace FlexBackend.Services.PROD
         public async Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync()
         {
             return await _repo.LoadBrandOptionsAsync();
+        }
+
+        public async Task<IEnumerable<SysCodeDto>> GetSysCodes(string Mod, List<string> ids)
+        {
+            return await _srepo.GetSysCodes(Mod, ids);
         }
     }
 }
