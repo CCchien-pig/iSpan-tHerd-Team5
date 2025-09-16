@@ -12,9 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Controllers\" />
-    <Folder Include="Areas\USER\Controllers\" />
     <Folder Include="Areas\USER\ViewModels\" />
+    <Folder Include="Data\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Core\FlexBackend.Core.csproj" />
+    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Infra\FlexBackend.Infra.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
     <ProjectReference Include="..\..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>

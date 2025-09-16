@@ -1,0 +1,27 @@
+﻿.preview-title {
+    all: unset;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.preview-box {
+    border: 3px solid #ccc;
+    border-radius: 12px;
+    padding: 0 28px 0 28px;
+    height: 720px;
+    background: #f9f9f9;
+    white-space: pre-wrap; /* 保留換行符號 */
+    overflow-y: auto; /* 超過高度時出現捲軸 */
+    overflow-wrap: break-word; /* 新版推薦 */
+    position: sticky;
+    top: 12px;
+}
+
+.preview-content {
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    background-color: rgb(255, 255, 255);
+    height: 540px;
+    overflow-y: auto; /* 超過就出現捲軸 */
+    padding: 12px
+}
