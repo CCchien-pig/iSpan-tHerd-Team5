@@ -17,11 +17,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 	public class PagesController : Controller
 	{
 		private readonly tHerdDBContext _db;
-		private const int HomePageTypeId = 1000; // 統一首頁 PageTypeId
+		private readonly PageDeletionService _pageDeletionService;
+		private const int HomePageTypeId = 1000;
 
 		public PagesController(tHerdDBContext db)
 		{
 			_db = db;
+			_pageDeletionService = new PageDeletionService(_db); // ⭐ 直接 new
 		}
 
 		// ================================
@@ -77,6 +79,27 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		}
 
 		// ================================
+		// 共用方法：讀 QueryString 列表狀態
+		// ================================
+		private (int? page, int pageSize, string? keyword, string? status) GetListState(int defaultPageSize = 8)
+		{
+			var q = Request?.Query;
+
+			int? page = null;
+			if (int.TryParse(q?["page"], out var pageParsed) && pageParsed > 0)
+				page = pageParsed;
+
+			var pageSize = defaultPageSize;
+			if (int.TryParse(q?["pageSize"], out var sizeParsed) && sizeParsed > 0)
+				pageSize = sizeParsed;
+
+			var keyword = q?["keyword"].ToString();
+			var status = q?["status"].ToString();
+
+			return (page, pageSize, keyword, status);
+		}
+
+		// ================================
 		// 文章列表 (Index)
 		// ================================
 		public IActionResult Index(int? page, string keyword, string status, int pageSize = 8)
@@ -107,9 +130,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				{
 					PageId = p.PageId,
 					Title = p.Title,
-					Status = (PageStatus)int.Parse(p.Status),   // varchar -> enum
+					Status = (PageStatus)int.Parse(p.Status),
 					CreatedDate = p.CreatedDate,
-					RevisedDate = p.RevisedDate
+					RevisedDate = p.RevisedDate,
+					PageTypeName = _db.CntPageTypes
+								.Where(pt => pt.PageTypeId == p.PageTypeId)
+								.Select(pt => pt.TypeName)
+								.FirstOrDefault() ?? "未知類別" // ⭐ 撈文章類型
 				});
 
 			// 給 ViewBag
@@ -142,8 +169,9 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				),
 				Blocks = new List<CntPageBlock>()
 			};
-			// ✅ 使用共用方法
-			ViewBag.PageTypeList = GetPageTypeSelectList(vm.PageTypeId);
+			// ✅ 改成呼叫共用方法，避免重複
+			PreparePageEditVM(vm);
+
 			return View(vm);
 		}
 
@@ -230,13 +258,16 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			TempData["Msg"] = "文章已建立";
 
-			// ✅ 保留查詢條件（返回列表）
+			// 讀取目前 QueryString 的列表狀態
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
+
 			return RedirectToAction(nameof(Index), new
 			{
-				page = model.Page,
-				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,
-				keyword = model.Keyword,
-				status = model.StatusFilter
+				// 以 model 為主，否則回退 QueryString，再回退預設
+				page = model.Page ?? qPage,
+				pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
+				keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
+				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
 			});
 		}
 
@@ -274,7 +305,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			};
 
 			// ✅ 使用共用方法
-			ViewBag.PageTypeList = GetPageTypeSelectList(vm.PageTypeId);
+			PreparePageEditVM(vm);
 			return View(vm);
 		}
 
@@ -393,13 +424,17 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			TempData["Msg"] = "文章修改成功";
 
-			return RedirectToAction(nameof(Index), new
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
+
+			return RedirectToAction(nameof(Details), new
 			{
-				page = model.Page,
-				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,
-				keyword = model.Keyword,
-				status = model.StatusFilter
+				id = model.PageId,
+				page = model.Page ?? qPage,
+				pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
+				keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
+				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
 			});
+
 		}
 
 		// ================================
@@ -427,16 +462,17 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		public IActionResult Details(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 			{
-				var pageEntity = _db.CntPages
-					.Include(p => p.CntPageBlocks)               // 撈文章區塊
-					.FirstOrDefault(p => p.PageId == id);
+			var pageEntity = _db.CntPages
+				.Include(p => p.CntPageBlocks) // 撈文章區塊
+				.FirstOrDefault(p => p.PageId == id && p.Status != "9"); // ⭐ 排除已刪除
 
-				if (pageEntity == null) return NotFound();
+			if (pageEntity == null) return NotFound();
 
-				var tagNames = (from pt in _db.CntPageTags
-								join t in _db.CntTags on pt.TagId equals t.TagId
-								where pt.PageId == id
-								select t.TagName).ToList();
+			// ⭐ 撈取標籤
+			var tagNames = (from pt in _db.CntPageTags
+							join t in _db.CntTags on pt.TagId equals t.TagId
+							where pt.PageId == id
+							select t.TagName).ToList();
 
 			// ⭐ 撈取排程
 			var schedules = _db.CntSchedules
@@ -471,7 +507,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				Keyword = keyword,
 				StatusFilter = status
 			};
-
 
 			return View(vm);
 		}
@@ -518,31 +553,42 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			_db.SaveChanges();
 			TempData["Msg"] = "文章已移到回收桶";
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
+
 			return RedirectToAction(nameof(Index), new
 			{
-				page = model.Page,
-				pageSize = model.PageSize > 0 ? model.PageSize : pageSize,   // ⭐ 保險一層
-				keyword = model.Keyword,
-				status = model.StatusFilter
+				page = model.Page ?? qPage,
+				pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
+				keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
+				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
 			});
 		}
 
 		// ================================
 		// 回收桶列表 (RecycleBin)
 		// ================================
-		public IActionResult RecycleBin(int? page, string keyword, int pageSize = 8)
+		// ================================
+		// 回收桶列表 (RecycleBin)
+		// ================================
+		public IActionResult RecycleBin(int? page, string? keyword, int pageSize = 8, string? status = null)
 		{
-			int pageNumber = Math.Max(page ?? 1, 1);
+			// ⭐ 先從 QueryString 抓出共用狀態
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
+
+			int pageNumber = Math.Max(page ?? qPage ?? 1, 1);
+			pageSize = (pageSize > 0) ? pageSize : qSize;
 
 			var query = _db.CntPages.Where(p => p.Status == ((int)PageStatus.Deleted).ToString());
 
-			if (!string.IsNullOrWhiteSpace(keyword))
+			// 搜尋條件
+			var finalKeyword = !string.IsNullOrWhiteSpace(keyword) ? keyword : qKeyword;
+			if (!string.IsNullOrWhiteSpace(finalKeyword))
 			{
-				keyword = keyword.Trim();
-				if (int.TryParse(keyword, out int idValue))
-					query = query.Where(p => p.PageId == idValue || p.Title.Contains(keyword));
+				finalKeyword = finalKeyword.Trim();
+				if (int.TryParse(finalKeyword, out int idValue))
+					query = query.Where(p => p.PageId == idValue || p.Title.Contains(finalKeyword));
 				else
-					query = query.Where(p => p.Title.Contains(keyword));
+					query = query.Where(p => p.Title.Contains(finalKeyword));
 			}
 
 			var deletedPages = query
@@ -556,11 +602,14 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					RevisedDate = p.RevisedDate
 				});
 
-			ViewBag.Keyword = keyword;
+			// ✅ 保留狀態到 ViewBag，方便搜尋框/分頁 UI 回填
+			ViewBag.Keyword = finalKeyword;
+			ViewBag.Status = status ?? qStatus;
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 8, 10, 20, 50, 100 }, pageSize);
 
 			return View(deletedPages.ToPagedList(pageNumber, pageSize));
 		}
+
 
 		// ================================
 		// 復原 (Restore)
@@ -576,37 +625,48 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			_db.SaveChanges();
 			TempData["Msg"] = "文章已復原";
 
-			return RedirectToAction(nameof(Index), new
+			// 讀取 QueryString 狀態
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
+
+			return RedirectToAction(nameof(RecycleBin), new
 			{
-				page,
-				pageSize,
-				keyword,
-				status
+				page = page ?? qPage,
+				pageSize = qSize,
+				keyword = string.IsNullOrWhiteSpace(keyword) ? qKeyword : keyword,
+				status = string.IsNullOrWhiteSpace(status) ? qStatus : status
 			});
 		}
+
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Destroy(int id, int? page, int pageSize = 8, string? keyword = null, string? status = null)
 		{
-			var pageEntity = _db.CntPages.Find(id);
-			if (pageEntity == null) return NotFound();
+			// 先取得目前 QueryString 狀態
+			var (qPage, qSize, qKeyword, qStatus) = GetListState();
 
-			if (pageEntity.PageTypeId == HomePageTypeId)
+			if (!_pageDeletionService.PermanentlyDeletePage(id, out var error))
 			{
-				return BadRequest("首頁不能永久刪除");
+				// ❌ 有錯誤：放進 TempData → 回列表頁顯示
+				TempData["Error"] = error;
+				return RedirectToAction(nameof(RecycleBin), new
+				{
+					page = page ?? qPage,
+					pageSize = qSize,
+					keyword = string.IsNullOrWhiteSpace(keyword) ? qKeyword : keyword,
+					status = string.IsNullOrWhiteSpace(status) ? qStatus : status
+				});
 			}
 
-			_db.CntPages.Remove(pageEntity);
-			_db.SaveChanges();
-
-			TempData["Msg"] = "文章已永久刪除";
-			return RedirectToAction(nameof(Index), new
+			// ✅ 改這裡：成功刪除後 → 回 RecycleBin，而不是 Index
+			return RedirectToAction(nameof(RecycleBin), new
 			{
-				page,
-				pageSize,
-				keyword,
-				status
+				page = page ?? qPage,
+				pageSize = qSize,
+				keyword = string.IsNullOrWhiteSpace(keyword) ? qKeyword : keyword,
+				status = string.IsNullOrWhiteSpace(status) ? qStatus : status
 			});
 		}
+
+
 	}
 }

@@ -1,0 +1,38 @@
+﻿@model bool
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(function () {
+      var isHomePage = @Html.Raw(Model.ToString().ToLowerInvariant());
+      console.log("isHomePage =", isHomePage);
+
+      // 不要忽略 hidden，確保 Select2 綁定的 select 會被驗證
+      $.validator.setDefaults({ ignore: [] });
+
+      // 啟用 Select2
+      $('.tag-selector').select2({
+        placeholder: "請選擇標籤",
+        allowClear: true,
+        width: '100%'
+      });
+
+      if (typeof $.validator !== "undefined") {
+        $.validator.addMethod("requireOne", function (value, element) {
+          return (value != null && value.length > 0);
+        }, "請至少選擇一個標籤");
+
+        var $tags = $("select[name='SelectedTagIds']");
+        console.log("before add:", $tags.rules());
+
+        if (!isHomePage) {
+          $tags.rules("add", { requireOne: true });
+          console.log("after add:", $tags.rules());
+        } else {
+          $tags.attr("data-val", "false");
+          try { $tags.rules("remove"); } catch (e) { }
+          console.log("首頁 → 已移除規則");
+        }
+      }
+    });
+</script>

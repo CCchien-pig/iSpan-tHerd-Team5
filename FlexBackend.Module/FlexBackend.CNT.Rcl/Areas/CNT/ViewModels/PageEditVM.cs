@@ -24,6 +24,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public IEnumerable<SelectListItem> StatusList { get; set; }
 
 		// ⭐ 使用者選取的標籤 Id（多選）
+		[Required(ErrorMessage = "標籤必填")]
 		public List<int> SelectedTagIds { get; set; } = new();
 
 		// ⭐ 可供選擇的標籤清單（只做 UI 選項，不驗證）
