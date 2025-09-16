@@ -523,10 +523,32 @@ namespace FlexBackend.Infra.Repository.PROD
                         skuDto.SkuCode = previews.FirstOrDefault(r => r.SkuId == skuDto.SkuId).NewSkuCode;
                     }
 
-                    // 先 upsert SKU
-                    await conn.ExecuteAsync(skuUpsertSql, skuDto, tran);
+					// 先 upsert SKU
+					//await conn.ExecuteAsync(skuUpsertSql, skuDto, tran);
+					await conn.ExecuteAsync(skuUpsertSql, new
+					{
+						skuDto.SkuId,
+						skuDto.ProductId,
+						skuDto.SpecCode,
+						skuDto.SkuCode,
+						skuDto.Barcode,
+						skuDto.CostPrice,
+						skuDto.ListPrice,
+						skuDto.UnitPrice,   // 確保這裡真的有值
+						skuDto.SalePrice,
+						skuDto.StockQty,
+						skuDto.SafetyStockQty,
+						skuDto.ReorderPoint,
+						skuDto.MaxStockQty,
+						skuDto.IsAllowBackorder,
+						skuDto.ShelfLifeDays,
+						skuDto.StartDate,
+						skuDto.EndDate,
+						skuDto.IsActive
+					}, tran);
 
-                    var optDtos = skuDto.SpecValues ?? new();
+
+					var optDtos = skuDto.SpecValues ?? new();
                     var optIds = optDtos.Select(o => o.SpecificationOptionId).ToList();
 
 					// 先刪除舊的

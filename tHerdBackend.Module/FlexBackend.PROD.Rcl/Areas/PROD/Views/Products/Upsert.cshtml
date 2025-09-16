@@ -339,170 +339,10 @@
                             </div>
                         <div class="row p-3">
                             <div id="specCards">
-                                    <div class="col-md-12 spec-card">
-                                @foreach (var sku in (Model?.Skus ?? new List<ProdProductSkuDto>()))
+                                @for (var i = 0; i < Model.Skus.Count; i++)
                                 {
-                                        
-                                        <div class="card shadow-sm mt-3 mb-3">
-                                            <div class="card-header d-flex justify-content-between align-items-center">
-                                                <span class="fw-bold">Sku 代碼</span>
-                                                <div class="col-md-9 mb-0 justify-content-start">
-                                                    <input type="hidden" name="Skus[@index].SkuCode" value="@sku.SkuCode" />
-                                                    <input class="form-control" value="@sku.SkuCode" disabled />
-                                                </div>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
-                                                        <i class="fas fa-copy"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-md-3 mb-3">
-                                                        <label class="form-label fw-bold required" for="Skus_(@index)_SpecCode">Sku 規格碼</label>
-                                                        <input type="text" class="form-control"
-                                                               name="Skus[@index].SpecCode"
-                                                               id="Skus_@(index)_SpecCode"
-                                                               value="@sku.SpecCode" />
-                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].SpecCode"></span>
-                                                    </div>
-
-                                                    <div class="col-md-3 mb-3">
-                                                        <label class="form-label fw-bold" for="Skus_(@index)_Barcode">條碼</label>
-                                                        <input type="text" class="form-control"
-                                                               name="Skus[@index].Barcode"
-                                                               id="Skus_(@index)_Barcode"
-                                                               value="@sku.Barcode" />
-                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].Barcode"></span>
-                                                    </div>
-
-                                                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
-                                                        <div class="form-check form-switch">
-                                                            <input type="hidden" name="Skus[@index].IsActive" value="false" />
-                                                            <input type="checkbox" class="form-check-input"
-                                                                   name="Skus[@index].IsActive"
-                                                                   id="Skus_(@index)_IsActive"
-                                                                   value="true"
-                                                                   @(sku.IsActive ? "checked" : "") />
-                                                            <label class="form-check-label fw-bold" for="Skus_(@index)_IsActive">啟用</label>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-md-3 mb-3">
-                                                        <label class="form-label fw-bold text-danger" for="Skus_(@index)_SkuId">Sku 編號</label>
-                                                         <input type="text" class="form-control"
-                                                               value="@sku.SkuId" disabled />
-
-                                                        <input type="hidden"
-                                                               name="Skus[@index].SkuId"
-                                                               value="@sku.SkuId" />
-                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].SkuId"></span>
-                                                    </div>
-                                                </div>
-
-                                                <!-- 規格值區塊（你可補上 Partial 或 TagHelper） -->
-                                                <div class="d-flex flex-wrap gap-2 spec-values">
-                                                    @* 若你有 buildSpecOptions Razor Helper，可以這裡呼叫 *@
-                                                    @* @Html.Partial("_SpecOptionsPartial", sku.SpecOptions) *@
-                                                </div>
-
-                                                <!-- 價格設定 -->
-                                                <fieldset class="group-box mb-3">
-                                                    <legend>價格設定</legend>
-                                                    <div class="row">
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">成本價</label>
-                                                            <input type="number" step="0.01" class="form-control"
-                                                                   name="Skus[@index].CostPrice"
-                                                                   value="@sku.CostPrice" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">原價</label>
-                                                            <input type="number" step="0.01" class="form-control"
-                                                                   name="Skus[@index].ListPrice"
-                                                                   value="@sku.ListPrice" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">單價</label>
-                                                            <input type="number" step="0.01" class="form-control"
-                                                                   name="Skus[@index].UnitPrice"
-                                                                   value="@sku.UnitPrice" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold required">優惠價</label>
-                                                            <input type="number" step="0.01" class="form-control"
-                                                                   name="Skus[@index].SalePrice"
-                                                                   value="@sku.SalePrice" />
-                                                            <span class="text-danger small" data-valmsg-for="Skus[@index].SalePrice"></span>
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
-
-                                                <!-- 庫存管理 -->
-                                                <fieldset class="group-box mb-3">
-                                                    <legend>庫存控管</legend>
-                                                    <div class="row">
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">目前庫存</label>
-                                                            <input type="number" class="form-control"
-                                                                   name="Skus[@index].StockQty"
-                                                                   value="@sku.StockQty" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">安全庫存量</label>
-                                                            <input type="number" class="form-control"
-                                                                   name="Skus[@index].SafetyStockQty"
-                                                                   value="@sku.SafetyStockQty" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">再訂購點</label>
-                                                            <input type="number" class="form-control"
-                                                                   name="Skus[@index].ReorderPoint"
-                                                                   value="@sku.ReorderPoint" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">最大庫存量</label>
-                                                            <input type="number" class="form-control"
-                                                                   name="Skus[@index].MaxStockQty"
-                                                                   value="@sku.MaxStockQty" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">有效天數</label>
-                                                            <input type="number" class="form-control"
-                                                                   name="Skus[@index].ShelfLifeDays"
-                                                                   value="@sku.ShelfLifeDays" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">上架時間</label>
-                                                            <input type="datetime-local" class="form-control"
-                                                                   name="Skus[@index].StartDate"
-                                                                   value="@(sku.StartDate.ToString("yyyy-MM-ddTHH:mm"))" />
-                                                        </div>
-
-                                                        <div class="col-md-3 mb-3">
-                                                            <label class="form-label fw-bold">下架時間</label>
-                                                            <input type="datetime-local" class="form-control"
-                                                                   name="Skus[@index].EndDate"
-                                                                   value="@(sku.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
-                                            </div>
-                                        </div>
-                                    index++;
+                                    @Html.Partial("_SkuCard", Model.Skus[i], new ViewDataDictionary(ViewData) { { "Index", i } })
                                 }
-                                        </div>
                             </div>
                             <!-- 左邊跨 3 欄 & 4 列 -->
                             <div class="col-md-12 mb-3 d-flex flex-column">
@@ -668,7 +508,7 @@
           bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
 
           refreshIndexes();    // 你的既有函式：重排 name 索引
-          refreshSpecValues(); // 讓所有 SKU 卡上的規格值區塊重建
+          refreshSpecOptions(); // 讓所有 SKU 卡上的規格值區塊重建
         }
 
         function removeTag(btn) {
@@ -763,231 +603,328 @@
         // 以上是分類選項
 
         // Sku 共用模板函式
-        function buildCardHtml(index, values = {}) {
-            return `
-                <div class="card shadow-sm mt-3 mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">Sku 代碼</span>
-                        <div class="col-md-9 mb-0 justify-content-start">
-                                    <input type="hidden" name="Skus[${index}].SkuCode" value="${values.SkuCode ?? ('TEMP-' + Date.now())}}" />
-                                    <input class="form-control" value="${values.SkuCode ?? ''}" disabled />
-                        </div>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label fw-bold required" for="Skus_${index}_SpecCode">Sku 規格碼</label>
-                                <input type="text" class="form-control"
-                                       name="Skus[${index}].SpecCode" id="Skus_${index}_SpecCode"
-                                       value="${values.SpecCode ?? ''}" />
-                                <span class="text-danger small" data-valmsg-for="Skus[${index}].SpecCode"></span>
-                            </div>
+        // function buildCardHtml(index, values = {}) {
+        //     return `
+        //         <div class="card shadow-sm mt-3 mb-3">
+        //             <div class="card-header d-flex justify-content-between align-items-center">
+        //                 <span class="fw-bold">Sku 代碼</span>
+        //                 <div class="col-md-9 mb-0 justify-content-start">
+        //                     <!-- 隱藏欄位：保證值會送回後端 -->
+        //                     <input type="hidden" name="Skus[${index}].SkuCode" value="${values.SkuCode ?? ('TEMP-' + Date.now())}" />
+        //                     <!-- 顯示用欄位：唯讀 -->
+        //                     <input class="form-control" value="${values.SkuCode ?? ''}" readonly />
+        //                 </div>
+        //                 <div class="btn-group">
+        //                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
+        //                         <i class="fas fa-copy"></i>
+        //                     </button>
+        //                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
+        //                         <i class="fas fa-trash"></i>
+        //                     </button>
+        //                 </div>
+        //             </div>
 
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label fw-bold" for="Skus_${index}_Barcode">條碼</label>
-                                <input type="text" class="form-control"
-                                       name="Skus[${index}].Barcode" id="Skus_${index}_Barcode"
-                                       value="${values.Barcode ?? ''}" />
-                                <span class="text-danger small" data-valmsg-for="Skus[${index}].Barcode"></span>
-                            </div>
+        //             <div class="card-body">
+        //                 <div class="row">
+        //                     <!-- 規格碼 -->
+        //                     <div class="col-md-3 mb-3">
+        //                         <label class="form-label fw-bold required" for="Skus_${index}_SpecCode">Sku 規格碼</label>
+        //                         <input type="text" class="form-control"
+        //                                name="Skus[${index}].SpecCode" id="Skus_${index}_SpecCode"
+        //                                value="${values.SpecCode ?? ''}" />
+        //                         <span class="text-danger small" data-valmsg-for="Skus[${index}].SpecCode"></span>
+        //                     </div>
 
-                            <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
-                                <div class="form-check form-switch">
-                                    <input type="hidden" name="Skus[${index}].IsActive" value="false" />
-                                    <input type="checkbox" class="form-check-input"
-                                           name="Skus[${index}].IsActive"
-                                           id="Skus_${index}_IsActive"
-                                           value="true"
-                                           ${values.IsActive ? "checked" : ""} />
-                                    <label class="form-check-label fw-bold" for="Skus_${index}_IsActive">啟用</label>
-                                </div>
-                            </div>
-                        </div>
+        //                     <!-- 條碼 -->
+        //                     <div class="col-md-3 mb-3">
+        //                         <label class="form-label fw-bold" for="Skus_${index}_Barcode">條碼</label>
+        //                         <input type="text" class="form-control"
+        //                                name="Skus[${index}].Barcode" id="Skus_${index}_Barcode"
+        //                                value="${values.Barcode ?? ''}" />
+        //                         <span class="text-danger small" data-valmsg-for="Skus[${index}].Barcode"></span>
+        //                     </div>
 
-                            <!-- 規格值區塊 -->
-                            <div class="d-flex flex-wrap gap-2 spec-values">
-                                ${buildSpecOptions(index, values.SpecOptions ?? {})}
-                            </div>
+        //                     <!-- 啟用 -->
+        //                     <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+        //                         <div class="form-check form-switch">
+        //                             <input type="hidden" name="Skus[${index}].IsActive" value="false" />
+        //                             <input type="checkbox" class="form-check-input"
+        //                                    name="Skus[${index}].IsActive"
+        //                                    id="Skus_${index}_IsActive"
+        //                                    value="true" ${values.IsActive ? "checked" : ""} />
+        //                             <label class="form-check-label fw-bold" for="Skus_${index}_IsActive">啟用</label>
+        //                         </div>
+        //                     </div>
+        //                 </div>
 
-                        <!-- 價格設定 -->
-                        <fieldset class="group-box mb-3">
-                            <legend>價格設定</legend>
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">成本價</label>
-                                    <input type="number" step="0.01" class="form-control"
-                                           name="Skus[${index}].CostPrice"
-                                           value="${values.CostPrice ?? ''}" />
-                                </div>
+        //                 <!-- 規格值區塊 -->
+        //                 <div class="d-flex flex-wrap gap-2 spec-values">
+        //                     ${buildSpecOptions(index, values.SpecOptions ?? {})}
+        //                 </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">原價</label>
-                                    <input type="number" step="0.01" class="form-control"
-                                           name="Skus[${index}].ListPrice"
-                                           value="${values.ListPrice ?? ''}" />
-                                </div>
+        //                 <!-- 價格設定 -->
+        //                 <fieldset class="group-box mb-3">
+        //                     <legend>價格設定</legend>
+        //                     <div class="row">
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">成本價</label>
+        //                             <input type="number" step="0.01" class="form-control"
+        //                                    name="Skus[${index}].CostPrice"
+        //                                    value="${values.CostPrice ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">單價</label>
-                                    <input type="number" step="0.01" class="form-control"
-                                           name="Skus[${index}].UnitPrice"
-                                           value="${values.UnitPrice ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">原價</label>
+        //                             <input type="number" step="0.01" class="form-control"
+        //                                    name="Skus[${index}].ListPrice"
+        //                                    value="${values.ListPrice ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold required">優惠價</label>
-                                    <input type="number" step="0.01" class="form-control"
-                                           name="Skus[${index}].SalePrice"
-                                           value="${values.SalePrice ?? ''}" />
-                                    <span class="text-danger small" data-valmsg-for="Skus[${index}].SalePrice"></span>
-                                </div>
-                            </div>
-                        </fieldset>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">單價</label>
+        //                             <input type="number" step="0.01" class="form-control"
+        //                                    name="Skus[${index}].UnitPrice"
+        //                                    value="${values.UnitPrice ?? ''}" />
+        //                         </div>
 
-                        <!-- 庫存管理 -->
-                        <fieldset class="group-box mb-3">
-                            <legend>庫存控管</legend>
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">目前庫存</label>
-                                    <input type="number" class="form-control"
-                                           name="Skus[${index}].StockQty"
-                                           value="${values.StockQty ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold required">優惠價</label>
+        //                             <input type="number" step="0.01" class="form-control"
+        //                                    name="Skus[${index}].SalePrice"
+        //                                    value="${values.SalePrice ?? ''}" />
+        //                             <span class="text-danger small" data-valmsg-for="Skus[${index}].SalePrice"></span>
+        //                         </div>
+        //                     </div>
+        //                 </fieldset>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">安全庫存量</label>
-                                    <input type="number" class="form-control"
-                                           name="Skus[${index}].SafetyStockQty"
-                                           value="${values.SafetyStockQty ?? ''}" />
-                                </div>
+        //                 <!-- 庫存管理 -->
+        //                 <fieldset class="group-box mb-3">
+        //                     <legend>庫存控管</legend>
+        //                     <div class="row">
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">目前庫存</label>
+        //                             <input type="number" class="form-control" value="${values.StockQty ?? ''}" readonly />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">再訂購點</label>
-                                    <input type="number" class="form-control"
-                                           name="Skus[${index}].ReorderPoint"
-                                           value="${values.ReorderPoint ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">安全庫存量</label>
+        //                             <input type="number" class="form-control"
+        //                                    name="Skus[${index}].SafetyStockQty"
+        //                                    value="${values.SafetyStockQty ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">最大庫存量</label>
-                                    <input type="number" class="form-control"
-                                           name="Skus[${index}].MaxStockQty"
-                                           value="${values.MaxStockQty ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">再訂購點</label>
+        //                             <input type="number" class="form-control"
+        //                                    name="Skus[${index}].ReorderPoint"
+        //                                    value="${values.ReorderPoint ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">有效天數</label>
-                                    <input type="number" class="form-control"
-                                           name="Skus[${index}].ShelfLifeDays"
-                                           value="${values.ShelfLifeDays ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">最大庫存量</label>
+        //                             <input type="number" class="form-control"
+        //                                    name="Skus[${index}].MaxStockQty"
+        //                                    value="${values.MaxStockQty ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">上架時間</label>
-                                    <input type="datetime-local" class="form-control"
-                                           name="Skus[${index}].StartDate"
-                                           value="${values.StartDate ?? ''}" />
-                                </div>
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">有效天數</label>
+        //                             <input type="number" class="form-control"
+        //                                    name="Skus[${index}].ShelfLifeDays"
+        //                                    value="${values.ShelfLifeDays ?? ''}" />
+        //                         </div>
 
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label fw-bold">下架時間</label>
-                                    <input type="datetime-local" class="form-control"
-                                           name="Skus[${index}].EndDate"
-                                           value="${values.EndDate ?? ''}" />
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-                </div>
-            `;
-        }
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">上架日期</label>
+        //                             <input type="date" class="form-control"
+        //                                    name="Skus[${index}].StartDate"
+        //                                    value="${values.StartDate ? values.StartDate.split('T')[0] : ''}" />
+        //                         </div>
+
+        //                         <div class="col-md-3 mb-3">
+        //                             <label class="form-label fw-bold">下架日期</label>
+        //                             <input type="date" class="form-control"
+        //                                    name="Skus[${index}].EndDate"
+        //                                    value="${values.EndDate ? values.EndDate.split('T')[0] : ''}" />
+        //                         </div>
+        //                     </div>
+        //                 </fieldset>
+        //             </div>
+        //         </div>
+        //     `;
+        // }
 
         // 新增 SKU 卡片（永遠加在最後）
         function addCard(values = {}) {
             const container = document.getElementById("specCards");
             const index = container.children.length;
 
-            const card = document.createElement("div");
-            card.classList.add("col-md-12", "spec-card");
-            card.setAttribute("data-index", index);
-            card.innerHTML = buildCardHtml(index, values);
-
-            container.appendChild(card);
-
-            refreshIndexes();
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                const card = document.createElement("div");
+                card.classList.add("col-md-12", "spec-card");
+                card.setAttribute("data-index", index);
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
         }
 
         // 複製 SKU 卡片（插入在原卡片後）
         function copyCard(button) {
             const card = button.closest(".spec-card");
-            const values = {};
+            const index = document.querySelectorAll("#specCards .spec-card").length;
 
-            card.querySelectorAll("input").forEach(input => {
-                const match = input.name.match(/Skus\[\d+\]\.(\w+)/);
-                if (match) {
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                const newCard = document.createElement("div");
+                newCard.classList.add("col-md-12", "spec-card");
+                newCard.setAttribute("data-index", index);
+                newCard.innerHTML = html;
+
+                card.insertAdjacentElement("afterend", newCard);
+
+                // 複製舊卡片的值到新卡片 (排除 SkuCode & Barcode)
+                const oldInputs = card.querySelectorAll("input, select, textarea");
+                const newInputs = newCard.querySelectorAll("input, select, textarea");
+
+                oldInputs.forEach((oldInput, i) => {
+                    const match = oldInput.name?.match(/Skus\[\d+\]\.(\w+)/);
+                    if (!match) return;
+
                     const field = match[1];
-                    values[field] = (input.type === "checkbox") ? input.checked : input.value;
-                }
+                    const newInput = Array.from(newInputs).find(x => x.name?.endsWith("." + field));
+                    if (!newInput) return;
+
+                    // 排除不複製的欄位
+                    if (field === "SkuCode" || field === "Barcode") {
+                        return;
+                    }
+
+                    if (oldInput.type === "checkbox") {
+                        newInput.checked = oldInput.checked;
+                    } else {
+                        newInput.value = oldInput.value;
+                    }
+                });
             });
-
-            const newCard = document.createElement("div");
-            newCard.classList.add("col-md-12", "spec-card");
-            newCard.innerHTML = buildCardHtml(0, values); // 先用暫時 index=0
-            card.insertAdjacentElement("afterend", newCard);
-
-            refreshIndexes();
         }
+
 
         function removeCard(button) {
             const card = button.closest(".spec-card");
-            if (card) {
-                card.remove();
-                refreshIndexes(); // 刪除後更新索引
-            }
+            card.remove();
+            refreshIndexes(); // 刪除後重新整理索引
         }
 
         function refreshIndexes() {
-            document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
-                card.setAttribute("data-index", i);
+            const cards = document.querySelectorAll("#specCards .spec-card");
 
-                // 更新所有 input name 屬性
-                card.querySelectorAll("[name]").forEach(input => {
-                    input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
+            cards.forEach((card, newIndex) => {
+                card.setAttribute("data-index", newIndex);
+
+                // 調整所有 input/select 的 name 和 id
+                card.querySelectorAll("[name]").forEach(el => {
+                    el.name = el.name.replace(/Skus\[\d+\]/, `Skus[${newIndex}]`);
                 });
 
-                // 更新 id 屬性
                 card.querySelectorAll("[id]").forEach(el => {
-                    el.id = el.id.replace(/Skus_\d+_/, `Skus_${i}_`);
+                    el.id = el.id.replace(/Skus_\d+_/, `Skus_${newIndex}_`);
+                });
+
+                // 調整 validation span
+                card.querySelectorAll("[data-valmsg-for]").forEach(el => {
+                    el.setAttribute("data-valmsg-for",
+                        el.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${newIndex}]`)
+                    );
                 });
             });
         }
 
-        // 重新整理SKU
-        function refreshIndexes() {
-            document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
-                card.setAttribute("data-index", i);
-
-                card.querySelectorAll("input, select, textarea").forEach(input => {
-                    if (!input.name) return; // 跳過沒有 name 的（像 SkuCode）
-                    input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
-                    input.id = input.id.replace(/Skus_\d+_/, `Skus_${i}_`);
-                });
-
-                // 更新 data-valmsg-for (驗證訊息)
-                card.querySelectorAll("[data-valmsg-for]").forEach(span => {
-                    span.setAttribute("data-valmsg-for", span.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${i}]`));
-                });
-            });
+        function markDeleted(button) {
+            const card = button.closest(".spec-card");
+            const hidden = card.querySelector("input[name$='.IsDeleted']");
+            if (hidden) {
+                hidden.value = "true";   // 標記刪除
+            }
+            card.style.display = "none"; // 只隱藏，不真正移除
         }
+
+
+        // 新增 SKU 卡片（永遠加在最後）
+        // function addCard(values = {}) {
+        //     const container = document.getElementById("specCards");
+        //     const index = container.children.length;
+
+        //     const card = document.createElement("div");
+        //     card.classList.add("col-md-12", "spec-card");
+        //     card.setAttribute("data-index", index);
+        //     card.innerHTML = buildCardHtml(index, values);
+
+        //     container.appendChild(card);
+
+        //     refreshIndexes();
+        // }
+
+        // // 複製 SKU 卡片（插入在原卡片後）
+        // function copyCard(button) {
+        //     const card = button.closest(".spec-card");
+        //     const values = {};
+
+        //     card.querySelectorAll("input").forEach(input => {
+        //         const match = input.name.match(/Skus\[\d+\]\.(\w+)/);
+        //         if (match) {
+        //             const field = match[1];
+        //             values[field] = (input.type === "checkbox") ? input.checked : input.value;
+        //         }
+        //     });
+
+        //     const newCard = document.createElement("div");
+        //     newCard.classList.add("col-md-12", "spec-card");
+        //     newCard.innerHTML = buildCardHtml(0, values); // 先用暫時 index=0
+        //     card.insertAdjacentElement("afterend", newCard);
+
+        //     refreshIndexes();
+        // }
+
+        // function removeCard(button) {
+        //     const card = button.closest(".spec-card");
+        //     if (card) {
+        //         card.remove();
+        //         refreshIndexes(); // 刪除後更新索引
+        //     }
+        // }
+
+        // function refreshIndexes() {
+        //     document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
+        //         card.setAttribute("data-index", i);
+
+        //         // 更新所有 input name 屬性
+        //         card.querySelectorAll("[name]").forEach(input => {
+        //             input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
+        //         });
+
+        //         // 更新 id 屬性
+        //         card.querySelectorAll("[id]").forEach(el => {
+        //             el.id = el.id.replace(/Skus_\d+_/, `Skus_${i}_`);
+        //         });
+        //     });
+        // }
+
+        // // 重新整理SKU
+        // function refreshIndexes() {
+        //     document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
+        //         card.setAttribute("data-index", i);
+
+        //         card.querySelectorAll("input, select, textarea").forEach(input => {
+        //             if (!input.name) return; // 跳過沒有 name 的（像 SkuCode）
+        //             input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
+        //             input.id = input.id.replace(/Skus_\d+_/, `Skus_${i}_`);
+        //         });
+
+        //         // 更新 data-valmsg-for (驗證訊息)
+        //         card.querySelectorAll("[data-valmsg-for]").forEach(span => {
+        //             span.setAttribute("data-valmsg-for", span.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${i}]`));
+        //         });
+        //     });
+        // }
 
         // 品牌下拉選項
         $(document).ready(function () {
