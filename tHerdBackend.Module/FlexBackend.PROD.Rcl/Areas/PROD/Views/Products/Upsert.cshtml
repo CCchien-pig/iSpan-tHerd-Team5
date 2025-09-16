@@ -390,6 +390,17 @@
                                                             <label class="form-check-label fw-bold" for="Skus_(@index)_IsActive">啟用</label>
                                                         </div>
                                                     </div>
+
+                                                    <div class="col-md-3 mb-3">
+                                                        <label class="form-label fw-bold text-danger" for="Skus_(@index)_SkuId">Sku 編號</label>
+                                                         <input type="text" class="form-control"
+                                                               value="@sku.SkuId" disabled />
+
+                                                        <input type="hidden"
+                                                               name="Skus[@index].SkuId"
+                                                               value="@sku.SkuId" />
+                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].SkuId"></span>
+                                                    </div>
                                                 </div>
 
                                                 <!-- 規格值區塊（你可補上 Partial 或 TagHelper） -->

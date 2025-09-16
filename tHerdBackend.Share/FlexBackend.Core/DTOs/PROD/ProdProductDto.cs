@@ -278,12 +278,24 @@ public partial class ProdProductSkuDto
     [Display(Name = "是否啟用")]
     public bool IsActive { get; set; }
 
-    /// <summary>
-    /// 規格選項
-    /// </summary>
-    [Display(Name = "規格選項")]
-    public List<ProdSpecificationOptionDto>? SpecOptions { get; set; }
+	public List<ProdSkuSpecificationValueDto>? SpecValues { get; set; }
 }
+
+/// <summary>
+/// 商品的規格設定
+/// </summary>
+public partial class ProdSkuSpecificationValueDto
+{
+	/// <summary>
+	/// Sku編號
+	/// </summary>
+	public int SkuId { get; set; }
+	/// <summary>
+	/// 規格值編號
+	/// </summary>
+	public int SpecificationOptionId { get; set; }
+}
+
 
 /// <summary>
 /// 商品的規格設定
@@ -317,6 +329,12 @@ public partial class ProdSpecificationConfigDto
 	[Display(Name = "顯示順序")]
     [Range(0, 999, ErrorMessage = "{0} 必須大於等於 {1}")]
     public int OrderSeq { get; set; }
+
+	/// <summary>
+	/// 規格選項
+	/// </summary>
+	[Display(Name = "規格選項")]
+	public List<ProdSpecificationOptionDto>? SpecOptions { get; set; }
 }
 
 /// <summary>
