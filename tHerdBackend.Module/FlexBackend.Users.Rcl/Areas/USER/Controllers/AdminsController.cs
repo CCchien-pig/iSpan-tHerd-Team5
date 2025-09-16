@@ -1,5 +1,7 @@
 ﻿using FlexBackend.Core.DTOs.USER;
+using FlexBackend.Core.Web_Datatables;
 using FlexBackend.Infra.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -9,243 +11,416 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 {
+	[Area("USER")]
+	[Controller]
 	public class AdminsController : Controller
 	{
 		private readonly ApplicationDbContext _app;
 		private readonly UserManager<ApplicationUser> _userMgr;
-		private readonly IWebHostEnvironment _env;
+		private readonly RoleManager<ApplicationRole> _roleMgr;
 
 		public AdminsController(
 			ApplicationDbContext app,
 			UserManager<ApplicationUser> userMgr,
-			IWebHostEnvironment env)
+			RoleManager<ApplicationRole> roleMgr)
 		{
 			_app = app;
 			_userMgr = userMgr;
-			_env = env;
+			_roleMgr = roleMgr;
 		}
 
 		public IActionResult Index() => View();
 
-		// DataTables 來源：只列出具有「非 Member」角色的使用者
+		// 角色下拉（排除 Member）
 		[HttpGet]
-		public async Task<IActionResult> Users([FromQuery] int draw, [FromQuery] int start = 0, [FromQuery] int length = 10)
+		public async Task<IActionResult> RolesCombo()
 		{
-			// search[value]
-			var kw = (Request.Query["search[value]"].ToString() ?? string.Empty).Trim();
+			var roles = await _roleMgr.Roles
+				.Where(r => r.Name != "Member")
+				.OrderBy(r => r.Name)
+				.Select(r => new { id = r.Id, name = r.Name })
+				.ToListAsync();
+			return Json(roles);
+		}
 
-			// 先找出有非 Member 角色的使用者 Id
-			var nonMemberUserIds = await (
-				from ur in _app.UserRoles
-				join r in _app.Roles on ur.RoleId equals r.Id
-				where r.Name != "Member"
-				select ur.UserId
-			).Distinct().ToListAsync();
+		// 員工清單（排除只有 Member 的帳號；可依角色篩選）
+		[HttpGet]
+		public async Task<IActionResult> Users([FromQuery] DataTableRequest? dt, [FromQuery] string? roleId)
+		{
+			var draw = dt?.Draw ?? 0;
+			var start = Math.Max(0, dt?.Start ?? 0);
+			var length = (dt?.Length ?? 10) > 0 ? dt!.Length : 10;
 
-			// 基礎查詢：只列出非 Member 使用者
-			var q = _app.Users.AsNoTracking()
-							  .Where(u => nonMemberUserIds.Contains(u.Id));
+			var kw = dt?.Search?.Value;
+			if (string.IsNullOrWhiteSpace(kw))
+				kw = Request.Query["search[value]"].ToString();
+			kw = kw?.Trim();
+
+			// 有非 Member 角色的使用者
+			var nonMemberRoleIds = await _roleMgr.Roles
+	.Where(r => r.Name != "Member")
+	.Select(r => r.Id)
+	.ToListAsync();                         // ★ 新增
+
+			var userIdsWithNonMember = _app.UserRoles
+				.Where(ur => nonMemberRoleIds.Contains(ur.RoleId))
+				.Select(ur => ur.UserId);
+
+			var q = _app.Users.AsNoTracking().Where(u => userIdsWithNonMember.Contains(u.Id));
+
+			// 角色篩選
+			if (!string.IsNullOrEmpty(roleId))
+				q = q.Where(u => _app.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == roleId));
 
 			var recordsTotal = await q.CountAsync();
 
+			// 搜尋（姓名/Email/電話）
 			if (!string.IsNullOrEmpty(kw))
 			{
 				q = q.Where(u =>
-					(u.FirstName + " " + u.LastName).Contains(kw) ||
-					u.Email!.Contains(kw) ||
-					u.UserName!.Contains(kw) ||
-					u.PhoneNumber!.Contains(kw)
-				);
+					(u.LastName + " " + u.FirstName).Contains(kw) ||
+					(u.Email ?? "").Contains(kw) ||
+					(u.PhoneNumber ?? "").Contains(kw));
 			}
 
 			var recordsFiltered = await q.CountAsync();
 
-			// 排序（依 DataTables 第一個排序欄位）
-			// columns: 0=displayName, 1=email, 2=phoneNumber, 3=isActive, 4=createdDate, 5=操作
-			var orderCol = int.TryParse(Request.Query["order[0][column]"], out var col) ? col : 4;
-			var orderDir = Request.Query["order[0][dir]"].ToString();
-			var desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
+			// ---- 排序（以 DataTables columns[n][data] 名稱為準；若缺就預設 CreatedDate DESC）----
+			string? orderColIdxStr = Request.Query["order[0][column]"];
+			string? orderDir = Request.Query["order[0][dir]"];
+			bool desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
 
-			q = orderCol switch
+			IOrderedQueryable<ApplicationUser> ordered; // 外層宣告
+
+			if (int.TryParse(orderColIdxStr, out var orderIdx))
 			{
-				0 => (desc ? q.OrderByDescending(u => u.LastName).ThenByDescending(u => u.FirstName)
-						   : q.OrderBy(u => u.LastName).ThenBy(u => u.FirstName)),
-				1 => (desc ? q.OrderByDescending(u => u.Email) : q.OrderBy(u => u.Email)),
-				2 => (desc ? q.OrderByDescending(u => u.PhoneNumber) : q.OrderBy(u => u.PhoneNumber)),
-				3 => (desc ? q.OrderByDescending(u => u.IsActive) : q.OrderBy(u => u.IsActive)),
-				4 => (desc ? q.OrderByDescending(u => u.CreatedDate) : q.OrderBy(u => u.CreatedDate)),
-				_ => q.OrderByDescending(u => u.CreatedDate)
-			};
+				// e.g. number / lastName / firstName / email / phoneNumber / isActive / createdDate / (空字串為操作欄)
+				var colDataKey = Request.Query[$"columns[{orderIdx}][data]"].ToString();
 
-			// 分頁 + 先抓基本欄位
-			var page = await q.Skip(start).Take(length)
-				.Select(u => new
+				ordered = colDataKey switch
 				{
-					u.Id,
-					u.FirstName,
-					u.LastName,
-					u.Email,
-					u.PhoneNumber,
-					u.IsActive,
-					u.CreatedDate
-				})
-				.ToListAsync();
-
-			var userIds = page.Select(p => p.Id).ToList();
-
-			// 把每位使用者的角色（排除 Member）查出來
-			var roleMap = await (
-				from ur in _app.UserRoles
-				join r in _app.Roles on ur.RoleId equals r.Id
-				where userIds.Contains(ur.UserId) && r.Name != "Member"
-				group r.Name by ur.UserId into g
-				select new { UserId = g.Key, Roles = g.ToList() }
-			).ToDictionaryAsync(x => x.UserId, x => x.Roles);
-
-			var data = page.Select(p => new
+					"number" => desc ? q.OrderByDescending(u => u.UserNumberId).ThenByDescending(u => u.LastName)
+										  : q.OrderBy(u => u.UserNumberId).ThenBy(u => u.LastName),
+					"lastName" => desc ? q.OrderByDescending(u => u.LastName).ThenByDescending(u => u.FirstName)
+										  : q.OrderBy(u => u.LastName).ThenBy(u => u.FirstName),
+					"firstName" => desc ? q.OrderByDescending(u => u.FirstName)
+										  : q.OrderBy(u => u.FirstName),
+					"email" => desc ? q.OrderByDescending(u => u.Email)
+										  : q.OrderBy(u => u.Email),
+					"phoneNumber" => desc ? q.OrderByDescending(u => u.PhoneNumber)
+										  : q.OrderBy(u => u.PhoneNumber),
+					"isActive" => desc ? q.OrderByDescending(u => u.IsActive)
+										  : q.OrderBy(u => u.IsActive),
+					"createdDate" => desc ? q.OrderByDescending(u => u.CreatedDate)
+										  : q.OrderBy(u => u.CreatedDate),
+					_ => desc ? q.OrderByDescending(u => u.CreatedDate)   // roleId / 操作欄 或未知欄位
+										  : q.OrderBy(u => u.CreatedDate),
+				};
+			}
+			else
 			{
-				id = p.Id,
-				displayName = $"{p.LastName}{p.FirstName}",
-				email = p.Email,
-				phoneNumber = p.PhoneNumber,
-				isActive = p.IsActive,
-				createdDate = p.CreatedDate.ToString("yyyy-MM-dd HH:mm"),
-				roles = roleMap.TryGetValue(p.Id, out var roles) ? string.Join(", ", roles) : ""
+				// 沒給排序參數 → 預設
+				ordered = q.OrderByDescending(u => u.CreatedDate);
+			}
+
+			// ↓ 之後用 ordered 取頁
+			var page = await ordered
+	.Skip(start).Take(length)
+	.Select(u => new
+	{
+		u.Id,
+		u.UserNumberId,
+		u.LastName,
+		u.FirstName,
+		u.Email,
+		u.PhoneNumber,
+		u.IsActive,
+		u.CreatedDate
+	})
+	.ToListAsync();
+
+			var ids = page.Select(p => p.Id).ToList();
+
+			var roles = await (from ur in _app.UserRoles
+							   join r in _app.Roles on ur.RoleId equals r.Id
+							   where ids.Contains(ur.UserId) && r.Name != "Member"
+							   select new { ur.UserId, r.Id, r.Name })
+							   .ToListAsync();
+
+			var primaryRole = roles
+				.GroupBy(x => x.UserId)
+				.ToDictionary(g => g.Key, g => g.OrderBy(x => x.Name).First());
+
+			var data = page.Select(u => new
+			{
+				id = u.Id,
+				number = u.UserNumberId,
+				lastName = u.LastName,
+				firstName = u.FirstName,
+				email = u.Email,
+				phoneNumber = u.PhoneNumber,
+				roleId = primaryRole.TryGetValue(u.Id, out var rr) ? rr.Id : null,
+				roleName = primaryRole.TryGetValue(u.Id, out var rr2) ? rr2.Name : "",
+				isActive = u.IsActive,
+				createdDate = u.CreatedDate.ToString("yyyy-MM-dd HH:mm")
 			});
 
 			return Json(new { draw, recordsTotal, recordsFiltered, data });
 		}
 
-		// 詳細頁
+		// 就地編輯欄位
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> UpdateField([FromForm] string userId, [FromForm] string field, [FromForm] string? value)
+		{
+			var u = await _userMgr.Users.FirstOrDefaultAsync(x => x.Id == userId);
+			if (u == null) return NotFound(new { ok = false, message = "找不到使用者" });
+
+			switch (field)
+			{
+				case "lastName": u.LastName = value?.Trim() ?? ""; break;
+				case "firstName": u.FirstName = value?.Trim() ?? ""; break;
+				case "email":
+					if (string.IsNullOrWhiteSpace(value)) return BadRequest(new { ok = false, message = "Email 必填" });
+					var email = value.Trim();
+					u.Email = email;
+					u.UserName = email;
+					u.NormalizedEmail = _userMgr.NormalizeEmail(email);
+					u.NormalizedUserName = _userMgr.NormalizeName(email);
+					break;
+				case "phoneNumber": u.PhoneNumber = value?.Trim(); break;
+				case "isActive":
+					u.IsActive = value == "true" || value == "1" || value?.ToLowerInvariant() == "on";
+					if (u.IsActive && u.ActivationDate == null) u.ActivationDate = DateTime.UtcNow;
+					break;
+				default:
+					return BadRequest(new { ok = false, message = "不允許的欄位" });
+			}
+
+			u.RevisedDate = DateTime.UtcNow;
+			var res = await _userMgr.UpdateAsync(u);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
+		}
+
+		// 更換角色（單一主要角色；排除 Member）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ChangeRole([FromForm] string userId, [FromForm] string roleId)
+		{
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null) return NotFound(new { ok = false, message = "找不到使用者" });
+
+			var role = await _roleMgr.FindByIdAsync(roleId);
+			if (role == null || role.Name == "Member")
+				return BadRequest(new { ok = false, message = "角色錯誤" });
+
+			var currRoleIds = await _app.UserRoles.Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync();
+			var toRemove = await _roleMgr.Roles.Where(r => currRoleIds.Contains(r.Id) && r.Name != "Member")
+											   .Select(r => r.Name!).ToListAsync();
+			if (toRemove.Count > 0)
+			{
+				var rm = await _userMgr.RemoveFromRolesAsync(user, toRemove);
+				if (!rm.Succeeded) return BadRequest(new { ok = false, message = string.Join("; ", rm.Errors.Select(e => e.Description)) });
+			}
+
+			var addRes = await _userMgr.AddToRoleAsync(user, role.Name!);
+			if (!addRes.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", addRes.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
+		}
+
+		// ★ 詳細資料（帶出目前角色）
 		[HttpGet]
 		public async Task<IActionResult> Details(string id)
 		{
-			var u = await _app.Users.AsNoTracking()
-				.Where(x => x.Id == id)
-				.Select(x => new AdminUserVm
-				{
-					Id = x.Id,
-					FirstName = x.FirstName,
-					LastName = x.LastName,
-					Email = x.Email!,
-					PhoneNumber = x.PhoneNumber,
-					IsActive = x.IsActive,
-					CreatedDate = x.CreatedDate
-				}).FirstOrDefaultAsync();
-
+			var u = await _app.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 			if (u == null) return NotFound();
 
-			// 角色（排除 Member）
-			u.Roles = await (
-				from ur in _app.UserRoles
-				join r in _app.Roles on ur.RoleId equals r.Id
-				where ur.UserId == id && r.Name != "Member"
-				select r.Name
-			).ToListAsync();
+			var roleId = await (from ur in _app.UserRoles
+								join r in _app.Roles on ur.RoleId equals r.Id
+								where ur.UserId == id && r.Name != "Member"
+								select r.Id).FirstOrDefaultAsync();
 
-			return View(u);
+			return Json(new
+			{
+				id = u.Id,
+				number = u.UserNumberId,
+				lastName = u.LastName,
+				firstName = u.FirstName,
+				email = u.Email,
+				phoneNumber = u.PhoneNumber,
+				gender = u.Gender,
+				birthDate = u.BirthDate?.ToString("yyyy-MM-dd"),
+				address = u.Address,
+				isActive = u.IsActive,
+				roleId
+			});
 		}
 
-		// 上傳員工照片
+		// ★ 詳細資料儲存（含角色）
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> UploadPhoto([FromForm] string id, [FromForm] IFormFile photo)
+		public async Task<IActionResult> UpdateDetails(
+			[FromForm] string id,
+			[FromForm] string lastName,
+			[FromForm] string firstName,
+			[FromForm] string email,
+			[FromForm] string? phoneNumber,
+			[FromForm] string? gender,
+			[FromForm] DateTime? birthDate,
+			[FromForm] string? address,
+			[FromForm] bool isActive,
+			[FromForm] string roleId)
 		{
-			var user = await _app.Users.FirstOrDefaultAsync(u => u.Id == id);
-			if (user == null) return NotFound();
+			var user = await _userMgr.FindByIdAsync(id);
+			if (user == null) return BadRequest(new { ok = false, message = "使用者不存在" });
 
-			if (photo == null || photo.Length == 0)
-				return BadRequest("未選擇檔案");
+			var role = await _roleMgr.FindByIdAsync(roleId);
+			if (role == null || role.Name == "Member")
+				return BadRequest(new { ok = false, message = "角色無效" });
 
-			// 基本驗證：類型與大小
-			var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
-			if (!allowed.Contains(photo.ContentType))
-				return BadRequest("僅接受 JPG / PNG / WEBP");
+			if (string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(email))
+				return BadRequest(new { ok = false, message = "必填欄位不足" });
 
-			if (photo.Length > 2 * 1024 * 1024) // 2MB
-				return BadRequest("檔案過大（上限 2MB）");
+			// 基本欄位
+			user.LastName = lastName.Trim();
+			user.FirstName = firstName.Trim();
+			user.Gender = string.IsNullOrWhiteSpace(gender) ? (user.Gender ?? "N/A") : gender.Trim(); // 避免 NOT NULL 失敗
+			user.BirthDate = birthDate;
+			user.Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
+			user.IsActive = isActive;
 
-			var root = _env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
-			var dir = Path.Combine(root, "uploads", "users", id);
-			Directory.CreateDirectory(dir);
+			// Email / UserName 正規化
+			var newEmail = email.Trim();
+			user.Email = newEmail;
+			user.UserName = newEmail;
+			user.NormalizedEmail = _userMgr.NormalizeEmail(newEmail);
+			user.NormalizedUserName = _userMgr.NormalizeName(newEmail);
 
-			// 先刪除舊檔
-			foreach (var f in Directory.EnumerateFiles(dir))
-				System.IO.File.Delete(f);
-
-			// 以固定檔名 profile.副檔名 儲存
-			var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
-			var filePath = Path.Combine(dir, "profile" + ext);
-			using (var fs = System.IO.File.Create(filePath))
-			{
-				await photo.CopyToAsync(fs);
-			}
-
-			// 你有 ImgId 欄位，但未提供影像表結構；這裡不動 DB 結構，只存檔到 wwwroot
-			// 可視需要在此更新 RevisedDate 等欄位
+			user.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
 			user.RevisedDate = DateTime.UtcNow;
-			await _app.SaveChangesAsync();
 
-			return RedirectToAction(nameof(Details), new { id });
-		}
+			var res = await _userMgr.UpdateAsync(user);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
 
-		// 供 <img src> 使用：若無檔案，動態輸出 SVG（帶姓名縮寫）
-		[HttpGet]
-		public async Task<IActionResult> Photo(string id)
-		{
-			// 找實體檔案
-			var root = _env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
-			var dir = Path.Combine(root, "uploads", "users", id);
-			if (Directory.Exists(dir))
+			// 更新角色（同 ChangeRole）
+			var currRoleIds = await _app.UserRoles.Where(ur => ur.UserId == id).Select(ur => ur.RoleId).ToListAsync();
+			var toRemove = await _roleMgr.Roles.Where(r => currRoleIds.Contains(r.Id) && r.Name != "Member")
+											   .Select(r => r.Name!).ToListAsync();
+			if (toRemove.Count > 0)
 			{
-				var file = Directory.EnumerateFiles(dir, "profile.*").FirstOrDefault();
-				if (file != null)
-				{
-					var ct = GetContentType(file);
-					return PhysicalFile(file, ct ?? "application/octet-stream");
-				}
+				var rm = await _userMgr.RemoveFromRolesAsync(user, toRemove);
+				if (!rm.Succeeded) return BadRequest(new { ok = false, message = string.Join("; ", rm.Errors.Select(e => e.Description)) });
 			}
+			var addRes = await _userMgr.AddToRoleAsync(user, role.Name!);
+			if (!addRes.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", addRes.Errors.Select(e => e.Description)) });
 
-			// 沒檔案 → 產生 SVG 頭像（姓名縮寫）
-			var user = await _app.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
-			var initials = user == null ? "U" : GetInitials(user.LastName + user.FirstName);
-			var svg = $@"<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'>
-  <rect width='100%' height='100%' fill='#e5e7eb'/>
-  <text x='50%' y='55%' font-family='Segoe UI,Arial' font-size='96' fill='#374151' text-anchor='middle'>{initials}</text>
-</svg>";
-			return Content(svg, "image/svg+xml");
+			return Json(new { ok = true });
 		}
 
-		private static string GetInitials(string name)
+		// ★ 刪除員工（僅允許刪除具有非 Member 角色者）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Delete([FromForm] string userId)
 		{
-			if (string.IsNullOrWhiteSpace(name)) return "U";
-			var s = new string(name.Where(char.IsLetterOrDigit).ToArray());
-			return s.Length <= 2 ? s.ToUpperInvariant() : s.Substring(0, 2).ToUpperInvariant();
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null) return NotFound(new { ok = false, message = "使用者不存在" });
+
+			// 確認是否為「員工」（有非 Member 角色）
+			var hasNonMemberRole = await (from ur in _app.UserRoles
+										  join r in _app.Roles on ur.RoleId equals r.Id
+										  where ur.UserId == userId && r.Name != "Member"
+										  select ur).AnyAsync();
+			if (!hasNonMemberRole)
+				return BadRequest(new { ok = false, message = "此帳號非員工，無法在此刪除" });
+
+			var res = await _userMgr.DeleteAsync(user);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
 		}
 
-		private static string? GetContentType(string path)
+		// 新增員工（修正：補 Gender 避免 DB NOT NULL；Email/UserName 正規化）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Create([FromForm] string email,
+												[FromForm] string lastName,
+												[FromForm] string firstName,
+												[FromForm] string roleId,
+												[FromForm] string? phone)
 		{
-			var ext = Path.GetExtension(path).ToLowerInvariant();
-			return ext switch
+			if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(firstName))
+				return BadRequest(new { ok = false, message = "必填欄位缺失" });
+
+			var role = await _roleMgr.FindByIdAsync(roleId);
+			if (role == null || role.Name == "Member")
+				return BadRequest(new { ok = false, message = "角色錯誤" });
+
+			if (await _userMgr.FindByEmailAsync(email) != null)
+				return BadRequest(new { ok = false, message = "Email 已存在" });
+
+			var normalizedEmail = _userMgr.NormalizeEmail(email.Trim());
+			var normalizedUserName = _userMgr.NormalizeName(email.Trim());
+
+			var user = new ApplicationUser
 			{
-				".jpg" or ".jpeg" => "image/jpeg",
-				".png" => "image/png",
-				".webp" => "image/webp",
-				_ => null
+				Id = Guid.NewGuid().ToString(),
+				UserNumberId = 0,
+				UserName = email.Trim(),
+				NormalizedUserName = normalizedUserName,
+				Email = email.Trim(),
+				NormalizedEmail = normalizedEmail,
+				LastName = lastName.Trim(),
+				FirstName = firstName.Trim(),
+				PhoneNumber = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
+				// ★ 關鍵：DB 欄位 Gender NOT NULL，給預設值
+				Gender = "N/A",
+				IsActive = true,
+				CreatedDate = DateTime.UtcNow,
+				ActivationDate = DateTime.UtcNow,
+				EmailConfirmed = true,
+				SecurityStamp = Guid.NewGuid().ToString()
 			};
+
+			// 密碼須符合 Identity Policy（大寫/小寫/數字/特殊字元）
+			var tempPwd = "Init@12345";
+			var createRes = await _userMgr.CreateAsync(user, tempPwd);
+			if (!createRes.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", createRes.Errors.Select(e => e.Description)) });
+
+			var addRoleRes = await _userMgr.AddToRoleAsync(user, role.Name!);
+			if (!addRoleRes.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", addRoleRes.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
 		}
 
+		// NEW: 修改密碼（管理員重設）
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ChangePassword([FromForm] string userId, [FromForm] string newPassword)
+		{
+			var strong = System.Text.RegularExpressions.Regex.IsMatch(
+				newPassword ?? "", @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$");
+			if (!strong) return BadRequest(new { ok = false, message = "密碼需至少 8 碼，且含大小寫與數字。" });
+
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null) return NotFound(new { ok = false, message = "使用者不存在" });
+
+			var token = await _userMgr.GeneratePasswordResetTokenAsync(user);
+			var res = await _userMgr.ResetPasswordAsync(user, token, newPassword);
+			if (!res.Succeeded)
+				return BadRequest(new { ok = false, message = string.Join("; ", res.Errors.Select(e => e.Description)) });
+
+			return Json(new { ok = true });
+		}
 	}
-	public sealed class AdminUserVm
-	{
-		public string Id { get; set; } = default!;
-		[Display(Name = "姓")] public string LastName { get; set; } = "";
-		[Display(Name = "名")] public string FirstName { get; set; } = "";
-		public string Email { get; set; } = "";
-		public string? PhoneNumber { get; set; }
-		public bool IsActive { get; set; }
-		public DateTime CreatedDate { get; set; }
-		public List<string> Roles { get; set; } = new();
-	}
-	
+
 }
