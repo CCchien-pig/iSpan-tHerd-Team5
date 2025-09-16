@@ -1,0 +1,42 @@
+﻿@model FlexBackend.Infra.Models.CntPageBlock
+@{
+    ViewData["Title"] = "刪除區塊";
+}
+
+<h3 class="mb-3 text-danger">確定要刪除此區塊？</h3>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-2">類型</dt>
+            <dd class="col-sm-10">@Model.BlockType</dd>
+            <dt class="col-sm-2">順序</dt>
+            <dd class="col-sm-10">@Model.OrderSeq</dd>
+            <dt class="col-sm-2">內容</dt>
+            <dd class="col-sm-10">
+                @if (Model.BlockType == "richtext")
+                {
+                    @Html.Raw((Model.Content ?? "").Length > 120 ? Model.Content!.Substring(0, 120) + "..." : Model.Content)
+                }
+                else if (Model.BlockType == "image")
+                {
+                    if (!string.IsNullOrWhiteSpace(Model.Content))
+                    {
+                        <img src="@Model.Content" style="max-height:120px" />
+                    }
+                    else
+                    {
+
+                        <span class="text-muted">（無）</span>
+                    }
+                }
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="PageBlockId" />
+    <button class="btn btn-danger" type="submit">刪除</button>
+    <a asp-area="CNT" asp-controller="Pages" asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-secondary ms-2">取消</a>
+</form>
