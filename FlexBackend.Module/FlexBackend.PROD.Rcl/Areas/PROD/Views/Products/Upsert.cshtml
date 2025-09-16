@@ -808,123 +808,71 @@
         }
 
 
-        function removeCard(button) {
-            const card = button.closest(".spec-card");
-            card.remove();
-            refreshIndexes(); // 刪除後重新整理索引
-        }
+        // 新增 SKU 卡片（永遠加在最後）
+        function addCard(values = {}) {
+            const container = document.getElementById("specCards");
+            const index = document.querySelectorAll("#specCards .spec-card").length; // 保證取現有數量
 
-        function refreshIndexes() {
-            const cards = document.querySelectorAll("#specCards .spec-card");
-
-            cards.forEach((card, newIndex) => {
-                card.setAttribute("data-index", newIndex);
-
-                // 調整所有 input/select 的 name 和 id
-                card.querySelectorAll("[name]").forEach(el => {
-                    el.name = el.name.replace(/Skus\[\d+\]/, `Skus[${newIndex}]`);
-                });
-
-                card.querySelectorAll("[id]").forEach(el => {
-                    el.id = el.id.replace(/Skus_\d+_/, `Skus_${newIndex}_`);
-                });
-
-                // 調整 validation span
-                card.querySelectorAll("[data-valmsg-for]").forEach(el => {
-                    el.setAttribute("data-valmsg-for",
-                        el.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${newIndex}]`)
-                    );
-                });
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                const card = document.createElement("div");
+                card.classList.add("col-md-12", "spec-card");
+                card.dataset.index = index; // dataset 更直覺
+                card.innerHTML = html;
+                container.appendChild(card);
             });
         }
 
+        // 複製 SKU 卡片（插入在原卡片後）
+        function copyCard(button) {
+            const card = button.closest(".spec-card");
+            const index = document.querySelectorAll("#specCards .spec-card").length;
+
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                const newCard = document.createElement("div");
+                newCard.classList.add("col-md-12", "spec-card");
+                newCard.setAttribute("data-index", index);
+                newCard.innerHTML = html;
+
+                card.insertAdjacentElement("afterend", newCard);
+
+                // 複製舊卡片的值到新卡片
+                const oldInputs = card.querySelectorAll("input, select, textarea");
+                const newInputs = newCard.querySelectorAll("input, select, textarea");
+
+                oldInputs.forEach(oldInput => {
+                    const match = oldInput.name?.match(/Skus\[\d+\]\.(\w+)/);
+                    if (!match) return;
+
+                    const field = match[1];
+
+                    // 排除不應該被複製的欄位
+                    if (["SkuCode", "SkuId", "Barcode", "IsDeleted"].includes(field)) return;
+
+                    // 找到新卡片對應欄位
+                    const newInput = Array.from(newInputs).find(x => x.name?.endsWith("." + field));
+                    if (!newInput) return;
+
+                    if (oldInput.type === "checkbox") {
+                        newInput.checked = oldInput.checked;
+                    } else {
+                        newInput.value = oldInput.value;
+                    }
+                });
+            });
+}
+
+
+
+
         function markDeleted(button) {
             const card = button.closest(".spec-card");
-            const hidden = card.querySelector("input[name$='.IsDeleted']");
+            const hidden = card.querySelector("input[name*='.IsDeleted']");
             if (hidden) {
                 hidden.value = "true";   // 標記刪除
+                console.log("已標記刪除", hidden.name, hidden.value);
             }
-            card.style.display = "none"; // 只隱藏，不真正移除
+            card.style.display = "none"; // 只隱藏，不移除
         }
-
-
-        // 新增 SKU 卡片（永遠加在最後）
-        // function addCard(values = {}) {
-        //     const container = document.getElementById("specCards");
-        //     const index = container.children.length;
-
-        //     const card = document.createElement("div");
-        //     card.classList.add("col-md-12", "spec-card");
-        //     card.setAttribute("data-index", index);
-        //     card.innerHTML = buildCardHtml(index, values);
-
-        //     container.appendChild(card);
-
-        //     refreshIndexes();
-        // }
-
-        // // 複製 SKU 卡片（插入在原卡片後）
-        // function copyCard(button) {
-        //     const card = button.closest(".spec-card");
-        //     const values = {};
-
-        //     card.querySelectorAll("input").forEach(input => {
-        //         const match = input.name.match(/Skus\[\d+\]\.(\w+)/);
-        //         if (match) {
-        //             const field = match[1];
-        //             values[field] = (input.type === "checkbox") ? input.checked : input.value;
-        //         }
-        //     });
-
-        //     const newCard = document.createElement("div");
-        //     newCard.classList.add("col-md-12", "spec-card");
-        //     newCard.innerHTML = buildCardHtml(0, values); // 先用暫時 index=0
-        //     card.insertAdjacentElement("afterend", newCard);
-
-        //     refreshIndexes();
-        // }
-
-        // function removeCard(button) {
-        //     const card = button.closest(".spec-card");
-        //     if (card) {
-        //         card.remove();
-        //         refreshIndexes(); // 刪除後更新索引
-        //     }
-        // }
-
-        // function refreshIndexes() {
-        //     document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
-        //         card.setAttribute("data-index", i);
-
-        //         // 更新所有 input name 屬性
-        //         card.querySelectorAll("[name]").forEach(input => {
-        //             input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
-        //         });
-
-        //         // 更新 id 屬性
-        //         card.querySelectorAll("[id]").forEach(el => {
-        //             el.id = el.id.replace(/Skus_\d+_/, `Skus_${i}_`);
-        //         });
-        //     });
-        // }
-
-        // // 重新整理SKU
-        // function refreshIndexes() {
-        //     document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
-        //         card.setAttribute("data-index", i);
-
-        //         card.querySelectorAll("input, select, textarea").forEach(input => {
-        //             if (!input.name) return; // 跳過沒有 name 的（像 SkuCode）
-        //             input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
-        //             input.id = input.id.replace(/Skus_\d+_/, `Skus_${i}_`);
-        //         });
-
-        //         // 更新 data-valmsg-for (驗證訊息)
-        //         card.querySelectorAll("[data-valmsg-for]").forEach(span => {
-        //             span.setAttribute("data-valmsg-for", span.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${i}]`));
-        //         });
-        //     });
-        // }
 
         // 品牌下拉選項
         $(document).ready(function () {
