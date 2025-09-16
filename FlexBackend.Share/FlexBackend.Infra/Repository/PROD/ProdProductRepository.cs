@@ -6,7 +6,6 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.Data;
 using static Dapper.SqlMapper;
 
@@ -139,14 +138,12 @@ namespace FlexBackend.Infra.Repository.PROD
                         StartDate = _sku.StartDate,
                         EndDate = _sku.EndDate,
                         IsActive = _sku.IsActive,
-                            SpecOptions = _sku.SpecificationOptions.Select(o => new ProdSpecificationOptionDto
-                            {
-                                SpecificationOptionId = o.SpecificationOptionId,
-                                SpecificationConfigId = o.SpecificationConfigId,
-                                OptionName = o.OptionName,
-                                OrderSeq = o.OrderSeq
-                            }).ToList()
-                    }).ToList();
+						SpecValues = _sku.SpecificationOptions.Select(o => new ProdSkuSpecificationValueDto
+						{
+							SkuId = _sku.SkuId,
+							SpecificationOptionId = o.SpecificationOptionId
+						}).ToList()
+					}).ToList();
                 }
                 else
                 {
@@ -154,8 +151,8 @@ namespace FlexBackend.Infra.Repository.PROD
                 }
                 // 找出所有該商品用到的「規格群組」
                 var specConfigIds = item.Skus
-                    .SelectMany(s => s.SpecOptions)
-                    .Select(o => o.SpecificationConfigId)
+                    .SelectMany(s => s.SpecValues)
+                    .Select(o => o.SpecificationOptionId)
                     .Distinct()
                     .ToList();
 
@@ -169,8 +166,15 @@ namespace FlexBackend.Infra.Repository.PROD
                     {
                         SpecificationConfigId = c.SpecificationConfigId,
                         GroupName = c.GroupName,
-                        OrderSeq = c.OrderSeq
-                    }).ToList();
+                        OrderSeq = c.OrderSeq,
+						SpecOptions = c.ProdSpecificationOptions.Select(o => new ProdSpecificationOptionDto
+						{
+							SpecificationOptionId = o.SpecificationOptionId,
+							SpecificationConfigId = o.SpecificationConfigId,
+							OptionName = o.OptionName,
+							OrderSeq = o.OrderSeq
+						}).ToList()
+					}).ToList();
                 }
                 else
                 {
@@ -188,32 +192,153 @@ namespace FlexBackend.Infra.Repository.PROD
         // 新增
         public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var entity = dto.Adapt<ProdProduct>(MapsterConfig.Default);
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 
-            // 自動帶建立/異動者與時間（或放到 DbContext.SaveChangesAsync 統一處理）
-            var now = DateTime.Now;
-            var uid = 1003;
+			using var tran = conn.BeginTransaction();
+			try
+			{
+				// === 1. 新增 Product 主檔 ===
+				var insertProductSql = @"
+                    INSERT INTO PROD_Product
+                    (BrandId, SeoId, ProductCode, ProductName,
+                     ShortDesc, FullDesc, IsPublished, Weight,
+                     VolumeCubicMeter, VolumeUnit, Creator, CreatedDate,
+                     Reviser, RevisedDate)
+                    OUTPUT INSERTED.ProductId
+                    VALUES
+                    (@BrandId, @SeoId, @ProductCode, @ProductName,
+                     @ShortDesc, @FullDesc, @IsPublished, @Weight,
+                     @VolumeCubicMeter, @VolumeUnit, @Creator, SYSDATETIME(),
+                     @Reviser, SYSDATETIME());
+                ";
 
-            entity.Creator = uid;
-            entity.CreatedDate = now;
-            entity.Reviser = uid;
-            entity.RevisedDate = now;
+				var productId = await conn.ExecuteScalarAsync<int>(insertProductSql, new
+				{
+					dto.BrandId,
+					dto.SeoId,
+					dto.ProductCode,
+					dto.ProductName,
+					dto.ShortDesc,
+					dto.FullDesc,
+					dto.IsPublished,
+					dto.Weight,
+					dto.VolumeCubicMeter,
+					dto.VolumeUnit,
+					Creator = 1003,
+					Reviser = 1003
+				}, tran);
 
-            _db.ProdProducts.Add(entity);
+				// === 2. 規格群組 & 選項 ===
+				var insertCfgSql = @"
+                    INSERT INTO PROD_SpecificationConfig (ProductId, GroupName, OrderSeq)
+                    OUTPUT INSERTED.SpecificationConfigId
+                    VALUES (@ProductId, @GroupName, @OrderSeq);
+                ";
 
-            // 部分更新（PATCH：忽略 null）
-            dto.Adapt(entity, MapsterConfig.Patch);
-            //await _db.SaveChangesAsync(ct);
+				var insertOptSql = @"
+                    INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
+                    OUTPUT INSERTED.SpecificationOptionId
+                    VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);
+                ";
 
-            var entry = _db.Entry(entity);
-            System.Diagnostics.Debug.WriteLine($"BEFORE save: State={entry.State}, TempKey={entry.Property(p => p.ProductId).IsTemporary}");
-            await _db.SaveChangesAsync(ct);
-            entry = _db.Entry(entity);
-            System.Diagnostics.Debug.WriteLine($"AFTER save:  State={entry.State}, TempKey={entry.Property(p => p.ProductId).IsTemporary}, Id={entity.ProductId}");
+				foreach (var cfg in dto.SpecConfigs ?? new())
+				{
+					var cfgId = await conn.ExecuteScalarAsync<int>(insertCfgSql, new
+					{
+						ProductId = productId,
+						cfg.GroupName,
+						cfg.OrderSeq
+					}, tran);
 
+					foreach (var opt in cfg.SpecOptions ?? new())
+					{
+						var optId = await conn.ExecuteScalarAsync<int>(insertOptSql, new
+						{
+							SpecificationConfigId = cfgId,
+							opt.OptionName,
+							opt.OrderSeq
+						}, tran);
 
-            return entity.ProductId;
-        }
+						// 回填回 DTO（方便後續用）
+						opt.SpecificationOptionId = optId;
+					}
+				}
+
+				// === 3. SKU & 規格對應 ===
+				var insertSkuSql = @"
+                    INSERT INTO PROD_ProductSku
+                    (ProductId, SpecCode, SkuCode, Barcode,
+                     CostPrice, ListPrice, UnitPrice, SalePrice,
+                     StockQty, SafetyStockQty, ReorderPoint, MaxStockQty,
+                     IsAllowBackorder, ShelfLifeDays, StartDate, EndDate,
+                     IsActive)
+                    OUTPUT INSERTED.SkuId
+                    VALUES
+                    (@ProductId, @SpecCode, @SkuCode, @Barcode,
+                     @CostPrice, @ListPrice, @UnitPrice, @SalePrice,
+                     @StockQty, @SafetyStockQty, @ReorderPoint, @MaxStockQty,
+                     @IsAllowBackorder, @ShelfLifeDays, @StartDate, @EndDate,
+                     @IsActive);
+                ";
+
+				var insertSkuSpecValueSql = @"
+                    INSERT INTO PROD_SkuSpecificationValue (SkuId, SpecificationOptionId)
+                    VALUES (@SkuId, @SpecificationOptionId);
+                ";
+
+				foreach (var skuDto in dto.Skus ?? new())
+				{
+					// 如果前端沒給 SkuCode → 預設 TEMP-xxxx
+					if (string.IsNullOrEmpty(skuDto.SkuCode))
+						skuDto.SkuCode = $"TEMP-{Guid.NewGuid():N}".Substring(0, 16);
+
+					var skuId = await conn.ExecuteScalarAsync<int>(insertSkuSql, new
+					{
+						ProductId = productId,
+						skuDto.SpecCode,
+						skuDto.SkuCode,
+						skuDto.Barcode,
+						skuDto.CostPrice,
+						skuDto.ListPrice,
+						skuDto.UnitPrice,
+						skuDto.SalePrice,
+						skuDto.StockQty,
+						skuDto.SafetyStockQty,
+						skuDto.ReorderPoint,
+						skuDto.MaxStockQty,
+						skuDto.IsAllowBackorder,
+						skuDto.ShelfLifeDays,
+						skuDto.StartDate,
+						skuDto.EndDate,
+						skuDto.IsActive
+					}, tran);
+
+					// 建立 SKU 與規格選項對應
+					foreach (var opt in skuDto.SpecValues ?? new())
+					{
+						if (opt.SpecificationOptionId > 0)
+						{
+							await conn.ExecuteAsync(insertSkuSpecValueSql, new
+							{
+								SkuId = skuId,
+								opt.SpecificationOptionId
+							}, tran);
+						}
+					}
+				}
+
+				// === 4. 刷新 SkuCode (把 TEMP- 改成正式碼) ===
+				await RefreshSkuCodesAsync(productId, conn, tran);
+
+				tran.Commit();
+				return productId;
+			}
+			catch
+			{
+				tran.Rollback();
+				throw;
+			}
+		}
 
         public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
@@ -223,35 +348,50 @@ namespace FlexBackend.Infra.Repository.PROD
 
             try
             {
-                // === 1. 更新 Product 主檔 ===
-                var updateProductSql = @"
-            UPDATE PROD_Product
-            SET ProductName = @ProductName,
-                BrandId = @BrandId,
-                FullDesc = @FullDesc,
-                Reviser = @Reviser,
-                RevisedDate = @RevisedDate
-            WHERE ProductId = @ProductId;
-        ";
-                await conn.ExecuteAsync(updateProductSql, new
-                {
-                    dto.ProductName,
-                    dto.BrandId,
-                    dto.FullDesc,
-                    Reviser = 1003,
-                    RevisedDate = DateTime.Now,
-                    dto.ProductId
-                }, tran);
+				// === 1. 更新 Product 主檔 ===
+				var updateProductSql = @"
+                    UPDATE PROD_Product
+                    SET BrandId          = @BrandId,
+                        SeoId            = @SeoId,
+                        ProductCode      = @ProductCode,
+                        ProductName      = @ProductName,
+                        ShortDesc        = @ShortDesc,
+                        FullDesc         = @FullDesc,
+                        IsPublished      = @IsPublished,
+                        Weight           = @Weight,
+                        VolumeCubicMeter = @VolumeCubicMeter,
+                        VolumeUnit       = @VolumeUnit,
+                        Reviser          = @Reviser,
+                        RevisedDate      = @RevisedDate
+                    WHERE ProductId = @ProductId;
+                ";
 
-                // === 2. 規格群組 SpecConfig ===
-                var cfgIds = dto.SpecConfigs?.Select(c => c.SpecificationConfigId).ToList() ?? new();
+				await conn.ExecuteAsync(updateProductSql, new
+				{
+					dto.BrandId,
+					dto.SeoId,
+					dto.ProductCode,
+					dto.ProductName,
+					dto.ShortDesc,
+					dto.FullDesc,
+					dto.IsPublished,
+					dto.Weight,
+					dto.VolumeCubicMeter,
+					dto.VolumeUnit,
+					Reviser = 1003,              // 或 dto.Reviser
+					RevisedDate = DateTime.Now,
+					dto.ProductId
+				}, tran);
+
+				// === 2. 規格群組 SpecConfig ===
+				var cfgIds = dto.SpecConfigs?.Select(c => c.SpecificationConfigId).ToList() ?? new();
 
                 // 2-1 刪除不存在的
                 var deleteCfgSql = @"
-            DELETE FROM PROD_SpecificationConfig
-            WHERE ProductId = @ProductId 
-              AND SpecificationConfigId NOT IN @CfgIds;
-        ";
+                    DELETE FROM PROD_SpecificationConfig
+                    WHERE ProductId = @ProductId 
+                      AND SpecificationConfigId NOT IN @CfgIds;
+                ";
                 await conn.ExecuteAsync(deleteCfgSql, new
                 {
                     dto.ProductId,
@@ -260,64 +400,121 @@ namespace FlexBackend.Infra.Repository.PROD
 
                 // 2-2 新增/更新
                 var upsertCfgSql = @"
-            MERGE PROD_SpecificationConfig AS target
-            USING (SELECT @SpecificationConfigId AS SpecificationConfigId) AS source
-            ON target.SpecificationConfigId = source.SpecificationConfigId
-            WHEN MATCHED THEN
-                UPDATE SET GroupName = @GroupName, OrderSeq = @OrderSeq
-            WHEN NOT MATCHED THEN
-                INSERT (ProductId, GroupName, OrderSeq)
-                VALUES (@ProductId, @GroupName, @OrderSeq);
-        ";
+                    MERGE PROD_SpecificationConfig AS target
+                    USING (SELECT @SpecificationConfigId AS SpecificationConfigId) AS source
+                    ON target.SpecificationConfigId = source.SpecificationConfigId
+                    WHEN MATCHED THEN
+                        UPDATE SET GroupName = @GroupName, OrderSeq = @OrderSeq
+                    WHEN NOT MATCHED THEN
+                        INSERT (ProductId, GroupName, OrderSeq)
+                        VALUES (@ProductId, @GroupName, @OrderSeq);
+                ";
 
-                foreach (var cfg in dto.SpecConfigs ?? new())
-                {
-                    await conn.ExecuteAsync(upsertCfgSql, new
-                    {
-                        cfg.SpecificationConfigId,
-                        cfg.GroupName,
-                        cfg.OrderSeq,
-                        dto.ProductId
-                    }, tran);
-                }
+				// 刪除不存在的選項
+				var deleteOptSql = @"
+                    DELETE FROM PROD_SpecificationOption
+                    WHERE SpecificationConfigId = @SpecificationConfigId
+                      AND SpecificationOptionId NOT IN @OptIds;
+                ";
 
-                // === 3. SKU 與規格選項 ===
-                var skuUpsertSql = @"
-            MERGE PROD_ProductSku AS target
-            USING (SELECT @SkuId AS SkuId) AS source
-            ON target.SkuId = source.SkuId
-            WHEN MATCHED THEN
-                UPDATE SET 
-                    SpecCode   = @SpecCode, 
-                    Barcode    = @Barcode,
-                    CostPrice  = @CostPrice, 
-                    ListPrice  = @ListPrice, 
-                    UnitPrice  = @UnitPrice, 
-                    SalePrice  = @SalePrice,
-                    IsActive   = @IsActive,
-                    StockQty   = @StockQty
-            WHEN NOT MATCHED AND @SkuCode LIKE 'TEMP-%' THEN
-                INSERT (ProductId, SpecCode, SkuCode, Barcode, CostPrice, ListPrice, UnitPrice, SalePrice, IsActive, StockQty)
-                VALUES (@ProductId, @SpecCode, @SkuCode, @Barcode, @CostPrice, @ListPrice, @UnitPrice, @SalePrice, @IsActive, @StockQty);
-        ";
+				var upsertOptSql = @"
+                    MERGE PROD_SpecificationOption AS target
+                    USING (SELECT @SpecificationOptionId AS SpecificationOptionId) AS source
+                    ON target.SpecificationOptionId = source.SpecificationOptionId
+                    WHEN MATCHED THEN
+                        UPDATE SET OptionName = @OptionName, OrderSeq = @OrderSeq
+                    WHEN NOT MATCHED THEN
+                        INSERT (SpecificationConfigId, OptionName, OrderSeq)
+                        VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);
+                ";
 
-                var deleteSkuOptSql = @"
-            DELETE FROM PROD_SpecificationOption
-            WHERE SkuId = @SkuId AND SpecificationOptionId NOT IN @OptIds;
-        ";
+				foreach (var cfg in dto.SpecConfigs ?? new())
+				{
+					// 1 Upsert Config
+					await conn.ExecuteAsync(upsertCfgSql, new
+					{
+						cfg.SpecificationConfigId,
+						cfg.GroupName,
+						cfg.OrderSeq,
+						dto.ProductId
+					}, tran);
 
-                var upsertSkuOptSql = @"
-            MERGE PROD_SpecificationOption AS target
-            USING (SELECT @SpecificationOptionId AS SpecificationOptionId) AS source
-            ON target.SpecificationOptionId = source.SpecificationOptionId
-            WHEN MATCHED THEN
-                UPDATE SET OptionName = @OptionName, OrderSeq = @OrderSeq
-            WHEN NOT MATCHED THEN
-                INSERT (SkuId, SpecificationConfigId, OptionName, OrderSeq)
-                VALUES (@SkuId, @SpecificationConfigId, @OptionName, @OrderSeq);
-        ";
+					// 2️ Upsert Config 底下的 Options
+					var optDtos = cfg.SpecOptions ?? new();
+					var optIds = optDtos.Select(o => o.SpecificationOptionId ?? 0).ToList();
 
-                foreach (var skuDto in dto.Skus ?? new())
+					// 2-1 刪除不存在的
+					await conn.ExecuteAsync(deleteOptSql, new
+					{
+						cfg.SpecificationConfigId,
+						OptIds = optIds.Any() ? optIds : new List<int> { -1 }
+					}, tran);
+
+					// 2-2 Upsert 每個 Option
+					foreach (var optDto in optDtos)
+					{
+						await conn.ExecuteAsync(upsertOptSql, new
+						{
+							optDto.SpecificationOptionId,
+							cfg.SpecificationConfigId,
+							optDto.OptionName,
+							optDto.OrderSeq
+						}, tran);
+					}
+				}
+
+				// === 3. SKU 與規格選項 ===
+				var skuUpsertSql = @"
+                    MERGE PROD_ProductSku AS target
+                    USING (SELECT @SkuId AS SkuId) AS source
+                    ON target.SkuId = source.SkuId
+                    WHEN MATCHED THEN
+                        UPDATE SET 
+                            SkuCode          = @SkuCode, 
+                            SpecCode         = @SpecCode, 
+                            Barcode          = @Barcode,
+                            CostPrice        = @CostPrice, 
+                            ListPrice        = @ListPrice, 
+                            UnitPrice        = @UnitPrice, 
+                            SalePrice        = @SalePrice,
+                            StockQty         = @StockQty,
+                            SafetyStockQty   = @SafetyStockQty,
+                            ReorderPoint     = @ReorderPoint,
+                            MaxStockQty      = @MaxStockQty,
+                            IsAllowBackorder = @IsAllowBackorder,
+                            ShelfLifeDays    = @ShelfLifeDays,
+                            StartDate        = @StartDate,
+                            EndDate          = @EndDate,
+                            IsActive         = @IsActive
+                    WHEN NOT MATCHED AND @SkuCode LIKE 'TEMP-%' THEN
+                        INSERT (
+                            ProductId, SpecCode, SkuCode, Barcode,
+                            CostPrice, ListPrice, UnitPrice, SalePrice,
+                            StockQty, SafetyStockQty, ReorderPoint, MaxStockQty,
+                            IsAllowBackorder, ShelfLifeDays, StartDate, EndDate,
+                            IsActive
+                        )
+                        VALUES (
+                            @ProductId, @SpecCode, @SkuCode, @Barcode,
+                            @CostPrice, @ListPrice, @UnitPrice, @SalePrice,
+                            @StockQty, @SafetyStockQty, @ReorderPoint, @MaxStockQty,
+                            @IsAllowBackorder, @ShelfLifeDays, @StartDate, @EndDate,
+                            @IsActive
+                        );
+                    ";
+
+				// === SKU 與多個規格選項對應 ===
+				var deleteSkuSpecValueSql = @"
+                        DELETE FROM PROD_SkuSpecificationValue
+                        WHERE SkuId = @SkuId;
+                    ";
+
+				var insertSkuSpecValueSql = @"
+                        INSERT INTO PROD_SkuSpecificationValue (SkuId, SpecificationOptionId)
+                        VALUES (@SkuId, @SpecificationOptionId);
+                    ";
+
+				foreach (var skuDto in dto.Skus ?? new())
                 {
                     // 如果是 TEMP- 代表新建 → 之後要更新成正式碼
                     if (skuDto.SkuCode.StartsWith("TEMP-"))
@@ -329,29 +526,25 @@ namespace FlexBackend.Infra.Repository.PROD
                     // 先 upsert SKU
                     await conn.ExecuteAsync(skuUpsertSql, skuDto, tran);
 
-                    var optDtos = skuDto.SpecOptions ?? new();
-                    var optIds = optDtos.Select(o => o.SpecificationOptionId ?? 0).ToList();
+                    var optDtos = skuDto.SpecValues ?? new();
+                    var optIds = optDtos.Select(o => o.SpecificationOptionId).ToList();
 
-                    // 刪掉不在清單內的 options
-                    await conn.ExecuteAsync(deleteSkuOptSql, new
-                    {
-                        skuDto.SkuId,
-                        OptIds = optIds.Any() ? optIds : new List<int> { -1 }
-                    }, tran);
+					// 先刪除舊的
+					await conn.ExecuteAsync(deleteSkuSpecValueSql, new { skuDto.SkuId }, tran);
 
-                    // 新增/更新 options
-                    foreach (var optDto in optDtos)
-                    {
-                        await conn.ExecuteAsync(upsertSkuOptSql, new
-                        {
-                            skuDto.SkuId,
-                            SpecificationOptionId = optDto.SpecificationOptionId ?? 0,
-                            optDto.SpecificationConfigId,
-                            optDto.OptionName,
-                            optDto.OrderSeq
-                        }, tran);
-                    }
-                }
+					// 再新增新的
+					foreach (var optDto in optDtos)
+					{
+						if (optDto.SpecificationOptionId > 0)
+						{
+							await conn.ExecuteAsync(insertSkuSpecValueSql, new
+							{
+								skuDto.SkuId,
+								optDto.SpecificationOptionId
+							}, tran);
+						}
+					}
+				}
 
                 tran.Commit();
                 return true;
