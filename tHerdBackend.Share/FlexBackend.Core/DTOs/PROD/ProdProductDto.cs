@@ -70,10 +70,11 @@ public partial class ProdProductDto
 	[Required(ErrorMessage = "{0}為必填")]
 	public string FullDesc { get; set; }
 
-	/// <summary>
-	/// 是否上架（0=否，1=是）
-	/// </summary>
-	public bool IsPublished { get; set; }
+    /// <summary>
+    /// 是否上架（0=否，1=是）
+    /// </summary>
+    [Display(Name = "是否上架")]
+    public bool IsPublished { get; set; }
 
 	/// <summary>
 	/// 重量（公斤）
@@ -96,10 +97,11 @@ public partial class ProdProductDto
 	[Required(ErrorMessage = "請選擇{0}")]
 	public string VolumeUnit { get; set; }
 
-	/// <summary>
-	/// 建檔人員
-	/// </summary>
-	public int Creator { get; set; }
+    /// <summary>
+    /// 建檔人員
+    /// </summary>
+    [Display(Name = "建檔人員")]
+    public int Creator { get; set; }
 
 	/// <summary>
 	/// 建檔姓名
@@ -119,7 +121,8 @@ public partial class ProdProductDto
 	/// 異動人員
 	/// </summary>
 	[BindNever]
-	public int? Reviser { get; set; }
+    [Display(Name = "異動人員")]
+    public int? Reviser { get; set; }
 
 	/// <summary>
 	/// 異動姓名
@@ -150,100 +153,136 @@ public partial class ProdProductDto
 /// </summary>
 public partial class ProdProductSkuDto
 {
-	/// <summary>
-	/// SKU ID（主鍵）
-	/// </summary>
-	public int SkuId { get; set; }
+    /// <summary>
+    /// SKU ID（主鍵）
+    /// </summary>
+    [Display(Name = "SKU 編號")]
+    public int SkuId { get; set; }
 
-	/// <summary>
-	/// 規格碼
-	/// </summary>
-	public string SpecCode { get; set; }
+    /// <summary>
+    /// 規格碼
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "規格碼")]
+    [StringLength(50, ErrorMessage = "{0} 長度不可超過 {1}")]
+    public string SpecCode { get; set; }
 
-	/// <summary>
-	/// SKU代碼
-	/// </summary>
-	public string SkuCode { get; set; }
+    /// <summary>
+    /// SKU代碼
+    /// </summary>
+    public string SkuCode { get; set; }
 
-	/// <summary>
-	/// 商品ID（外鍵）
-	/// </summary>
-	public int ProductId { get; set; }
+    /// <summary>
+    /// 商品ID（外鍵）
+    /// </summary>
+    [Display(Name = "商品ID")]
+    public int ProductId { get; set; }
 
-	/// <summary>
-	/// 條碼
-	/// </summary>
-	public string Barcode { get; set; }
+    /// <summary>
+    /// 條碼
+    /// </summary>
+    [Display(Name = "條碼")]
+    [StringLength(100, ErrorMessage = "{0} 長度不可超過 {1}")]
+    public string Barcode { get; set; }
 
-	/// <summary>
-	/// 成本價
-	/// </summary>
-	public decimal? CostPrice { get; set; }
+    /// <summary>
+    /// 成本價
+    /// </summary>
+    [Display(Name = "成本價")]
+    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? CostPrice { get; set; }
 
-	/// <summary>
-	/// 原價
-	/// </summary>
-	public decimal? ListPrice { get; set; }
+    /// <summary>
+    /// 原價
+    /// </summary>
+    [Display(Name = "原價")]
+    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? ListPrice { get; set; }
 
-	/// <summary>
-	/// 單價
-	/// </summary>
-	public decimal? UnitPrice { get; set; }
+    /// <summary>
+    /// 單價
+    /// </summary>
+    [Display(Name = "單價")]
+    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? UnitPrice { get; set; }
 
-	/// <summary>
-	/// 優惠價
-	/// </summary>
-	public decimal SalePrice { get; set; }
+    /// <summary>
+    /// 優惠價
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "優惠價")]
+    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal SalePrice { get; set; }
 
-	/// <summary>
-	/// 目前庫存
-	/// </summary>
-	public int StockQty { get; set; }
+    /// <summary>
+    /// 目前庫存
+    /// </summary>
+    [Display(Name = "目前庫存")]
+    [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int StockQty { get; set; }
 
-	/// <summary>
-	/// 安全庫存量（低於提醒）
-	/// </summary>
-	public int SafetyStockQty { get; set; }
+    /// <summary>
+    /// 安全庫存量（低於提醒）
+    /// </summary>
+    [Display(Name = "安全庫存量")]
+    [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int SafetyStockQty { get; set; }
 
-	/// <summary>
-	/// 再訂購點（≧安全庫存量）
-	/// </summary>
-	public int ReorderPoint { get; set; }
+    /// <summary>
+    /// 再訂購點（≧安全庫存量）
+    /// </summary>
+    [Display(Name = "再訂購點")]
+    [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int ReorderPoint { get; set; }
 
-	/// <summary>
-	/// 最大庫存量（0=不限制)
-	/// </summary>
-	public int MaxStockQty { get; set; }
+    /// <summary>
+    /// 最大庫存量（0=不限制)
+    /// </summary>
+    [Display(Name = "最大庫存量")]
+    [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int MaxStockQty { get; set; }
 
-	/// <summary>
-	/// 是否允許缺貨預購（1=可超賣，0=禁止）
-	/// </summary>
-	public bool IsAllowBackorder { get; set; }
+    /// <summary>
+    /// 是否允許缺貨預購（1=可超賣，0=禁止）
+    /// </summary>
+    [Display(Name = "允許缺貨預購")]
+    public bool IsAllowBackorder { get; set; }
 
-	/// <summary>
-	/// 有效天數
-	/// </summary>
-	public int ShelfLifeDays { get; set; }
+    /// <summary>
+    /// 有效天數
+    /// </summary>
+    [Display(Name = "有效天數")]
+    [Range(0, 36500, ErrorMessage = "{0} 必須介於 {1} 到 {2} 天")]
+    public int ShelfLifeDays { get; set; }
 
-	/// <summary>
-	/// 上架開始時間
-	/// </summary>
-	public DateTime StartDate { get; set; }
+    /// <summary>
+    /// 上架開始時間
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "上架時間")]
+    [DataType(DataType.DateTime)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime StartDate { get; set; }
 
-	/// <summary>
-	/// 下架時間（NULL=無限期）
-	/// </summary>
-	public DateTime? EndDate { get; set; }
+    /// <summary>
+    /// 下架時間（NULL=無限期）
+    /// </summary>
+    [Display(Name = "下架時間")]
+    [DataType(DataType.DateTime)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime? EndDate { get; set; }
 
-	/// <summary>
-	/// 是否啟用
-	/// </summary>
-	public bool IsActive { get; set; }
+    /// <summary>
+    /// 是否啟用
+    /// </summary>
+    [Display(Name = "是否啟用")]
+    public bool IsActive { get; set; }
 
-	/// <summary>
-	/// 規格選項
-	/// </summary>
-	public List<ProdSpecificationOptionDto>? SpecOptions { get; set; }
+    /// <summary>
+    /// 規格選項
+    /// </summary>
+    [Display(Name = "規格選項")]
+    public List<ProdSpecificationOptionDto>? SpecOptions { get; set; }
 }
 
 /// <summary>
@@ -251,25 +290,66 @@ public partial class ProdProductSkuDto
 /// </summary>
 public partial class ProdSpecificationConfigDto
 {
-	/// <summary>
-	/// 規格群組ID（主鍵）
-	/// </summary>
-	public int SpecificationConfigId { get; set; }
+    /// <summary>
+    /// 規格群組ID（主鍵）
+    /// </summary>
+    [Display(Name = "規格群組編號")]
+    public int SpecificationConfigId { get; set; }
 
-	/// <summary>
-	/// 商品ID（外鍵）
-	/// </summary>
-	public int ProductId { get; set; }
+    /// <summary>
+    /// 商品ID（外鍵）
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "商品ID")]
+    public int ProductId { get; set; }
 
-	/// <summary>
-	/// 規格群組名稱（例如：容量、口味、顏色）
-	/// </summary>
-	public string GroupName { get; set; }
+    /// <summary>
+    /// 規格群組名稱（例如：容量、口味、顏色）
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "規格群組名稱")]
+    [StringLength(50, ErrorMessage = "{0} 長度不可超過 {1}")]
+    public string GroupName { get; set; } = string.Empty;
 
-	/// <summary>
-	/// 顯示順序
-	/// </summary>
-	public int OrderSeq { get; set; }
+    /// <summary>
+    /// 顯示順序
+    /// </summary>
+	[Display(Name = "顯示順序")]
+    [Range(0, 999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int OrderSeq { get; set; }
+}
+
+/// <summary>
+/// 商品的規格設定的選項
+/// </summary>
+public partial class ProdSpecificationOptionDto
+{
+    /// <summary>
+    /// 規格選項ID（主鍵）
+    /// </summary>
+    [Display(Name = "規格選項ID")]
+    public int? SpecificationOptionId { get; set; }
+
+    /// <summary>
+    /// 規格群組ID（外鍵）
+    /// </summary>
+    [Required(ErrorMessage = "{0} 必填")]
+    [Display(Name = "規格群組ID")]
+    public int? SpecificationConfigId { get; set; }
+
+    /// <summary>
+    /// 規格選項名稱（例如：250ml、巧克力）
+    /// </summary>
+    [Display(Name = "規格選項名稱")]
+    [StringLength(50, ErrorMessage = "{0} 長度不可超過 {1}")]
+    public string OptionName { get; set; }
+
+    /// <summary>
+    /// 顯示順序
+    /// </summary>
+    [Display(Name = "顯示順序")]
+    [Range(0, 999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public int OrderSeq { get; set; }
 }
 
 /// <summary>
@@ -311,32 +391,6 @@ public partial class ProdProductTypeConfig
 	/// 是否啟用分類（0=否，1=是）
 	/// </summary>
 	public bool IsActive { get; set; }
-}
-
-/// <summary>
-/// 商品的規格設定的選項
-/// </summary>
-public partial class ProdSpecificationOptionDto
-{
-	/// <summary>
-	/// 規格選項ID（主鍵）
-	/// </summary>
-	public int? SpecificationOptionId { get; set; }
-
-	/// <summary>
-	/// 規格群組ID（外鍵）
-	/// </summary>
-	public int? SpecificationConfigId { get; set; }
-
-	/// <summary>
-	/// 規格選項名稱（例如：250ml、巧克力）
-	/// </summary>
-	public string OptionName { get; set; }
-
-	/// <summary>
-	/// 顯示順序
-	/// </summary>
-	public int OrderSeq { get; set; }
 }
 
 /// <summary>
