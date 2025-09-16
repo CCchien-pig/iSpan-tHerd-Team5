@@ -366,7 +366,7 @@ namespace FlexBackend.Infra.Repository.PROD
                     WHERE ProductId = @ProductId;
                 ";
 
-				await conn.ExecuteAsync(updateProductSql, new
+				var productId = await conn.ExecuteScalarAsync<int>(updateProductSql, new
 				{
 					dto.BrandId,
 					dto.SeoId,
@@ -382,6 +382,7 @@ namespace FlexBackend.Infra.Repository.PROD
 					RevisedDate = DateTime.Now,
 					dto.ProductId
 				}, tran);
+
 
 				// === 2. 規格群組 SpecConfig ===
 				var cfgIds = dto.SpecConfigs?.Select(c => c.SpecificationConfigId).ToList() ?? new();
@@ -468,7 +469,8 @@ namespace FlexBackend.Infra.Repository.PROD
                     MERGE PROD_ProductSku AS target
                     USING (SELECT @SkuId AS SkuId) AS source
                     ON target.SkuId = source.SkuId
-                    WHEN MATCHED THEN
+
+                    WHEN MATCHED AND @SkuId > 0 THEN
                         UPDATE SET 
                             SkuCode          = @SkuCode, 
                             SpecCode         = @SpecCode, 
@@ -486,7 +488,8 @@ namespace FlexBackend.Infra.Repository.PROD
                             StartDate        = @StartDate,
                             EndDate          = @EndDate,
                             IsActive         = @IsActive
-                    WHEN NOT MATCHED AND @SkuCode LIKE 'TEMP-%' THEN
+
+                    WHEN NOT MATCHED AND @SkuId = 0 THEN
                         INSERT (
                             ProductId, SpecCode, SkuCode, Barcode,
                             CostPrice, ListPrice, UnitPrice, SalePrice,
@@ -501,7 +504,7 @@ namespace FlexBackend.Infra.Repository.PROD
                             @IsAllowBackorder, @ShelfLifeDays, @StartDate, @EndDate,
                             @IsActive
                         );
-                    ";
+                ";
 
 				// === SKU 與多個規格選項對應 ===
 				var deleteSkuSpecValueSql = @"
@@ -517,9 +520,9 @@ namespace FlexBackend.Infra.Repository.PROD
 				foreach (var skuDto in dto.Skus ?? new())
                 {
                     // 如果是 TEMP- 代表新建 → 之後要更新成正式碼
-                    if (skuDto.SkuCode.StartsWith("TEMP-"))
+                    if (skuDto.SkuId==0)
                     {
-                        var previews = await RefreshSkuCodesAsync(productId: dto.ProductId, conn, tran);
+                        var previews = await RefreshSkuCodesAsync(productId: dto.ProductId, conn, tran, dto.BrandId, skuDto.SpecCode);
                         skuDto.SkuCode = previews.FirstOrDefault(r => r.SkuId == skuDto.SkuId).NewSkuCode;
                     }
 
@@ -528,7 +531,7 @@ namespace FlexBackend.Infra.Repository.PROD
 					await conn.ExecuteAsync(skuUpsertSql, new
 					{
 						skuDto.SkuId,
-						skuDto.ProductId,
+						dto.ProductId,
 						skuDto.SpecCode,
 						skuDto.SkuCode,
 						skuDto.Barcode,
@@ -589,9 +592,7 @@ namespace FlexBackend.Infra.Repository.PROD
         }
 
         public async Task<IEnumerable<(int SkuId, string NewSkuCode)>> RefreshSkuCodesAsync(
-    int? productId = null,
-    IDbConnection? conn = null,
-    IDbTransaction? tran = null)
+            int? productId = null, IDbConnection? conn = null, IDbTransaction? tran = null, int? BrandId = null, string SpecCode = null)
         {
             var disposeLocal = false;
             if (conn == null)
@@ -601,68 +602,44 @@ namespace FlexBackend.Infra.Repository.PROD
 
             if (productId.HasValue)
             {
-                // 👉 單一 ProductId：只回傳，不更新
-                //    var sqlPreview = @"
-                //;WITH sku_seq AS (
-                //    SELECT
-                //        s.SkuId,
-                //        s.ProductId,
-                //        s.SpecCode,
-                //        p.ProductCode,
-                //        b.BrandCode,
-                //        tc.ProductTypeCode,
-                //        ROW_NUMBER() OVER (PARTITION BY p.ProductId ORDER BY s.SkuId) AS SeqNo
-                //    FROM PROD_ProductSku s
-                //    JOIN PROD_Product p ON p.ProductId = s.ProductId
-                //    JOIN SUP_Brand b ON b.BrandId = p.BrandId
-                //    LEFT JOIN PROD_ProductType t ON t.ProductId = p.ProductId AND t.IsPrimary = 1
-                //    JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId = t.ProductTypeId
-                //    WHERE s.ProductId = @ProductId
-                //      AND (s.SkuCode IS NULL OR s.SkuCode LIKE 'TEMP-%')
-                //)
-                //    SELECT 
-                //        q.SkuId,
-                //        CONCAT_WS('-', 
-                //            q.BrandCode, 
-                //            q.ProductTypeCode, 
-                //            q.ProductCode, 
-                //            RIGHT('0000' + CAST(q.SeqNo AS VARCHAR(4)), 4), 
-                //            q.SpecCode
-                //        ) AS NewSkuCode
-                //    FROM sku_seq q;
-                //";
-
                 var sqlPreview = @";WITH sku_seq AS (
-                                    SELECT
-                                        s.SkuId,
-                                        s.ProductId,
-                                        s.SpecCode,
-                                        p.ProductCode,
-                                        b.BrandCode,
-                                        COALESCE(tc.ProductTypeCode, 'PT') AS ProductTypeCode, -- 預設 ""PT""
-                                        ROW_NUMBER() OVER (PARTITION BY p.ProductId ORDER BY s.SkuId) AS SeqNo
-                                    FROM PROD_ProductSku s
-                                    JOIN PROD_Product p ON p.ProductId = s.ProductId
-                                    JOIN SUP_Brand b ON b.BrandId = p.BrandId
-                                    LEFT JOIN PROD_ProductType t ON t.ProductId = p.ProductId AND t.IsPrimary = 1
-                                    LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId = t.ProductTypeId
-                                    WHERE s.ProductId = @ProductId
-                                      AND (s.SkuCode IS NULL OR s.SkuCode LIKE 'TEMP-%')
-                                )
-                                SELECT 
-                                    q.SkuId,
-                                    CONCAT_WS('-', 
-                                        q.BrandCode, 
-                                        q.ProductTypeCode, 
-                                        q.ProductCode, 
-                                        RIGHT('0000' + CAST(q.SeqNo AS VARCHAR(4)), 4), 
-                                        q.SpecCode
-                                    ) AS NewSkuCode
-                                FROM sku_seq q;
+                                SELECT
+                                    s.SkuId,
+                                    s.ProductId,
+                                    s.SpecCode,
+                                    p.ProductCode,
+                                    b.BrandCode,
+                                    COALESCE(tc.ProductTypeCode, 'PT') AS ProductTypeCode,
+                                    ROW_NUMBER() OVER (PARTITION BY p.ProductId ORDER BY s.SkuId) AS SeqNo
+                                FROM PROD_ProductSku s
+                                JOIN PROD_Product p ON p.ProductId = s.ProductId
+                                JOIN SUP_Brand b ON b.BrandId = p.BrandId
+                                LEFT JOIN PROD_ProductType t ON t.ProductId = p.ProductId AND t.IsPrimary = 1
+                                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId = t.ProductTypeId
+                                WHERE s.ProductId = @ProductId
+                                  AND (s.SkuCode IS NULL OR s.SkuCode LIKE 'TEMP-%')
+                            )
+                            SELECT 
+                                q.SkuId,
+                                CONCAT_WS('-', 
+                                    q.BrandCode, 
+                                    q.ProductTypeCode, 
+                                    q.ProductCode, 
+                                    RIGHT('0000' + CAST(q.SeqNo AS VARCHAR(4)), 4), 
+                                    q.SpecCode
+                                ) AS NewSkuCode
+                            FROM sku_seq q
+
+                            UNION ALL
+                            -- 永遠額外加一筆 SkuId = 0 的 fallback
+                            SELECT 
+                                0 AS SkuId,
+                                CONCAT('SKU-DEFAULT-', @ProductId, '-', ISNULL(@SpecCode, 'XXX')) AS NewSkuCode;
+
                                 ";
 
                 var results = await conn.QueryAsync<(int SkuId, string NewSkuCode)>(
-                    sqlPreview, new { ProductId = productId }, tran);
+                    sqlPreview, new { ProductId = productId, SpecCode, BrandId }, tran);
 
                 if (disposeLocal)
                     conn.Dispose();
