@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Infra\FlexBackend.Infra.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
     <ProjectReference Include="..\..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
