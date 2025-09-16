@@ -1,7 +1,8 @@
-﻿using FlexBackend.Infra.Models;
-using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FlexBackend.Infra.Models;
+using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels;
+
 
 namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 {
@@ -9,180 +10,192 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
     public class RmaController : Controller
     {
         private readonly tHerdDBContext _db;
+        public RmaController(tHerdDBContext db) => _db = db;
 
-        public RmaController(tHerdDBContext db)
+        // 退貨列表
+        [HttpGet]
+        public IActionResult Index(string? group = "all", int page = 1, int pageSize = 10, string? keyword = "")
         {
-            _db = db;
-        }
-
-        // ======================
-        // RMA 列表
-        // ======================
-        public async Task<IActionResult> Index(string? group, string? keyword, int page = 1, int pageSize = 10)
-        {
-            var query = _db.OrdReturnRequests
+            var q = _db.OrdReturnRequests
                 .Include(r => r.Order)
+                .Include(r => r.OrdReturnItems).ThenInclude(ri => ri.OrderItem)
+                .AsNoTracking()
                 .AsQueryable();
 
-            // group 篩選
-            if (!string.IsNullOrEmpty(group))
+            // 搜尋：RMA（RmaId）或訂單號
+            if (!string.IsNullOrWhiteSpace(keyword))
             {
-                query = group.ToLower() switch
-                {
-                    "pending" => query.Where(r => r.Status == "pending" || r.Status == "review"),
-                    "approved" => query.Where(r => r.Status == "reshipping" || r.Status == "refunding"),
-                    "done" => query.Where(r => r.Status == "done"),
-                    "rejected" => query.Where(r => r.Status == "rejected"),
-                    _ => query
-                };
+                q = q.Where(r => r.RmaId.Contains(keyword) || r.Order.OrderNo.Contains(keyword));
             }
 
-            // keyword 篩選
-            if (!string.IsNullOrEmpty(keyword))
+            // 分組（依 Status）
+            switch (group)
             {
-                query = query.Where(r =>
-                    r.RmaId!.Contains(keyword) ||
-                    r.Order.OrderNo.Contains(keyword));
+                case "pending": q = q.Where(r => r.Status == "pending"); break;
+                case "review": q = q.Where(r => r.Status == "review"); break;
+                case "refunding": q = q.Where(r => r.Status == "refunding"); break;
+                case "done": q = q.Where(r => r.Status == "done"); break;
+                case "rejected": q = q.Where(r => r.Status == "rejected"); break;
+                default: break;
             }
 
-            var total = await query.CountAsync();
+            var total = q.Count();
 
-            var list = await query
-                .OrderByDescending(r => r.ReturnRequestId)
+            var list = q.OrderByDescending(r => r.CreatedDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(r => new ReturnListItemVM
+                .Select(r => new ReturnListVM
                 {
                     ReturnRequestId = r.ReturnRequestId,
-                    RmaId = r.RmaId ?? "",
-                    OrderId = r.OrderId,
+                    RmaNo = r.RmaId,
                     OrderNo = r.Order.OrderNo,
-                    Status = r.Status,
+                    TypeName = r.RequestType,
+                    ScopeName = r.RefundScope,
+                    StatusName = r.Status,
                     CreatedDate = r.CreatedDate,
-                    ReasonText = r.ReasonText
+                    Reason = r.ReasonText,
+
+                    // 為確保可編譯，先以 ID 顯示，有商品/規格名稱時可改為 oi.Product.XXX / oi.Sku.XXX
+                    ProductName = r.OrdReturnItems
+                                        .OrderBy(i => i.RmaItemId)
+                                        .Select(i => "PID:" + i.OrderItem.ProductId)
+                                        .FirstOrDefault() ?? "",
+                    Spec = r.OrdReturnItems
+                                        .OrderBy(i => i.RmaItemId)
+                                        .Select(i => "SKU:" + i.OrderItem.SkuId)
+                                        .FirstOrDefault() ?? "",
+                    Qty = r.OrdReturnItems
+                                        .OrderBy(i => i.RmaItemId)
+                                        .Select(i => (int?)i.Qty)
+                                        .FirstOrDefault() ?? 0
                 })
-                .ToListAsync();
+                .ToList();
+
+            var tabs = new Dictionary<string, int>
+            {
+                { "all",       _db.OrdReturnRequests.AsNoTracking().Count() },
+                { "pending",   _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "pending") },
+                { "review",    _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "review") },
+                { "refunding", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "refunding") },
+                { "done",      _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "done") },
+                { "rejected",  _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "rejected") }
+            };
 
             var vm = new ReturnListPageVM
             {
-                Group = group,
                 Keyword = keyword,
+                Group = group ?? "all",
+                Tabs = tabs,
                 Page = page,
                 PageSize = pageSize,
                 Total = total,
-                Items = list
+                Pages = (int)Math.Ceiling(total / (double)pageSize),
+                RmaList = list
             };
 
-            return View("Index", vm);
+            return View(vm);
         }
 
-        // ======================
-        // RMA 明細
-        // ======================
+        // 明細（給 Modal）
         [HttpGet]
-        public async Task<IActionResult> GetReturnDetail(int id)
+        public IActionResult GetReturnDetail(int id)
         {
-            var r = await _db.OrdReturnRequests
+            var r = _db.OrdReturnRequests
                 .Include(x => x.Order)
-                .Include(x => x.OrdReturnItems)
-                    .ThenInclude(i => i.OrderItem)
-                    .ThenInclude(oi => oi.Product)
-                .Include(x => x.OrdReturnItems)
-                    .ThenInclude(i => i.OrderItem)
-                    .ThenInclude(oi => oi.Sku)
-                .FirstOrDefaultAsync(x => x.ReturnRequestId == id);
+                .Include(x => x.OrdReturnItems).ThenInclude(ri => ri.OrderItem)
+                .AsNoTracking()
+                .FirstOrDefault(x => x.ReturnRequestId == id);
 
-            if (r == null) return NotFound();
+            if (r == null) return Json(new { ok = false, message = "RMA not found." });
 
-            var vm = new ReturnDetailVM
-            {
-                ReturnRequestId = r.ReturnRequestId,
-                RmaId = r.RmaId ?? "",
-                OrderId = r.OrderId,
-                OrderNo = r.Order.OrderNo,
-                StatusName = r.Status,
-                CreatedDate = r.CreatedDate,
-                ReasonText = r.ReasonText,
-                Items = r.OrdReturnItems.Select(i => new ReturnDetailItemVM
+            // 訂單品項（用 OrderItem，若要顯示商品名/規格名，可改為 oi.Product.Name / oi.Sku.XXX）
+            var orderItems = _db.OrdOrderItems
+                .Where(oi => oi.OrderId == r.OrderId)
+                .Select(oi => new
                 {
-                    RmaItemId = i.RmaItemId,
-                    OrderItemId = i.OrderItemId,
-                    OrderQty = i.OrderItem.Qty,
-                    RequestQty = i.Qty,
-                    ApprovedQty = i.ApprovedQty,
-                    RefundQty = i.RefundQty,
-                    ReshipQty = i.ReshipQty,
-                    RefundUnitAmount = i.RefundUnitAmount,
-                    ProductName = i.OrderItem.Product.ProductName,
-                    SkuSpec = i.OrderItem.Sku.SpecCode
-                }).ToList()
+                    productName = "PID:" + oi.ProductId, // TODO: 可改為商品名稱
+                    skuSpec = "SKU:" + oi.SkuId,     // TODO: 可改為規格名稱
+                    unitPrice = oi.UnitPrice,
+                    qty = oi.Qty,
+                    subTotal = oi.UnitPrice * oi.Qty
+                })
+                .ToList();
+
+            var rmaItems = r.OrdReturnItems
+                .OrderBy(i => i.RmaItemId)
+                .Select(i => new
+                {
+                    productName = "PID:" + i.OrderItem.ProductId, // TODO: 可改為商品名稱
+                    skuSpec = "SKU:" + i.OrderItem.SkuId,     // TODO: 可改為規格名稱
+                    originalQty = i.OrderItem.Qty,
+                    qty = i.Qty,
+                    approvedQty = i.ApprovedQty,
+                    refundQty = i.RefundQty,
+                    reshipQty = i.ReshipQty,
+                    refundUnitAmount = i.RefundUnitAmount
+                })
+                .ToList();
+
+            var orderTotal = r.Order.Subtotal - r.Order.DiscountTotal + r.Order.ShippingFee;
+
+            var dto = new
+            {
+                orderNo = r.Order.OrderNo,
+                statusName = r.Status,
+                reasonText = r.ReasonText,
+                createdDate = r.CreatedDate,
+                orderSummary = new
+                {
+                    coupon = r.Order.CouponId.HasValue ? r.Order.CouponId.ToString() : "-",
+                    discount = r.Order.DiscountTotal,
+                    shippingFee = r.Order.ShippingFee,
+                    total = orderTotal
+                },
+                orderItems = orderItems,
+                rmaItems = rmaItems
             };
 
-            return Json(new { ok = true, rma = vm, items = vm.Items });
+            return Json(new { ok = true, rma = dto });
         }
 
-        // ======================
-        // Approve (批准)
-        // ======================
+        // 核准（退款/補寄）
         [HttpPost]
-        public async Task<IActionResult> Approve(int id, string nextStatus)
+        public IActionResult Approve(int id, string nextStatus)
         {
-            var rr = await _db.OrdReturnRequests.FirstOrDefaultAsync(r => r.ReturnRequestId == id);
-            if (rr == null) return Json(new { ok = false, message = "找不到退貨申請" });
+            var r = _db.OrdReturnRequests.FirstOrDefault(x => x.ReturnRequestId == id);
+            if (r == null) return Json(new { ok = false, message = "RMA not found." });
 
-            if (!(rr.Status == "pending" || rr.Status == "review"))
-                return Json(new { ok = false, message = $"目前狀態為 {rr.Status} ，不可批准" });
-
-            if (nextStatus != "refunding" && nextStatus != "reshipping")
-                return Json(new { ok = false, message = "nextStatus 僅能為 refunding 或 reshipping" });
-
-            rr.Status = nextStatus;
-
-            if (string.IsNullOrEmpty(rr.RmaId))
-            {
-                rr.RmaId = $"RMA{DateTime.Now:yyyyMMdd}{Guid.NewGuid().ToString()[..4]}";
-            }
-
-            await _db.SaveChangesAsync();
-            return Json(new { ok = true, message = "批准成功", rr.ReturnRequestId, rr.RmaId, rr.Status });
+            r.Status = nextStatus; // "refunding" / "reshipping"
+            r.RevisedDate = DateTime.UtcNow;
+            _db.SaveChanges();
+            return Json(new { ok = true, message = "已更新狀態。" });
         }
 
-        // ======================
-        // Reject (駁回)
-        // ======================
+        // 駁回
         [HttpPost]
-        public async Task<IActionResult> Reject(int id, string? reason)
+        public IActionResult Reject(int id, string? reason)
         {
-            var rr = await _db.OrdReturnRequests.FirstOrDefaultAsync(r => r.ReturnRequestId == id);
-            if (rr == null) return Json(new { ok = false, message = "找不到退貨申請" });
+            var r = _db.OrdReturnRequests.FirstOrDefault(x => x.ReturnRequestId == id);
+            if (r == null) return Json(new { ok = false, message = "RMA not found." });
 
-            if (!(rr.Status == "pending" || rr.Status == "review"))
-                return Json(new { ok = false, message = $"目前狀態為 {rr.Status} ，不可駁回" });
-
-            rr.Status = "rejected";
-            if (!string.IsNullOrWhiteSpace(reason))
-                rr.ReasonText = reason;
-
-            await _db.SaveChangesAsync();
-            return Json(new { ok = true, message = "已駁回", rr.ReturnRequestId, rr.Status });
+            r.Status = "rejected";
+            if (!string.IsNullOrWhiteSpace(reason)) r.ReviewComment = reason;
+            r.RevisedDate = DateTime.UtcNow;
+            _db.SaveChanges();
+            return Json(new { ok = true, message = "已駁回。" });
         }
 
-        // ======================
-        // Complete (完成退貨流程)
-        // ======================
+        // 結單
         [HttpPost]
-        public async Task<IActionResult> Complete(int id)
+        public IActionResult Complete(int id)
         {
-            var rr = await _db.OrdReturnRequests.FirstOrDefaultAsync(r => r.ReturnRequestId == id);
-            if (rr == null) return Json(new { ok = false, message = "找不到退貨申請" });
+            var r = _db.OrdReturnRequests.FirstOrDefault(x => x.ReturnRequestId == id);
+            if (r == null) return Json(new { ok = false, message = "RMA not found." });
 
-            if (!(rr.Status == "refunding" || rr.Status == "reshipping"))
-                return Json(new { ok = false, message = $"目前狀態為 {rr.Status} ，不可結單" });
-
-            rr.Status = "done";
-            await _db.SaveChangesAsync();
-
-            return Json(new { ok = true, message = "已結單", rr.ReturnRequestId, rr.Status });
+            r.Status = "done";
+            r.RevisedDate = DateTime.UtcNow;
+            _db.SaveChanges();
+            return Json(new { ok = true, message = "已結單。" });
         }
     }
 }
