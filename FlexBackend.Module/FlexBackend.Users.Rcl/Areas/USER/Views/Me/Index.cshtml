@@ -1,0 +1,143 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@model FlexBackend.Core.DTOs.USER.MeProfileVm
+@{
+    ViewData["Title"] = "個人資料";
+}
+@section PageTitle {
+    個人資料
+}
+
+<div class="card shadow">
+    <div class="card-body">
+        <form id="frmMe" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />  @* 非必需，後端用 _me *@
+
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <label>員編</label>
+                    <input class="form-control" value="@Model.UserNumberId" disabled />
+                </div>
+                <div class="form-group col-md-3">
+                    <label>姓</label>
+                    <input name="lastName" class="form-control" value="@Model.LastName" required />
+                </div>
+                <div class="form-group col-md-3">
+                    <label>名</label>
+                    <input name="firstName" class="form-control" value="@Model.FirstName" required />
+                </div>
+                <div class="form-group col-md-3">
+                    <label>性別</label>
+                    <select name="gender" class="form-control">
+                        <option value="N/A" @(Model.Gender == "N/A" ? "selected" : "")>N/A</option>
+                        <option value="Male" @(Model.Gender == "Male" ? "selected" : "")>男</option>
+                        <option value="Female" @(Model.Gender == "Female" ? "selected" : "")>女</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>Email</label>
+                    <input name="email" type="email" class="form-control" value="@Model.Email" required />
+                </div>
+                <div class="form-group col-md-6">
+                    <label>電話</label>
+                    <input name="phoneNumber" class="form-control" value="@Model.PhoneNumber" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label>生日</label>
+                    <input name="birthDate" type="date" class="form-control"
+                           value="@(Model.BirthDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="form-group col-md-6">
+                    <label>地址</label>
+                    <input name="address" class="form-control" value="@Model.Address" />
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">儲存基本資料</button>
+                <a class="btn btn-outline-secondary" href="javascript:history.back()">返回</a>
+            </div>
+        </form>
+
+        <hr class="my-4" />
+
+        <h6 class="mb-2">變更密碼</h6>
+        <form id="frmPwd" method="post" class="row">
+            @Html.AntiForgeryToken()
+            <div class="form-group col-md-4">
+                <label>舊密碼</label>
+                <input type="password" name="oldPassword" class="form-control" autocomplete="current-password">
+            </div>
+            <div class="form-group col-md-4">
+                <label>新密碼</label>
+                <input type="password" id="pwd1" class="form-control" placeholder="至少8碼，含大小寫與數字" autocomplete="new-password">
+            </div>
+            <div class="form-group col-md-4">
+                <label>確認新密碼</label>
+                <input type="password" id="pwd2" class="form-control" autocomplete="new-password">
+            </div>
+            <div class="col-12">
+                <small class="text-muted">密碼需至少 8 碼，並同時包含英文大寫、英文小寫與數字。</small>
+            </div>
+            <div class="col-12 mt-3">
+                <button type="button" id="btnPwd" class="btn btn-outline-primary">變更密碼</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+          function anti(){ return document.querySelector('#frmMe input[name="__RequestVerificationToken"]')?.value || ''; }
+          function strong(p){ return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(p); }
+
+          // 儲存基本資料（AJAX）
+          document.getElementById('frmMe').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const res = await fetch('/USER/Me/UpdateProfile', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': anti() },
+              credentials: 'same-origin'
+            });
+            const j = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && j.ok){
+              alert('已儲存');
+              // 後端有 RefreshSignInAsync()，下次回到頁面右上角名字會跟著更新
+            }else{
+              alert(j.message || '儲存失敗');
+            }
+          });
+
+          // 變更密碼（AJAX）
+          document.getElementById('btnPwd').addEventListener('click', async ()=>{
+            const oldP = document.querySelector('#frmPwd [name="oldPassword"]').value.trim();
+            const p1 = document.getElementById('pwd1').value.trim();
+            const p2 = document.getElementById('pwd2').value.trim();
+            if(!oldP || !p1 || !p2){ alert('請完整輸入舊密碼與新密碼'); return; }
+            if(p1 !== p2){ alert('兩次新密碼不一致'); return; }
+            if(!strong(p1)){ alert('新密碼需至少 8 碼且含英文大小寫與數字'); return; }
+
+            const fd = new FormData(); fd.append('oldPassword', oldP); fd.append('newPassword', p1);
+            const res = await fetch('/USER/Me/ChangePassword', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': anti() },
+              credentials: 'same-origin'
+            });
+            const j = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && j.ok){
+              document.querySelector('#frmPwd [name="oldPassword"]').value='';
+              document.getElementById('pwd1').value='';
+              document.getElementById('pwd2').value='';
+              alert('密碼已更新');
+            }else{
+              alert(j.message || '變更密碼失敗');
+            }
+          });
+        })();
+    </script>
+}
+
