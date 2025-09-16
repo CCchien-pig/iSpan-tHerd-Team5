@@ -1,4 +1,5 @@
 ﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns.ReturnDetailVM
+
 <div class="mb-3">
     <div><strong>RMA：</strong>@(string.IsNullOrEmpty(Model.RmaId) ? "-" : Model.RmaId)</div>
     <div><strong>訂單號：</strong>@Model.OrderNo</div>
@@ -11,29 +12,31 @@
     }
 </div>
 
-<table class="table table-sm table-bordered">
-    <thead class="table-light">
+<table class="table table-bordered">
+    <thead>
         <tr>
-            <th>#</th>
-            <th>OrderItemId</th>
-            <th>申請數量</th>
-            <th>核可數量</th>
-            <th>退款數量</th>
-            <th>補寄數量</th>
+            <th>商品</th>
+            <th>規格</th>
+            <th>原始數量</th>
+            <th>申請</th>
+            <th>核可</th>
+            <th>退款</th>
+            <th>補寄</th>
             <th>退款單價</th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var x in Model.Items)
+        @foreach (var item in Model.Items)
         {
             <tr>
-                <td>@x.RmaItemId</td>
-                <td>@x.OrderItemId</td>
-                <td>@x.Qty</td>
-                <td>@x.ApprovedQty</td>
-                <td>@x.RefundQty</td>
-                <td>@x.ReshipQty</td>
-                <td>@(x.RefundUnitAmount?.ToString("N2") ?? "-")</td>
+                <td>@item.ProductName</td>
+                <td>@item.SkuSpec</td>
+                <td>@item.OrderQty</td>
+                <td>@item.RequestQty</td>
+                <td>@item.ApprovedQty</td>
+                <td>@item.RefundQty</td>
+                <td>@item.ReshipQty</td>
+                <td>@item.RefundUnitAmount?.ToString("C0")</td>
             </tr>
         }
     </tbody>
