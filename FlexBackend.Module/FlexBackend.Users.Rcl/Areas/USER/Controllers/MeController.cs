@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 {
 	[Area("USER")]
-	//[Authorize]
+	[Authorize]
 	[Route("USER/[controller]/[action]")]   // ← 這行讓你在任何地方都可用 /USER/Me/Details 等固定路徑
 	public class MeController : Controller
 	{
