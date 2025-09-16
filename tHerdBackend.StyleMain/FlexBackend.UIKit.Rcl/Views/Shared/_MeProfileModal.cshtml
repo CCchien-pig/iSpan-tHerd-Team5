@@ -1,0 +1,87 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+<div class="modal fade" id="dlgMe" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">個人資料</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+
+            <form id="frmMe" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="me_id" />
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label>員編</label>
+                            <input id="me_number" class="form-control" disabled />
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label>姓</label>
+                            <input id="me_lastName" name="lastName" class="form-control" required />
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label>名</label>
+                            <input id="me_firstName" name="firstName" class="form-control" required />
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label>性別</label>
+                            <select id="me_gender" name="gender" class="form-control">
+                                <option value="N/A">N/A</option>
+                                <option value="Male">男</option>
+                                <option value="Female">女</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Email</label>
+                            <input id="me_email" name="email" type="email" class="form-control" required />
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>電話</label>
+                            <input id="me_phone" name="phoneNumber" class="form-control" />
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>生日</label>
+                            <input id="me_birth" name="birthDate" type="date" class="form-control" />
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>地址</label>
+                            <input id="me_addr" name="address" class="form-control" />
+                        </div>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <h6 class="mb-2">變更密碼</h6>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>舊密碼</label>
+                            <input type="password" id="me_oldPwd" class="form-control" autocomplete="current-password">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>新密碼</label>
+                            <input type="password" id="me_newPwd" class="form-control" placeholder="至少8碼，含大小寫與數字" autocomplete="new-password">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>確認新密碼</label>
+                            <input type="password" id="me_newPwd2" class="form-control" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <small class="text-muted">密碼需至少 8 碼，並同時包含英文大寫、英文小寫與數字。</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">關閉</button>
+                    <button type="button" id="btnMeChangePwd" class="btn btn-outline-primary ml-auto">變更密碼</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
