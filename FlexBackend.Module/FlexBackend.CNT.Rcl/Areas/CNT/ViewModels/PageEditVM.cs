@@ -36,13 +36,20 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 
 		// PageEditVM.cs
 		public int PageTypeId { get; set; }
-
+		public bool IsHomePage => PageTypeId == 1000;
 
 		// 🔑 用來保留回列表的查詢條件
 		public int? Page { get; set; }
 		public int PageSize { get; set; } = 8;
 		public string? Keyword { get; set; }
 		public string? StatusFilter { get; set; }
+
+		// 排程欄位
+		[Display(Name = "排程時間")]
+		public DateTime? ScheduledDate { get; set; }
+
+		[Display(Name = "排程動作")]
+		public ActionType? ActionType { get; set; }
 
 		// 狀態中文顯示
 		public string StatusText =>

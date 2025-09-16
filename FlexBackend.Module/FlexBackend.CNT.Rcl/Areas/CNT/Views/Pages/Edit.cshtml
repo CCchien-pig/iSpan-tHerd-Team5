@@ -1,8 +1,5 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
-@{
-    const int HomePageId = 1000;  // 設定首頁 ID
-    bool isHome = Model.PageId == HomePageId;
-}
+
 @{
     ViewData["Title"] = "編輯文章";
 }
@@ -41,34 +38,74 @@
                 <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
                 <span asp-validation-for="Status" class="text-danger"></span>
             </div>
+            <!-- 分類 -->
             <div class="mb-3">
-                <label class="form-label">標籤</label>
+                <label asp-for="PageTypeId" class="form-label">分類</label>
 
-                @if (isHome)
+                @if (Model.IsHomePage)
                 {
-                    <!-- 首頁：允許空，關閉驗證 -->
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            data-val="false">
-                        <!-- 🚫 關閉 unobtrusive 驗證 -->
-                    </select>
-                    <small class="text-muted">首頁不需要標籤。</small>
-                    <!-- ❌ 不要渲染 asp-validation-for -->
+                    <!-- 首頁：顯示文字 + 隱藏欄位 -->
+                    <div class="form-control-plaintext">
+                        <span class="badge bg-primary">首頁</span>
+                    </div>
+                    @Html.HiddenFor(m => m.PageTypeId)  <!-- 保持首頁值 -->
+                    <!-- 首頁不需要驗證訊息 -->
                 }
                 else
                 {
-                    <!-- 其他文章：必填 -->
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            required>
-                    </select>
-                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                    @Html.DropDownListFor(
+                        m => m.PageTypeId,
+                        (SelectList)ViewBag.PageTypeList,
+                        "請選擇類別",
+                        new { @class = "form-select" }
+                    )
+                    <span asp-validation-for="PageTypeId" class="text-danger"></span>
                 }
             </div>
+            <!-- tags-->
+            <div class="mb-3">
+                <label class="form-label">標籤</label>
+                  @if (Model.IsHomePage)
+                    {
+                        <!-- 首頁：允許空，關閉驗證 -->
+                        <select asp-for="SelectedTagIds"
+                                asp-items="Model.TagOptions"
+                                multiple="multiple"
+                                class="tag-selector w-100"
+                                data-val="false">
+                        </select>
+                        <small class="text-muted">首頁不需要標籤。</small>
+                        <!-- ❌ 不要渲染 asp-validation-for -->
+                    }
+                    else
+                    {
+                        <!-- 其他文章：必填 -->
+                        <select asp-for="SelectedTagIds"
+                                asp-items="Model.TagOptions"
+                                multiple="multiple"
+                                class="tag-selector w-100"
+                                required>
+                        </select>
+                        <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                    }
+            </div>
+            <!-- 排程時間 -->
+            <div class="mb-3">
+                <label asp-for="ScheduledDate" class="form-label"></label>
+                <input asp-for="ScheduledDate" type="datetime-local" class="form-control"
+                       min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+            </div>
+
+            <!-- 排程動作 -->
+            <div class="mb-3">
+                <label asp-for="ActionType" class="form-label">排程動作</label>
+                <select asp-for="ActionType" asp-items="Html.GetEnumSelectList<ActionType>()" class="form-select">
+                    <option value="">-- 不使用排程 --</option>
+                </select>
+                <span asp-validation-for="ActionType" class="text-danger"></span>
+            </div>
+
 
             <div class="mb-3">
                 <label asp-for="RevisedDate" class="form-label">最後修改時間</label>
