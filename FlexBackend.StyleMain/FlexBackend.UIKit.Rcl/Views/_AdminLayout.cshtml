@@ -118,7 +118,7 @@
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="#" id="lnkMe">
+                                <a class="dropdown-item" asp-area="USER" asp-controller="Me" asp-action="Index">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     個人資料
                                 </a>
@@ -228,8 +228,7 @@
         <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
     <script src="//cdn.datatables.net/fixedheader/4.0.3/js/dataTables.fixedHeader.min.js"></script>
 
-    @await Html.PartialAsync("~/Views/Shared/_MeProfileModal.cshtml")
-    <script src="~/js/me-profile.js" asp-append-version="true"></script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

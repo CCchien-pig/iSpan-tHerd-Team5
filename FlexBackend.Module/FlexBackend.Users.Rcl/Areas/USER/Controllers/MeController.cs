@@ -119,6 +119,29 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 			await _signInMgr.RefreshSignInAsync(user);
 			return Json(new { ok = true });
 		}
+
+		[HttpGet]
+		public async Task<IActionResult> Index()
+		{
+			var u = await _userMgr.Users.AsNoTracking()
+						.FirstOrDefaultAsync(x => x.Id == _me.Id);
+			if (u == null) return NotFound();
+
+			var vm = new MeProfileVm
+			{
+				Id = u.Id,
+				UserNumberId = u.UserNumberId,
+				LastName = u.LastName,
+				FirstName = u.FirstName,
+				Email = u.Email,
+				PhoneNumber = u.PhoneNumber,
+				Gender = u.Gender ?? "N/A",
+				BirthDate = u.BirthDate,
+				Address = u.Address,
+				IsActive = u.IsActive
+			};
+			return View(vm); // 會找 Areas/USER/Views/Me/Index.cshtml
+		}
 	}
 }
 
