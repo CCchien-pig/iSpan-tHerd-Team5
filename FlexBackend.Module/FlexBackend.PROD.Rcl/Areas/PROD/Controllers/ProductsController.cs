@@ -1,6 +1,7 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {
@@ -38,7 +39,17 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             }).ToList();
         }
 
-        [HttpGet]
+		public IActionResult AddSkuCard(int index)
+		{
+			var newSku = new ProdProductSkuDto
+			{
+				SkuCode = $"TEMP-{DateTime.UtcNow.Ticks}" // 或 Guid.NewGuid().ToString()
+			};
+			ViewData["Index"] = index;
+			return PartialView("_SkuCard", newSku);
+		}
+
+		[HttpGet]
         public async Task<IActionResult> Upsert(int? id)
         {
             var dto = id.HasValue ? await _repo.GetByIdAsync((int)id) : new ProdProductDto();

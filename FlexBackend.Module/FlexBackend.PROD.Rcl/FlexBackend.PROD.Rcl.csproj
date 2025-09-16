@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <Folder Include="Areas\PROD\ViewModels\" />
+    <Folder Include="Areas\PROD\Views\PartialView\" />
+    <Folder Include="Areas\PROD\Views\Shared\" />
   </ItemGroup>
 
   <ItemGroup>
