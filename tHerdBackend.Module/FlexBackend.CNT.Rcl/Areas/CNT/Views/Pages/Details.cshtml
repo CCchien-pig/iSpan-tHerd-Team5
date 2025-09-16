@@ -1,4 +1,12 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageDetailVM
+@if (Model.IsHomePage)
+{
+    <div class="alert alert-info">
+        這是首頁，不允許刪除或更改 PageType
+    </div>
+}
+
+
 @section Styles{
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
     <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
@@ -6,6 +14,7 @@
 @{
     ViewData["Title"] = "文章詳情";
 }
+
 
 <div class="card shadow-sm border-0">
     <div class="card-header bg-info text-white fw-bold">
@@ -22,15 +31,27 @@
             <dt class="col-sm-3">狀態</dt>
             <dd class="col-sm-9">
                 <span class="badge
-                    @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
-                                              Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
-                                              Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
-                                              Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
-                                                                       "bg-light text-dark")">
+            @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
+                                                            Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
+                                                            Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
+                                                            Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
+                                                                                     "bg-light text-dark")">
                     @Model.StatusText
                 </span>
             </dd>
-
+            <!-- pagetype -->
+            <dt class="col-sm-3">類別</dt>
+            <dd class="col-sm-9">
+                @if (Model.IsHomePage)
+                {
+                    <span class="badge bg-primary">首頁</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">@Model.PageTypeName</span>
+                }
+            </dd>
+            <!-- tags -->
             <dt class="col-sm-3">標籤</dt>
             <dd class="col-sm-9">
                 @if (Model.TagNames.Any())
@@ -43,6 +64,37 @@
                 else
                 {
                     <span class="text-muted">（尚未設定標籤）</span>
+                }
+            </dd>           
+            <!-- 🕒 排程資訊 -->
+            <dt class="col-sm-3">排程資訊</dt>
+            <dd class="col-sm-9">
+                @if (Model.Schedules != null && Model.Schedules.Any())
+                {
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>排程時間</th>
+                                <th>動作</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Schedules)
+                            {
+                                <tr>
+                                    <td>@s.ScheduledDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@s.ActionTypeText</td>
+                                    <td>@s.StatusText</td>
+
+                                </tr>
+                             }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <span class="text-muted">（目前沒有排程）</span>
                 }
             </dd>
 
@@ -61,6 +113,8 @@
                 }
             </dd>
         </dl>
+
+
         <div class="card-footer d-flex gap-3">
             <a asp-action="Index"
                asp-route-page="@Model.Page"
