@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.DTOs.SYS;
 
 namespace FlexBackend.Core.Interfaces.Products
 {

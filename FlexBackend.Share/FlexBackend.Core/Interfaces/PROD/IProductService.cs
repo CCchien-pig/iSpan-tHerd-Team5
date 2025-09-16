@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.DTOs.SYS;
 
 namespace FlexBackend.Core.Interfaces.PROD
 {
@@ -11,5 +12,6 @@ namespace FlexBackend.Core.Interfaces.PROD
         Task DeleteAsync(int productId);
 
         Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync();
+        Task<IEnumerable<SysCodeDto>> GetSysCodes(string mod, List<string> ids);
     }
 }
