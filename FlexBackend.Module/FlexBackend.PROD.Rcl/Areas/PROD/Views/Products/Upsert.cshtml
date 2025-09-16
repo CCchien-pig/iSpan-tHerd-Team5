@@ -338,27 +338,160 @@
                                 </div>
                             </div>
                         <div class="row p-3">
-                            <div id="specCards" class="row m-0">
+                            <div id="specCards">
+                                    <div class="col-md-12 spec-card">
                                 @foreach (var sku in (Model?.Skus ?? new List<ProdProductSkuDto>()))
                                 {
-                                    <div class="col-md-4 spec-card" data-index="@index">
-                                        <div class="card shadow-sm">
+                                        
+                                        <div class="card shadow-sm mt-3 mb-3">
                                             <div class="card-header d-flex justify-content-between align-items-center">
-                                                <span class="fw-bold">規格群組</span>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="mb-2">
-                                                    <label class="form-label fw-bold">名稱</label>
-                                                    <input name="Skus[@index].SpecCode" value="@sku.SpecCode" class="form-control" />
+                                                <span class="fw-bold">Sku 代碼</span>
+                                                <div class="col-md-9 mb-0 justify-content-start">
+                                                    <input type="hidden" name="Skus[@index].SkuCode" value="@sku.SkuCode" />
+                                                    <input class="form-control" value="@sku.SkuCode" disabled />
+                                                </div>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
                                                 </div>
                                             </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3 mb-3">
+                                                        <label class="form-label fw-bold required" for="Skus_(@index)_SpecCode">Sku 規格碼</label>
+                                                        <input type="text" class="form-control"
+                                                               name="Skus[@index].SpecCode"
+                                                               id="Skus_@(index)_SpecCode"
+                                                               value="@sku.SpecCode" />
+                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].SpecCode"></span>
+                                                    </div>
+
+                                                    <div class="col-md-3 mb-3">
+                                                        <label class="form-label fw-bold" for="Skus_(@index)_Barcode">條碼</label>
+                                                        <input type="text" class="form-control"
+                                                               name="Skus[@index].Barcode"
+                                                               id="Skus_(@index)_Barcode"
+                                                               value="@sku.Barcode" />
+                                                        <span class="text-danger small" data-valmsg-for="Skus[@index].Barcode"></span>
+                                                    </div>
+
+                                                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                                                        <div class="form-check form-switch">
+                                                            <input type="hidden" name="Skus[@index].IsActive" value="false" />
+                                                            <input type="checkbox" class="form-check-input"
+                                                                   name="Skus[@index].IsActive"
+                                                                   id="Skus_(@index)_IsActive"
+                                                                   value="true"
+                                                                   @(sku.IsActive ? "checked" : "") />
+                                                            <label class="form-check-label fw-bold" for="Skus_(@index)_IsActive">啟用</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 規格值區塊（你可補上 Partial 或 TagHelper） -->
+                                                <div class="d-flex flex-wrap gap-2 spec-values">
+                                                    @* 若你有 buildSpecOptions Razor Helper，可以這裡呼叫 *@
+                                                    @* @Html.Partial("_SpecOptionsPartial", sku.SpecOptions) *@
+                                                </div>
+
+                                                <!-- 價格設定 -->
+                                                <fieldset class="group-box mb-3">
+                                                    <legend>價格設定</legend>
+                                                    <div class="row">
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">成本價</label>
+                                                            <input type="number" step="0.01" class="form-control"
+                                                                   name="Skus[@index].CostPrice"
+                                                                   value="@sku.CostPrice" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">原價</label>
+                                                            <input type="number" step="0.01" class="form-control"
+                                                                   name="Skus[@index].ListPrice"
+                                                                   value="@sku.ListPrice" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">單價</label>
+                                                            <input type="number" step="0.01" class="form-control"
+                                                                   name="Skus[@index].UnitPrice"
+                                                                   value="@sku.UnitPrice" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold required">優惠價</label>
+                                                            <input type="number" step="0.01" class="form-control"
+                                                                   name="Skus[@index].SalePrice"
+                                                                   value="@sku.SalePrice" />
+                                                            <span class="text-danger small" data-valmsg-for="Skus[@index].SalePrice"></span>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+
+                                                <!-- 庫存管理 -->
+                                                <fieldset class="group-box mb-3">
+                                                    <legend>庫存控管</legend>
+                                                    <div class="row">
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">目前庫存</label>
+                                                            <input type="number" class="form-control"
+                                                                   name="Skus[@index].StockQty"
+                                                                   value="@sku.StockQty" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">安全庫存量</label>
+                                                            <input type="number" class="form-control"
+                                                                   name="Skus[@index].SafetyStockQty"
+                                                                   value="@sku.SafetyStockQty" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">再訂購點</label>
+                                                            <input type="number" class="form-control"
+                                                                   name="Skus[@index].ReorderPoint"
+                                                                   value="@sku.ReorderPoint" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">最大庫存量</label>
+                                                            <input type="number" class="form-control"
+                                                                   name="Skus[@index].MaxStockQty"
+                                                                   value="@sku.MaxStockQty" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">有效天數</label>
+                                                            <input type="number" class="form-control"
+                                                                   name="Skus[@index].ShelfLifeDays"
+                                                                   value="@sku.ShelfLifeDays" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">上架時間</label>
+                                                            <input type="datetime-local" class="form-control"
+                                                                   name="Skus[@index].StartDate"
+                                                                   value="@(sku.StartDate.ToString("yyyy-MM-ddTHH:mm"))" />
+                                                        </div>
+
+                                                        <div class="col-md-3 mb-3">
+                                                            <label class="form-label fw-bold">下架時間</label>
+                                                            <input type="datetime-local" class="form-control"
+                                                                   name="Skus[@index].EndDate"
+                                                                   value="@(sku.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
                                         </div>
-                                    </div>
                                     index++;
                                 }
+                                        </div>
                             </div>
                             <!-- 左邊跨 3 欄 & 4 列 -->
                             <div class="col-md-12 mb-3 d-flex flex-column">
@@ -625,7 +758,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span class="fw-bold">Sku 代碼</span>
                         <div class="col-md-9 mb-0 justify-content-start">
-                                    <input type="hidden" name="Skus[${index}].SkuCode" value="${values.SkuCode ?? crypto.randomUUID()}" />
+                                    <input type="hidden" name="Skus[${index}].SkuCode" value="${values.SkuCode ?? ('TEMP-' + Date.now())}}" />
                                     <input class="form-control" value="${values.SkuCode ?? ''}" disabled />
                         </div>
                         <div class="btn-group">
@@ -815,22 +948,17 @@
             document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
                 card.setAttribute("data-index", i);
 
-                card.querySelectorAll("input, select, textarea").forEach(input => {
-                    if (!input.name) return; // 跳過沒有 name 的欄位（例如 SkuCode）
+                // 更新所有 input name 屬性
+                card.querySelectorAll("[name]").forEach(input => {
                     input.name = input.name.replace(/Skus\[\d+\]/, `Skus[${i}]`);
-                    if (input.id) {
-                        input.id = input.id.replace(/Skus_\d+_/, `Skus_${i}_`);
-                    }
                 });
 
-                card.querySelectorAll("[data-valmsg-for]").forEach(span => {
-                    span.setAttribute("data-valmsg-for",
-                        span.getAttribute("data-valmsg-for").replace(/Skus\[\d+\]/, `Skus[${i}]`)
-                    );
+                // 更新 id 屬性
+                card.querySelectorAll("[id]").forEach(el => {
+                    el.id = el.id.replace(/Skus_\d+_/, `Skus_${i}_`);
                 });
             });
         }
-
 
         // 重新整理SKU
         function refreshIndexes() {
