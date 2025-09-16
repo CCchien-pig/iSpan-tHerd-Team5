@@ -1,5 +1,6 @@
 ﻿using FlexBackend.Infra.Models;
 using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
+using FlexBackend.MKT.Rcl.Areas.MKT.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +17,31 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        [AllowAnonymous] // 測試用，允許未登入也能進
         public IActionResult Index()
         {
-            return View();
+            var campaigns = _context.MktCampaigns
+                .Select(c => new CampaignDTO { CampaignId = c.CampaignId, CampaignName = c.CampaignName })
+                .ToList();
+
+            ViewBag.Campaigns = campaigns;
+
+            // 將一個空的 Coupon 傳給 Partial 避免 null
+            var couponModel = new MktCoupon();
+            return View(couponModel);
+        }
+
+
+        // 新增 GET 方法，給新增優惠券的 Modal 用
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            // 取得所有活動列表
+            var campaigns = await _context.MktCampaigns
+                                          .Select(c => new { c.CampaignId, c.CampaignName })
+                                          .ToListAsync();
+            ViewBag.Campaigns = campaigns;
+
+            return View(new MktCoupon());
         }
 
         // 取得日曆事件
@@ -69,13 +90,11 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 CreatedDate = c.CreatedDate.ToString("yyyy-MM-ddTHH:mm")
             };
 
-            // 這裡關鍵，避免自動轉成 camelCase
             return Json(result, new System.Text.Json.JsonSerializerOptions
             {
                 PropertyNamingPolicy = null
             });
         }
-
 
         [HttpPost]
         public IActionResult CreateCoupon([FromBody] MktCoupon model)
