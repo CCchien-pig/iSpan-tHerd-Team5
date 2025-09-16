@@ -9,82 +9,106 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- 活動ID 下拉選單 -->
                     <div class="mb-3">
-                        <label class="form-label">活動ID</label>
-                        <input type="number" name="CampaignId" class="form-control" required
-                               value="@Model?.CampaignId" />
+                        <label class="form-label">活動</label>
+                        <select id="createCampaignId" name="CampaignId" class="form-select" required>
+                            <option value="">-- 請選擇活動 --</option>
+                            @if (ViewBag.Campaigns != null)
+                            {
+                                foreach (var campaign in ViewBag.Campaigns)
+                                {
+                                    <option value="@campaign.CampaignId"
+                                            @(Model?.CampaignId == campaign.CampaignId ? "selected" : "")>
+                                        @campaign.CampaignName
+                                    </option>
+                                }
+                            }
+                        </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">規則ID</label>
-                        <input type="number" name="RuleId" class="form-control" required
+                        <input type="number" id="createRuleId" name="RuleId" class="form-control" required
                                value="@Model?.RuleId" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">優惠券名稱</label>
-                        <input type="text" name="CouponName" class="form-control" required
+                        <input type="text" id="createCouponName" name="CouponName" class="form-control" required
                                value="@Model?.CouponName" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">優惠碼</label>
-                        <input type="text" name="CouponCode" class="form-control" required
+                        <input type="text" id="createCouponCode" name="CouponCode" class="form-control" required
                                value="@Model?.CouponCode" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">優惠券狀態</label>
-                        <select name="Status" class="form-select" required>
+                        <select id="createStatus" name="Status" class="form-select" required>
                             <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>未啟用</option>
                             <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>啟用</option>
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">開始時間</label>
-                        <input type="datetime-local" name="StartDate" class="form-control" required
-                               value="@Model?.StartDate.ToString("yyyy-MM-ddTHH:mm")" />
+                        <input type="datetime-local" id="createStartDate" name="StartDate" class="form-control" required
+                               value="@(Model != null ? Model.StartDate.ToString("yyyy-MM-ddTHH:mm") : "")" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">結束時間</label>
-                        <input type="datetime-local" name="EndDate" class="form-control"
-                               value="@(Model?.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        <input type="datetime-local" id="createEndDate" name="EndDate" class="form-control"
+                               value="@(Model != null && Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">折扣金額</label>
-                        <input type="number" name="DiscountAmount" class="form-control" step="0.01"
+                        <input type="number" id="createDiscountAmount" name="DiscountAmount" class="form-control" step="0.01"
                                value="@Model?.DiscountAmount" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">折扣百分比</label>
-                        <input type="number" name="DiscountPercent" class="form-control" step="0.01"
+                        <input type="number" id="createDiscountPercent" name="DiscountPercent" class="form-control" step="0.01"
                                value="@Model?.DiscountPercent" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">總數量</label>
-                        <input type="number" name="TotQty" class="form-control" required
+                        <input type="number" id="createTotQty" name="TotQty" class="form-control" required
                                value="@Model?.TotQty" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">每人限領</label>
-                        <input type="number" name="UserLimit" class="form-control" required
+                        <input type="number" id="createUserLimit" name="UserLimit" class="form-control" required
                                value="@Model?.UserLimit" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">有效時數</label>
-                        <input type="number" name="ValidHours" class="form-control" required
+                        <input type="number" id="createValidHours" name="ValidHours" class="form-control" required
                                value="@Model?.ValidHours" />
                     </div>
 
-                    <!-- IsActive 改成 Bootstrap Toggle -->
+                    <!-- IsActive 開關 -->
                     <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="IsActive" id="createIsActive"
+                        <input type="checkbox" id="createIsActive" name="IsActive" class="form-check-input"
                                @(Model?.IsActive ?? true ? "checked" : "") />
                         <label class="form-check-label" for="createIsActive">啟用</label>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">建立者</label>
-                        <input type="number" name="Creator" class="form-control" required
+                        <input type="number" id="createCreator" name="Creator" class="form-control" required
                                value="@Model?.Creator" />
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" id="createCouponSubmitBtn" class="btn btn-primary">新增</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
