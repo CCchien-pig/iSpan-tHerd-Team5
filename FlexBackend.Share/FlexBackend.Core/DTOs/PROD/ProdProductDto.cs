@@ -144,8 +144,8 @@ public partial class ProdProductDto
 
 	public PRODSeoConfigDto? Seo { get; set; }
 
-	public List<ProdProductSkuDto>? Skus { get; set; }
-    public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
+	public List<ProdProductSkuDto> Skus { get; set; } = new List<ProdProductSkuDto>();
+	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
 }
 
 /// <summary>
@@ -183,69 +183,73 @@ public partial class ProdProductSkuDto
     /// </summary>
     [Display(Name = "條碼")]
     [StringLength(100, ErrorMessage = "{0} 長度不可超過 {1}")]
-    public string Barcode { get; set; }
+	[DisplayFormat(ConvertEmptyStringToNull = true)]
+	public string? Barcode { get; set; }
 
     /// <summary>
     /// 成本價
     /// </summary>
     [Display(Name = "成本價")]
-    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public decimal? CostPrice { get; set; }
+	[Required(ErrorMessage = "{0} 必填")]
+	[Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? CostPrice { get; set; } = 0;
 
-    /// <summary>
-    /// 原價
-    /// </summary>
-    [Display(Name = "原價")]
-    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public decimal? ListPrice { get; set; }
+	/// <summary>
+	/// 原價
+	/// </summary>
+	[Display(Name = "原價")]
+	[Required(ErrorMessage = "{0} 必填")]
+	[Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? ListPrice { get; set; } = 0;
 
-    /// <summary>
-    /// 單價
-    /// </summary>
-    [Display(Name = "單價")]
-    [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public decimal? UnitPrice { get; set; }
+	/// <summary>
+	/// 單價
+	/// </summary>
+	[Display(Name = "單價")]
+	[Required(ErrorMessage = "{0} 必填")]
+	[Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
+    public decimal? UnitPrice { get; set; } = 0;
 
-    /// <summary>
-    /// 優惠價
-    /// </summary>
-    [Required(ErrorMessage = "{0} 必填")]
+	/// <summary>
+	/// 優惠價
+	/// </summary>
+	[Required(ErrorMessage = "{0} 必填")]
     [Display(Name = "優惠價")]
     [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public decimal SalePrice { get; set; }
+    public decimal SalePrice { get; set; } = 0;
 
-    /// <summary>
-    /// 目前庫存
-    /// </summary>
-    [Display(Name = "目前庫存")]
-    [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public int StockQty { get; set; }
+	/// <summary>
+	/// 目前庫存
+	/// </summary>
+	[Display(Name = "目前庫存")]
+	[DisplayFormat(ConvertEmptyStringToNull = true)]
+	public int StockQty { get; set; } = 0;
 
     /// <summary>
     /// 安全庫存量（低於提醒）
     /// </summary>
     [Display(Name = "安全庫存量")]
     [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public int SafetyStockQty { get; set; }
+    public int SafetyStockQty { get; set; } = 0;
 
-    /// <summary>
-    /// 再訂購點（≧安全庫存量）
-    /// </summary>
-    [Display(Name = "再訂購點")]
+	/// <summary>
+	/// 再訂購點（≧安全庫存量）
+	/// </summary>
+	[Display(Name = "再訂購點")]
     [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public int ReorderPoint { get; set; }
+    public int ReorderPoint { get; set; } = 0;
 
-    /// <summary>
-    /// 最大庫存量（0=不限制)
-    /// </summary>
-    [Display(Name = "最大庫存量")]
+	/// <summary>
+	/// 最大庫存量（0=不限制)
+	/// </summary>
+	[Display(Name = "最大庫存量")]
     [Range(0, int.MaxValue, ErrorMessage = "{0} 必須大於等於 {1}")]
-    public int MaxStockQty { get; set; }
+    public int MaxStockQty { get; set; } = 0;
 
-    /// <summary>
-    /// 是否允許缺貨預購（1=可超賣，0=禁止）
-    /// </summary>
-    [Display(Name = "允許缺貨預購")]
+	/// <summary>
+	/// 是否允許缺貨預購（1=可超賣，0=禁止）
+	/// </summary>
+	[Display(Name = "允許缺貨預購")]
     public bool IsAllowBackorder { get; set; }
 
     /// <summary>
@@ -253,12 +257,12 @@ public partial class ProdProductSkuDto
     /// </summary>
     [Display(Name = "有效天數")]
     [Range(0, 36500, ErrorMessage = "{0} 必須介於 {1} 到 {2} 天")]
-    public int ShelfLifeDays { get; set; }
+    public int ShelfLifeDays { get; set; } = 0;
 
-    /// <summary>
-    /// 上架開始時間
-    /// </summary>
-    [Required(ErrorMessage = "{0} 必填")]
+	/// <summary>
+	/// 上架開始時間
+	/// </summary>
+	[Required(ErrorMessage = "{0} 必填")]
     [Display(Name = "上架時間")]
     [DataType(DataType.DateTime)]
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}", ApplyFormatInEditMode = true)]
@@ -279,6 +283,8 @@ public partial class ProdProductSkuDto
     public bool IsActive { get; set; }
 
 	public List<ProdSkuSpecificationValueDto>? SpecValues { get; set; }
+
+	public bool IsDeleted { get; set; } = false;
 }
 
 /// <summary>
