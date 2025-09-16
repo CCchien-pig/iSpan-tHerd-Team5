@@ -1,11 +1,13 @@
-﻿using FlexBackend.Composition;
+﻿using FlexBackend.Admin.Infrastructure.Auth;
+using FlexBackend.Composition;
+using FlexBackend.Core.Abstractions;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.CS.Rcl.Areas.CS.Controllers;
 using FlexBackend.Infra;
+using FlexBackend.Infra.Models;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
-using FlexBackend.Infra.Models;
-using FlexBackend.Core.DTOs.USER;
 using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -33,6 +35,7 @@ namespace FlexBackend.Admin
             builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
 				.AddRoles<ApplicationRole>()
 				.AddEntityFrameworkStores<ApplicationDbContext>();
+		
 
 			//確保預設驗證方案是 Identity Cookie（避免被其他套件改成 JWT）
 			builder.Services.AddAuthentication(options =>
@@ -42,6 +45,7 @@ namespace FlexBackend.Admin
 				options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
 			});
 
+			// 電子郵件服務
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 			builder.Services.AddScoped<FlexBackend.USER.Rcl.Services.UserService>();
@@ -86,7 +90,10 @@ namespace FlexBackend.Admin
 				options.SlidingExpiration = true;
 			});
 
-
+			// 使用自訂的 ClaimsPrincipalFactory 來加入額外的 Claims
+			builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, AppClaimsPrincipalFactory>();
+			builder.Services.AddHttpContextAccessor();
+			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 			//Data Protection 金鑰持久化（避免重啟就讓 Cookie 失效）
 			builder.Services.AddDataProtection()
 				.PersistKeysToFileSystem(new DirectoryInfo(
