@@ -6,7 +6,7 @@
     var uniqueId = $"Skus_{index}_{Model.SkuCode ?? "TEMP"}";
 }
 
-<div class="card shadow-sm mt-3 mb-3 spec-card" data-index="@index">
+<div class="card shadow-sm mt-3 mb-3" data-index="@index">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-bold">Sku 代碼</span>
         <div class="col-md-7 mb-0 justify-content-start">
@@ -30,9 +30,13 @@
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
                 <i class="fas fa-copy"></i>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="markDeleted(this)">
-                <i class="fas fa-trash"></i>
-            </button>
+             @if (isTemp)
+            {
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="markDeleted(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            
+            }
         </div>
     </div>
 

@@ -162,6 +162,59 @@
 
                 text-align: center;
             }
+
+        /* 標籤 badge 樣式 */
+        #specConfigTags .badge {
+            background-color: #F5E2AD !important; /* 淺紫底 */
+            color: #5a2d82; /* 深紫字 */
+            font-size: 1.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 50rem; /* pill 圓角 */
+            display: flex;
+            align-items: center;
+        }
+
+            /* 刪除按鈕微調 */
+            #specConfigTags .badge .btn-close {
+                margin-left: 0.5rem;
+                font-size: 0.6rem;
+                filter: invert(20%) sepia(20%) saturate(400%) hue-rotate(250deg);
+                opacity: 0.7;
+            }
+
+                #specConfigTags .badge .btn-close:hover {
+                    opacity: 1;
+                }
+
+        /* 新增按鈕 hover 效果 */
+        button[data-bs-target="#tagModal"]:hover {
+            background-color: #f0ebf8; /* 淺背景 */
+            border-color: #5a2d82;
+            color: #5a2d82;
+        }
+
+        .spec-label {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #5a2d82; /* 深紫字 */
+            position: relative;
+            padding-left: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+
+            /* 左側裝飾條 */
+            .spec-label::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0.2rem;
+                bottom: 0.2rem;
+                width: 4px;
+                border-radius: 2px;
+                background: linear-gradient(180deg, #7b2cbf, #9d4edd);
+            }
+
     </style>
 }
 
@@ -204,11 +257,16 @@
                 <div class="row pl-3 pr-3 m-0">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
-                        <select asp-for="BrandId" class="form-select">
+                        <select asp-for="BrandId" class="form-select" id="BrandId">
                             <option value="">請選擇品牌</option>
                             @foreach (var b in brands)
                             {
-                                <option value="@b.BrandId">@b.BrandName (@b.SupplierName)</option>
+                                <option value="@b.BrandId"
+                                        data-supplier="@b.SupplierName"
+                                        data-brandcode="@b.BrandCode"
+                                        selected="@(b.BrandId == Model.BrandId ? "selected" : null)">
+                                    @b.BrandId - @b.BrandName
+                                </option>
                             }
                         </select>
                     </div>
@@ -217,6 +275,8 @@
                         <label class="form-label fw-bold">供應商</label>
                         <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
                     </div>
+
+                    <input type="hidden" asp-for="BrandCode" id="BrandCode" />
 
                     <div class="col-12 mb-3">
                         <label class="form-label fw-bold required">商品名稱</label>
@@ -231,7 +291,7 @@
                     </div>
 
                     <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold required">重量</label>
+                        <label class="form-label fw-bold required">重量(KG)</label>
                         <input asp-for="Weight" class="form-control" />
                         <span asp-validation-for="Weight" class="text-danger small"></span>
                     </div>
@@ -243,8 +303,11 @@
                     </div>
 
                     <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold invisible">占位</label>
-                        <input asp-for="VolumeUnit" class="form-control" />
+                        <label asp-for="VolumeUnit" class="form-label fw-bold"></label>
+                        <select asp-for="VolumeUnit" class="form-select"
+                                asp-items="ViewBag.Units">
+                            <option value="">請選擇單位</option>
+                        </select>
                         <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
                     </div>
 
@@ -310,7 +373,7 @@
                             </div>
                         </div>
                     </div>
-
+                </div>
             </div>
         </div>
         <!-- SKU -->
@@ -326,20 +389,28 @@
                 </div>
 
                 <div id="collapseSku" class="collapse show">
-                    <div class="card-body">
+                        <div class="card-body" style="background-color: #E5DEEA;">
                             <!-- 規格分類 -->
-                            <div class="mb-3 ml-3">
-                                <label class="form-label fw-bold">規格分類</label>
-                                <div class="row">
-                                    <button type="button" class="col-md-2 btn btn-sm btn-outline-primary mt-2 mr-4" data-bs-toggle="modal" data-bs-target="#tagModal">
-                                        + 新增規格分類
+                            <div class="mb-3">
+                                <label class="form-label spec-label">規格分類</label>
+                                <div class="d-flex flex-wrap gap-3 p-3 rounded shadow-sm bg-light align-items-start">
+                                    <!-- 新增按鈕 -->
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center"
+                                            style="border-style: dashed;"
+                                            data-bs-toggle="modal" data-bs-target="#tagModal">
+                                        <i class="fas fa-plus me-1"></i> 新增分類
                                     </button>
-                                    <div id="specConfigTags" class="col-md-9 d-flex flex-wrap gap-2 rounded p-2"></div>
+
+                                    <!-- 分類標籤區 -->
+                                    <div id="specConfigTags" class="d-flex flex-wrap gap-2 flex-grow-1">
+                                        <!-- 動態新增的分類會放這裡 -->
+                                    </div>
                                 </div>
                             </div>
+
                         <div class="row p-3">
                             <div id="specCards">
-                                @for (var i = 0; i < Model.Skus.Count; i++)
+                                @for (var i = 0; i < Model?.Skus.Count; i++)
                                 {
                                     @Html.Partial("_SkuCard", Model.Skus[i], new ViewDataDictionary(ViewData) { { "Index", i } })
                                 }
@@ -356,7 +427,7 @@
             </div>
 
             <!-- SEO 設定：暫時隱藏 -->
-            <div class="card shadow mb-3 d-none">
+                <div class="card shadow mb-3 d-none">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
                     <h6 class="m-0 fw-bold">SEO 設定</h6>
                     <button class="btn btn-sm btn-outline-light" type="button"
@@ -459,6 +530,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    @await Html.PartialAsync("_SweetAlertPartial")
+
     <script>
         // 商品分類
         // 1) 產生穩定的負數臨時 Id
@@ -602,212 +676,6 @@
 
         // 以上是分類選項
 
-        // Sku 共用模板函式
-        // function buildCardHtml(index, values = {}) {
-        //     return `
-        //         <div class="card shadow-sm mt-3 mb-3">
-        //             <div class="card-header d-flex justify-content-between align-items-center">
-        //                 <span class="fw-bold">Sku 代碼</span>
-        //                 <div class="col-md-9 mb-0 justify-content-start">
-        //                     <!-- 隱藏欄位：保證值會送回後端 -->
-        //                     <input type="hidden" name="Skus[${index}].SkuCode" value="${values.SkuCode ?? ('TEMP-' + Date.now())}" />
-        //                     <!-- 顯示用欄位：唯讀 -->
-        //                     <input class="form-control" value="${values.SkuCode ?? ''}" readonly />
-        //                 </div>
-        //                 <div class="btn-group">
-        //                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
-        //                         <i class="fas fa-copy"></i>
-        //                     </button>
-        //                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCard(this)">
-        //                         <i class="fas fa-trash"></i>
-        //                     </button>
-        //                 </div>
-        //             </div>
-
-        //             <div class="card-body">
-        //                 <div class="row">
-        //                     <!-- 規格碼 -->
-        //                     <div class="col-md-3 mb-3">
-        //                         <label class="form-label fw-bold required" for="Skus_${index}_SpecCode">Sku 規格碼</label>
-        //                         <input type="text" class="form-control"
-        //                                name="Skus[${index}].SpecCode" id="Skus_${index}_SpecCode"
-        //                                value="${values.SpecCode ?? ''}" />
-        //                         <span class="text-danger small" data-valmsg-for="Skus[${index}].SpecCode"></span>
-        //                     </div>
-
-        //                     <!-- 條碼 -->
-        //                     <div class="col-md-3 mb-3">
-        //                         <label class="form-label fw-bold" for="Skus_${index}_Barcode">條碼</label>
-        //                         <input type="text" class="form-control"
-        //                                name="Skus[${index}].Barcode" id="Skus_${index}_Barcode"
-        //                                value="${values.Barcode ?? ''}" />
-        //                         <span class="text-danger small" data-valmsg-for="Skus[${index}].Barcode"></span>
-        //                     </div>
-
-        //                     <!-- 啟用 -->
-        //                     <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
-        //                         <div class="form-check form-switch">
-        //                             <input type="hidden" name="Skus[${index}].IsActive" value="false" />
-        //                             <input type="checkbox" class="form-check-input"
-        //                                    name="Skus[${index}].IsActive"
-        //                                    id="Skus_${index}_IsActive"
-        //                                    value="true" ${values.IsActive ? "checked" : ""} />
-        //                             <label class="form-check-label fw-bold" for="Skus_${index}_IsActive">啟用</label>
-        //                         </div>
-        //                     </div>
-        //                 </div>
-
-        //                 <!-- 規格值區塊 -->
-        //                 <div class="d-flex flex-wrap gap-2 spec-values">
-        //                     ${buildSpecOptions(index, values.SpecOptions ?? {})}
-        //                 </div>
-
-        //                 <!-- 價格設定 -->
-        //                 <fieldset class="group-box mb-3">
-        //                     <legend>價格設定</legend>
-        //                     <div class="row">
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">成本價</label>
-        //                             <input type="number" step="0.01" class="form-control"
-        //                                    name="Skus[${index}].CostPrice"
-        //                                    value="${values.CostPrice ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">原價</label>
-        //                             <input type="number" step="0.01" class="form-control"
-        //                                    name="Skus[${index}].ListPrice"
-        //                                    value="${values.ListPrice ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">單價</label>
-        //                             <input type="number" step="0.01" class="form-control"
-        //                                    name="Skus[${index}].UnitPrice"
-        //                                    value="${values.UnitPrice ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold required">優惠價</label>
-        //                             <input type="number" step="0.01" class="form-control"
-        //                                    name="Skus[${index}].SalePrice"
-        //                                    value="${values.SalePrice ?? ''}" />
-        //                             <span class="text-danger small" data-valmsg-for="Skus[${index}].SalePrice"></span>
-        //                         </div>
-        //                     </div>
-        //                 </fieldset>
-
-        //                 <!-- 庫存管理 -->
-        //                 <fieldset class="group-box mb-3">
-        //                     <legend>庫存控管</legend>
-        //                     <div class="row">
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">目前庫存</label>
-        //                             <input type="number" class="form-control" value="${values.StockQty ?? ''}" readonly />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">安全庫存量</label>
-        //                             <input type="number" class="form-control"
-        //                                    name="Skus[${index}].SafetyStockQty"
-        //                                    value="${values.SafetyStockQty ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">再訂購點</label>
-        //                             <input type="number" class="form-control"
-        //                                    name="Skus[${index}].ReorderPoint"
-        //                                    value="${values.ReorderPoint ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">最大庫存量</label>
-        //                             <input type="number" class="form-control"
-        //                                    name="Skus[${index}].MaxStockQty"
-        //                                    value="${values.MaxStockQty ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">有效天數</label>
-        //                             <input type="number" class="form-control"
-        //                                    name="Skus[${index}].ShelfLifeDays"
-        //                                    value="${values.ShelfLifeDays ?? ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">上架日期</label>
-        //                             <input type="date" class="form-control"
-        //                                    name="Skus[${index}].StartDate"
-        //                                    value="${values.StartDate ? values.StartDate.split('T')[0] : ''}" />
-        //                         </div>
-
-        //                         <div class="col-md-3 mb-3">
-        //                             <label class="form-label fw-bold">下架日期</label>
-        //                             <input type="date" class="form-control"
-        //                                    name="Skus[${index}].EndDate"
-        //                                    value="${values.EndDate ? values.EndDate.split('T')[0] : ''}" />
-        //                         </div>
-        //                     </div>
-        //                 </fieldset>
-        //             </div>
-        //         </div>
-        //     `;
-        // }
-
-        // 新增 SKU 卡片（永遠加在最後）
-        function addCard(values = {}) {
-            const container = document.getElementById("specCards");
-            const index = container.children.length;
-
-            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
-                const card = document.createElement("div");
-                card.classList.add("col-md-12", "spec-card");
-                card.setAttribute("data-index", index);
-                card.innerHTML = html;
-                container.appendChild(card);
-            });
-        }
-
-        // 複製 SKU 卡片（插入在原卡片後）
-        function copyCard(button) {
-            const card = button.closest(".spec-card");
-            const index = document.querySelectorAll("#specCards .spec-card").length;
-
-            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
-                const newCard = document.createElement("div");
-                newCard.classList.add("col-md-12", "spec-card");
-                newCard.setAttribute("data-index", index);
-                newCard.innerHTML = html;
-
-                card.insertAdjacentElement("afterend", newCard);
-
-                // 複製舊卡片的值到新卡片 (排除 SkuCode & Barcode)
-                const oldInputs = card.querySelectorAll("input, select, textarea");
-                const newInputs = newCard.querySelectorAll("input, select, textarea");
-
-                oldInputs.forEach((oldInput, i) => {
-                    const match = oldInput.name?.match(/Skus\[\d+\]\.(\w+)/);
-                    if (!match) return;
-
-                    const field = match[1];
-                    const newInput = Array.from(newInputs).find(x => x.name?.endsWith("." + field));
-                    if (!newInput) return;
-
-                    // 排除不複製的欄位
-                    if (field === "SkuCode" || field === "Barcode") {
-                        return;
-                    }
-
-                    if (oldInput.type === "checkbox") {
-                        newInput.checked = oldInput.checked;
-                    } else {
-                        newInput.value = oldInput.value;
-                    }
-                });
-            });
-        }
-
-
         // 新增 SKU 卡片（永遠加在最後）
         function addCard(values = {}) {
             const container = document.getElementById("specCards");
@@ -859,10 +727,7 @@
                     }
                 });
             });
-}
-
-
-
+        }
 
         function markDeleted(button) {
             const card = button.closest(".spec-card");
@@ -876,11 +741,22 @@
 
         // 品牌下拉選項
         $(document).ready(function () {
-            $("#BrandId").change(function () {
-                var supplier = $(this).find(":selected").data("supplier") || "";
+            function updateSupplierAndBrand() {
+                var selected = $("#BrandId option:selected");
+                var supplier = selected.data("supplier") || "";
+                var brandCode = selected.data("brandcode") || "";
+
                 $("#SupplierName").val(supplier);
-            });
+                $("#BrandCode").val(brandCode);
+            }
+
+            // 下拉變更時更新
+            $("#BrandId").change(updateSupplierAndBrand);
+
+            // 頁面初始載入時執行一次
+            updateSupplierAndBrand();
         });
+
 
         $(function(){
           const $sel = $('#BrandId');

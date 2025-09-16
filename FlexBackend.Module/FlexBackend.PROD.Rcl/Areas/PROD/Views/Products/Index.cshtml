@@ -59,15 +59,8 @@
             .publish-toggle:checked:focus {
                 box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
             }
-    </style>
-}
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success d-flex align-items-center" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        @TempData["SuccessMessage"]
-    </div>
+    </style>
 }
 
 <!-- DataTales -->
@@ -103,9 +96,19 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
+    @await Html.PartialAsync("_SweetAlertPartial")
     <script>
+        $('#dataTable').DataTable({
+            scrollY: 'auto',       // 高度等一下用 JS 計算
+            scrollCollapse: true,
+            paging: true,
+            info: true,
+            ordering: true,
+            searching: true,
+            // fixedHeader: true,  // ❌ 先關掉，避免複製 thead
+        });
+
         // Razor 端輸出 → 正確 JSON 陣列
         var dataJson = @Html.Raw(JsonSerializer.Serialize(
             Model ?? Enumerable.Empty<ProdProductDto>(),
