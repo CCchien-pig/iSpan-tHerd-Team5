@@ -60,10 +60,11 @@
                 <table id="batchMovementTable" border="1" class="table table-bordered text-center" style="width:95%; margin: 0 auto; border-collapse: separate; border-spacing: 0 4px;">
                     <thead>
                         <tr>
+                            <th></th>
                             <th>批號</th>
                             <th>變動類型</th>
-                            <th>增加/減少</th>
                             <th>異動前庫存</th>
+                            <th>增加/減少</th>
                             <th>異動後庫存</th>
                             @* <th>預計庫存</th> *@
                         </tr>
@@ -487,6 +488,13 @@
                     }
                 },
                 columns: [
+                    {
+                        className: 'dt-control text-center',
+                        orderable: false,
+                        data: null,
+                        defaultContent: '<i class="fa-solid fa-angle-down"></i>',
+                        width: '20px'
+                    },
                     { data: 'skuCode', title: 'SKU', className: 'text-center'},
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
                     { data: 'brandName', title: '品牌', className: 'text-center'},
@@ -552,6 +560,7 @@
                 scrollY: "500px",
                 scrollCollapse: true,
                 colReorder: true,
+                order: [[1, 'asc']], // 第一欄是控制欄，不排序
                 columnDefs: [
                     { targets: '_all', type: 'string' }
                 ],
@@ -586,6 +595,56 @@
                 $('[data-bs-toggle="tooltip"]').each(function() {
                     new bootstrap.Tooltip(this);
                 });
+            });
+
+            // 綁定展開/收起事件
+            $('#stockTable tbody').on('click', 'td.dt-control', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                if (row.child.isShown()) {
+                    // 收起
+                    row.child.hide();
+                    tr.removeClass('shown');
+                    $(this).html('<i class="fa-solid fa-angle-down"></i>');
+                } else {
+                    // 展開，顯示異動紀錄
+                    var stockBatchId = row.data().stockBatchId;
+
+                    row.child('<div class="text-muted">載入中...</div>').show();
+                    tr.addClass('shown');
+                    $(this).html('<i class="fa-solid fa-angle-up"></i>');
+
+                    // 從後端取得異動紀錄
+                    $.getJSON('/SUP/StockBatches/GetStockHistory', { stockBatchId: stockBatchId })
+                        .done(function (data) {
+                            if (!data || data.length === 0) {
+                                row.child('<div class="text-danger">沒有異動紀錄</div>').show();
+                                return;
+                            }
+
+                            let html = `<table class="table table-sm table-bordered">
+                                <thead><tr>
+                                    <th>異動時間</th>
+                                    <th>異動類型</th>
+                                    <th>異動數量</th>
+                                    <th>操作人</th>
+                                </tr></thead><tbody>`;
+
+                            data.forEach(h => {
+                                html += `<tr>
+                                    <td>${new Date(h.revisedDate).toLocaleString()}</td>
+                                    <td>${h.movementType}</td>
+                                    <td>${h.changeQty}</td>
+                                    <td>${h.reviserName}</td>
+                                </tr>`;
+                            });
+
+                            html += `</tbody></table>`;
+                            row.child(html).show();
+                        })
+                        .fail(() => row.child('<div class="text-danger">載入失敗</div>').show());
+                }
             });
 
             // ===== 搜尋欄清空時重置 =====
@@ -709,8 +768,8 @@
                 const row = `<tr>
                     <td>${m.batchNumber || '-'}</td>
                     <td>${m.movementType}</td>
-                    <td>${changeDisplay}</td>
                     <td>${m.currentQty}</td>
+                    <td>${changeDisplay}</td>
                     <td>${afterQtyDisplay}</td>
                 </tr>`;
                 tbody.append(row);
