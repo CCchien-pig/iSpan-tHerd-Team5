@@ -1,194 +1,175 @@
-﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.Returns.ReturnListPageVM
+﻿@using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
+@model ReturnListPageVM
 @{
-    ViewData["Title"] = "售後申請處理";
-    string Q(string g) => Url.Action("Index", new { group = g, keyword = Model.Keyword, page = 1, pageSize = Model.PageSize })!;
+    ViewData["Title"] = "售後申請審核";
 }
 
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link @(string.IsNullOrEmpty(Model.Group) ? "active" : "")"
-           href="@Q(null)">全部 (@Model.Tabs.All)</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Group == "pending" ? "active" : "")"
-           href="@Q("pending")">待審核 (@Model.Tabs.Pending)</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Group == "approved" ? "active" : "")"
-           href="@Q("approved")">已核可 (@Model.Tabs.Approved)</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Group == "done" ? "active" : "")"
-           href="@Q("done")">已完成 (@Model.Tabs.Done)</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(Model.Group == "rejected" ? "active" : "")"
-           href="@Q("rejected")">已駁回 (@Model.Tabs.Rejected)</a>
-    </li>
-</ul>
+<link rel="stylesheet" href="~/_content/FlexBackend.ORD.Rcl/css/rma.css" asp-append-version="true" />
 
+@section Styles {
+    <link rel="stylesheet" href="~/_content/FlexBackend.ORD.Rcl/css/rma.css" asp-append-version="true" />
+}
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 text-purple2">售後申請審核</h6>
-    </div>
+@functions {
+    // 狀態徽章樣式
+    string BadgeClass(string? s) => (s ?? "").ToLowerInvariant() switch
+    {
+        "pending" => "badge-rma badge-rma-pending",
+        "review" => "badge-rma badge-rma-review",
+        "refunding" => "badge-rma badge-rma-refunding",
+        "reshipping" => "badge-rma badge-rma-reshipping",
+        "done" => "badge-rma badge-rma-done",
+        "rejected" => "badge-rma badge-rma-rejected",
+        _ => "badge bg-secondary"
+    };
+}
 
+<div class="card my-3">
+    <div class="card-header">售後申請審核</div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>RMA</th>
-                        <th>訂單號</th>
-                        <th>類型</th>
-                        <th>範圍</th>
-                        <th>狀態</th>
-                        <th>建立時間</th>
-                        <th>原因</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var it in Model.Items)
+
+        <!-- 搜尋 / 每頁 -->
+        <form method="get" class="row g-2 mb-3">
+            <input type="hidden" name="group" value="@Model.Group" />
+            <input type="hidden" name="page" value="1" />
+
+            <div class="col-auto">
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
+            </div>
+
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @* <option> 不放 C#，改用 if/else 產生 *@
+                    @if (Model.PageSize == 10)
                     {
-                        <tr data-rmaid="@it.ReturnRequestId" data-order-id="@it.OrderId">
-                            <td><a href="javascript:;" class="rma-detail">#@it.ReturnRequestId</a></td>
-                            <td>@(string.IsNullOrEmpty(it.RmaId) ? "-" : it.RmaId)</td>
-                            <td>@it.OrderNo</td>
-                            <td>@(string.IsNullOrEmpty(it.RequestTypeName) ? it.RequestType : it.RequestTypeName)</td>
-                            <td>@(string.IsNullOrEmpty(it.RefundScopeName) ? it.RefundScope : it.RefundScopeName)</td>
-                            <td><span class="badge bg-secondary">@it.StatusName</span></td>
-                            <td>@it.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
-                            <td>@it.ReasonText</td>
-                        </tr>
+                        <option value="10" selected>10/頁</option>
                     }
-                </tbody>
-            </table>
+                    else
+                    {
+                        <option value="10">10/頁</option>
+                    }
+                    @if (Model.PageSize == 25)
+                    {
+                        <option value="25" selected>25/頁</option>
+                    }
+                    else
+                    {
+                        <option value="25">25/頁</option>
+                    }
+                    @if (Model.PageSize == 50)
+                    {
+                        <option value="50" selected>50/頁</option>
+                    }
+                    else
+                    {
+                        <option value="50">50/頁</option>
+                    }
+                    @if (Model.PageSize == 100)
+                    {
+                        <option value="100" selected>100/頁</option>
+                    }
+                    else
+                    {
+                        <option value="100">100/頁</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">搜尋</button>
+            </div>
+        </form>
+
+        <!-- 狀態群組 Tabs -->
+        <div class="mb-3">
+            @foreach (var tab in Model.Tabs)
+            {
+                <a class="btn @(Model.Group == tab.Key ? "btn-secondary" : "btn-outline-secondary") me-1"
+                   href="@Url.Action("Index", new { group = tab.Key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
+                    @tab.Key (@tab.Value)
+                </a>
+            }
         </div>
+
+        <!-- 列表 -->
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:80px">#</th>
+                    <th>RMA</th>
+                    <th>訂單號</th>
+                    <th>類型</th>
+                    <th>範圍</th>
+                    <th>狀態</th>
+                    <th>建立時間</th>
+                    <th>原因</th>
+                    <th>商品</th>
+                    <th>規格</th>
+                    <th>數量</th>
+                    <th style="width:260px">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.RmaList)
+                {
+                    <tr>
+                        <td><a href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">#@r.ReturnRequestId</a></td>
+                        <td>@r.RmaNo</td>
+                        <td>@r.OrderNo</td>
+                        <td>@r.TypeName</td>
+                        <td>@r.ScopeName</td>
+                        <td><span class="@BadgeClass(r.StatusName)">@r.StatusName</span></td>
+                        <td>@r.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>@r.Reason</td>
+                        <td>@r.ProductName</td>
+                        <td>@r.Spec</td>
+                        <td>@r.Qty</td>
+                        <td>
+                            @* 黃藍按鈕樣式 *@
+                            @if ((r.StatusName ?? "").ToLower() is "pending" or "review")
+                            {
+                                <button class="btn-rma btn-rma-blue   me-1" onclick="approveRefund(@r.ReturnRequestId)">批准退款</button>
+                                <button class="btn-rma btn-rma-yellow me-1" onclick="approveReship(@r.ReturnRequestId)">批准補寄</button>
+                                <button class="btn-rma btn-rma-red" onclick="rejectRma(@r.ReturnRequestId)">駁回</button>
+                            }
+                            else if ((r.StatusName ?? "").ToLower() is "refunding" or "reshipping")
+                            {
+                                <button class="btn-rma btn-rma-gray" onclick="completeRma(@r.ReturnRequestId)">結單</button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- 分頁 -->
+        <nav>
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.Pages; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new { group = Model.Group, page = i, pageSize = Model.PageSize, keyword = Model.Keyword })">
+                            @i
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
+
+        <div>總筆數 @Model.Total</div>
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="rmaDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">退貨申請明細</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="rma-detail-body">載入中...</div>
-        </div>
-    </div>
-</div>
+<!-- 明細 Modal -->
+<partial name="_RmaDetails" />
 
 @section Scripts {
-    <script>
-        (function(){
-          const get = (o,...ns)=>{for(const n of ns){if(o&&o[n]!=null)return o[n]}};
-          const fmtMoney=n=>(n==null||isNaN(n))?'-':Number(n).toLocaleString('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0});
-          const fmt=s=>(s==null?'':s);
-          const fmtDate=s=>{ if(!s) return '-'; const d=new Date(s); return isNaN(d)?s:d.toLocaleString('zh-TW'); };
-
-          const api = {
-            order: id => $.getJSON('/ORD/Orders/GetOrderDetails',{orderId:id}),
-            rma  : id => $.getJSON('/ORD/Rma/GetReturnDetail',{id}),
-            approve:(id,next)=>$.post('/ORD/Rma/Approve',{id,nextStatus:next}),
-            reject :(id,reason)=>$.post('/ORD/Rma/Reject',{id,reason}),
-            complete:id=>$.post('/ORD/Rma/Complete',{id})
-          };
-
-          $(document).off('click.rma').on('click.rma','.rma-detail',function(){
-            const $tr = $(this).closest('tr');
-            const rmaId = $tr.data('rmaid');
-            const orderId = $tr.data('order-id');
-
-            console.log("點到的 RMA:", rmaId, "OrderId:", orderId);
-
-            $('#rma-detail-body').html('載入中...');
-            new bootstrap.Modal(document.getElementById('rmaDetailModal')).show();
-
-            $.when(api.order(orderId), api.rma(rmaId)).done((oRes, rRes)=>{
-              const o=oRes[0], r=rRes[0];
-              if(!o || !o.order || !r || !r.ok){
-                $('#rma-detail-body').html('<div class="text-danger">明細載入失敗</div>');
-                return;
-              }
-
-              // 🔑 容錯：PascalCase / camelCase 都抓
-              const order = o.order;
-              const orderNo = order.OrderNo ?? order.orderNo;
-              const discountTotal = order.DiscountTotal ?? order.discountTotal;
-              const shippingFee = order.ShippingFee ?? order.shippingFee;
-              const totalAmount = order.TotalAmount ?? order.totalAmount;
-              const couponCode = order.CouponCode ?? order.couponCode;
-
-              const rma = r.rma;
-              const status = rma.StatusName ?? rma.statusName;
-              const reason = rma.ReasonText ?? rma.reasonText;
-              const created = rma.CreatedDate ?? rma.createdDate;
-
-              const orderItems = o.items || [];
-              const rmaItems = r.items || [];
-
-              // === Render HTML ===
-              let html = `
-                <div class="fw-bold mb-2">商品明細</div>
-                <div class="table-responsive mb-2">
-                  <table class="table table-sm table-bordered">
-                    <thead class="table-light"><tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
-                    <tbody>
-                      ${orderItems.map(i=>`
-                        <tr>
-                          <td>${fmt(i.ProductName ?? i.productName)}</td>
-                          <td>${fmt(i.SkuSpec ?? i.skuSpec)}</td>
-                          <td>${fmtMoney(i.UnitPrice ?? i.unitPrice)}</td>
-                          <td>${i.Qty ?? i.qty}</td>
-                          <td>${fmtMoney(i.Subtotal ?? i.subtotal)}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                  </table>
-                </div>
-                <div class="text-end mb-2">
-                  <div>優惠券：${fmt(couponCode) || '-'}</div>
-                  <div>優惠折扣：${fmtMoney(discountTotal)}</div>
-                  <div>運費：${fmtMoney(shippingFee)}</div>
-                  <div class="fw-bold">總金額：${fmtMoney(totalAmount)}</div>
-                </div>
-                <hr class="my-3"/>
-                <div class="fw-bold">退貨申請</div>
-                <div class="small text-muted">
-                  <span class="badge bg-secondary me-2">${status}</span>
-                  建立：${fmtDate(created)}
-                </div>
-                ${reason?`<div class="mt-1"><strong>原因：</strong>${reason}</div>`:''}
-                <div class="table-responsive mt-2">
-                  <table class="table table-sm table-bordered">
-                    <thead class="table-light">
-                      <tr><th>商品</th><th>規格</th><th>原始數量</th><th>申請</th><th>核可</th><th>退款</th><th>補寄</th><th>退款單價</th></tr>
-                    </thead>
-                    <tbody>
-                      ${rmaItems.map(x=>`
-                        <tr>
-                          <td>${x.ProductName ?? x.productName}</td>
-                          <td>${x.SkuSpec ?? x.skuSpec}</td>
-                          <td>${x.OrderQty ?? x.orderQty}</td>
-                          <td>${x.RequestQty ?? x.requestQty}</td>
-                          <td>${x.ApprovedQty ?? x.approvedQty}</td>
-                          <td>${x.RefundQty ?? x.refundQty}</td>
-                          <td>${x.ReshipQty ?? x.reshipQty}</td>
-                          <td>${fmtMoney(x.RefundUnitAmount ?? x.refundUnitAmount)}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              `;
-
-              $('#rma-detail-body').html(html);
-            }).fail(()=>{
-              $('#rma-detail-body').html('<div class="text-danger">明細載入失敗</div>');
-            });
-          });
-        })();
-    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/_content/FlexBackend.ORD.Rcl/js/rma.js" asp-append-version="true"></script>
 }
-
