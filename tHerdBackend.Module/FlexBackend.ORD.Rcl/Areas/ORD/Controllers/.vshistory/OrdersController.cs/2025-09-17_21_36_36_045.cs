@@ -416,7 +416,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 						.FirstOrDefault(),
                     CouponName = _db.MktCoupons
                         .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
+                        .Select(c => c.CouponName)
+                        .FirstOrDefault(),
+                    CouponCode = _db.MktCoupons
+                        .Where(c => c.CouponId == o.CouponId)
+                        .Select(c => c.CouponCode)
                         .FirstOrDefault(),
                     Items = _db.OrdOrderItems
 						.Where(i => i.OrderId == o.OrderId)
