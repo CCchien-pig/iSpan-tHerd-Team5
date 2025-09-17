@@ -1,10 +1,12 @@
 ﻿using Dapper;
+using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Infra.DBSetting;
 using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Data;
 using static Dapper.SqlMapper;
 
@@ -14,11 +16,13 @@ namespace FlexBackend.Infra.Repository.PROD
     {
         private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
         private readonly tHerdDBContext _db;                 // 寫入與交易來源
+        private readonly ICurrentUser _currentUser;
 
-        public ProdProductRepository(ISqlConnectionFactory factory, tHerdDBContext db)
+        public ProdProductRepository(ISqlConnectionFactory factory, tHerdDBContext db, ICurrentUser currentUser)
         {
             _factory = factory;
             _db = db;
+            _currentUser = currentUser;
         }
         /// <summary>
         /// 取得所有有效分類
@@ -121,6 +125,11 @@ namespace FlexBackend.Infra.Repository.PROD
 
                 if (item == null) return null;
 
+                var repo = new AspnetusersNameRepository(_factory, _db);
+                var emp = await repo.GetAllUserNameAsync(ct);
+                item.CreatorNm = emp.FirstOrDefault(e => e.UserNumberId == item.Creator)?.FullName;
+                item.ReviserNm = emp.FirstOrDefault(e => e.UserNumberId == item.Reviser)?.FullName;
+                
                 var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId);
 
                 item.Seo = seo == null ? null : new PRODSeoConfigDto
@@ -214,6 +223,15 @@ namespace FlexBackend.Infra.Repository.PROD
                     item.SpecConfigs = new List<ProdSpecificationConfigDto>();
                 }
 
+                item.Types = await _db.ProdProductTypes
+                    .Where(t => t.ProductId == item.ProductId)
+                    .Select(t => new ProdProductTypeDto
+                    {
+                        ProductTypeId = t.ProductTypeId,
+                        ProductId = t.ProductId,
+                        IsPrimary = t.IsPrimary
+                    }).ToListAsync();
+
                 return item;
 			}
             finally
@@ -255,8 +273,8 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Creator = 1003,
-                        Reviser = 1003
+                        Creator = _currentUser.UserNumberId,
+                        Reviser = _currentUser.UserNumberId
                     }, tran);
 
                 // 更新正式 ProductCode
@@ -295,8 +313,8 @@ namespace FlexBackend.Infra.Repository.PROD
 				.ToListAsync();
 		}
 
-		// 修改
-		public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
+        // 修改
+        public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
             var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
@@ -331,7 +349,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Reviser = 1003,
+                        Reviser = _currentUser.UserNumberId,
                         RevisedDate = DateTime.Now,
                         dto.ProductId
                     }, tran);
@@ -479,6 +497,20 @@ namespace FlexBackend.Infra.Repository.PROD
 							new { opt.SkuId, SpecificationOptionId = optionId }, tran);
 					}
 				}
+            }
+
+            // === Step 4: 商品分類處理 (ProdProductType) ===
+            await conn.ExecuteAsync(
+                "DELETE FROM PROD_ProductType WHERE ProductId = @ProductId",
+                new { Ids = dto.ProductId }, tran);
+
+            foreach (var opt in dto.Types ?? new())
+            {
+                var optionId = await conn.ExecuteScalarAsync<int>(
+                    @"INSERT INTO PROD_ProductType (ProductTypeId, ProductId, IsPrimary)
+                          OUTPUT INSERTED.PROD_ProductType
+                          VALUES (@ProductTypeId, @ProductId, @IsPrimary);",
+                    new { opt.ProductTypeId, dto.ProductId, opt.IsPrimary }, tran);
             }
         }
 

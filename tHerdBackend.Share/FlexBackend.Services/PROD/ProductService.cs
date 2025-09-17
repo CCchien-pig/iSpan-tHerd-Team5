@@ -107,11 +107,11 @@ namespace FlexBackend.Services.PROD
 		/// 商品完整分類清單
 		/// </summary>
 		/// <returns></returns>
-		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync()
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
 		{
 			try
 			{
-				return await _repo.GetAllProductTypesAsync();
+				return await _repo.GetAllProductTypesAsync(ct);
 			}
 			catch (Exception ex)
 			{

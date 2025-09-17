@@ -7,6 +7,8 @@
     ViewData["Title"] = isEdit ? "修改商品" : "新增商品";
     var brands = ViewBag.BrandDtos as IEnumerable<LoadBrandOptionDto>
              ?? Enumerable.Empty<LoadBrandOptionDto>();
+    var Types = ViewBag.TypeDtos as IEnumerable<ProdProductTypeConfigDto>
+        ?? Enumerable.Empty<ProdProductTypeConfigDto>();
     var index = 0;
 }
 
@@ -222,29 +224,60 @@
             border: 1px solid #652D77 !important;
         }
 
+        .btn-no-frame:hover {
+            color: #a00;
+            transform: scale(1.1);
+        }
+
+        .btn-icon {
+            background-color: transparent;
+            border: none;
+            padding: 0.25rem;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+            .btn-icon:hover {
+                transform: scale(1.3);
+                color: #4b176c; /* 或你想要的深一點紫色，加強 hover 效果 */
+            }
+
+        .table-warning {
+            background-color: #fff3cd !important;
+        }
     </style>
 }
 
 <div class="container-fluid">
     <div class="row">
         <!-- 左側分類 -->
-        <div class="col-md-2 bg-light p-3" id="left-nav">
-            <h6 class="fw-bold text-purple2">分類設定</h6>
-            <div class="category-container">
-                <select id="categorySelect" class="form-select" multiple="multiple">
-                    <option value="保健食品">保健食品</option>
-                    <option value="保養品">保養品</option>
-                    <option value="生技品">生技品</option>
-                    <option value="食品">食品</option>
-                    <option value="藥品">藥品</option>
-                </select>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-purple2 mb-0">分類設定</h6>
+
+                        <!-- 新增 icon 按鈕靠右 -->
+                        <button class="btn btn-icon text-purple2" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="新增分類">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-2" id="categoryTable">
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <small class="text-muted">可輸入新增，並可指定主分類</small>
-        </div>
+
+            <!-- 隱藏容器，放所有 input -->
+            <div id="categoryInputs"></div>
 
         <!-- 自訂右鍵選單 -->
         <ul id="contextMenu" class="dropdown-menu" style="display:none; position:absolute;width: 60px">
-          <li><a class="dropdown-item" href="#" id="setMainCategory">設為主分類</a></li>
+            <li><a class="dropdown-item" href="#" id="setMainCategory">設為主分類</a></li>
+            <li><a class="dropdown-item text-danger" href="#" id="deleteCategory">刪除</a></li>
         </ul>
 
         <!-- 中間主表單 -->
@@ -569,7 +602,38 @@
         </form>
     </div>
     </div>
+        </div>
 </div>
+@*增加分類畫面*@
+    <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCategoryModalLabel">新增分類</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                </div>
+                <div class="modal-body">
+                    <select class="form-select" id="modalCategorySelect">
+                        <option value="">請選擇分類</option>
+                        @if (ViewBag.TypeDtos != null)
+                        {
+                            foreach (var type in ViewBag.TypeDtos)
+                            {
+                                <option value="@type.ProductTypeId">@type.ProductTypeName</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnModalAdd">新增</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
@@ -582,44 +646,167 @@
     @await Html.PartialAsync("_SweetAlertPartial")
 
     <script>
-        $(function () {
-            // 啟用 select2 (可輸入新增)
-            $('#categorySelect').select2({
-                tags: true,
-                width: '100%'
+        // 從 Razor 序列化後端 Model 成前端可用的 JS 物件
+        let Model = {
+            ProductId: @Model.ProductId,
+            Types: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Types ?? new List<ProdProductTypeDto>()))
+        };
+
+        if (!Model.Types) {
+            Model.Types = [];
+        }
+
+        // ===== 綁定右鍵選單到每一列 =====
+        function bindContextMenu() {
+            document.querySelectorAll("#categoryTable tbody tr").forEach(row => {
+                row.addEventListener("contextmenu", function (e) {
+                    e.preventDefault();
+                    selectedRow = this;
+
+                    const menu = document.getElementById("contextMenu");
+                    menu.style.display = "block";
+                    menu.style.left = e.pageX + "px";
+                    menu.style.top = e.pageY + "px";
+                });
+            });
+        }
+
+        // ===== 設為主分類 =====
+        document.getElementById("setMainCategory").addEventListener("click", function (e) {
+            e.preventDefault();
+            if (!selectedRow) return;
+
+            const index = parseInt(selectedRow.getAttribute("data-index"));
+            if (isNaN(index)) return;
+
+            // 1. 將所有 Model.Types.IsPrimary = false
+            Model.Types.forEach(t => t.IsPrimary = false);
+
+            // 2. 設定目前這列為主分類
+            Model.Types[index].IsPrimary = true;
+
+            // 3. 清除所有 row 的黃底
+            document.querySelectorAll("#categoryTable tbody tr").forEach(row => {
+                row.classList.remove("table-warning");
             });
 
-            // 事件委派：監聽右鍵
-            $(document).on('contextmenu', '.select2-selection__choice', function (e) {
-                e.preventDefault();
-                const value = $(this).attr('title'); // Select2 把文字放在 title 屬性
-                $('#contextMenu')
-                    .css({ top: e.pageY + 'px', left: e.pageX + 'px' })
-                    .show()
-                    .data('target', value)
-                    .data('element', this);
-            });
+            // 4. 加上黃色背景
+            selectedRow.classList.add("table-warning");
 
-            // 設定為主分類
-            $('#setMainCategory').on('click', function () {
-                const mainCat = $('#contextMenu').data('target');
-                const element = $('#contextMenu').data('element');
-
-                // 移除舊的主分類樣式
-                $('.select2-selection__choice').removeClass('main-category');
-
-                // 標記新的主分類
-                $(element).addClass('main-category');
-
-                $('#contextMenu').hide();
-                alert('已設定主分類：' + mainCat);
-            });
-
-            // 點其他地方隱藏選單
-            $(document).on('click', function () {
-                $('#contextMenu').hide();
-            });
+            // 隱藏右鍵選單
+            document.getElementById("contextMenu").style.display = "none";
         });
+
+        // ===== 刪除分類 =====
+        document.getElementById("deleteCategory").addEventListener("click", function (e) {
+            e.preventDefault();
+            if (!selectedRow) return;
+
+            const index = parseInt(selectedRow.getAttribute("data-index"));
+            if (isNaN(index)) return;
+
+            // 1. 從 Model.Types 移除對應項目
+            Model.Types.splice(index, 1);
+
+            // 2. 從表格刪掉該列
+            selectedRow.remove();
+            selectedRow = null;
+
+            // 3. 重新整理每列的 data-index
+            document.querySelectorAll("#categoryTable tbody tr").forEach((row, i) => {
+                row.setAttribute("data-index", i);
+            });
+
+            // 隱藏選單
+            document.getElementById("contextMenu").style.display = "none";
+        });
+
+        // ===== 點其他地方關閉右鍵選單 =====
+        document.addEventListener("click", function () {
+            document.getElementById("contextMenu").style.display = "none";
+        });
+
+       let categoryIndex = 0;
+
+        function addCategory(name) {
+            // 動態新增顯示列
+            const tbody = document.querySelector("#categoryTable tbody");
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${name}</td>`;
+            tbody.appendChild(row);
+
+            // 動態新增隱藏 input
+            const inputContainer = document.getElementById("categoryInputs");
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = `Types[${categoryIndex}].TypeName`;
+            hidden.value = name;
+            inputContainer.appendChild(hidden);
+
+            categoryIndex++;
+        }
+
+
+        // ===== 新增分類 =====
+        document.getElementById("btnModalAdd").addEventListener("click", function () {
+            const select = document.getElementById("modalCategorySelect");
+            const selectedId = select.value;   // 字串，不先轉數字
+            const selectedName = select.options[select.selectedIndex]?.text ?? "";
+
+            if (selectedId === "") {  // 僅判斷是否空字串
+                
+                // 檢查是否有選值
+                if (selectedId === "") {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '提示',
+                        text: '請選擇一個分類！'
+                    });
+                    return;
+                }
+                 //alert("請選擇一個分類！");
+                return;
+            }
+
+            const id = parseInt(selectedId);   // 這裡才轉數字
+
+            // 檢查是否已存在
+            const exists = Model.Types.some(t => t.ProductTypeId === id);
+            if (exists) {
+                // 檢查重複
+                const exists = Model.Types.some(t => t.ProductTypeId === id);
+                if (exists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '操作失敗',
+                        text: '此分類已經存在！'
+                    });
+                    return;
+                }
+                // alert("此分類已經存在！");
+                return;
+            }
+
+            Model.Types.push({
+                ProductId: Model.ProductId || 0,
+                ProductTypeId: id,
+                IsPrimary: false
+            });
+
+            const index = Model.Types.length - 1;
+            const row = document.createElement("tr");
+            row.setAttribute("data-index", index);
+            row.innerHTML = `<td>${selectedName}</td>`;
+            document.querySelector("#categoryTable tbody").appendChild(row);
+
+            bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+            select.value = ""; // 重置
+            bindContextMenu();
+        });
+
+
+        // 初始化右鍵事件
+        bindContextMenu();
 
 
         //  商品假資料

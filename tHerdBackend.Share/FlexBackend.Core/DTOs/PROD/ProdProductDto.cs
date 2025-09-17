@@ -152,10 +152,36 @@ public partial class ProdProductDto
     /// </summary>
     public List<string> ProductTypeDesc { get; set; }
 
-	public PRODSeoConfigDto? Seo { get; set; }
+    /// <summary>
+    /// 分類敘述
+    /// </summary>
+    public List<ProdProductTypeDto> Types { get; set; }
+
+    public PRODSeoConfigDto? Seo { get; set; }
 
 	public List<ProdProductSkuDto> Skus { get; set; } = new List<ProdProductSkuDto>();
 	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
+}
+
+/// <summary>
+/// 商品分類設定檔，可支援多階層架構
+/// </summary>
+public partial class ProdProductTypeDto
+{
+    /// <summary>
+    /// 商品ID（外鍵）
+    /// </summary>
+    public int ProductId { get; set; }
+
+    /// <summary>
+    /// 分類ID（外鍵）
+    /// </summary>
+    public int ProductTypeId { get; set; }
+
+    /// <summary>
+    /// 是否為主分類（1=是）
+    /// </summary>
+    public bool IsPrimary { get; set; }
 }
 
 /// <summary>
@@ -389,47 +415,6 @@ public partial class ProdSpecificationOptionDto
 	/// 歸屬SKU編碼 (PROD_SkuSpecificationValue.SkuId)
 	/// </summary>
 	public int SkuId { get; set; }
-}
-
-/// <summary>
-/// 商品分類設定檔，可支援多階層架構
-/// </summary>
-public partial class ProdProductTypeConfig
-{
-	/// <summary>
-	/// 分類ID（主鍵）
-	/// </summary>
-	public int ProductTypeId { get; set; }
-
-	/// <summary>
-	/// 父分類ID（NULL 代表最上層）
-	/// </summary>
-	public int? ParentId { get; set; }
-
-	/// <summary>
-	/// 分類簡碼
-	/// </summary>
-	public string ProductTypeCode { get; set; }
-
-	/// <summary>
-	/// 分類名稱
-	/// </summary>
-	public string ProductTypeName { get; set; }
-
-	/// <summary>
-	/// Seo 設定
-	/// </summary>
-	public int? SeoId { get; set; }
-
-	/// <summary>
-	/// 顯示順序
-	/// </summary>
-	public int OrderSeq { get; set; }
-
-	/// <summary>
-	/// 是否啟用分類（0=否，1=是）
-	/// </summary>
-	public bool IsActive { get; set; }
 }
 
 /// <summary>
