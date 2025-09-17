@@ -2,6 +2,28 @@
 @{
     ViewData["Title"] = "刪除文章";
 }
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+}
+<partial name="_AlertMessage" />
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Msg"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ @TempData["Msg"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 
 <div class="card shadow-sm border-0">
     <div class="card-header bg-danger text-white fw-bold">
@@ -14,7 +36,7 @@
             <dt class="col-sm-2">文章標題</dt>
             <dd class="col-sm-10">@Model.Title</dd>
 
-            <dt class="col-sm-2">狀態</dt>
+            <dt class="col-sm-2 badge">狀態</dt>
             <dd class="col-sm-10">@Model.StatusText</dd>
 
             <dt class="col-sm-2">最後修改時間</dt>
@@ -24,10 +46,39 @@
         <form asp-action="Delete" method="post">
             <input type="hidden" asp-for="PageId" />
 
+            <!-- 🔑 保留查詢狀態 -->
+            <input type="hidden" asp-for="Page" />
+            <input type="hidden" asp-for="PageSize" />
+            <input type="hidden" asp-for="Keyword" />
+            <input type="hidden" asp-for="StatusFilter" />
+
             <div class="d-flex gap-3 mt-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
                 <button type="submit" class="btn btn-outline-danger btn-lg">🗑 確認刪除</button>
             </div>
-        </form>
+        </form>      
     </div>
+    <!-- ⬆️ 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop"
+            class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
 </div>
+@section Scripts {
+    <script>
+              function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+
+    </script>
+}

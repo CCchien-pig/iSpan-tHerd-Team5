@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace FlexBackend.USER.Rcl.Areas.Identity.Pages.Account
 {
+    [AllowAnonymous]
     public class LoginWith2faModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
