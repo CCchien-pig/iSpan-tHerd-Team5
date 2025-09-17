@@ -18,7 +18,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// </summary>
 		public OrderSearchVM SearchParams { get; set; } = new OrderSearchVM();
 
-
 		/// <summary>
 		/// 分頁資訊
 		/// </summary>
@@ -341,8 +340,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// 每頁筆數
 		/// </summary>
 		public int PageSize { get; set; } = 10;
-
-    }
+	}
 
 	/// <summary>
 	/// 分頁資訊 ViewModel
