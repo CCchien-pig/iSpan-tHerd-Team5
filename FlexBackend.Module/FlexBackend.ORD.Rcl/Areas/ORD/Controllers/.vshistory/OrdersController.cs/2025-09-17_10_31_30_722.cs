@@ -161,8 +161,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
 						.FirstOrDefault(),
-                    trackingNumber = o.TrackingNumber,
-                    couponCode = _db.MktCoupons
+					couponCode = _db.MktCoupons
 						.Where(c => c.CouponId == o.CouponId)
 						.Select(c => c.CouponCode)
 						.FirstOrDefault(),
@@ -199,191 +198,92 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
         // 產出出貨單號
         private static string GenerateTrackingNo(int orderId)
         {
-            // 例：TRK250917000123
+            // 例：TRK250917-000123
             return $"TRK{DateTime.UtcNow:yyMMdd}{orderId:D6}";
         }
 
 
+
         // 即點即改訂單狀態 (AJAX)
         [HttpPost]
-        public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
-        {
-            var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
-            if (order == null) return Json(new { success = false, message = "找不到訂單" });
+		public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
+		{
+			var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+			if (order == null)
+			{
+				return Json(new { success = false, message = "找不到訂單" });
+			}
 
-            try
-            {
-                switch (field)
-                {
-                    case "PaymentStatus":
-                        order.PaymentStatus = value;
-                        break;
+			try
+			{
+				switch (field)
+				{
+					case "PaymentStatus":
+						order.PaymentStatus = value; // 存 CodeNo
+						break;
+					case "ShippingStatusId":
+						order.ShippingStatusId = value;
+						break;
+					case "OrderStatusId":
+						order.OrderStatusId = value;
+						break;
+				}
 
-                    case "ShippingStatusId":
-                        order.ShippingStatusId = value;
+				await _db.SaveChangesAsync();
+				return Json(new { success = true });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
 
-                        // 若設為 shipped 且目前沒有單號 → 自動產生
-                        if (string.Equals(value, SHIPPING_SHIPPED_CODE, StringComparison.OrdinalIgnoreCase)
-                            && string.IsNullOrEmpty(order.TrackingNumber))
-                        {
-                            order.TrackingNumber = GenerateTrackingNo(order.OrderId);
-                        }
-                        break;
-
-                    case "OrderStatusId":
-                        order.OrderStatusId = value;
-                        break;
-                }
-
-                order.RevisedDate = DateTime.Now;
-                await _db.SaveChangesAsync();
-
-                return Json(new { success = true, trackingNo = order.TrackingNumber });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-
-
-        //      // 即點即改訂單狀態 (AJAX)
-        //      [HttpPost]
-        //public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
-        //{
-        //	var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
-        //	if (order == null)
-        //	{
-        //		return Json(new { success = false, message = "找不到訂單" });
-        //	}
-
-        //	try
-        //	{
-        //		switch (field)
-        //		{
-        //			case "PaymentStatus":
-        //				order.PaymentStatus = value; // 存 CodeNo
-        //				break;
-        //			case "ShippingStatusId":
-        //				order.ShippingStatusId = value;
-        //				break;
-        //			case "OrderStatusId":
-        //				order.OrderStatusId = value;
-        //				break;
-        //		}
-
-        //		await _db.SaveChangesAsync();
-        //		return Json(new { success = true });
-        //	}
-        //	catch (Exception ex)
-        //	{
-        //		return Json(new { success = false, message = ex.Message });
-        //	}
-        //}
-
-
-
-        // 批量更新訂單狀態
-        [HttpPost]
-        public async Task<IActionResult> BulkUpdateOrders(
+		// ======================
+		// 批量更新訂單狀態
+		// ======================
+		[HttpPost]
+		public async Task<IActionResult> BulkUpdateOrders(
 		[FromForm] List<int> orderIds,
 		[FromForm] string? shippingStatusId,
 		[FromForm] string? orderStatusId)
-        {
-            if (orderIds == null || !orderIds.Any())
-                return Json(new { success = false, message = "沒有選擇訂單" });
+		{
+			if (orderIds == null || !orderIds.Any())
+				return Json(new { success = false, message = "沒有選擇訂單" });
 
-            try
-            {
-                var orders = await _db.OrdOrders
-                                      .Where(o => orderIds.Contains(o.OrderId))
-                                      .ToListAsync();
+			try
+			{
+				var orders = await _db.OrdOrders
+					.Where(o => orderIds.Contains(o.OrderId))
+					.ToListAsync();
 
-                if (!orders.Any())
-                    return Json(new { success = false, message = "找不到訂單" });
+				if (!orders.Any())
+					return Json(new { success = false, message = "找不到訂單" });
 
-                foreach (var order in orders)
-                {
-                    if (!string.IsNullOrEmpty(shippingStatusId))
-                    {
-                        order.ShippingStatusId = shippingStatusId;
+				foreach (var order in orders)
+				{
+					if (!string.IsNullOrEmpty(shippingStatusId))
+						order.ShippingStatusId = shippingStatusId;
 
-                        if (string.Equals(shippingStatusId, SHIPPING_SHIPPED_CODE, StringComparison.OrdinalIgnoreCase)
-                            && string.IsNullOrEmpty(order.TrackingNumber))
-                        {
-                            order.TrackingNumber = GenerateTrackingNo(order.OrderId);
-                        }
-                    }
+					if (!string.IsNullOrEmpty(orderStatusId))
+						order.OrderStatusId = orderStatusId;
 
-                    if (!string.IsNullOrEmpty(orderStatusId))
-                        order.OrderStatusId = orderStatusId;
+					order.RevisedDate = DateTime.Now;
+				}
 
-                    order.RevisedDate = DateTime.Now;
-                }
-
-                await _db.SaveChangesAsync();
-
-                var generated = orders.Where(o => !string.IsNullOrEmpty(o.TrackingNumber))
-                                      .Select(o => new { o.OrderId, o.TrackingNumber })
-                                      .ToList();
-
-                return Json(new { success = true, generated });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
+				await _db.SaveChangesAsync();
+				return Json(new { success = true });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
 
 
-
-        //      // ======================
-        //      // 批量更新訂單狀態
-        //      // ======================
-        //      [HttpPost]
-        //public async Task<IActionResult> BulkUpdateOrders(
-        //[FromForm] List<int> orderIds,
-        //[FromForm] string? shippingStatusId,
-        //[FromForm] string? orderStatusId)
-        //{
-        //	if (orderIds == null || !orderIds.Any())
-        //		return Json(new { success = false, message = "沒有選擇訂單" });
-
-        //	try
-        //	{
-        //		var orders = await _db.OrdOrders
-        //			.Where(o => orderIds.Contains(o.OrderId))
-        //			.ToListAsync();
-
-        //		if (!orders.Any())
-        //			return Json(new { success = false, message = "找不到訂單" });
-
-        //		foreach (var order in orders)
-        //		{
-        //			if (!string.IsNullOrEmpty(shippingStatusId))
-        //				order.ShippingStatusId = shippingStatusId;
-
-        //			if (!string.IsNullOrEmpty(orderStatusId))
-        //				order.OrderStatusId = orderStatusId;
-
-        //			order.RevisedDate = DateTime.Now;
-        //		}
-
-        //		await _db.SaveChangesAsync();
-        //		return Json(new { success = true });
-        //	}
-        //	catch (Exception ex)
-        //	{
-        //		return Json(new { success = false, message = ex.Message });
-        //	}
-        //}
-
-
-        // ======================
-        // 批量列印出貨單
-        // ======================
-        public async Task<IActionResult> PrintOrders(string ids)
+		// ======================
+		// 批量列印出貨單
+		// ======================
+		public async Task<IActionResult> PrintOrders(string ids)
 		{
 			if (string.IsNullOrEmpty(ids))
 				return Content("沒有選擇訂單");
