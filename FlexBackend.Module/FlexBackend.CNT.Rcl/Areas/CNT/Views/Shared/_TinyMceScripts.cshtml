@@ -1,9 +1,15 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.TinyMceInitVM
+@Html.AntiForgeryToken()
 <script src="https://cdn.tiny.cloud/1/r5667x13d0hhddtzkecsjtxy7i4xdtrx1p7nyscygxet0ht0/tinymce/8/tinymce.min.js"
         referrerpolicy="origin" crossorigin="anonymous"></script>
 <script>
-          // 取得 Anti-forgery Token（若你的表單有 @Html.AntiForgeryToken()）
-        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+      // 取得 Anti-forgery Token（若你的表單有 @Html.AntiForgeryToken()）
+    const antiForgeryToken =
+    document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    // 用 Razor 產生正確的區域路徑
+    const uploadImageUrl = '@Url.Action("Image", "Upload", new { area = "CNT" })';
+    const uploadMediaUrl = '@Url.Action("Media", "Upload", new { area = "CNT" })';
+
         const placeholders = [
           "「用文字征服世界。」",
           "「寫吧，這裡是你的戰場！」",
@@ -45,25 +51,33 @@
 
           // ✅ 圖片上傳：兩種做法擇一
           // A. 最簡：靠 images_upload_url（TinyMCE 自動用 multipart/form-data 上傳「file」欄位）
-          images_upload_url: '/upload/image',
+          // images_upload_url: '/upload/image',
 
           // B. (可選) 自訂 handler：自己用 fetch 加上 CSRF 標頭與進度回報
-          images_upload_handler: async (blobInfo, progress) => {
-            const form = new FormData();
-            form.append('file', blobInfo.blob(), blobInfo.filename());
+            images_upload_handler: async (blobInfo, progress) => {
+              const form = new FormData();
+              form.append('file', blobInfo.blob(), blobInfo.filename());
 
-            const resp = await fetch('/upload/image', {
-              method: 'POST',
-              body: form,
-              headers: antiForgeryToken ? { 'RequestVerificationToken': antiForgeryToken } : {}
-            });
+              const resp = await fetch(uploadImageUrl, {
+                method: 'POST',
+                body: form,
+                headers: antiForgeryToken ? { 'RequestVerificationToken': antiForgeryToken } : {}
+              });
 
-            const json = await resp.json();
-            if (!resp.ok || !json?.location) {
-              throw new Error(json?.message || 'Image upload failed');
-            }
-            return json.location; // TinyMCE 需要回傳圖片 URL
-          },
+              const text = await resp.text();
+              let json;
+              try {
+                  json = JSON.parse(text);
+              } catch {
+                  console.error("❌ 回傳不是 JSON:", text);
+                  throw new Error("Upload API did not return JSON");
+              }
+
+              if (!resp.ok || !json?.location) {
+                  throw new Error(json?.message || "Image upload failed");
+              }
+              return json.location;
+            },
 
           // ✅ 影片上傳：用 file_picker_callback 把檔案丟到 /upload/media，回傳 URL 後插入 <video> 或 <iframe>
           file_picker_callback: async (callback, value, meta) => {
@@ -81,7 +95,7 @@
               const form = new FormData();
               form.append('file', file);
 
-              const url = meta.filetype === 'image' ? '/upload/image' : '/upload/media';
+              const url = meta.filetype === 'image' ? uploadImageUrl : uploadMediaUrl;
 
               const resp = await fetch(url, {
                 method: 'POST',

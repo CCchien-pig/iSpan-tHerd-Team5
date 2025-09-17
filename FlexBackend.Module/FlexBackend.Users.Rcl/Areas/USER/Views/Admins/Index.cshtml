@@ -215,6 +215,10 @@
           const dt = new DataTable('#tblUsers', {
             processing: true,
             serverSide: true,
+            language: {
+          url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+          processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+        },
             searchDelay: 400,
             ajax: {
               url: '/USER/Admins/Users',
@@ -239,10 +243,10 @@
               { data: 'createdDate' }, //7
               { data: null, orderable:false, searchable:false, //8
                 render: (d,t,row)=> `
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary btn-detail" data-id="${row.id}">詳細</button>
-                    <button class="btn btn-outline-danger btn-del" data-id="${row.id}">刪除</button>
-                  </div>`}
+                        <div class="btn-group btn-group-sm gap-2" role="group">
+          <button class="btn btn-outline-primary btn-detail btn-sm" data-id="${row.id}">詳細</button>
+          <button class="btn btn-outline-danger  btn-del   btn-sm" data-id="${row.id}">刪除</button>
+        </div>`}
             ],
             order: [[7,'desc']],
             columnDefs: [
