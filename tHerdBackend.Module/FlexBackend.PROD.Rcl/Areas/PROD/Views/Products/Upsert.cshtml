@@ -248,6 +248,10 @@
 
             <div class="row">
                 <div class="d-flex justify-content-end">
+                      <!-- 測試用自動帶入 -->
+                    <button type="button" class="btn btn-warning btn-sm me-5" id="btnAutoFill">
+                        <i class="fas fa-vial me-1"></i> 測試帶入
+                    </button>
                     <button type="submit" class="btn btn-success btn-sm me-2">
                         <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
                     </button>
@@ -326,9 +330,11 @@
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-bold">商品簡碼</label>
-                        <input asp-for="ProductCode" class="form-control" readonly />
+                        <!-- 只顯示，不參與驗證 -->
+                        <input type="text" class="form-control" value="@Model.ProductCode" readonly />
+
+                        <!-- 帶回去避免 null -->
                         <input type="hidden" asp-for="ProductCode" />
-                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
                     </div>
 
                     <div class="col-md-4 mb-3">
@@ -540,6 +546,44 @@
     @await Html.PartialAsync("_SweetAlertPartial")
 
     <script>
+        //  商品假資料
+        document.getElementById("btnAutoFill")?.addEventListener("click", function () {
+            // 商品主檔
+            document.querySelector("[name='BrandId']").value = "1040";
+            document.querySelector("[name='ProductName']").value = "Ancient Nutrition, 複合膠原蛋白，1 磅（454.5 克）";
+            document.querySelector("[name='Weight']").value = "0.56";
+            document.querySelector("[name='VolumeCubicMeter']").value = "0.0026";
+            document.querySelector("[name='ShortDesc']").value = "Ancient Nutrition 有一個目標 - 用歷史上功能特強大的 SuperFood 改變地球上每個人的健康狀態。 我們的多種膠原蛋白由 10 種類型食物來源的膠原蛋白獨特配制而成，經科學證明，可促進健康頭髮、皮膚、關節和消化。";
+            document.querySelector("[name='FullDesc']").value = "科學研究成分,經科學證明有助於健康的皮膚、頭髮、關節和消化,10 種膠原蛋白,維生素 C + 益生菌,每 2 勺 20 克膠原蛋白,草飼，牧場放養,全食膳食補劑,皮膚,腸道,指甲,頭髮,關節,R.A.N.C.H.® 項目,經 Igen™ Non-GMO 測試,含牛源成分,4 周後淡化魚尾紋,7 天內減輕關節不適";
+            document.querySelector("[name='VolumeUnit']").value = "cm";
+
+            
+            // 找第一張 SKU 卡來塞值
+            const firstCard = document.querySelector("#specCards .spec-card");
+            if (firstCard) {
+                firstCard.querySelector("[name*='SpecCode']").value = "L";
+                firstCard.querySelector("[name*='Barcode']").value = "";
+                firstCard.querySelector("[name*='CostPrice']").value = "100";
+                firstCard.querySelector("[name*='ListPrice']").value = "200";
+                firstCard.querySelector("[name*='UnitPrice']").value = "150";
+                firstCard.querySelector("[name*='SalePrice']").value = "120";
+                firstCard.querySelector("[name*='SafetyStockQty']").value = "50";
+                firstCard.querySelector("[name*='ReorderPoint']").value = "60";
+                firstCard.querySelector("[name*='MaxStockQty']").value = "200";
+                firstCard.querySelector("[name*='ShelfLifeDays']").value = "365";
+                    // 格式化成 yyyy-MM-dd
+                const today = new Date().toISOString().split('T')[0];
+                firstCard.querySelector("[name*='StartDate']").value = today;
+            }
+
+            Swal.fire({
+                icon: "success",
+                title: "測試資料已填入！",
+                text: "你可以直接按儲存進行測試。",
+                confirmButtonColor: "#28a745"
+            });
+        });
+
         // 商品分類
         // 1) 產生穩定的負數臨時 Id
         let _tempIdSeed = -1;
