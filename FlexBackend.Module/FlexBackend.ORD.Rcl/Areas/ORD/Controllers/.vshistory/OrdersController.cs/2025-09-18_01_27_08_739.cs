@@ -300,12 +300,14 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
+
+
         // 批量更新訂單狀態
         [HttpPost]
         public async Task<IActionResult> BulkUpdateOrders(
-		[FromForm] List<int> orderIds,
-		[FromForm] string? shippingStatusId,
-		[FromForm] string? orderStatusId)
+    [FromForm] List<int> orderIds,
+    [FromForm] string? shippingStatusId,
+    [FromForm] string? orderStatusId)
         {
             if (orderIds == null || !orderIds.Any())
                 return Json(new { success = false, message = "沒有選擇訂單" });
@@ -313,44 +315,47 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             try
             {
                 var orders = await _db.OrdOrders
-                                      .Where(o => orderIds.Contains(o.OrderId))
-                                      .ToListAsync();
+                    .Where(o => orderIds.Contains(o.OrderId))
+                    .ToListAsync();
 
                 if (!orders.Any())
                     return Json(new { success = false, message = "找不到訂單" });
 
+                var now = DateTime.Now;
                 foreach (var order in orders)
                 {
                     if (!string.IsNullOrEmpty(shippingStatusId))
                     {
                         order.ShippingStatusId = shippingStatusId;
 
-                        if (string.Equals(shippingStatusId, SHIPPING_SHIPPED_CODE, StringComparison.OrdinalIgnoreCase)
-                            && string.IsNullOrEmpty(order.TrackingNumber))
+                        // 如果改成「已出貨」，就產生 TrackingNumber（模擬用 Guid 或流水號）
+                        if (shippingStatusId == "shipped" && string.IsNullOrEmpty(order.TrackingNumber))
                         {
-                            order.TrackingNumber = GenerateTrackingNo(order.OrderId);
+                            order.TrackingNumber = "TRK" + now.ToString("yyyyMMddHHmmssfff") + order.OrderId;
                         }
                     }
 
                     if (!string.IsNullOrEmpty(orderStatusId))
                         order.OrderStatusId = orderStatusId;
 
-                    order.RevisedDate = DateTime.Now;
+                    order.RevisedDate = now;
                 }
 
                 await _db.SaveChangesAsync();
 
-                var generated = orders.Where(o => !string.IsNullOrEmpty(o.TrackingNumber))
-                                      .Select(o => new { o.OrderId, o.TrackingNumber })
-                                      .ToList();
+                var trackingNos = orders
+                    .Where(o => !string.IsNullOrEmpty(o.TrackingNumber))
+                    .Select(o => new { o.OrderId, o.TrackingNumber })
+                    .ToList();
 
-                return Json(new { success = true, generated });
+                return Json(new { success = true, trackingNos });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
 
 
 
