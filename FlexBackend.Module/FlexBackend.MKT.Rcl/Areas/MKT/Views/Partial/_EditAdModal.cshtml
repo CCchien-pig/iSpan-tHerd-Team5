@@ -1,31 +1,40 @@
-﻿@model FlexBackend.Infra.Models.MktAd
-
-<div class="modal fade" id="adModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+﻿<div class="modal fade" id="adModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="adForm">
+            <form id="adForm" enctype="multipart/form-data">
+                <input type="hidden" name="AdId" value="@Model.AdId" />
+
                 <div class="modal-header">
                     <h5 class="modal-title">編輯廣告</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
                 <div class="modal-body">
-                    <input type="hidden" name="AdId" value="@Model.AdId" />
                     <div class="mb-3">
                         <label class="form-label">標題</label>
-                        <input type="text" name="Title" class="form-control" value="@Model.Title" required />
+                        <input type="text" name="Title" value="@Model.Title" class="form-control" required />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">內容</label>
                         <textarea name="Content" class="form-control">@Model.Content</textarea>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">廣告圖片</label>
+                        <input type="file" name="ImgId" class="form-control" />
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">開始日期</label>
-                        <input type="datetime-local" name="StartDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")" required />
+                        <input type="datetime-local" name="StartDate" value="@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")" class="form-control" required />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">結束日期</label>
-                        <input type="datetime-local" name="EndDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        <input type="datetime-local" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">狀態</label>
                         <select name="Status" class="form-select">
@@ -33,49 +42,24 @@
                             <option value="aInactive" @(Model.Status == "aInactive" ? "selected" : "")>下架</option>
                         </select>
                     </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" class="form-check-input" name="IsActive" value="true" @(Model.IsActive ? "checked" : "") />
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="IsActive" value="true" @(Model.IsActive ? "checked" : "") />
                         <label class="form-check-label">啟用</label>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">建檔人員</label>
+                        <input type="text" name="Creator" value="@Model.Creator" class="form-control" required />
+                    </div>
                 </div>
+
                 <div class="modal-footer">
-                    <button type="button" id="btnDeleteAd" class="btn btn-danger me-auto">刪除</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="submit" class="btn btn-primary">儲存</button>
+                    <button type="button" id="btnDeleteAd" class="btn btn-danger">刪除</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-    $(document).ready(function () {
-        // 刪除按鈕
-        $('#btnDeleteAd').off('click').on('click', function () {
-            if (!confirm('確定要刪除這筆廣告嗎？')) return;
-
-            var adId = $('input[name="AdId"]').val();
-
-            $.ajax({
-                url: '/MKT/Ads/Delete',
-                type: 'POST',
-                data: { id: adId },
-                success: function (res) {
-                    if (res.success) {
-                        $('#adModal').modal('hide');
-                        if (window.calendar) {
-                            window.calendar.refetchEvents();
-                        } else {
-                            location.reload(); // 若 calendar 不存在，退回頁面刷新
-                        }
-                    } else {
-                        alert('刪除失敗');
-                    }
-                },
-                error: function () {
-                    alert('系統錯誤');
-                }
-            });
-        });
-    });
-</script>

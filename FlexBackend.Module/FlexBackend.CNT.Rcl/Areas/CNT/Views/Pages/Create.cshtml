@@ -1,10 +1,14 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
+
 @{
     ViewData["Title"] = "新增文章";
 }
 @section Styles {
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@      
+            
 }
 
 <div class="card shadow-sm border-0">
@@ -13,40 +17,83 @@
     </div>
     <div class="card-body">
         <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <!-- 標題 -->
             <div class="mb-3">
                 <label asp-for="Title" class="form-label">標題</label>
                 <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
+            <!-- 分類 -->
+            <div class="mb-3">
+                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <select asp-for="PageTypeId" asp-items="ViewBag.PageTypeList" class="form-select"></select>
+                <span asp-validation-for="PageTypeId" class="text-danger"></span>
+            </div>
 
+            <!-- 狀態 -->
             <div class="mb-3">
                 <label asp-for="Status" class="form-label">狀態</label>
                 <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
                 <span asp-validation-for="Status" class="text-danger"></span>
             </div>
+            <!-- 標籤 -->
             <div class="mb-3">
                 <label class="form-label">標籤</label>
                 <select asp-for="SelectedTagIds"
                         asp-items="Model.TagOptions"
                         multiple="multiple"
-                        class="tag-selector w-100">
+                        class="tag-selector w-100"
+                        required>
                 </select>
                 <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
             </div>
-            <div class="d-flex gap-3">
-                <a asp-action="Index" class="btn btn-outline-secondary">🔙 返回列表</a>
-                <button type="submit" class="btn btn-outline-success">💾 儲存</button>
+
+            <!-- 🔑 保留查詢狀態 -->
+            <input type="hidden" asp-for="Page" />
+            <input type="hidden" asp-for="PageSize" />
+            <input type="hidden" asp-for="Keyword" />
+            <input type="hidden" asp-for="StatusFilter" />
+
+            <!-- 排程時間 -->
+            <div class="mb-3">
+                <label asp-for="ScheduledDate" class="form-label"></label>
+                <input asp-for="ScheduledDate" type="datetime-local" class="form-control"
+                       min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="ScheduledDate" class="text-danger"></span>
             </div>
+            <!-- 排程動作 -->
+            <div class="mb-3">
+                <label asp-for="ActionType" class="form-label">排程動作</label>
+                <select asp-for="ActionType" asp-items="Html.GetEnumSelectList<ActionType>()" class="form-select">
+                    <option value="">-- 不使用排程 --</option>
+                </select>
+                <span asp-validation-for="ActionType" class="text-danger"></span>
+            </div>
+
+            
+            <div class="d-flex gap-3">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+                <button type="submit" class="btn btn-outline-success btn-lg">💾 儲存</button>
+            </div>
+           
         </form>
     </div>
+    <!-- ⬆️ 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop"
+            class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
 </div>
 
-@section Scripts {
-    
+@section Scripts {    
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
             $(document).ready(function () {
                 $('.tag-selector').select2({
@@ -56,7 +103,24 @@
                 });
             });
         </script>
-    
+
+    <script>
+              function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+
+    </script>
+
+
 }
 
 

@@ -42,8 +42,12 @@
 
         <!-- SKU 選擇 -->
         <div class="form-floating mb-2">
-            <select asp-for="SkuId" class="form-select" id="SkuSelect" disabled>
+            <select asp-for="SkuId" class="form-select" id="SkuSelect">
                 <option value="">請選 SKU</option>
+                @foreach (var sku in Model.SkuOptions)
+                {
+                    <option value="@sku.SkuId">@sku.SkuCode</option>
+                }
             </select>
             <label>SKU</label>
         </div>
@@ -57,14 +61,10 @@
 
         <!-- 唯讀庫存資訊 -->
         <div class="mb-2">
-            @* <div>當前庫存: <span id="CurrentQty">@Model.Qty</span></div> *@
             <div>當前庫存: <span id="CurrentQty">0</span> &nbsp;|&nbsp; 預計庫存: <span id="PredictedQty">0</span></div>
             <div>最大庫存量: <span id="MaxStockQty">@Model.MaxStockQty</span></div>
-            <div>再訂購點: <span id="ReorderPoint">@Model.ReorderPoint</span></div>
-            <div>安全庫存量: <span id="SafetyStockQty">@Model.SafetyStockQty</span></div>
-            @* <div>是否可銷售: <span id="IsSellableText">@Model.IsSellable ? "可銷售" : "不可銷售"</span></div> *@
-            <div>上架狀態: <span id="IsPublishedText"></span></div>
-            <div>是否可缺貨預購: <span id="IsAllowBackorderText"></span></div>
+            <div>再訂購點: <span id="ReorderPoint">@Model.ReorderPoint</span> &nbsp;|&nbsp; 安全庫存量: <span id="SafetyStockQty">@Model.SafetyStockQty</span></div>
+            @* <div>是否可缺貨預購: <span id="IsAllowBackorderText"></span></div> *@
         </div>
 
         <!-- 異動類型 -->
@@ -75,22 +75,28 @@
             <label>異動類型</label>
         </div>
 
-        <!-- 手動調整加/減 -->
-        <div class="form-floating mb-2" id="AdjustTypeDiv" style="display:@(Model.MovementType == "Adjust" ? "block" : "none");">
-            <select asp-for="IsAdd" class="form-select" id="AdjustTypeSelect">
-                <option value="true">加</option>
-                <option value="false">減</option>
-            </select>
-            <label>手動調整加/減</label>
+        <!-- 只有「加/減」選項要受 Adjust 控制 -->
+        <div id="AdjustOptions" style="display:none;">
+            <!-- 手動調整類型，選加/減 -->
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="IsAdd" id="Increase" value="true">                
+                <label class="form-check-label" for="Increase">增加</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="IsAdd" id="Decrease" value="false">                
+                <label class="form-check-label" for="Decrease">減少</label>
+            </div>
+
         </div>
 
-        <!-- 變動庫存量 -->
+        <!-- 異動數量 -->
         <div class="form-floating mb-2">
-            <input asp-for="ChangeQty" type="number" class="form-control" min="0"
-                   max="@Model.MaxStockQty" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
-            <label>變動庫存量</label>
+            <input asp-for="ChangeQty" type="number" class="form-control" min="1" max="@Model.MaxStockQty"
+                   step="1" id="ChangeQtyInput" value="@(Model.ChangeQty)" />
+            <label>異動庫存量</label>
             <small id="ChangeQtyHelp" class="text-muted"></small>
         </div>
+
 
         <!-- 備註 -->
         <div class="form-floating mb-2">

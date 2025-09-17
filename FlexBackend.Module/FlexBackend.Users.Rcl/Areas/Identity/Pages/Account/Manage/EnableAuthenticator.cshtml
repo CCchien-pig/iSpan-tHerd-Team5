@@ -53,4 +53,26 @@
     <partial name="_ValidationScriptsPartial" />
     <script src="~/qrcode/qr.min.js"></script>
     <script src="~/qrcode/qrcode.min.js"></script>
+    @* <script src="~/_content/FlexBackend.USER.Rcl/qrcode/qrcode.min.js"></script>
+    <script src="~/_content/FlexBackend.USER.Rcl/qrcode/qrcode/qr.min.js"></script> *@
+    @* <script>
+        (function () {
+          var dataEl = document.getElementById('qrCodeData');
+          if (!dataEl) return;
+
+          var uri = dataEl.dataset.url;   // 這就是 Model.AuthenticatorUri
+          if (!uri) {
+            console.warn('AuthenticatorUri 空值，後端 OnGet 沒塞到。');
+            return;
+          }
+
+          var target = document.getElementById('qrCode');
+          target.innerHTML = ''; // 清乾淨
+          new QRCode(target, {
+            text: uri,
+            width: 180,
+            height: 180
+          });
+        })();
+    </script> *@
 }
