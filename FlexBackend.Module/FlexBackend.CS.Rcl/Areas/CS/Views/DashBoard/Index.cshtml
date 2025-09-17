@@ -25,14 +25,14 @@
         <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
 
-                <!-- 快速篩選 Chips：品類 -->
-                <div class="mr-3 d-flex align-items-center flex-wrap">
-                    <span class="text-muted small mr-2">品類</span>
-                    <div id="chipCategories" class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Category chips">
-                        <!-- 由 JS 注入；預設提供「全部」 -->
-                        <button type="button" class="btn btn-outline-secondary active" data-cat="">全部</button>
-                    </div>
-                </div>
+             <!-- 品類下拉（改為打後端真資料） -->
+<div class="mr-3 d-flex align-items-center">
+  <span class="text-muted small mr-2">品類</span>
+  <select id="categorySelect" class="custom-select custom-select-sm" style="min-width: 180px;">
+    <option value="">全部</option> <!-- 其餘選項由 JS 動態注入 -->
+  </select>
+</div>
+
 
                 <!-- 維度切換（日/週/月） -->
                 <div class="btn-group btn-group-sm mr-3" role="group" aria-label="Dimension">
@@ -64,14 +64,6 @@
                         <a class="dropdown-item" href="#" id="exportKpiCsv">CSV</a>
                         <a class="dropdown-item" href="#" id="exportKpiExcel">Excel</a>
                         <a class="dropdown-item" href="#" id="exportKpiPdf">PDF</a>
-                        <div class="dropdown-divider"></div>
-
-                        <!-- 明細資料 -->
-                        <h6 class="dropdown-header">📑 明細資料</h6>
-                        <a href="#" class="dropdown-item js-export-orders">訂單明細 (CSV)</a>
-                        <a href="#" class="dropdown-item js-export-items">商品明細 (CSV)</a>
-
-
                         <div class="dropdown-divider"></div>
 
                         <!-- 異常清單 -->
@@ -413,107 +405,145 @@
       if (!resp.ok) throw new Error(`Overview HTTP ${resp.status}`);
       return await resp.json();
     }
-    async function fetchTops(days, top=10) {
-      const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?days=${encodeURIComponent(days)}&top=${encodeURIComponent(top)}`;
-      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
-      return await resp.json();
-    }
+async function fetchTops(days, top = 10) {
+  const q = new URLSearchParams({
+    days: String(days),
+    top: String(top),
+    category: state.category || ''   // ★ 新增
+  }).toString();
+  const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?${q}`;
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
+  return await resp.json();
+}
 
-    /* ====== 依品類篩選（前端） ====== */
-    function applyCategoryFilter(tp) {
-      if (!state.category) return { ...tp };
-      const topProducts = tp.topProducts.filter(x => (x.category || '') === state.category);
-      const categories = { labels: [state.category], revenue: [
-        topProducts.reduce((s, x) => s + Number(x.revenue || 0), 0)
-      ]};
-      return { ...tp, topProducts, categories };
-    }
 
-    /* ====== 建品類 chips ====== */
-    function buildCategoryChipsFrom(tp) {
-      const host = document.getElementById('chipCategories');
-      const existed = host.querySelectorAll('button[data-cat]').length > 1;
-      if (existed) return;
-      const labels = tp.categories?.labels || [];
-      labels.forEach(cat => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'btn btn-outline-secondary';
-        b.dataset.cat = cat;
-        b.textContent = cat;
-        host.appendChild(b);
-      });
-    }
+ 
 
     /* ====== 整體刷新 ====== */
-    async function refresh(days = state.days) {
-      try {
-        state.days = days;
-			// 1) 折線圖（原始資料入 cache）
-        const ov = await fetchOverview(days);
-        state.cache.overview = ov;
+   async function refresh(days = state.days) {
+  try {
+    state.days = days;
 
-			// 2) 銷售 KPI + 熱銷 + 品類（原始資料入 cache）
-        const tp = await fetchTops(days, 10);
-        state.cache.tpsrc = tp;
+    // 1) 折線圖
+    const ov = await fetchOverview(days);
+    state.cache.overview = ov;
 
-			// 建 chips
-        buildCategoryChipsFrom(tp);
+    // 2) KPI + Top + 分類（已由後端依 category 篩選）
+    const tp = await fetchTops(days, 10);
+    state.cache.tpsrc = tp;
 
-			// 套用前端品類篩選
-        const tpView = applyCategoryFilter(tp);
-        document.getElementById('filterHint').style.display = state.category ? '' : 'none';
+    // 顯示「已套用品類篩選」
+    document.getElementById('filterHint').style.display = state.category ? '' : 'none';
 
-			// KPI（保留全體區間，不因前端篩選變動）
-        updateSalesKpis(tp.kpi);
+    // KPI
+    updateSalesKpis(tp.kpi || {});
 
-			// 表格
-        const viewList = tpView.topProducts.map(x => ({
-          rank: x.rank, sku: x.sku, name: x.name, category: x.category,
-          qty: x.qty, revenue: x.revenue, share: x.share
-        }));
-        state.viewTopList = viewList;
-        renderTopTable(viewList);
+    // 表格
+    const list = (tp.topProducts || []).map(x => ({
+      rank: x.rank, sku: x.sku, name: x.name, category: x.category,
+      qty: x.qty, revenue: x.revenue, share: x.share
+    }));
+    state.viewTopList = list;
+    renderTopTable(list);
 
-        buildCatBarChart(tpView.categories.labels, tpView.categories.revenue);
+    // 品類長條
+    const labels = tp.categories?.labels || [];
+    const revenue = tp.categories?.revenue || [];
+    buildCatBarChart(labels, revenue);
 
-        buildAreaChart(ov.labels, ov.net, ov.orders);
+    // 折線圖
+    buildAreaChart(ov.labels, ov.net, ov.orders);
 
-        document.getElementById('lastUpdated').textContent =
-          new Date().toLocaleString('zh-TW', { hour12: false });
+    // 其他 UI
+    document.getElementById('lastUpdated').textContent =
+      new Date().toLocaleString('zh-TW', { hour12: false });
 
-        const anom = (tp.kpi?.aov ?? 0) <= 0 ? 1 : 0;
-        const badge = document.getElementById('badgeAnom');
-        badge.textContent = anom;
-        badge.style.display = anom > 0 ? '' : 'none';
+    const anom = (tp.kpi?.aov ?? 0) <= 0 ? 1 : 0;
+    const badge = document.getElementById('badgeAnom');
+    badge.textContent = anom;
+    badge.style.display = anom > 0 ? '' : 'none';
 
-      } catch (err) {
-        console.error('Dashboard refresh error:', err);
-      }
-    }
+  } catch (err) {
+    console.error('Dashboard refresh error:', err);
+  }
+}
+
+    // 取品類清單（打後端）
+async function fetchProductTypes() {
+  const url = '@Url.Content("~/api/cs/dashboard/productTypes")';
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+
+  // 先讀文字，方便 debug
+  const text = await resp.text();
+  const ct = resp.headers.get('content-type') || '';
+
+  if (!resp.ok) {
+    console.error('productTypes HTTP', resp.status, text);
+    throw new Error(`productTypes HTTP ${resp.status}`);
+  }
+
+  if (!ct.includes('application/json')) {
+    console.error('⚠️ productTypes 回傳的不是 JSON，內容前 200 字：', text.slice(0, 200));
+    throw new Error('productTypes 回傳 HTML（可能是登入頁/錯誤頁），不是 JSON');
+  }
+
+  return JSON.parse(text);
+}
+
+
+// 建立下拉選單
+// 建立下拉選單（正確）
+async function loadCategories() {
+  const sel = document.getElementById('categorySelect');
+  if (!sel) return;
+
+  // 先放「全部」
+  sel.innerHTML = '<option value="">全部</option>';
+
+  try {
+    const types = await fetchProductTypes(); // 期待 [{ code, name }, ...]
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.code;          // 例如 'HERB'、'VITA'、'__NULL__'
+      opt.textContent = t.name;    // 例如 '草本補充品'
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('loadCategories failed:', err);
+  }
+}
+
+
 
     /* ====== 初始化事件 ====== */
     (function init() {
-      refresh(30);
+      // 先載入品類選項
+  loadCategories().then(() => refresh(30));
 
-      // 區間選擇 & 手動重新整理
-      document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
-      document.getElementById('btnRefresh').addEventListener('click', () => {
-        const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
-        refresh(days);
-      });
+  // 區間選擇 & 手動重新整理
+  document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
+  document.getElementById('btnRefresh').addEventListener('click', () => {
+    const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+    refresh(days);
+  });
 
-      // 維度切換
-      document.querySelectorAll('[data-dim]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('[data-dim]').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          state.dimension = btn.dataset.dim;
-          const ov = state.cache.overview || { labels:[], net:[], orders:[] };
-          buildAreaChart(ov.labels, ov.net, ov.orders);
-        });
-      });
+  // 維度切換
+  document.querySelectorAll('[data-dim]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-dim]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.dimension = btn.dataset.dim;
+      const ov = state.cache.overview || { labels:[], net:[], orders:[] };
+      buildAreaChart(ov.labels, ov.net, ov.orders);
+    });
+  });
+
+  // 品類下拉：變更就刷新（後端會依 category 篩選）
+  document.getElementById('categorySelect').addEventListener('change', (e) => {
+    state.category = e.target.value || '';  // '' | '__NULL__' | 真實 Code
+    refresh(state.days);
+  });
 
       // 同期比較（UI 先放）
       const switchCompare = document.getElementById('switchCompare');
@@ -526,20 +556,7 @@
       });
       compareType.addEventListener('change', () => state.compare.type = compareType.value);
 
-      // 品類 chips 點擊
-      document.getElementById('chipCategories').addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-cat]'); if (!btn) return;
-        document.querySelectorAll('#chipCategories button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.category = btn.dataset.cat || '';
-        const tpsrc = state.cache.tpsrc;
-        if (!tpsrc) return;
-        const tpView = applyCategoryFilter(tpsrc);
-        document.getElementById('filterHint').style.display = state.category ? '' : 'none';
-        state.viewTopList = tpView.topProducts;
-        renderTopTable(state.viewTopList);
-        buildCatBarChart(tpView.categories.labels, tpView.categories.revenue);
-      });
+     
 
       /* ====== 匯出功能 ====== */
 
@@ -575,29 +592,6 @@
         e.preventDefault();
         window.print();
       });
-
-      // // 訂單明細 CSV
-      // document.getElementById('exportOrdersCsv').addEventListener('click', (e) => {
-      //   e.preventDefault();
-      //   fetch('/api/cs/orders?days=' + (state.days || 30))
-      //     .then(r => r.json())
-      //     .then(list => {
-      //       const rows = [['訂單編號','日期','金額','狀態']];
-      //       list.forEach(o => rows.push([o.id, o.date, o.total, o.status]));
-      //       const csv = rows.map(r => r.join(',')).join('\n');
-      //       downloadFile(CSV_BOM + csv, `orders_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-      //     });
-      // });
-
-      // // 商品明細 CSV（使用目前畫面 top list）
-      // document.getElementById('exportProductsCsv').addEventListener('click', (e) => {
-      //   e.preventDefault();
-      //   const list = state.viewTopList || [];
-      //   const rows = [['排名','商品','SKU','分類','數量','營收','佔比']];
-      //   list.forEach(p => rows.push([p.rank, p.name, p.sku, p.category, p.qty, p.revenue, p.share]));
-      //   const csv = rows.map(r => r.join(',')).join('\n');
-      //   downloadFile(CSV_BOM + csv, `products_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-      // });
 
       // 異常清單 CSV / PDF
       document.getElementById('exportAnomaliesCsv').addEventListener('click', (e) => {
