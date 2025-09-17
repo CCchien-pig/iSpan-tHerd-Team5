@@ -224,7 +224,7 @@ namespace FlexBackend.Infra.Repository.PROD
                     {
                         dto.BrandId,
                         dto.SeoId,
-                        ProductCode = dto.ProductCode ?? string.Empty,
+                        ProductCode = string.Empty,
                         dto.ProductName,
                         dto.ShortDesc,
                         dto.FullDesc,
