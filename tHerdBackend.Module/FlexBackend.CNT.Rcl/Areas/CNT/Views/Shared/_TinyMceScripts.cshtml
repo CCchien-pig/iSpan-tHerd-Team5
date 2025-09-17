@@ -79,42 +79,64 @@
               return json.location;
             },
 
-          // ✅ 影片上傳：用 file_picker_callback 把檔案丟到 /upload/media，回傳 URL 後插入 <video> 或 <iframe>
-          file_picker_callback: async (callback, value, meta) => {
-            // meta.filetype 可能是 'image' 或 'media'
-            if (meta.filetype !== 'image' && meta.filetype !== 'media') return;
+        // ✅ 影片上傳：用 file_picker_callback 把檔案丟到 /upload/media，回傳 URL 後插入 <video> 或 <iframe>
+        // TinyMCE file_picker_callback
+        file_picker_callback: async (callback, value, meta) => {
+          if (meta.filetype !== 'image' && meta.filetype !== 'media') return;
 
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = meta.filetype === 'image'
-              ? 'image/*'
-              : 'video/mp4,video/webm,video/ogg';   // 你要支援的影片格式
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = meta.filetype === 'image'
+            ? 'image/*'
+            : 'video/mp4,video/webm,video/ogg'; // 你支援的影片格式
 
-            input.onchange = async () => {
-              const file = input.files[0];
-              const form = new FormData();
-              form.append('file', file);
+          input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
 
-              const url = meta.filetype === 'image' ? uploadImageUrl : uploadMediaUrl;
+            const form = new FormData();
+            form.append('file', file);
 
+            const url = meta.filetype === 'image' ? uploadImageUrl : uploadMediaUrl;
+
+            try {
               const resp = await fetch(url, {
                 method: 'POST',
                 body: form,
-                headers: antiForgeryToken ? { 'RequestVerificationToken': antiForgeryToken } : {}
+                headers: antiForgeryToken
+                  ? { 'RequestVerificationToken': antiForgeryToken }
+                  : {}
               });
 
-              const json = await resp.json();
-              if (!resp.ok || !json?.location) {
-                alert(json?.message || 'Upload failed');
+              if (!resp.ok) {
+                alert('伺服器錯誤，狀態碼：' + resp.status);
                 return;
               }
 
-              // image：直接回傳 URL
-              // media：可回傳 video URL，TinyMCE 會放到「插入媒體」對話框
-              callback(json.location, { title: file.name });
-            };
-            input.click();
-          },
+              const json = await resp.json();
+              if (!json?.location) {
+                alert(json?.message || 'Upload failed: 沒有回傳 location');
+                return;
+              }
+
+              // ✅ 根據檔案類型回傳
+              if (meta.filetype === 'image') {
+                callback(json.location, { title: file.name });
+              } else if (meta.filetype === 'media') {
+                // TinyMCE 插入 <video><source src="..."></video>
+                callback(json.location, {
+                  title: file.name,
+                  source2: json.location
+                });
+              }
+            } catch (err) {
+              console.error('Upload failed', err);
+              alert('上傳失敗，可能是伺服器沒有回傳 JSON');
+            }
+          };
+
+          input.click();
+        },
 
           // Emoji（表情符號）
           // 只要有 emoticons 外掛與工具列按鈕，就能插入 emoji
