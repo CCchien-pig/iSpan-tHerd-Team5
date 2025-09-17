@@ -32,15 +32,9 @@
                 <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
-
-            <div class="mb-3">
-                <label asp-for="Status" class="form-label">狀態</label>
-                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
             <!-- 分類 -->
             <div class="mb-3">
-                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <label asp-for="PageTypeId" class="form-label">文章分類</label>
 
                 @if (Model.IsHomePage)
                 {
@@ -61,6 +55,12 @@
                     )
                     <span asp-validation-for="PageTypeId" class="text-danger"></span>
                 }
+            </div>
+            <!-- 狀態 -->
+             <div class="mb-3">
+                <label asp-for="Status" class="form-label">文章狀態</label>
+                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
             </div>
             <!-- tags-->
             <div class="mb-3">
