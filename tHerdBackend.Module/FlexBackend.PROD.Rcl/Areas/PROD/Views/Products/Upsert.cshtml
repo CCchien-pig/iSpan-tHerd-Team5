@@ -657,38 +657,48 @@
         // 生成規格值區塊
         // 4) 規格值卡片（對應每個 SKU）
         function buildSpecOptions(skuIndex, values = {}) {
-          if (!Array.isArray(specConfigs)) return "";
+            if (!Array.isArray(specConfigs)) return "";
 
-          const skuIdInput = document.querySelector(`#specCards .spec-card:nth-child(${skuIndex + 1}) input[name*='SkuId']`);
-          const skuId = skuIdInput ? skuIdInput.value : 0;
+              const skuIdInput = document.querySelector(
+                `#specCards .spec-card:nth-child(${skuIndex + 1}) input[name*='SkuId']`
+              );
+              const skuId = skuIdInput ? skuIdInput.value : 0;
 
-          return specConfigs.map((cfg, j) => {
-            const stableId = getStableConfigId(cfg);
-            const val = values[stableId] || {};
+              return specConfigs
+                .map((cfg, j) => {
+                  const stableId = getStableConfigId(cfg);
+                  const val = values[stableId] || {};
 
-            return `
-              <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values" 
-                   style="min-width:120px; max-width:200px;">
-                <label class="form-label fw-bold small mb-1">${cfg.GroupName}</label>
+                  // 找到舊的 OptionName 值（避免洗掉 Razor Render 的值）
+                  const existingInput = document.querySelector(
+                    `#specCards .spec-card:nth-child(${skuIndex + 1}) input[name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"]`
+                  );
+                  const existingVal = existingInput ? existingInput.value : "";
 
-                <input type="hidden"
-                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationConfigId"
-                       value="${stableId}" />
+                  return `
+                    <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values" 
+                         style="min-width:120px; max-width:200px;">
+                      <label class="form-label fw-bold small mb-1">${cfg.GroupName}</label>
 
-                <input type="hidden"
-                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationOptionId"
-                       value="${val.SpecificationOptionId || 0}" />
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationConfigId"
+                             value="${stableId}" />
 
-                <input type="hidden"
-                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SkuId"
-                       value="${skuId}" />
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationOptionId"
+                             value="${val.SpecificationOptionId || 0}" />
 
-                <input type="text" class="form-control form-control-sm"
-                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"
-                       value="${val.OptionName || ''}" />
-              </div>
-            `;
-          }).join('');
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SkuId"
+                             value="${skuId}" />
+
+                      <input type="text" class="form-control form-control-sm"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"
+                             value="${val.OptionName || existingVal}" />
+                    </div>
+                  `;
+                })
+                .join("");
         }
 
 
@@ -734,57 +744,76 @@
             const index = document.querySelectorAll("#specCards .spec-card").length; // 保證取現有數量
 
             $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                        // 插入新卡片
                 container.insertAdjacentHTML("beforeend", html);
+
+                // 這裡再刷新分類輸入框，確保新卡片也有
+                refreshSpecOptions();
             });
         }
 
         // 複製 SKU 卡片（插入在原卡片後）
         function copyCard(button) {
-            // 取得要複製的卡片
             const card = button.closest(".spec-card");
             const index = document.querySelectorAll("#specCards .spec-card").length;
 
-            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
-                // 直接插 partial（它本身已經有 .spec-card 外框）
-                 card.insertAdjacentHTML("afterend", html);
+            // 收集舊卡片的規格值
+            const oldSpecValues = {};
+            card.querySelectorAll(".spec-values").forEach(block => {
+                const cfgId = block.querySelector("input[name*='SpecificationConfigId']").value;
+                const optionInput = block.querySelector("input[name*='OptionName']");
+                const optionIdInput = block.querySelector("input[name*='SpecificationOptionId']");
+                
+                if (!oldSpecValues[cfgId]) oldSpecValues[cfgId] = [];
+                oldSpecValues[cfgId].push({
+                    OptionName: optionInput ? optionInput.value : "",
+                    SpecificationOptionId: optionIdInput ? optionIdInput.value : 0
+                });
+            });
 
-                // 取得新插入的卡片
+                // === 2. 收集舊卡片的價格/庫存欄位 ===
+            const oldSkuData = {};
+            card.querySelectorAll("input[name^='Skus']").forEach(input => {
+                const name = input.name.split('.').pop(); // 例如 "CostPrice"
+
+                // 跳過不需要複製的欄位
+                if (["SpecCode", "Barcode", "IsActive", "StockQty", "SkuId", "SkuCode", "IsDeleted"].includes(name)) return;
+
+                oldSkuData[name] = input.type === "checkbox" 
+                    ? input.checked 
+                    : input.value;
+            });
+
+            // 呼叫後端產生新的 partial
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                card.insertAdjacentHTML("afterend", html);
+
                 const newCard = card.nextElementSibling;
 
-                // 複製舊卡片的值到新卡片
-                const oldInputs = card.querySelectorAll("input, select, textarea");
-                const newInputs = newCard.querySelectorAll("input, select, textarea");
+                // === 3a. 填回規格值 ===
+                const container = newCard.querySelector(".spec-values-container");
+                if (container) {
+                    container.innerHTML = buildSpecOptions(index, oldSpecValues);
+                }
 
-                oldInputs.forEach(oldInput => {
-                    const match = oldInput.name?.match(/Skus\[\d+\]\.(\w+)/);
-                    if (!match) return;
-
-                    const field = match[1];
-
-                    // 排除不應該被複製的欄位
-                    if (["SkuCode", "SkuId", "Barcode", "IsDeleted"].includes(field)) return;
-
-                    // 找到新卡片對應欄位
-                    const newInput = Array.from(newInputs).find(x => x.name?.endsWith("." + field));
-                    if (!newInput) return;
-
-                    if (oldInput.type === "checkbox") {
-                        newInput.checked = oldInput.checked;
-                    } else {
-                        newInput.value = oldInput.value;
+                // === 3b. 填回價格/庫存欄位（排除規格碼、條碼、啟用） ===
+                for (const key in oldSkuData) {
+                    const input = newCard.querySelector(`[name='Skus[${index}].${key}']`);
+                    if (input) {
+                        if (input.type === "checkbox") {
+                            input.checked = oldSkuData[key];
+                        } else {
+                            input.value = oldSkuData[key];
+                        }
                     }
-                });
+                }
+                 refreshSpecOptions(); // 重繪每張 SKU 卡的規格值區塊
             });
         }
 
         function markDeleted(button) {
             const card = button.closest(".spec-card");
-            const hidden = card.querySelector("input[name*='.IsDeleted']");
-            if (hidden) {
-                hidden.value = "true";   // 標記刪除
-                console.log("已標記刪除", hidden.name, hidden.value);
-            }
-            card.style.display = "none"; // 只隱藏，不移除
+            card.remove();  // 從 DOM 完全刪除
         }
 
         // 品牌下拉選項

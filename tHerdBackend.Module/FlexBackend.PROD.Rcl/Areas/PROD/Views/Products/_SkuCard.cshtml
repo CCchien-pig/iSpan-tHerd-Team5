@@ -96,29 +96,27 @@
             var skuId = Model.SkuId;
         }
 
-@for (int j = 0; j < cfgs.Count; j++)
-{
-    var cfg = cfgs[j];
-    var options = cfg.SpecOptions?.Where(o => o.SkuId == skuId).ToList() ?? new();
+            @for (int j = 0; j < cfgs.Count; j++)
+            {
+                var cfg = cfgs[j];
+                var options = cfg.SpecOptions?.Where(o => o.SkuId == skuId).ToList() ?? new();
 
-    for (int k = 0; k < options.Count; k++)
-    {
-        var opt = options[k];
+                for (int k = 0; k < options.Count; k++)
+                {
+                    var opt = options[k];
+                    <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values">
+                        <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
 
-        <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values"
-             style="min-width:120px; max-width:200px;">
-            <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SpecificationConfigId" value="@opt.SpecificationConfigId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SpecificationOptionId" value="@opt.SpecificationOptionId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SkuId" value="@skuId" />
+                        <input type="text" class="form-control form-control-sm"
+                               name="SpecConfigs[@j].SpecOptions[@index].OptionName"
+                               value="@opt.OptionName" />
 
-            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationConfigId" value="@opt.SpecificationConfigId" />
-            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationOptionId" value="@opt.SpecificationOptionId" />
-            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SkuId" value="@skuId" />
-
-            <input type="text" class="form-control form-control-sm"
-                   name="SpecConfigs[@j].SpecOptions[@k].OptionName"
-                   value="@opt.OptionName" />
-        </div>
-    }
-}
+                    </div>
+                }
+            }
         </div>
 
 
@@ -163,22 +161,22 @@
             <legend>庫存控管</legend>
             <div class="row">
                 <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold">目前庫存</label>
+                    <label class="form-label fw-bold required">目前庫存</label>
                     <input type="hidden" name="Skus[@index].StockQty" value="@Model.StockQty" />
                     <input class="form-control" value="@Model.StockQty" readonly />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold">安全庫存量</label>
+                    <label class="form-label fw-bold required">安全庫存量</label>
                     <input type="number" name="Skus[@index].SafetyStockQty"
                            value="@Model.SafetyStockQty" class="form-control" />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold">再訂購點</label>
+                    <label class="form-label fw-bold required">再訂購點</label>
                     <input type="number" name="Skus[@index].ReorderPoint"
                            value="@Model.ReorderPoint" class="form-control" />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold">最大庫存量</label>
+                    <label class="form-label fw-bold required">最大庫存量</label>
                     <input type="number" name="Skus[@index].MaxStockQty"
                            value="@Model.MaxStockQty" class="form-control" />
                 </div>
@@ -188,7 +186,7 @@
                            value="@Model.ShelfLifeDays" class="form-control" />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label fw-bold">上架日期</label>
+                    <label class="form-label fw-bold required">上架日期</label>
                     <input type="date" name="Skus[@index].StartDate"
                            value="@(Model.StartDate == default ? "" : Model.StartDate.ToString("yyyy-MM-dd"))"
                            class="form-control" />

@@ -2,6 +2,7 @@
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {
@@ -60,15 +61,33 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             await LoadBrandOptionsAsync();
         }
 
-        public IActionResult AddSkuCard(int index)
+		//      public IActionResult AddSkuCard(int index)
+		//{
+		//	var newSku = new ProdProductSkuDto
+		//	{
+		//		SkuCode = $"TEMP-{DateTime.UtcNow.Ticks}" // 或 Guid.NewGuid().ToString()
+		//	};
+		//	ViewData["Index"] = index;
+		//	return PartialView("_SkuCard", newSku);
+		//}
+
+		public IActionResult AddSkuCard(int index)
 		{
 			var newSku = new ProdProductSkuDto
 			{
-				SkuCode = $"TEMP-{DateTime.UtcNow.Ticks}" // 或 Guid.NewGuid().ToString()
+				SkuCode = $"TEMP-{DateTime.UtcNow.Ticks}"
 			};
+
+			// 從主頁的 ViewData 或資料庫帶 SpecConfigs
+			var specConfigs = ViewData["SpecConfigs"] as List<ProdSpecificationConfigDto> ?? new();
+
+			// 塞進 ViewData
 			ViewData["Index"] = index;
+			ViewData["SpecConfigs"] = specConfigs;
+
 			return PartialView("_SkuCard", newSku);
 		}
+
 
 		[HttpGet]
         public async Task<IActionResult> Upsert(int? id)
@@ -93,36 +112,64 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 				 })
                 ModelState.Remove(k);
 
-            // 手動驗證 SKU 庫存與價格邏輯
-            foreach (var (sku, i) in dto.Skus.Select((x, i) => (x, i)))
-            {
-                var max = sku.MaxStockQty;
-                var reorder = sku.ReorderPoint;
-                var safety = sku.SafetyStockQty;
+			var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
+			if (!isValid)
+			{
+				ViewBag.ErrorMessage = errorMsg;
+				await GetData();
+				return View("Upsert", dto);
+			}
 
-                // === 1. 庫存檢查 ===
-                if (max <= reorder || reorder <= safety)
-                {
-                    ViewBag.ErrorMessage = "最大庫存必須大於再訂點，再訂點必須大於安全庫存！";
-                    await GetData();
-                    return View("Upsert", dto);
-                }
+			// === 0. 條碼唯一性檢查 ===
+			//var barcodes = dto.Skus
+			//	.Where(s => !string.IsNullOrWhiteSpace(s.Barcode))
+			//	.Select(s => s.Barcode.Trim())
+			//	.ToList();
 
-                // === 2. 價格層級檢查 ===
-                var listPrice = sku.ListPrice ?? 0;      // 原價
-                var unitPrice = sku.UnitPrice ?? 0;      // 單價
-                var discount = sku.SalePrice;  // 優惠價
-                var cost = sku.CostPrice ?? 0;      // 成本價
+			//// 先檢查 dto 本身有沒有重複
+			//var dupLocal = barcodes
+			//	.GroupBy(b => b)
+			//	.Where(g => g.Count() > 1)
+			//	.Select(g => g.Key)
+			//	.ToList();
 
-                if (!(listPrice > unitPrice && unitPrice > discount && discount > cost))
-                {
-                    ViewBag.ErrorMessage = $"第{i + 1}筆 SKU 的價格設定錯誤：必須符合 原價 > 單價 > 優惠價 > 成本價！";
-                    await GetData();
-                    return View("Upsert", dto);
-                }
-            }
+			//if (!await _repo.ValidateProductAsync(dto, out string errorMsg))
+			//{
+			//	ViewBag.ErrorMessage = errorMsg;
+			//	await GetData();
+			//	return View("Upsert", dto);
+			//}
 
-            if (!ModelState.IsValid)
+			// 手動驗證 SKU 庫存與價格邏輯
+			//foreach (var (sku, i) in dto.Skus.Select((x, i) => (x, i)))
+			//         {
+			//             var max = sku.MaxStockQty;
+			//             var reorder = sku.ReorderPoint;
+			//             var safety = sku.SafetyStockQty;
+
+			//             // === 1. 庫存檢查 ===
+			//             if (max <= reorder || reorder <= safety)
+			//             {
+			//                 ViewBag.ErrorMessage = "最大庫存必須大於再訂點，再訂點必須大於安全庫存！";
+			//                 await GetData();
+			//                 return View("Upsert", dto);
+			//             }
+
+			//             // === 2. 價格層級檢查 ===
+			//             var listPrice = sku.ListPrice ?? 0;      // 原價
+			//             var unitPrice = sku.UnitPrice ?? 0;      // 單價
+			//             var discount = sku.SalePrice;  // 優惠價
+			//             var cost = sku.CostPrice ?? 0;      // 成本價
+
+			//             if (!(listPrice > unitPrice && unitPrice > discount && discount > cost))
+			//             {
+			//                 ViewBag.ErrorMessage = $"第{i + 1}筆 SKU 的價格設定錯誤：必須符合 原價 > 單價 > 優惠價 > 成本價！";
+			//                 await GetData();
+			//                 return View("Upsert", dto);
+			//             }
+			//         }
+
+			if (!ModelState.IsValid)
             {
                 var errors = ModelState
                     .Where(x => x.Value.Errors.Count > 0)

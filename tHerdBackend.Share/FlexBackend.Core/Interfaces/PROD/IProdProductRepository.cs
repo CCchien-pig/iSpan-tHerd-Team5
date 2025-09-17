@@ -13,10 +13,13 @@ namespace FlexBackend.Core.Interfaces.Products
         Task<PagedResult<ProdProductDto>> QueryAsync(ProductQuery query, CancellationToken ct = default);
 
         Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync(CancellationToken ct = default);
-    }
+        Task<List<string>> GetDuplicateBarcodesAsync(IEnumerable<string> barcodes, IEnumerable<int> excludeSkuIds);
 
-    // 簡化的查詢模型與分頁結果
-    public sealed class ProductQuery
+
+	}
+
+	// 簡化的查詢模型與分頁結果
+	public sealed class ProductQuery
     {
         public string? Keyword { get; set; }
         public bool? IsPublished { get; set; }
