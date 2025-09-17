@@ -40,102 +40,27 @@
             display: none !important;
         }
 
-        /* ==== 整列Hover/選取高亮（作用在 td/th，而不是 tr） ==== */
+        /* ===== 整列 Hover（以更高選擇器+!important 壓過 table-striped / DataTables） ===== */
         :root {
             --brand: #652D77;
             --row-hover: #f3e8ff;
             --row-even: #f8fafc;
         }
 
-        /* 斑馬紋（可留可不留；要壓過 table-striped 必須作用在 cell） */
-        table.rcl-table > tbody > tr:nth-of-type(even) > * {
+        table.rcl-table > tbody > tr:nth-of-type(even) {
             background: var(--row-even) !important;
         }
 
-        /* 列 hover：所有 cell 一起變色 */
-        table.rcl-table > tbody > tr:hover > *,
-        table.rcl-table > tbody > tr.is-selected > * {
+        table.rcl-table > tbody > tr:hover,
+        table.rcl-table > tbody > tr.is-selected {
             background: var(--row-hover) !important;
+            box-shadow: inset 4px 0 0 var(--brand) !important;
         }
 
-        /* 第一格做左側色條，不位移（預留透明邊框） */
-        table.rcl-table > tbody > tr > *:first-child {
-            border-left: 4px solid transparent;
-        }
-
-        table.rcl-table > tbody > tr:hover > *:first-child,
-        table.rcl-table > tbody > tr.is-selected > *:first-child {
-            border-left-color: var(--brand);
-        }
-
-        /* 平滑過渡 */
-        table.rcl-table > tbody > tr > * {
-            transition: background-color .18s ease, border-left-color .18s ease;
-        }
-
-        /* DataTables child 明細列別吃 hover */
-        table.rcl-table > tbody > tr.child > * {
+        table.rcl-table > tbody > tr.child:hover {
             background: inherit !important;
-            border-left-color: transparent !important;
+            box-shadow: none !important;
         }
-
-        /* SweetAlert2：批次視窗尺寸與內距修正 */
-        .rcl-bulk .swal2-html-container {
-            padding: 0 1rem !important;
-            max-height: 70vh;
-            overflow: auto;
-        }
-
-        .rcl-bulk select {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-        /* 避免100%+邊框造成橫向捲軸 */
-        .rcl-bulk label {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-        }
-
-        .rcl-bulk .swal2-actions {
-            gap: .5rem;
-        }
-
-        /* ==== SweetAlert2：批次視窗尺寸 & 溢位修正 ==== */
-        .rcl-bulk.swal2-popup {
-            width: min(92vw, 520px) !important; /* 統一寬度，手機時吃 92vw */
-            box-sizing: border-box;
-            overflow-x: hidden !important; /* 禁止水平捲軸 */
-        }
-
-        .rcl-bulk-html {
-            padding: 0 1rem !important; /* 內距 */
-            max-height: 70vh; /* 高度上限 */
-            overflow-y: auto; /* 只允許直向捲動 */
-            overflow-x: hidden !important; /* 關閉橫向捲動 */
-        }
-
-            .rcl-bulk-html select,
-            .rcl-bulk-html .form-select {
-                display: block;
-                width: 100% !important;
-                max-width: 100% !important;
-                min-width: 0 !important; /* 蓋掉 .swal2-select 的 min-width:50% */
-                box-sizing: border-box; /* 避免 100% + 邊框造成溢位 */
-            }
-
-        .rcl-bulk label {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-        }
-
-        .rcl-bulk-actions {
-            gap: .5rem;
-        }
-
-
 
         /* ===== 狀態徽章（保留，可依需要使用） ===== */
         .badge-status {
@@ -358,7 +283,7 @@
             info: false,
             order: [[7, "desc"]],
             columnDefs: [
-                { orderable: false, targets: [0, 8] }, 
+                { orderable: false, targets: [0, 8] }, // 無「操作」欄，回到 0、8 禁排序
                 {
                     targets: [3, 4, 5], // 以選中 option 的文字排序
                     render: function (data, type) {
@@ -381,7 +306,7 @@
             ]
         });
 
-        // ===== 搜尋列：即時跳轉=====
+        // ===== 搜尋列：即時跳轉（select 變更 / 關鍵字 debounce 400ms）=====
         (function(){
             const $form = $('#searchForm');
 
@@ -461,97 +386,90 @@
 
         // ===== 批量更改（視窗：預設「請選擇」；按鈕=更新/取消）=====
         $("#bulkUpdate").on("click", function () {
-          var ids = getSelectedOrders();
-          if (ids.length === 0) { Swal.fire("請先選擇訂單", "", "warning"); return; }
+            var ids = getSelectedOrders();
+            if (ids.length === 0) { Swal.fire("請先選擇訂單", "", "warning"); return; }
 
-          Swal.fire({
-            title: "批量更改狀態",
-            heightAuto: false,
-            scrollbarPadding: false,
-            customClass: {
-              popup: 'rcl-bulk',
-              htmlContainer: 'rcl-bulk-html',
-              actions: 'rcl-bulk-actions'
-            },
-            html: `
-              <div>
-                <label class="mb-2">
-                  <input type="radio" name="bulkType" value="shipping" checked>
-                  <span class="ms-2">配送狀態</span>
-                </label>
-                <select id="bulkShipping" class="form-select">
-                  <option value="" selected disabled>請選擇</option>
-                  @foreach (var option in Model.ShippingStatusOptions)
-                {
-                        <option value="@option.Value">@option.Text</option>
-                  }
-                </select>
+            Swal.fire({
+                title: "批量更改狀態",
+                html: `
+                  <div style="text-align:left">
+                    <label class="mb-2 d-flex align-items-center gap-2">
+                      <input type="radio" name="bulkType" value="shipping" checked>
+                      <span>配送狀態</span>
+                    </label>
+                    <select id="bulkShipping" class="swal2-select" style="width:100%">
+                      <option value="" selected disabled>請選擇</option>
+                      @foreach (var option in Model.ShippingStatusOptions)
+                    {
+                          <option value="@option.Value">@option.Text</option>
+                      }
+                    </select>
 
-                <div class="my-3"></div>
+                    <div class="my-3"></div>
 
-                <label class="mb-2">
-                  <input type="radio" name="bulkType" value="order">
-                  <span class="ms-2">訂單狀態</span>
-                </label>
-                <select id="bulkOrder" class="form-select" disabled>
-                  <option value="" selected disabled>請選擇</option>
-                  @foreach (var option in Model.OrderStatusOptions)
-                {
-                        <option value="@option.Value">@option.Text</option>
-                  }
-                </select>
-              </div>
-            `,
-            didOpen: () => {
-              $("input[name='bulkType']").on("change", function () {
-                const isShip = $(this).val() === "shipping";
-                $("#bulkShipping").prop("disabled", !isShip).val("");
-                $("#bulkOrder").prop("disabled", isShip).val("");
-              });
-            },
-            preConfirm: () => {
-              const type = $("input[name='bulkType']:checked").val();
-              const shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
-              const order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
+                    <label class="mb-2 d-flex align-items-center gap-2">
+                      <input type="radio" name="bulkType" value="order">
+                      <span>訂單狀態</span>
+                    </label>
+                    <select id="bulkOrder" class="swal2-select" style="width:100%" disabled>
+                      <option value="" selected disabled>請選擇</option>
+                      @foreach (var option in Model.OrderStatusOptions)
+                    {
+                          <option value="@option.Value">@option.Text</option>
+                      }
+                    </select>
+                  </div>
+                `,
+                didOpen: () => {
+                    $("input[name='bulkType']").on("change", function () {
+                        const isShip = $(this).val() === "shipping";
+                        $("#bulkShipping").prop("disabled", !isShip).val("");
+                        $("#bulkOrder").prop("disabled", isShip).val("");
+                    });
+                },
+                focusConfirm: false,
+                preConfirm: () => {
+                    const type = $("input[name='bulkType']:checked").val();
+                    const shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
+                    const order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
 
-              if (type === "shipping" && !shipping) { Swal.showValidationMessage("請先選擇「配送狀態」"); return false; }
-              if (type === "order" && !order) { Swal.showValidationMessage("請先選擇「訂單狀態」"); return false; }
+                    if (type === "shipping" && !shipping) { Swal.showValidationMessage("請先選擇「配送狀態」"); return false; }
+                    if (type === "order" && !order) { Swal.showValidationMessage("請先選擇「訂單狀態」"); return false; }
 
-              return { type, shippingStatus: shipping || null, orderStatus: order || null };
-            },
-            showCancelButton: true,
-            confirmButtonText: "更新",
-            cancelButtonText: "取消"
-          }).then((result) => {
-            if (!result.isConfirmed) return;
+                    return { type, shippingStatus: shipping || null, orderStatus: order || null };
+                },
+                showCancelButton: true,
+                confirmButtonText: "更新",
+                cancelButtonText: "取消"
+            }).then((result) => {
+                if (!result.isConfirmed) return;
 
-            $.post('@Url.Action("BulkUpdateOrders", "Orders", new { area = "ORD" })',
-              {
-                orderIds: ids,
-                shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
-                orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
-              },
-              function (res) {
-                if (res.success) {
-                  ids.forEach(function (id) {
-                    let $row = $("tr[data-id='" + id + "']");
-                    if (result.value.type === "shipping") {
-                      $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus).trigger('change');
-                    } else {
-                      $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus).trigger('change');
+                $.post('@Url.Action("BulkUpdateOrders", "Orders", new { area = "ORD" })',
+                    {
+                        orderIds: ids,
+                        shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
+                        orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
+                    },
+                    function (res) {
+                        if (res.success) {
+                            // 同步每列下拉
+                            ids.forEach(function (id) {
+                                let $row = $("tr[data-id='" + id + "']");
+                                if (result.value.type === "shipping") {
+                                    $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus).trigger('change');
+                                } else {
+                                    $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus).trigger('change');
+                                }
+                            });
+                            Swal.fire("更新成功", "", "success");
+                            $(".row-check, #selectAll").prop("checked", false);
+                        } else {
+                            Swal.fire("更新失敗", res.message || "", "error");
+                        }
                     }
-                  });
-                  Swal.fire("更新成功", "", "success");
-                  $(".row-check, #selectAll").prop("checked", false);
-                } else {
-                  Swal.fire("更新失敗", res.message || "", "error");
-                }
-              }
-            ).fail(() => Swal.fire("系統錯誤", "無法更新狀態", "error"));
-          });
+                ).fail(() => Swal.fire("系統錯誤", "無法更新狀態", "error"));
+            });
         });
-
-
 
         // ===== 批量列印 =====
         $("#bulkPrint").on("click", function () {
@@ -559,16 +477,6 @@
             if (ids.length === 0) { Swal.fire("請先選擇訂單", "", "warning"); return; }
             window.open('@Url.Action("PrintOrders", "Orders", new { area = "ORD" })' + "?ids=" + ids.join(","));
         });
-
-        // 勾選 → 加上 .is-selected，方便沿用上面的樣式
-        $('#ordersTable').on('change', '.row-check', function(){
-          $(this).closest('tr').toggleClass('is-selected', this.checked);
-        });
-        $('#selectAll').on('click', function(){
-          const checked = this.checked;
-          $('.row-check').each(function(){ this.checked = checked; }).trigger('change');
-        });
-
 
         // ===== 點「訂單編號」展開 / 收合明細 =====
         $('#ordersTable tbody').on('click', 'td.order-toggle', function () {

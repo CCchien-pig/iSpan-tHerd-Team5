@@ -102,41 +102,6 @@
             gap: .5rem;
         }
 
-        /* ==== SweetAlert2：批次視窗尺寸 & 溢位修正 ==== */
-        .rcl-bulk.swal2-popup {
-            width: min(92vw, 520px) !important; /* 統一寬度，手機時吃 92vw */
-            box-sizing: border-box;
-            overflow-x: hidden !important; /* 禁止水平捲軸 */
-        }
-
-        .rcl-bulk-html {
-            padding: 0 1rem !important; /* 內距 */
-            max-height: 70vh; /* 高度上限 */
-            overflow-y: auto; /* 只允許直向捲動 */
-            overflow-x: hidden !important; /* 關閉橫向捲動 */
-        }
-
-            .rcl-bulk-html select,
-            .rcl-bulk-html .form-select {
-                display: block;
-                width: 100% !important;
-                max-width: 100% !important;
-                min-width: 0 !important; /* 蓋掉 .swal2-select 的 min-width:50% */
-                box-sizing: border-box; /* 避免 100% + 邊框造成溢位 */
-            }
-
-        .rcl-bulk label {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-        }
-
-        .rcl-bulk-actions {
-            gap: .5rem;
-        }
-
-
-
         /* ===== 狀態徽章（保留，可依需要使用） ===== */
         .badge-status {
             display: inline-block;
@@ -460,26 +425,24 @@
         });
 
         // ===== 批量更改（視窗：預設「請選擇」；按鈕=更新/取消）=====
+        // 批量更改（小尺寸視窗 + 禁止橫向捲軸 + 按鈕=更新/取消）
         $("#bulkUpdate").on("click", function () {
           var ids = getSelectedOrders();
           if (ids.length === 0) { Swal.fire("請先選擇訂單", "", "warning"); return; }
 
           Swal.fire({
             title: "批量更改狀態",
-            heightAuto: false,
+            width: 'min(92vw, 520px)',        // ← 視窗縮小，手機時最多 92vw
+            heightAuto: false,                // ← 避免 body 捲軸造成位移
             scrollbarPadding: false,
-            customClass: {
-              popup: 'rcl-bulk',
-              htmlContainer: 'rcl-bulk-html',
-              actions: 'rcl-bulk-actions'
-            },
+            customClass: { popup: 'rcl-bulk' }, // ← 套上上面的 CSS
             html: `
               <div>
                 <label class="mb-2">
                   <input type="radio" name="bulkType" value="shipping" checked>
                   <span class="ms-2">配送狀態</span>
                 </label>
-                <select id="bulkShipping" class="form-select">
+                <select id="bulkShipping" class="swal2-select form-select">
                   <option value="" selected disabled>請選擇</option>
                   @foreach (var option in Model.ShippingStatusOptions)
                 {
@@ -493,65 +456,150 @@
                   <input type="radio" name="bulkType" value="order">
                   <span class="ms-2">訂單狀態</span>
                 </label>
-                <select id="bulkOrder" class="form-select" disabled>
+                <select id="bulkOrder" class="swal2-select form-select" disabled>
                   <option value="" selected disabled>請選擇</option>
                   @foreach (var option in Model.OrderStatusOptions)
                 {
                         <option value="@option.Value">@option.Text</option>
                   }
-                </select>
-              </div>
-            `,
-            didOpen: () => {
-              $("input[name='bulkType']").on("change", function () {
-                const isShip = $(this).val() === "shipping";
-                $("#bulkShipping").prop("disabled", !isShip).val("");
-                $("#bulkOrder").prop("disabled", isShip).val("");
-              });
-            },
-            preConfirm: () => {
-              const type = $("input[name='bulkType']:checked").val();
-              const shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
-              const order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
-
-              if (type === "shipping" && !shipping) { Swal.showValidationMessage("請先選擇「配送狀態」"); return false; }
-              if (type === "order" && !order) { Swal.showValidationMessage("請先選擇「訂單狀態」"); return false; }
-
-              return { type, shippingStatus: shipping || null, orderStatus: order || null };
-            },
-            showCancelButton: true,
-            confirmButtonText: "更新",
-            cancelButtonText: "取消"
-          }).then((result) => {
-            if (!result.isConfirmed) return;
-
-            $.post('@Url.Action("BulkUpdateOrders", "Orders", new { area = "ORD" })',
-              {
-                orderIds: ids,
-                shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
-                orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
-              },
-              function (res) {
-                if (res.success) {
-                  ids.forEach(function (id) {
-                    let $row = $("tr[data-id='" + id + "']");
-                    if (result.value.type === "shipping") {
-                      $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus).trigger('change');
-                    } else {
-                      $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus).trigger('change');
-                    }
-                  });
-                  Swal.fire("更新成功", "", "success");
-                  $(".row-check, #selectAll").prop("checked", false);
-                } else {
-                  Swal.fire("更新失敗", res.message || "", "error");
-                }
-              }
-            ).fail(() => Swal.fire("系統錯誤", "無法更新狀態", "error"));
+            </select>
+          </div>
+        `,
+        didOpen: () => {
+          $("input[name='bulkType']").on("change", function () {
+            const isShip = $(this).val() === "shipping";
+            $("#bulkShipping").prop("disabled", !isShip).val("");
+            $("#bulkOrder").prop("disabled", isShip).val("");
           });
-        });
+        },
+        preConfirm: () => {
+          const type = $("input[name='bulkType']:checked").val();
+          const shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
+          const order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
 
+          if (type === "shipping" && !shipping) { Swal.showValidationMessage("請先選擇「配送狀態」"); return false; }
+          if (type === "order" && !order) { Swal.showValidationMessage("請先選擇「訂單狀態」"); return false; }
 
+          return { type, shippingStatus: shipping || null, orderStatus: order || null };
+        },
+        showCancelButton: true,
+        confirmButtonText: "更新",
+        cancelButtonText: "取消"
+      }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        $.post('@Url.Action("BulkUpdateOrders", "Orders", new { area = "ORD" })',
+          {
+            orderIds: ids,
+            shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
+            orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
+          },
+          function (res) {
+            if (res.success) {
+              // 同步每列下拉
+              ids.forEach(function (id) {
+                let $row = $("tr[data-id='" + id + "']");
+                if (result.value.type === "shipping") {
+                  $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus).trigger('change');
+                } else {
+                  $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus).trigger('change');
+                }
+              });
+              Swal.fire("更新成功", "", "success");
+              $(".row-check, #selectAll").prop("checked", false);
+            } else {
+              Swal.fire("更新失敗", res.message || "", "error");
+            }
+          }
+        ).fail(() => Swal.fire("系統錯誤", "無法更新狀態", "error"));
+      });
+    });
+
+        // $("#bulkUpdate").on("click", function () {
+        //     var ids = getSelectedOrders();
+        //     if (ids.length === 0) { Swal.fire("請先選擇訂單", "", "warning"); return; }
+
+        //     Swal.fire({
+        //         title: "批量更改狀態",
+        //         html: `
+        //           <div style="text-align:left">
+        //             <label class="mb-2 d-flex align-items-center gap-2">
+        //               <input type="radio" name="bulkType" value="shipping" checked>
+        //               <span>配送狀態</span>
+        //             </label>
+        //             <select id="bulkShipping" class="swal2-select" style="width:100%">
+        //               <option value="" selected disabled>請選擇</option>
+        //               @foreach (var option in Model.ShippingStatusOptions)
+        //             {
+        //                   <option value="@option.Value">@option.Text</option>
+        //               }
+        //             </select>
+
+        //             <div class="my-3"></div>
+
+        //             <label class="mb-2 d-flex align-items-center gap-2">
+        //               <input type="radio" name="bulkType" value="order">
+        //               <span>訂單狀態</span>
+        //             </label>
+        //             <select id="bulkOrder" class="swal2-select" style="width:100%" disabled>
+        //               <option value="" selected disabled>請選擇</option>
+        //               @foreach (var option in Model.OrderStatusOptions)
+        //             {
+        //                   <option value="@option.Value">@option.Text</option>
+        //               }
+        //             </select>
+        //           </div>
+        //         `,
+        //         didOpen: () => {
+        //             $("input[name='bulkType']").on("change", function () {
+        //                 const isShip = $(this).val() === "shipping";
+        //                 $("#bulkShipping").prop("disabled", !isShip).val("");
+        //                 $("#bulkOrder").prop("disabled", isShip).val("");
+        //             });
+        //         },
+        //         focusConfirm: false,
+        //         preConfirm: () => {
+        //             const type = $("input[name='bulkType']:checked").val();
+        //             const shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
+        //             const order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
+
+        //             if (type === "shipping" && !shipping) { Swal.showValidationMessage("請先選擇「配送狀態」"); return false; }
+        //             if (type === "order" && !order) { Swal.showValidationMessage("請先選擇「訂單狀態」"); return false; }
+
+        //             return { type, shippingStatus: shipping || null, orderStatus: order || null };
+        //         },
+        //         showCancelButton: true,
+        //         confirmButtonText: "更新",
+        //         cancelButtonText: "取消"
+        //     }).then((result) => {
+        //         if (!result.isConfirmed) return;
+
+        //         $.post('@Url.Action("BulkUpdateOrders", "Orders", new { area = "ORD" })',
+        //             {
+        //                 orderIds: ids,
+        //                 shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
+        //                 orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
+        //             },
+        //             function (res) {
+        //                 if (res.success) {
+        //                     // 同步每列下拉
+        //                     ids.forEach(function (id) {
+        //                         let $row = $("tr[data-id='" + id + "']");
+        //                         if (result.value.type === "shipping") {
+        //                             $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus).trigger('change');
+        //                         } else {
+        //                             $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus).trigger('change');
+        //                         }
+        //                     });
+        //                     Swal.fire("更新成功", "", "success");
+        //                     $(".row-check, #selectAll").prop("checked", false);
+        //                 } else {
+        //                     Swal.fire("更新失敗", res.message || "", "error");
+        //                 }
+        //             }
+        //         ).fail(() => Swal.fire("系統錯誤", "無法更新狀態", "error"));
+        //     });
+        // });
 
         // ===== 批量列印 =====
         $("#bulkPrint").on("click", function () {
