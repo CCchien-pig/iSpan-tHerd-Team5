@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "搬移 Blocks";
+}
+
+<h2>搬移 Blocks</h2>
+
+<form asp-action="MoveBlocks" method="post">
+    <div class="form-group">
+        <label>來源 PageId</label>
+        <input type="number" name="fromPageId" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>目標 PageId</label>
+        <input type="number" name="toPageId" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">搬移</button>
+</form>
+
+@if (TempData["Msg"] != null)
+{
+    <div class="alert alert-info mt-3">@TempData["Msg"]</div>
+}

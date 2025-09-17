@@ -30,10 +30,10 @@
                 <label class="form-label">異動人員</label>
                 <input asp-for="Revisor" class="form-control" readonly />
             </div>
-
-            <div class="card-footer d-flex gap-3">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回列表</a>
-            <button type="submit" class="btn btn-outline-warning btn-lg">💾 更新</button>
+            <!-- 操作按鈕 -->
+            <div class="d-flex gap-3 mt-3 mb-4">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回列表</a>
+                <button type="submit" class="btn btn-outline-warning btn-lg">💾 更新</button>
             </div>
         </form>
     </div>
