@@ -88,7 +88,7 @@
 
 @section Scripts {
     <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
-        <<script>
+        <script>
              window.addEventListener('DOMContentLoaded', () => {
                // 1) 防呆：庫沒載到就直接提示
                if (!window.DataTable) {
@@ -101,6 +101,10 @@
                                 const dt = new DataTable('#tblRoles', {
                    processing: true,
                    serverSide: true,
+                                    language: {
+                   url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                   processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                 },
                    ajax: { url: '/USER/UserPermissions/Roles', type: 'GET', dataSrc: 'data' },
                    searchDelay: 400,
                    columns: [
@@ -111,7 +115,7 @@
                      { data: null, orderable:false, searchable:false,
                        render: (data, type, row) => `
                          <div class="btn-group btn-group-sm">
-                           <button class="btn btn-primary btn-mod" data-id="${row.id}">設定模組</button>
+                      <button class="btn btn-primary btn-mod" style="margin-right:10px" data-id="${row.id}">設定模組</button>
                            <button class="btn btn-outline-danger btn-del" data-id="${row.id}">刪除</button>
                          </div>`
                      }
