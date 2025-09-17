@@ -18,55 +18,62 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 			_context = context;
 		}
 
-		[HttpGet("kpi")]
-		public IActionResult ExportKpi([FromQuery] int days = 30)
-		{
-			// TODO: 這裡可以從 _context 算出真實 KPI
-			var kpi = new
-			{
-				TotalRevenue = 1234567,
-				TotalOrders = 321,
-				UnitsSold = 888,
-				Aov = 1234
-			};
+        [HttpGet("kpi")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> ExportKpi([FromQuery] int days = 30)
+        {
+            var end = DateTime.Now.Date.AddDays(1);                    // 明天 00:00
+            var start = (days <= 0) ? DateTime.MinValue : end.AddDays(-days);
 
-			using var wb = new XLWorkbook();
-			var ws = wb.Worksheets.Add("KPI 總表");
+            // 僅已付款；大小寫都接受
+            string[] PAID = new[] { "paid", "Paid", "PAID" };
 
-			// 標題
-			ws.Cell(1, 1).Value = "指標";
-			ws.Cell(1, 2).Value = "數值";
+            // 期間內且已付款的訂單
+            var paidOrdersQ = _context.OrdOrders.AsNoTracking()
+                .Where(o => (days <= 0) || (o.CreatedDate >= start && o.CreatedDate < end))
+                .Where(o => PAID.Contains(o.PaymentStatus));
 
-			// 資料
-			ws.Cell(2, 1).Value = "營收";
-			ws.Cell(2, 2).Value = kpi.TotalRevenue;
+            // 以明細口徑計算（和儀表板一致）
+            var revenue = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                 join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                 select (decimal?)(i.UnitPrice * i.Qty)).SumAsync() ?? 0m;
 
-			ws.Cell(3, 1).Value = "訂單數";
-			ws.Cell(3, 2).Value = kpi.TotalOrders;
+            var unitsSold = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                   join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                   select (int?)i.Qty).SumAsync() ?? 0;
 
-			ws.Cell(4, 1).Value = "售出數量";
-			ws.Cell(4, 2).Value = kpi.UnitsSold;
+            var orderCount = await paidOrdersQ.CountAsync();
 
-			ws.Cell(5, 1).Value = "平均客單價";
-			ws.Cell(5, 2).Value = kpi.Aov;
+            var aov = orderCount == 0 ? 0m : revenue / orderCount;
 
-			ws.Range("A1:B1").Style.Font.Bold = true;
-			ws.Columns().AdjustToContents();
+            using var wb = new ClosedXML.Excel.XLWorkbook();
+            var ws = wb.Worksheets.Add("KPI 總表");
+            ws.Cell(1, 1).Value = "指標"; ws.Cell(1, 2).Value = "數值";
+            ws.Cell(2, 1).Value = "營收"; ws.Cell(2, 2).Value = revenue;
+            ws.Cell(3, 1).Value = "訂單數"; ws.Cell(3, 2).Value = orderCount;
+            ws.Cell(4, 1).Value = "售出數量"; ws.Cell(4, 2).Value = unitsSold;
+            ws.Cell(5, 1).Value = "平均客單價"; ws.Cell(5, 2).Value = aov;
+            ws.Range("A1:B1").Style.Font.Bold = true;
+            ws.Columns().AdjustToContents();
 
-			using var stream = new MemoryStream();
-			wb.SaveAs(stream);
-			stream.Seek(0, SeekOrigin.Begin);
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            ms.Position = 0;
 
-			return File(
-				stream.ToArray(),
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				$"kpi_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
-			);
-		}
-		/// <summary>
-		/// 匯出訂單主表 (CSV)；days=0 代表不篩日期
-		/// </summary>
-		[HttpGet("orders-csv")]
+            Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            var fileName = $"kpi_{(days <= 0 ? "all" : $"{start:yyyyMMdd}-{end.AddDays(-1):yyyyMMdd}")}.xlsx";
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        /// <summary>
+        /// 匯出訂單主表 (CSV)；days=0 代表不篩日期
+        /// </summary>
+        [HttpGet("orders-csv")]
 		public async Task<IActionResult> ExportOrdersCsv([FromQuery] int days = 30)
 		{
 			var start = DateTime.Now.AddDays(-days);
