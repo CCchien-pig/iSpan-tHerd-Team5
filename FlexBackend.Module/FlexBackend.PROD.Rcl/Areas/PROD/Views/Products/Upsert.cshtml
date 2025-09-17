@@ -215,319 +215,361 @@
                 background: linear-gradient(180deg, #7b2cbf, #9d4edd);
             }
 
+        /*分類清單樣式*/
+        .select2-selection__choice.main-category {
+            background-color: #652D77 !important;
+            color: #fff !important;
+            border: 1px solid #652D77 !important;
+        }
+
     </style>
 }
 
-<div class="card shadow mb-4 cb mx-auto w-100">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 fw-bold">
-            <i class="fas @(isEdit ? "fa-pen-to-square" : "fa-plus") me-2"></i>
-            @(isEdit ? "修改商品基本資料" : "新增商品基本資料")
-        </h6>
-
-        <!-- 頂部工具列：返回、儲存（與清單上的工具列視覺一致） -->
-        <div class="d-flex gap-2">
-            <a asp-area="PROD" asp-controller="Products" asp-action="Index"
-               class="btn btn-sm btn-outline-light">
-                <i class="fas fa-arrow-left me-1"></i> 返回清單
-            </a>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左側分類 -->
+        <div class="col-md-2 bg-light p-3" id="left-nav">
+            <h6 class="fw-bold text-purple2">分類設定</h6>
+            <div class="category-container">
+                <select id="categorySelect" class="form-select" multiple="multiple">
+                    <option value="保健食品">保健食品</option>
+                    <option value="保養品">保養品</option>
+                    <option value="生技品">生技品</option>
+                    <option value="食品">食品</option>
+                    <option value="藥品">藥品</option>
+                </select>
+            </div>
+            <small class="text-muted">可輸入新增，並可指定主分類</small>
         </div>
-    </div>
-    <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
-        <div class="card-body">
 
-            @Html.AntiForgeryToken()
+        <!-- 自訂右鍵選單 -->
+        <ul id="contextMenu" class="dropdown-menu" style="display:none; position:absolute;width: 60px">
+          <li><a class="dropdown-item" href="#" id="setMainCategory">設為主分類</a></li>
+        </ul>
 
-            @* 編輯模式下帶 Id *@
-            @if (isEdit)
-            {
-                <input type="hidden" asp-for="ProductId" />
-            }
+        <!-- 中間主表單 -->
+        <div class="col-md-7">
 
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="valSummary"></div>
+    <div class="card shadow mb-4 cb mx-auto w-100">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold">
+                <i class="fas @(isEdit ? "fa-pen-to-square" : "fa-plus") me-2"></i>
+                @(isEdit ? "修改商品基本資料" : "新增商品基本資料")
+            </h6>
 
-            <div class="row">
-                <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-success btn-sm me-2">
-                        <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
-                    </button>
-                    <a asp-area="PROD" asp-controller="Products" asp-action="Index"
-                       class="btn btn-outline-secondary btn-sm">取消</a>
-                </div>
-                <div class="row pl-3 pr-3 m-0">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
-                        <select asp-for="BrandId" class="form-select" id="BrandId">
-                            <option value="">請選擇品牌</option>
-                            @foreach (var b in brands)
-                            {
-                                <option value="@b.BrandId"
-                                        data-supplier="@b.SupplierName"
-                                        data-brandcode="@b.BrandCode"
-                                        selected="@(b.BrandId == Model.BrandId ? "selected" : null)">
-                                    @b.BrandId - @b.BrandName
-                                </option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">供應商</label>
-                        <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
-                    </div>
-
-                    <input type="hidden" asp-for="BrandCode" id="BrandCode" />
-
-                    <div class="col-12 mb-3">
-                        <label class="form-label fw-bold required">商品名稱</label>
-                        <input asp-for="ProductName" class="form-control" />
-                        <span asp-validation-for="ProductName" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold required">重量(KG)</label>
-                        <input asp-for="Weight" class="form-control" />
-                        <span asp-validation-for="Weight" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold required">體積</label>
-                        <input asp-for="VolumeCubicMeter" class="form-control" />
-                        <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-                        <label asp-for="VolumeUnit" class="form-label fw-bold"></label>
-                        <select asp-for="VolumeUnit" class="form-select"
-                                asp-items="ViewBag.Units">
-                            <option value="">請選擇單位</option>
-                        </select>
-                        <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
-                        <div class="form-check form-switch">
-                            <input asp-for="IsPublished" class="form-check-input publish-toggle" />
-                            <label class="form-check-label fw-bold ms-2">上架</label>
-                        </div>
-                    </div>
-
-                    <div class="col-12 mb-3">
-                        <label class="form-label fw-bold required">商品簡述</label>
-                        <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
-                        <span asp-validation-for="ShortDesc" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-12 mb-3">
-                        <label class="form-label fw-bold required">商品說明</label>
-                        <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
-                        <span asp-validation-for="FullDesc" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">商品簡碼</label>
-                        <input asp-for="ProductCode" class="form-control" readonly />
-                        <input type="hidden" asp-for="ProductCode" />
-                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">建檔人員</label>
-                        <input asp-for="CreatorNm" class="form-control" disabled />
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">建檔時間</label>
-                        <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold text-danger">商品編號</label>
-                        <input asp-for="ProductId" class="form-control" disabled />
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">異動人員</label>
-                        <input asp-for="ReviserNm" class="form-control" disabled />
-                    </div>
-
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">異動時間</label>
-                        <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
-                    </div>
-
-                    <!-- Modal -->
-                    <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title fw-bold" id="tagModalLabel">新增分類</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <input type="text" id="tagNameInput" class="form-control" placeholder="請輸入分類名稱">
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                                    <button type="button" class="btn btn-primary" onclick="addTagFromModal()">新增</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- 頂部工具列：返回、儲存（與清單上的工具列視覺一致） -->
+            <div class="d-flex gap-2">
+                <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i> 返回清單
+                </a>
             </div>
         </div>
-        <!-- SKU -->
-        <div id="cardContainer" class="p-6 p-md-6">
-            <div class="card shadow mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9873B9">
-                    <h6 class="m-0 fw-bold">SKU 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseSku"
-                            aria-expanded="false" aria-controls="collapseSku">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
+        <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
+            <div class="card-body">
 
-                <div id="collapseSku" class="collapse show">
-                        <div class="card-body" style="background-color: #E5DEEA;">
-                            <!-- 規格分類 -->
-                            <div class="mb-3">
-                                <label class="form-label spec-label">規格分類</label>
-                                <div class="d-flex flex-wrap gap-3 p-3 rounded shadow-sm bg-light align-items-start">
-                                    <!-- 新增按鈕 -->
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center"
-                                            style="border-style: dashed;"
-                                            data-bs-toggle="modal" data-bs-target="#tagModal">
-                                        <i class="fas fa-plus me-1"></i> 新增分類
-                                    </button>
+                @Html.AntiForgeryToken()
 
-                                    <!-- 分類標籤區 -->
-                                    <div id="specConfigTags" class="d-flex flex-wrap gap-2 flex-grow-1">
-                                        <!-- 動態新增的分類會放這裡 -->
+                @* 編輯模式下帶 Id *@
+                @if (isEdit)
+                {
+                    <input type="hidden" asp-for="ProductId" />
+                }
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="valSummary"></div>
+
+                <div class="row">
+                    <div class="d-flex justify-content-end">
+                          <!-- 測試用自動帶入 -->
+                        <button type="button" class="btn btn-warning btn-sm me-5" id="btnAutoFill">
+                            <i class="fas fa-vial me-1"></i> 測試帶入
+                        </button>
+                        <button type="submit" class="btn btn-success btn-sm me-2">
+                            <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+                        </button>
+                        <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                           class="btn btn-outline-secondary btn-sm">取消</a>
+                    </div>
+                    <div class="row pl-3 pr-3 m-0">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
+                            <select asp-for="BrandId" class="form-select" id="BrandId">
+                                <option value="">請選擇品牌</option>
+                                @foreach (var b in brands)
+                                {
+                                    <option value="@b.BrandId"
+                                            data-supplier="@b.SupplierName"
+                                            data-brandcode="@b.BrandCode"
+                                            selected="@(b.BrandId == Model.BrandId ? "selected" : null)">
+                                        @b.BrandId - @b.BrandName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">供應商</label>
+                            <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
+                        </div>
+
+                        <input type="hidden" asp-for="BrandCode" id="BrandCode" />
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品名稱</label>
+                            <input asp-for="ProductName" class="form-control" />
+                            <span asp-validation-for="ProductName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold required">重量(KG)</label>
+                            <input asp-for="Weight" class="form-control" />
+                            <span asp-validation-for="Weight" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold required">體積</label>
+                            <input asp-for="VolumeCubicMeter" class="form-control" />
+                            <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label asp-for="VolumeUnit" class="form-label fw-bold"></label>
+                            <select asp-for="VolumeUnit" class="form-select"
+                                    asp-items="ViewBag.Units">
+                                <option value="">請選擇單位</option>
+                            </select>
+                            <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                                <label class="form-check-label fw-bold ms-2">上架</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品簡述</label>
+                            <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="ShortDesc" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品說明</label>
+                            <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
+                            <span asp-validation-for="FullDesc" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">商品簡碼</label>
+                            <!-- 只顯示，不參與驗證 -->
+                            <input type="text" class="form-control" value="@Model.ProductCode" readonly />
+
+                            <!-- 帶回去避免 null -->
+                            <input type="hidden" asp-for="ProductCode" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">建檔人員</label>
+                            <input asp-for="CreatorNm" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">建檔時間</label>
+                            <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-danger">商品編號</label>
+                            <input asp-for="ProductId" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">異動人員</label>
+                            <input asp-for="ReviserNm" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">異動時間</label>
+                            <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
+                        </div>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold" id="tagModalLabel">新增分類</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="text" id="tagNameInput" class="form-control" placeholder="請輸入分類名稱">
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                        <button type="button" class="btn btn-primary" onclick="addTagFromModal()">新增</button>
                                     </div>
                                 </div>
                             </div>
-
-                        <div class="row p-3">
-                              <div id="specCards">
-                                @for (var i = 0; i < Model?.Skus.Count; i++)
-                                {
-                                    @Html.Partial("_SkuCard",
-                                        Model.Skus[i],
-                                        new ViewDataDictionary(ViewData) {
-                                            { "Index", i },
-                                            { "SpecConfigs", Model.SpecConfigs }  // 多傳這個
-                                        })
-                                }
-                            </div>
-                            <!-- 左邊跨 3 欄 & 4 列 -->
-                            <div class="col-md-12 mb-3 d-flex flex-column">
-                                <button type="button" class="btn btn-sm btn-success mt-3" onclick="addCard()">
-                                    <i class="fas fa-plus"></i> 新增規格
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- SEO 設定：暫時隱藏 -->
-                <div class="card shadow mb-3 d-none">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
-                    <h6 class="m-0 fw-bold">SEO 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseSEO"
-                            aria-expanded="false" aria-controls="collapseSEO">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
-                <div id="collapseSEO" class="collapse">
-                    <div class="card-body">
-                        <p>這裡放 SEO 相關欄位...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 圖片 設定：初始收起 -->
+            <!-- SKU -->
+            <div id="cardContainer" class="p-6 p-md-6">
                 <div class="card shadow mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
-                    <h6 class="m-0 fw-bold">圖片 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseImg"
-                            aria-expanded="false" aria-controls="collapseImg">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
-                <div id="collapseImg" class="collapse">
-                    <div class="card-body">
-                        <p>這裡放 照片 相關欄位...</p>
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9873B9">
+                        <h6 class="m-0 fw-bold">SKU 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseSku"
+                                aria-expanded="false" aria-controls="collapseSku">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+
+                    <div id="collapseSku" class="collapse show">
+                            <div class="card-body" style="background-color: #E5DEEA;">
+                                <!-- 規格分類 -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                      <label class="form-label spec-label">規格分類</label>
+                                      <span>可透過新增或刪除規格分類，設定 SKU 規格選項。</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3 p-3 rounded shadow-sm bg-light align-items-start">
+                                        <!-- 新增按鈕 -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center"
+                                                style="border-style: dashed;"
+                                                data-bs-toggle="modal" data-bs-target="#tagModal">
+                                            <i class="fas fa-plus me-1"></i> 新增分類
+                                        </button>
+
+                                        <!-- 分類標籤區 -->
+                                        <div id="specConfigTags" class="d-flex flex-wrap gap-2 flex-grow-1">
+                                            <!-- 動態新增的分類會放這裡 -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                            <div class="row p-3">
+                                  <div id="specCards">
+                                    @for (var i = 0; i < Model?.Skus.Count; i++)
+                                    {
+                                        @Html.Partial("_SkuCard",
+                                            Model.Skus[i],
+                                            new ViewDataDictionary(ViewData) {
+                                                { "Index", i },
+                                                { "SpecConfigs", Model.SpecConfigs }  // 多傳這個
+                                            })
+                                    }
+                                </div>
+                                <!-- 左邊跨 3 欄 & 4 列 -->
+                                <div class="col-md-12 mb-3 d-flex flex-column">
+                                    <button type="button" class="btn btn-sm btn-success mt-3" onclick="addCard()">
+                                        <i class="fas fa-plus"></i> 新增規格
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 屬性設定：初始收起 -->
+                <!-- SEO 設定：暫時隱藏 -->
+                    <div class="card shadow mb-3 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                        <h6 class="m-0 fw-bold">SEO 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseSEO"
+                                aria-expanded="false" aria-controls="collapseSEO">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseSEO" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放 SEO 相關欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 圖片 設定：初始收起 -->
+                    <div class="card shadow mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                        <h6 class="m-0 fw-bold">圖片 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseImg"
+                                aria-expanded="false" aria-controls="collapseImg">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseImg" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放 照片 相關欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 屬性設定：初始收起 -->
+                    <div class="card shadow mb-3 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">屬性 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseAttribute"
+                                aria-expanded="false" aria-controls="collapseAttribute">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseAttribute" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分類設定：初始收起 -->
+                <div class="card shadow mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">分類 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseType"
+                                aria-expanded="false" aria-controls="collapseType">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseType" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成分設定：初始收起 -->
                 <div class="card shadow mb-3 d-none">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
-                    <h6 class="m-0 fw-bold">屬性 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseAttribute"
-                            aria-expanded="false" aria-controls="collapseAttribute">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
-                <div id="collapseAttribute" class="collapse">
-                    <div class="card-body">
-                        <p>這裡放其他進階欄位...</p>
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">成分 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseIngredient"
+                                aria-expanded="false" aria-controls="collapseIngredient">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseIngredient" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- 分類設定：初始收起 -->
-            <div class="card shadow mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
-                    <h6 class="m-0 fw-bold">分類 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseType"
-                            aria-expanded="false" aria-controls="collapseType">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
-                <div id="collapseType" class="collapse">
-                    <div class="card-body">
-                        <p>這裡放其他進階欄位...</p>
-                    </div>
-                </div>
+            <!-- 底部操作區：與清單的按鈕尺寸/距離一致 -->
+            <div class="d-flex justify-content-end m-3">
+                <button type="submit" class="btn btn-success btn-sm me-2">
+                    <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+                </button>
+                <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                   class="btn btn-outline-secondary btn-sm">取消</a>
             </div>
-
-            <!-- 成分設定：初始收起 -->
-            <div class="card shadow mb-3 d-none">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
-                    <h6 class="m-0 fw-bold">成分 設定</h6>
-                    <button class="btn btn-sm btn-outline-light" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseIngredient"
-                            aria-expanded="false" aria-controls="collapseIngredient">
-                        <i class="fas fa-chevron-up chevron"></i>
-                    </button>
-                </div>
-                <div id="collapseIngredient" class="collapse">
-                    <div class="card-body">
-                        <p>這裡放其他進階欄位...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- 底部操作區：與清單的按鈕尺寸/距離一致 -->
-        <div class="d-flex justify-content-end m-3">
-            <button type="submit" class="btn btn-success btn-sm me-2">
-                <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
-            </button>
-            <a asp-area="PROD" asp-controller="Products" asp-action="Index"
-               class="btn btn-outline-secondary btn-sm">取消</a>
-        </div>
-    </form>
+        </form>
+    </div>
+    </div>
 </div>
-
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
@@ -540,6 +582,84 @@
     @await Html.PartialAsync("_SweetAlertPartial")
 
     <script>
+        $(function () {
+            // 啟用 select2 (可輸入新增)
+            $('#categorySelect').select2({
+                tags: true,
+                width: '100%'
+            });
+
+            // 事件委派：監聽右鍵
+            $(document).on('contextmenu', '.select2-selection__choice', function (e) {
+                e.preventDefault();
+                const value = $(this).attr('title'); // Select2 把文字放在 title 屬性
+                $('#contextMenu')
+                    .css({ top: e.pageY + 'px', left: e.pageX + 'px' })
+                    .show()
+                    .data('target', value)
+                    .data('element', this);
+            });
+
+            // 設定為主分類
+            $('#setMainCategory').on('click', function () {
+                const mainCat = $('#contextMenu').data('target');
+                const element = $('#contextMenu').data('element');
+
+                // 移除舊的主分類樣式
+                $('.select2-selection__choice').removeClass('main-category');
+
+                // 標記新的主分類
+                $(element).addClass('main-category');
+
+                $('#contextMenu').hide();
+                alert('已設定主分類：' + mainCat);
+            });
+
+            // 點其他地方隱藏選單
+            $(document).on('click', function () {
+                $('#contextMenu').hide();
+            });
+        });
+
+
+        //  商品假資料
+        document.getElementById("btnAutoFill")?.addEventListener("click", function () {
+            // 商品主檔
+            document.querySelector("[name='BrandId']").value = "1040";
+            document.querySelector("[name='ProductName']").value = "Ancient Nutrition, 複合膠原蛋白，1 磅（454.5 克）";
+            document.querySelector("[name='Weight']").value = "0.56";
+            document.querySelector("[name='VolumeCubicMeter']").value = "0.0026";
+            document.querySelector("[name='ShortDesc']").value = "Ancient Nutrition 有一個目標 - 用歷史上功能特強大的 SuperFood 改變地球上每個人的健康狀態。 我們的多種膠原蛋白由 10 種類型食物來源的膠原蛋白獨特配制而成，經科學證明，可促進健康頭髮、皮膚、關節和消化。";
+            document.querySelector("[name='FullDesc']").value = "科學研究成分,經科學證明有助於健康的皮膚、頭髮、關節和消化,10 種膠原蛋白,維生素 C + 益生菌,每 2 勺 20 克膠原蛋白,草飼，牧場放養,全食膳食補劑,皮膚,腸道,指甲,頭髮,關節,R.A.N.C.H.® 項目,經 Igen™ Non-GMO 測試,含牛源成分,4 周後淡化魚尾紋,7 天內減輕關節不適";
+            document.querySelector("[name='VolumeUnit']").value = "cm";
+
+            
+            // 找第一張 SKU 卡來塞值
+            const firstCard = document.querySelector("#specCards .spec-card");
+            if (firstCard) {
+                firstCard.querySelector("[name*='SpecCode']").value = "L";
+                firstCard.querySelector("[name*='Barcode']").value = "";
+                firstCard.querySelector("[name*='CostPrice']").value = "100";
+                firstCard.querySelector("[name*='ListPrice']").value = "200";
+                firstCard.querySelector("[name*='UnitPrice']").value = "150";
+                firstCard.querySelector("[name*='SalePrice']").value = "120";
+                firstCard.querySelector("[name*='SafetyStockQty']").value = "50";
+                firstCard.querySelector("[name*='ReorderPoint']").value = "60";
+                firstCard.querySelector("[name*='MaxStockQty']").value = "200";
+                firstCard.querySelector("[name*='ShelfLifeDays']").value = "365";
+                    // 格式化成 yyyy-MM-dd
+                const today = new Date().toISOString().split('T')[0];
+                firstCard.querySelector("[name*='StartDate']").value = today;
+            }
+
+            Swal.fire({
+                icon: "success",
+                title: "測試資料已填入！",
+                text: "你可以直接按儲存進行測試。",
+                confirmButtonColor: "#28a745"
+            });
+        });
+
         // 商品分類
         // 1) 產生穩定的負數臨時 Id
         let _tempIdSeed = -1;
