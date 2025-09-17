@@ -366,6 +366,22 @@
     cursor: pointer;
     z-index: 10;
 }
+.login-card-header {
+    background: transparent; /* 不要漸層，純透明 */
+    border: none;            /* 移除原本的邊線 */
+    padding: 15px;
+}
+
+.login-title {
+    font-size: 1.8rem;
+    font-weight: 800; /* 粗體 */
+    color: #fff;      /* 白色 */
+    text-underline-offset: 6px; /* 與文字有間距 */
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.6),   /* 黑色陰影 */
+        0 0 10px rgba(255, 255, 255, 0.4); /* 白色柔光 */
+    margin: 0;
+}
     </style>
 }
 
@@ -385,8 +401,10 @@
 
 <div class="card login-card">
     <div class="card-body">
+    <div class="card-header login-card-header text-center">
+        <h3 class="login-title">tHerd 員工登入</h3>
+    </div>
         <form id="account" method="post">
-
                 <div class="form-floating mb-3">
                     <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                     <label asp-for="Input.Email" class="form-label">@Html.DisplayNameFor(m => m.Input.Email)</label>
