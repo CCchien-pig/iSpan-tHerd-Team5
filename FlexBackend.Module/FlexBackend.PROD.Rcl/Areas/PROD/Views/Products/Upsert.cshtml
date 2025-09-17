@@ -1,0 +1,1037 @@
+﻿@using FlexBackend.Core.DTOs.PROD
+@using System.Text.Json
+@model FlexBackend.Core.DTOs.PROD.ProdProductDto
+
+@{
+    var isEdit = Model != null && Model.ProductId > 0;   // 這行用來判斷模式
+    ViewData["Title"] = isEdit ? "修改商品" : "新增商品";
+    var brands = ViewBag.BrandDtos as IEnumerable<LoadBrandOptionDto>
+             ?? Enumerable.Empty<LoadBrandOptionDto>();
+    var index = 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <style>
+        /* === 全站一致：紫色主題 === */
+        .card-header {
+            background-color: #652D77;
+            color: #fff;
+        }
+
+            .card-header .btn {
+                color: #fff;
+                border-color: rgba(255,255,255,.35);
+            }
+
+                .card-header .btn:hover {
+                    background: rgba(255,255,255,.1);
+                    color: #fff;
+                }
+
+        .text-purple2 {
+            color: #652D77 !important;
+        }
+
+        /* 表單聚焦同色系 */
+        .form-control:focus, .form-select:focus {
+            border-color: #652D77;
+            box-shadow: 0 0 0 .2rem rgba(101,45,119,.15);
+        }
+
+        label.form-label.fw-bold {
+            color: #4d4d4d;
+        }
+
+        /* 滑動開關：開啟綠、關閉灰，與清單一致 */
+        .form-check-input.publish-toggle:checked {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+
+        .form-check-input.publish-toggle:focus {
+            box-shadow: 0 0 0 .2rem rgba(40,167,69,.25);
+        }
+
+        /* 必填星號（可選） */
+        .required:after {
+            content: " *";
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        /* 卡片內距與欄距微調，與清單頁同樣緊湊 */
+        .card-body .mb-3 {
+            margin-bottom: .85rem !important;
+        }
+
+        .btn-sm {
+            padding: .25rem .5rem;
+            font-size: .85rem;
+        }
+
+        /* 平滑旋轉動畫 */
+        .chevron {
+            transition: transform .2s ease;
+        }
+
+        /* 當按鈕是關閉狀態（aria-expanded="false"）就把箭頭轉 180 度 = 朝下 */
+        [data-bs-toggle="collapse"][aria-expanded="false"] .chevron {
+            transform: rotate(180deg);
+        }
+
+        .cb {
+            max-width: 1200px !important;
+        }
+
+        .p-6 {
+            max-width: 1200px !important;
+            padding: 15px 1rem !important;
+        }
+        /* 自訂你想要的值 */
+        @@media (min-width: 1200px) {
+            .p-md-6 {
+                padding: 3rem !important;
+            }
+        }
+
+        /* 讓這顆 select2 一定吃滿寬 */
+        #BrandId + .select2-container {
+            width: 100% !important;
+        }
+
+        /* 下拉面板白底（保持清楚對比） */
+        .select2-container--default .select2-dropdown {
+            background: #fff;
+            border-color: #ced4da;
+        }
+
+        /* 清單項目：一般狀態字色 */
+        .select2-container--default .select2-results__option {
+            color: #212529;
+        }
+
+        /* 滑鼠/鍵盤「反白」中的項目（hover/arrow 移動到的項目） */
+        .select2-container--default
+        .select2-results__option--highlighted[aria-selected] {
+            background: #7a3e8f !important; /* 亮一點的紫 */
+            color: #fff !important;
+        }
+
+        /* 已經「被選取」的項目（Select2 會把它變灰，這裡改成紫底白字） */
+        .select2-container--default
+        .select2-results__option[aria-selected="true"] {
+            background: #652D77 !important; /* 主紫 */
+            color: #fff !important;
+            font-weight: 600;
+        }
+
+        /* 下拉中的搜尋框樣式（字色/邊框別太淡） */
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            color: #212529;
+            border-color: #ced4da;
+        }
+
+        /* 上方選擇框中的字色/placeholder（避免看起來太淺） */
+        #BrandId + .select2-container .select2-selection__rendered {
+            color: #212529;
+        }
+
+        #BrandId + .select2-container .select2-selection__placeholder {
+            color: #6c757d;
+        }
+
+        .group-box {
+            border: 2px solid #652D77;
+            border-radius: 0.5rem;
+            padding: 1.5rem 1rem 1rem 1rem;
+            margin-top: 2rem;
+            position: relative;
+        }
+
+            .group-box legend {
+                font-weight: bold;
+                color: #652D77;
+                font-size: 1rem;
+                padding: 0 8px;
+                position: absolute;
+                top: -0.7em; /* 把文字拉到邊框上 */
+                left: 1rem; /* 從左邊縮一點 */
+                background: #fff; /* 白底，讓字浮在線上 */
+                width: 100px;
+
+                text-align: center;
+            }
+
+        /* 標籤 badge 樣式 */
+        #specConfigTags .badge {
+            background-color: #F5E2AD !important; /* 淺紫底 */
+            color: #5a2d82; /* 深紫字 */
+            font-size: 1.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 50rem; /* pill 圓角 */
+            display: flex;
+            align-items: center;
+        }
+
+            /* 刪除按鈕微調 */
+            #specConfigTags .badge .btn-close {
+                margin-left: 0.5rem;
+                font-size: 0.6rem;
+                filter: invert(20%) sepia(20%) saturate(400%) hue-rotate(250deg);
+                opacity: 0.7;
+            }
+
+                #specConfigTags .badge .btn-close:hover {
+                    opacity: 1;
+                }
+
+        /* 新增按鈕 hover 效果 */
+        button[data-bs-target="#tagModal"]:hover {
+            background-color: #f0ebf8; /* 淺背景 */
+            border-color: #5a2d82;
+            color: #5a2d82;
+        }
+
+        .spec-label {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #5a2d82; /* 深紫字 */
+            position: relative;
+            padding-left: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+
+            /* 左側裝飾條 */
+            .spec-label::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0.2rem;
+                bottom: 0.2rem;
+                width: 4px;
+                border-radius: 2px;
+                background: linear-gradient(180deg, #7b2cbf, #9d4edd);
+            }
+
+        /*分類清單樣式*/
+        .select2-selection__choice.main-category {
+            background-color: #652D77 !important;
+            color: #fff !important;
+            border: 1px solid #652D77 !important;
+        }
+
+    </style>
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左側分類 -->
+        <div class="col-md-2 bg-light p-3" id="left-nav">
+            <h6 class="fw-bold text-purple2">分類設定</h6>
+            <div class="category-container">
+                <select id="categorySelect" class="form-select" multiple="multiple">
+                    <option value="保健食品">保健食品</option>
+                    <option value="保養品">保養品</option>
+                    <option value="生技品">生技品</option>
+                    <option value="食品">食品</option>
+                    <option value="藥品">藥品</option>
+                </select>
+            </div>
+            <small class="text-muted">可輸入新增，並可指定主分類</small>
+        </div>
+
+        <!-- 自訂右鍵選單 -->
+        <ul id="contextMenu" class="dropdown-menu" style="display:none; position:absolute;width: 60px">
+          <li><a class="dropdown-item" href="#" id="setMainCategory">設為主分類</a></li>
+        </ul>
+
+        <!-- 中間主表單 -->
+        <div class="col-md-7">
+
+    <div class="card shadow mb-4 cb mx-auto w-100">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold">
+                <i class="fas @(isEdit ? "fa-pen-to-square" : "fa-plus") me-2"></i>
+                @(isEdit ? "修改商品基本資料" : "新增商品基本資料")
+            </h6>
+
+            <!-- 頂部工具列：返回、儲存（與清單上的工具列視覺一致） -->
+            <div class="d-flex gap-2">
+                <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i> 返回清單
+                </a>
+            </div>
+        </div>
+        <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
+            <div class="card-body">
+
+                @Html.AntiForgeryToken()
+
+                @* 編輯模式下帶 Id *@
+                @if (isEdit)
+                {
+                    <input type="hidden" asp-for="ProductId" />
+                }
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="valSummary"></div>
+
+                <div class="row">
+                    <div class="d-flex justify-content-end">
+                          <!-- 測試用自動帶入 -->
+                        <button type="button" class="btn btn-warning btn-sm me-5" id="btnAutoFill">
+                            <i class="fas fa-vial me-1"></i> 測試帶入
+                        </button>
+                        <button type="submit" class="btn btn-success btn-sm me-2">
+                            <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+                        </button>
+                        <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                           class="btn btn-outline-secondary btn-sm">取消</a>
+                    </div>
+                    <div class="row pl-3 pr-3 m-0">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold required" asp-for="BrandId">品牌</label>
+                            <select asp-for="BrandId" class="form-select" id="BrandId">
+                                <option value="">請選擇品牌</option>
+                                @foreach (var b in brands)
+                                {
+                                    <option value="@b.BrandId"
+                                            data-supplier="@b.SupplierName"
+                                            data-brandcode="@b.BrandCode"
+                                            selected="@(b.BrandId == Model.BrandId ? "selected" : null)">
+                                        @b.BrandId - @b.BrandName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">供應商</label>
+                            <input asp-for="SupplierName" id="SupplierName" class="form-control" disabled />
+                        </div>
+
+                        <input type="hidden" asp-for="BrandCode" id="BrandCode" />
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品名稱</label>
+                            <input asp-for="ProductName" class="form-control" />
+                            <span asp-validation-for="ProductName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold required">重量(KG)</label>
+                            <input asp-for="Weight" class="form-control" />
+                            <span asp-validation-for="Weight" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold required">體積</label>
+                            <input asp-for="VolumeCubicMeter" class="form-control" />
+                            <span asp-validation-for="VolumeCubicMeter" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label asp-for="VolumeUnit" class="form-label fw-bold"></label>
+                            <select asp-for="VolumeUnit" class="form-select"
+                                    asp-items="ViewBag.Units">
+                                <option value="">請選擇單位</option>
+                            </select>
+                            <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                                <label class="form-check-label fw-bold ms-2">上架</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品簡述</label>
+                            <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="ShortDesc" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold required">商品說明</label>
+                            <textarea asp-for="FullDesc" class="form-control" rows="4"></textarea>
+                            <span asp-validation-for="FullDesc" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">商品簡碼</label>
+                            <!-- 只顯示，不參與驗證 -->
+                            <input type="text" class="form-control" value="@Model.ProductCode" readonly />
+
+                            <!-- 帶回去避免 null -->
+                            <input type="hidden" asp-for="ProductCode" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">建檔人員</label>
+                            <input asp-for="CreatorNm" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">建檔時間</label>
+                            <input asp-for="FormateCreatedDate" class="form-control" type="form-local" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-danger">商品編號</label>
+                            <input asp-for="ProductId" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">異動人員</label>
+                            <input asp-for="ReviserNm" class="form-control" disabled />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">異動時間</label>
+                            <input asp-for="FormateRevisedDate" class="form-control" type="form-local" disabled />
+                        </div>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold" id="tagModalLabel">新增分類</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="text" id="tagNameInput" class="form-control" placeholder="請輸入分類名稱">
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                        <button type="button" class="btn btn-primary" onclick="addTagFromModal()">新增</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- SKU -->
+            <div id="cardContainer" class="p-6 p-md-6">
+                <div class="card shadow mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9873B9">
+                        <h6 class="m-0 fw-bold">SKU 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseSku"
+                                aria-expanded="false" aria-controls="collapseSku">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+
+                    <div id="collapseSku" class="collapse show">
+                            <div class="card-body" style="background-color: #E5DEEA;">
+                                <!-- 規格分類 -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                      <label class="form-label spec-label">規格分類</label>
+                                      <span>可透過新增或刪除規格分類，設定 SKU 規格選項。</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3 p-3 rounded shadow-sm bg-light align-items-start">
+                                        <!-- 新增按鈕 -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center"
+                                                style="border-style: dashed;"
+                                                data-bs-toggle="modal" data-bs-target="#tagModal">
+                                            <i class="fas fa-plus me-1"></i> 新增分類
+                                        </button>
+
+                                        <!-- 分類標籤區 -->
+                                        <div id="specConfigTags" class="d-flex flex-wrap gap-2 flex-grow-1">
+                                            <!-- 動態新增的分類會放這裡 -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                            <div class="row p-3">
+                                  <div id="specCards">
+                                    @for (var i = 0; i < Model?.Skus.Count; i++)
+                                    {
+                                        @Html.Partial("_SkuCard",
+                                            Model.Skus[i],
+                                            new ViewDataDictionary(ViewData) {
+                                                { "Index", i },
+                                                { "SpecConfigs", Model.SpecConfigs }  // 多傳這個
+                                            })
+                                    }
+                                </div>
+                                <!-- 左邊跨 3 欄 & 4 列 -->
+                                <div class="col-md-12 mb-3 d-flex flex-column">
+                                    <button type="button" class="btn btn-sm btn-success mt-3" onclick="addCard()">
+                                        <i class="fas fa-plus"></i> 新增規格
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEO 設定：暫時隱藏 -->
+                    <div class="card shadow mb-3 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                        <h6 class="m-0 fw-bold">SEO 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseSEO"
+                                aria-expanded="false" aria-controls="collapseSEO">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseSEO" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放 SEO 相關欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 圖片 設定：初始收起 -->
+                    <div class="card shadow mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
+                        <h6 class="m-0 fw-bold">圖片 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseImg"
+                                aria-expanded="false" aria-controls="collapseImg">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseImg" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放 照片 相關欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 屬性設定：初始收起 -->
+                    <div class="card shadow mb-3 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">屬性 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseAttribute"
+                                aria-expanded="false" aria-controls="collapseAttribute">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseAttribute" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分類設定：初始收起 -->
+                <div class="card shadow mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">分類 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseType"
+                                aria-expanded="false" aria-controls="collapseType">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseType" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成分設定：初始收起 -->
+                <div class="card shadow mb-3 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background:#9692AF">
+                        <h6 class="m-0 fw-bold">成分 設定</h6>
+                        <button class="btn btn-sm btn-outline-light" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseIngredient"
+                                aria-expanded="false" aria-controls="collapseIngredient">
+                            <i class="fas fa-chevron-up chevron"></i>
+                        </button>
+                    </div>
+                    <div id="collapseIngredient" class="collapse">
+                        <div class="card-body">
+                            <p>這裡放其他進階欄位...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 底部操作區：與清單的按鈕尺寸/距離一致 -->
+            <div class="d-flex justify-content-end m-3">
+                <button type="submit" class="btn btn-success btn-sm me-2">
+                    <i class="fas fa-save me-1"></i> @(isEdit ? "更新" : "儲存")
+                </button>
+                <a asp-area="PROD" asp-controller="Products" asp-action="Index"
+                   class="btn btn-outline-secondary btn-sm">取消</a>
+            </div>
+        </form>
+    </div>
+    </div>
+</div>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    @await Html.PartialAsync("_SweetAlertPartial")
+
+    <script>
+        $(function () {
+            // 啟用 select2 (可輸入新增)
+            $('#categorySelect').select2({
+                tags: true,
+                width: '100%'
+            });
+
+            // 事件委派：監聽右鍵
+            $(document).on('contextmenu', '.select2-selection__choice', function (e) {
+                e.preventDefault();
+                const value = $(this).attr('title'); // Select2 把文字放在 title 屬性
+                $('#contextMenu')
+                    .css({ top: e.pageY + 'px', left: e.pageX + 'px' })
+                    .show()
+                    .data('target', value)
+                    .data('element', this);
+            });
+
+            // 設定為主分類
+            $('#setMainCategory').on('click', function () {
+                const mainCat = $('#contextMenu').data('target');
+                const element = $('#contextMenu').data('element');
+
+                // 移除舊的主分類樣式
+                $('.select2-selection__choice').removeClass('main-category');
+
+                // 標記新的主分類
+                $(element).addClass('main-category');
+
+                $('#contextMenu').hide();
+                alert('已設定主分類：' + mainCat);
+            });
+
+            // 點其他地方隱藏選單
+            $(document).on('click', function () {
+                $('#contextMenu').hide();
+            });
+        });
+
+
+        //  商品假資料
+        document.getElementById("btnAutoFill")?.addEventListener("click", function () {
+            // 商品主檔
+            document.querySelector("[name='BrandId']").value = "1040";
+            document.querySelector("[name='ProductName']").value = "Ancient Nutrition, 複合膠原蛋白，1 磅（454.5 克）";
+            document.querySelector("[name='Weight']").value = "0.56";
+            document.querySelector("[name='VolumeCubicMeter']").value = "0.0026";
+            document.querySelector("[name='ShortDesc']").value = "Ancient Nutrition 有一個目標 - 用歷史上功能特強大的 SuperFood 改變地球上每個人的健康狀態。 我們的多種膠原蛋白由 10 種類型食物來源的膠原蛋白獨特配制而成，經科學證明，可促進健康頭髮、皮膚、關節和消化。";
+            document.querySelector("[name='FullDesc']").value = "科學研究成分,經科學證明有助於健康的皮膚、頭髮、關節和消化,10 種膠原蛋白,維生素 C + 益生菌,每 2 勺 20 克膠原蛋白,草飼，牧場放養,全食膳食補劑,皮膚,腸道,指甲,頭髮,關節,R.A.N.C.H.® 項目,經 Igen™ Non-GMO 測試,含牛源成分,4 周後淡化魚尾紋,7 天內減輕關節不適";
+            document.querySelector("[name='VolumeUnit']").value = "cm";
+
+            
+            // 找第一張 SKU 卡來塞值
+            const firstCard = document.querySelector("#specCards .spec-card");
+            if (firstCard) {
+                firstCard.querySelector("[name*='SpecCode']").value = "L";
+                firstCard.querySelector("[name*='Barcode']").value = "";
+                firstCard.querySelector("[name*='CostPrice']").value = "100";
+                firstCard.querySelector("[name*='ListPrice']").value = "200";
+                firstCard.querySelector("[name*='UnitPrice']").value = "150";
+                firstCard.querySelector("[name*='SalePrice']").value = "120";
+                firstCard.querySelector("[name*='SafetyStockQty']").value = "50";
+                firstCard.querySelector("[name*='ReorderPoint']").value = "60";
+                firstCard.querySelector("[name*='MaxStockQty']").value = "200";
+                firstCard.querySelector("[name*='ShelfLifeDays']").value = "365";
+                    // 格式化成 yyyy-MM-dd
+                const today = new Date().toISOString().split('T')[0];
+                firstCard.querySelector("[name*='StartDate']").value = today;
+            }
+
+            Swal.fire({
+                icon: "success",
+                title: "測試資料已填入！",
+                text: "你可以直接按儲存進行測試。",
+                confirmButtonColor: "#28a745"
+            });
+        });
+
+        // 商品分類
+        // 1) 產生穩定的負數臨時 Id
+        let _tempIdSeed = -1;
+        function genTempId() { return _tempIdSeed--; }
+
+        // 2) 取得此 config 的穩定 Id（已有正式 Id 用正式，否則配一個負數暫時 Id）
+        function getStableConfigId(cfg) {
+          if (Number.isInteger(cfg.specificationConfigId) && cfg.specificationConfigId !== 0) return cfg.specificationConfigId;
+          if (Number.isInteger(cfg._tempId)) return cfg._tempId;
+          cfg._tempId = genTempId();
+          return cfg._tempId;
+        }
+
+        // 3) 新增分類（Modal 確認）
+        function addTagFromModal() {
+          const name = document.getElementById("tagNameInput").value.trim();
+          if (!name) return;
+
+          // 重名檢查：注意大小寫一致
+          if (specConfigs.some(c => c.GroupName === name)) {
+            alert("已有相同名稱的分類，請勿重複新增！");
+            return;
+          }
+
+          // 建立前端分類物件（注意大寫 G）
+          const cfg = { SpecificationConfigId: 0, GroupName: name, OrderSeq: specConfigs.length, ProductId: 0 };
+          cfg._tempId = genTempId();
+          specConfigs.push(cfg);
+
+          const container = document.getElementById("specConfigTags");
+          const i = container.querySelectorAll(".draggable-tag").length;
+
+          const span = document.createElement("span");
+          span.className = "badge bg-purple2 draggable-tag";
+            span.innerHTML = `
+              ${cfg.GroupName}
+              <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
+              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.GroupName}" />
+              <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
+              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.SpecificationConfigId || cfg._tempId}" />
+            `;
+          container.appendChild(span);
+
+          document.getElementById("tagNameInput").value = "";
+          bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
+
+          refreshIndexes();
+          refreshSpecOptions();
+        }
+
+        // === 預設載入 SpecConfigs 到標籤區 ===
+        function renderTagsFromModel() {
+          const container = document.getElementById("specConfigTags");
+          container.innerHTML = ""; // 先清空，避免重複
+
+          specConfigs.forEach((cfg, i) => {
+            const span = document.createElement("span");
+            span.className = "badge bg-purple2 draggable-tag";
+            span.innerHTML = `
+              ${cfg.GroupName}
+              <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
+              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.GroupName}" />
+              <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
+              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.SpecificationConfigId || cfg._tempId}" />
+            `;
+            container.appendChild(span);
+          });
+
+          refreshIndexes();
+          refreshSpecOptions(); // 重繪每張 SKU 卡的規格值區塊
+        }
+
+        // 頁面載入時自動跑一次
+        document.addEventListener("DOMContentLoaded", renderTagsFromModel);
+
+        function removeTag(btn) {
+          const tag = btn.parentElement;
+          const name = tag.querySelector("input[name*='GroupName']").value;
+
+          // 從全域 specConfigs 移除（注意這裡要比對 GroupName）
+          specConfigs = specConfigs.filter(c => c.GroupName !== name);
+
+          // 移除畫面上的 badge
+          tag.remove();
+
+          // 重新整理索引
+          refreshIndexes();
+
+          // 重繪 SKU 規格值欄位
+          refreshSpecOptions();
+        }
+
+        function refreshIndexes() {
+            document.querySelectorAll("#specConfigTags .draggable-tag").forEach((tag, i) => {
+                const hidden = tag.querySelector("input[type=hidden]");
+                hidden.name = `SpecConfigs[${i}].GroupName`;
+            });
+        }
+
+        // 讓標籤可以拖曳排序
+        const specTagsEl = document.getElementById("specConfigTags");
+        if (specTagsEl) {
+            new Sortable(specTagsEl, {
+                animation: 150,
+                onEnd: refreshIndexes
+            });
+        }
+
+        // -- 以上是規格分類 -- 
+
+        // 初始值從 Model 帶進來
+        var specConfigs = @Html.Raw(JsonSerializer.Serialize(Model.SpecConfigs ?? new List<ProdSpecificationConfigDto>()));
+        console.log("初始化 specConfigs =", specConfigs);
+
+        // 生成規格值區塊
+        // 4) 規格值卡片（對應每個 SKU）
+        function buildSpecOptions(skuIndex, values = {}) {
+            if (!Array.isArray(specConfigs)) return "";
+
+              const skuIdInput = document.querySelector(
+                `#specCards .spec-card:nth-child(${skuIndex + 1}) input[name*='SkuId']`
+              );
+              const skuId = skuIdInput ? skuIdInput.value : 0;
+
+              return specConfigs
+                .map((cfg, j) => {
+                  const stableId = getStableConfigId(cfg);
+                  const val = values[stableId] || {};
+
+                  // 找到舊的 OptionName 值（避免洗掉 Razor Render 的值）
+                  const existingInput = document.querySelector(
+                    `#specCards .spec-card:nth-child(${skuIndex + 1}) input[name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"]`
+                  );
+                  const existingVal = existingInput ? existingInput.value : "";
+
+                  return `
+                    <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values" 
+                         style="min-width:120px; max-width:200px;">
+                      <label class="form-label fw-bold small mb-1">${cfg.GroupName}</label>
+
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationConfigId"
+                             value="${stableId}" />
+
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationOptionId"
+                             value="${val.SpecificationOptionId || 0}" />
+
+                      <input type="hidden"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SkuId"
+                             value="${skuId}" />
+
+                      <input type="text" class="form-control form-control-sm"
+                             name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"
+                             value="${val.OptionName || existingVal}" />
+                    </div>
+                  `;
+                })
+                .join("");
+        }
+
+
+        // 更新所有 SKU 卡片的規格值區塊
+       function refreshSpecOptions() {
+          document.querySelectorAll('#specCards .spec-card').forEach((card, skuIndex) => {
+            const skuId = card.querySelector("input[name*='SkuId']").value;
+            const currentValues = {};
+
+            card.querySelectorAll(".spec-values").forEach(block => {
+              const cfgId = block.querySelector("input[name*='SpecificationConfigId']").value;
+              const optionInput = block.querySelector("input[name*='OptionName']");
+              const optionIdInput = block.querySelector("input[name*='SpecificationOptionId']");
+
+              currentValues[cfgId] = {
+                OptionName: optionInput ? optionInput.value : "",
+                SpecificationOptionId: optionIdInput ? optionIdInput.value : 0,
+                SkuId: skuId
+              };
+            });
+
+            const container = card.querySelector(".spec-values-container");
+            if (container) {
+              container.innerHTML = buildSpecOptions(skuIndex, currentValues);
+            }
+          });
+        }
+        
+        // 讓卡片可拖曳
+        new Sortable(document.getElementById("specCards"), {
+            animation: 150,
+            handle: ".card-header",
+            onEnd: function () {
+                refreshIndexes();
+            }
+        });
+
+        // 以上是分類選項
+
+        // 新增 SKU 卡片（永遠加在最後）
+        function addCard(values = {}) {
+            const container = document.getElementById("specCards");
+            const index = document.querySelectorAll("#specCards .spec-card").length; // 保證取現有數量
+
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                        // 插入新卡片
+                container.insertAdjacentHTML("beforeend", html);
+
+                // 這裡再刷新分類輸入框，確保新卡片也有
+                refreshSpecOptions();
+            });
+        }
+
+        // 複製 SKU 卡片（插入在原卡片後）
+        function copyCard(button) {
+            const card = button.closest(".spec-card");
+            const index = document.querySelectorAll("#specCards .spec-card").length;
+
+            // 收集舊卡片的規格值
+            const oldSpecValues = {};
+            card.querySelectorAll(".spec-values").forEach(block => {
+                const cfgId = block.querySelector("input[name*='SpecificationConfigId']").value;
+                const optionInput = block.querySelector("input[name*='OptionName']");
+                const optionIdInput = block.querySelector("input[name*='SpecificationOptionId']");
+                
+                if (!oldSpecValues[cfgId]) oldSpecValues[cfgId] = [];
+                oldSpecValues[cfgId].push({
+                    OptionName: optionInput ? optionInput.value : "",
+                    SpecificationOptionId: optionIdInput ? optionIdInput.value : 0
+                });
+            });
+
+                // === 2. 收集舊卡片的價格/庫存欄位 ===
+            const oldSkuData = {};
+            card.querySelectorAll("input[name^='Skus']").forEach(input => {
+                const name = input.name.split('.').pop(); // 例如 "CostPrice"
+
+                // 跳過不需要複製的欄位
+                if (["SpecCode", "Barcode", "IsActive", "StockQty", "SkuId", "SkuCode", "IsDeleted"].includes(name)) return;
+
+                oldSkuData[name] = input.type === "checkbox" 
+                    ? input.checked 
+                    : input.value;
+            });
+
+            // 呼叫後端產生新的 partial
+            $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
+                card.insertAdjacentHTML("afterend", html);
+
+                const newCard = card.nextElementSibling;
+
+                // === 3a. 填回規格值 ===
+                const container = newCard.querySelector(".spec-values-container");
+                if (container) {
+                    container.innerHTML = buildSpecOptions(index, oldSpecValues);
+                }
+
+                // === 3b. 填回價格/庫存欄位（排除規格碼、條碼、啟用） ===
+                for (const key in oldSkuData) {
+                    const input = newCard.querySelector(`[name='Skus[${index}].${key}']`);
+                    if (input) {
+                        if (input.type === "checkbox") {
+                            input.checked = oldSkuData[key];
+                        } else {
+                            input.value = oldSkuData[key];
+                        }
+                    }
+                }
+                 refreshSpecOptions(); // 重繪每張 SKU 卡的規格值區塊
+            });
+        }
+
+        function markDeleted(button) {
+            const card = button.closest(".spec-card");
+            card.remove();  // 從 DOM 完全刪除
+        }
+
+        // 品牌下拉選項
+        $(document).ready(function () {
+            function updateSupplierAndBrand() {
+                var selected = $("#BrandId option:selected");
+                var supplier = selected.data("supplier") || "";
+                var brandCode = selected.data("brandcode") || "";
+
+                $("#SupplierName").val(supplier);
+                $("#BrandCode").val(brandCode);
+            }
+
+            // 下拉變更時更新
+            $("#BrandId").change(updateSupplierAndBrand);
+
+            // 頁面初始載入時執行一次
+            updateSupplierAndBrand();
+        });
+
+
+        $(function(){
+          const $sel = $('#BrandId');
+
+          // 初始化
+          $sel.select2({
+            placeholder: '輸入品牌名稱或代碼…',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0     // 一展開就能看到清單，同時可打字
+            // 若放在 Bootstrap Modal 裡，請加：dropdownParent: $('#yourModalId')
+          })
+          // 聚焦自動展開 + 聚焦搜尋框（就能直接打）
+          .on('focus', function(){ $(this).select2('open'); })
+          .on('select2:open', function(){
+            const $search = $('.select2-container--open .select2-search__field');
+            if ($search.length) { $search[0].focus(); }
+          })
+          // 變更時觸發驗證（若有用 jQuery Validate）
+          .on('change', function(){ $(this).valid && $(this).valid(); });
+
+          // 偵錯：console 確認 Select2 是否掛上
+          console.debug('select2 ready?', typeof $.fn.select2 === 'function');
+        });
+
+                $(function () {
+          $('#BrandId').select2({
+            placeholder: '輸入品牌名稱或代碼…',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0 // 一點就能看清單，同時可打字搜尋
+            // 若在 modal 裡面，解除遮擋請加：dropdownParent: $('#yourModalId')
+          })
+          .on('change', function(){ $(this).valid && $(this).valid(); });
+        });
+
+        // 頂部工具列「儲存」直接提交表單（與清單工具列互動一致）
+        document.getElementById('btnHeaderSubmit')
+            ?.addEventListener('click', function () {
+                document.getElementById('productCreateForm').submit();
+            });
+
+        // 顯示 MVC 驗證摘要（若有錯）
+        (function () {
+            const summary = document.getElementById('valSummary');
+            if (summary && summary.innerText.trim().length > 0) {
+                summary.classList.remove('d-none');
+            }
+        })();
+
+        // 讓容器內的卡片可以拖曳排序
+        new Sortable(document.getElementById('cardContainer'), {
+            animation: 150,          // 拖曳動畫毫秒數
+            handle: '.card-header',  // 只能抓 header 拖動
+            ghostClass: 'dragging',  // 拖曳時的 CSS class
+            onEnd: function (evt) {
+                console.log(`從 ${evt.oldIndex} 拖到 ${evt.newIndex}`);
+                // 這裡你可以用 AJAX 把新排序傳回後端
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+          // 展開完成後自動捲到卡片
+          document.querySelectorAll('.collapse').forEach(function (target) {
+            target.addEventListener('shown.bs.collapse', function () {
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+          });
+
+          // 讓 aria-expanded 跟著狀態更新（Bootstrap 會自動處理）
+          // 若動態改 show/hidden，也可在這裡手動同步按鈕屬性：
+          document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(btn){
+            const sel = btn.getAttribute('data-bs-target');
+            const tgt = document.querySelector(sel);
+            if (!tgt) return;
+            // 初始強制同步一次（避免第一次點要按兩次）
+            btn.setAttribute('aria-expanded', tgt.classList.contains('show') ? 'true' : 'false');
+          });
+        });
+    </script>
+}
