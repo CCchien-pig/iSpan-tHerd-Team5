@@ -4,7 +4,6 @@ using FlexBackend.Core.DTOs.USER;
 using FlexBackend.Core.Interfaces.SUP;
 using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,9 +23,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		private readonly UserManager<ApplicationUser> _userMgr;
 
 		public StockBatchesController(
-			tHerdDBContext context, 
-			IStockBatchService stockBatchService, 
-			IStockService stockService, 
+			tHerdDBContext context,
+			IStockBatchService stockBatchService,
+			IStockService stockService,
 			ICurrentUser me,
 			UserManager<ApplicationUser> userMgr)
 		{
@@ -174,8 +173,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					d.BrandName,
 					d.ProductName,
 
-					// 字串版規格，用斜線分隔
-					//Specifications = string.Join(" / ", d.Specifications),
 					// 陣列版規格
 					// 將 Specifications 轉成陣列，前端 render 時可用 map
 					Specifications = d.Specifications?.Select(s => new
@@ -640,59 +637,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-
-
-
-		// GET: /SUP/StockBatches/Edit/5
-		[HttpGet]
-		public async Task<IActionResult> Edit(int id)
-		{
-			// 取得批號資料
-			var dto = await _stockBatchService.GetStockBatchForEditAsync(id);
-			if (dto == null)
-				return Json(new { success = false, message = "找不到此批次" });
-
-			// 取得最新一筆異動紀錄(含備註)（StockBatchService.GetLastRemarkAsync）
-			var lastRemark = await _stockBatchService.GetLastRemarkAsync(id);
-
-			// DTO → ViewModel
-			var vm = new StockBatchContactViewModel
-			{
-				StockBatchId = dto.StockBatchId,
-				SkuId = dto.SkuId,
-				SkuCode = dto.SkuCode ?? "",
-				ProductName = dto.ProductName ?? "",
-				BrandName = dto.BrandName ?? "",
-				BatchNumber = dto.BatchNumber ?? "",
-				Qty = dto.Qty,                   // 當前庫存，只讀
-				IsSellable = dto.IsSellable,
-				ManufactureDate = dto.ManufactureDate,
-				ShelfLifeDays = dto.ExpireDate.HasValue && dto.ManufactureDate.HasValue
-								? (int)(dto.ExpireDate.Value - dto.ManufactureDate.Value).TotalDays
-								: 0,
-				SafetyStockQty = dto.SafetyStockQty,
-				ReorderPoint = dto.ReorderPoint,
-				MaxStockQty = dto.MaxStockQty,
-				Creator = dto.Creator,
-				CreatedDate = dto.CreatedDate,
-				Reviser = dto.Reviser,
-				RevisedDate = dto.RevisedDate,
-				Remark = lastRemark,            // 帶入最新異動備註
-				PredictedQty = dto.Qty         // 預計庫存初始等於當前庫存
-			};
-
-			ViewBag.FormAction = "Edit";
-
-			// 前端表單顯示建議：
-			// - 品牌名、商品名、SkuCode、製造日期、當前庫存、最大庫存、再訂購點、安全庫存量、可缺貨預購 → 只讀
-			// - 異動類型鎖定顯示 "手動調整"
-			// - 可選 +/-、數量
-			// - 備註可修改，送出時存到 SupStockHistory
-
-			return PartialView("Partials/_StockBatchFormPartial", vm);
-		}
-
-
 		// POST： /SUP/StockBatches/SaveStockMovement
 		[HttpPost]
 		[ValidateAntiForgeryToken]
@@ -710,73 +654,105 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-		// POST: /SUP/StockBatches/Edit/5
-		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, StockBatchContactViewModel model)
-		{
-			if (id != model.StockBatchId)
-				return Json(new { success = false, message = "找不到此異動紀錄Id" });
-			if (!ModelState.IsValid)
-				return PartialView("Partials/_StockBatchFormPartial", model);
 
-			using var transaction = await _context.Database.BeginTransactionAsync();
+
+
+		// GET: /SUP/StockBatches/Edit/5
+		[HttpGet]
+		public async Task<IActionResult> Edit(int id)
+		{
 			try
 			{
-				var stockBatch = await _context.SupStockBatches
-					.Include(sb => sb.Sku)
-					.FirstOrDefaultAsync(sb => sb.StockBatchId == id);
-
-				if (stockBatch == null)
-					return Json(new { success = false, message = "找不到資料" });
-
-				var sku = stockBatch.Sku;
-				int currentQty = stockBatch.Qty;
-
-				// 更新可修改欄位
-				stockBatch.ManufactureDate = model.ManufactureDate;
-				stockBatch.Reviser = model.UserId ?? 0; // 登入使用者
-				stockBatch.RevisedDate = DateTime.Now;
-				stockBatch.ExpireDate = model.ManufactureDate.HasValue && sku?.ShelfLifeDays > 0
-					? model.ManufactureDate.Value.AddDays(sku.ShelfLifeDays)
-					: null;
-
-				// 計算變動量（只對 SupStockHistory）
-				int changeQty = model.IsAdd ? (model.ChangeQty ?? 0) : -(model.ChangeQty ?? 0);
-				if (changeQty != 0)
-				{
-					_context.SupStockHistories.Add(new SupStockHistory
+				// 取得該批號資料
+				var stockBatchWithInfo = await (
+					from sb in _context.SupStockBatches
+					join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+					join prod in _context.ProdProducts on sku.ProductId equals prod.ProductId
+					join brand in _context.SupBrands on prod.BrandId equals brand.BrandId
+					where sb.StockBatchId == id
+					select new StockBatchEditDto
 					{
-						StockBatchId = stockBatch.StockBatchId,
-						ChangeType = "Adjust",
-						ChangeQty = changeQty,
-						BeforeQty = currentQty,
-						AfterQty = currentQty + changeQty,
-						Reviser = model.UserId ?? 0,
-						RevisedDate = DateTime.Now,
-						Remark = model.Remark
-					});
-					Console.WriteLine($"Added StockHistory: BatchId={stockBatch.StockBatchId}, Reviser={stockBatch.Reviser}");
-				}
+						StockBatchId = sb.StockBatchId,
+						BrandName = brand.BrandName,
+						ProductName = prod.ProductName,
+						SkuCode = sku.SkuCode,
+						ManufactureDate = sb.ManufactureDate,
+						CurrentQty = sb.Qty
+					}
+				).FirstOrDefaultAsync();
 
-				await _context.SaveChangesAsync();
-				await transaction.CommitAsync();
 
-				return Json(new
-				{
-					success = true,
-					expireDate = stockBatch.ExpireDate,
-					currentQty = currentQty,              // 保持只讀
-					predictedQty = currentQty + changeQty, // 前端顯示預計庫存
-					changeQty = changeQty
-				});
+				if (stockBatchWithInfo == null)
+					return NotFound();
+
+				// 取得該批號在 SUP_StockHistory 的最後一次備註
+				var lastRemark = await _context.SupStockHistories
+					.Where(h => h.StockBatchId == id)
+					.OrderByDescending(h => h.RevisedDate)
+					.Select(h => h.Remark)
+					.FirstOrDefaultAsync();
+
+				stockBatchWithInfo.Remark = lastRemark ?? "";
+
+				// 回傳 PartialView
+				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchInfoPartial.cshtml", stockBatchWithInfo);
 			}
 			catch (Exception ex)
 			{
-				await transaction.RollbackAsync();
-				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+				Console.WriteLine(ex.Message, "Edit 發生錯誤 (StockBatchId={id})", id);
+				return StatusCode(500, "發生內部錯誤");
 			}
 		}
+
+		// POST: /SUP/StockBatches/Update
+		[HttpPost]
+		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
+		{
+			var batch = await _context.SupStockBatches.FindAsync(id);
+			if (batch == null)
+				return Json(new { success = false, message = "找不到批號" });
+
+			// 異動前數量
+			int beforeQty = batch.Qty;
+
+			// 計算異動數量（增加為 +，減少為 -）
+			int changeQty = dto.IsAdd ? dto.ChangeQty : -dto.ChangeQty;
+
+			// 更新批次庫存
+			batch.Qty += changeQty;
+
+			// 異動後數量
+			int afterQty = batch.Qty;
+
+			var userId = _me.Id; // string
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
+
+			// 建立異動紀錄
+			_context.SupStockHistories.Add(new SupStockHistory
+			{
+				StockBatchId = id,
+				ChangeType = "Adjust",   // 固定:手動調整
+				ChangeQty = changeQty,
+				BeforeQty = beforeQty,
+				AfterQty = afterQty,
+				Remark = dto.Remark,
+				//Reviser = 1,
+				Reviser = currentUserId,
+				RevisedDate = DateTime.Now
+			});
+
+			await _context.SaveChangesAsync();
+
+			return Json(new { success = true });
+		}
+
 
 
 		private bool SupStockBatchExists(int id)
