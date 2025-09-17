@@ -326,9 +326,9 @@
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-bold">商品簡碼</label>
-                        <input class="form-control" 
-                               value="@(string.IsNullOrEmpty(Model?.ProductCode) ? "待系統產生" : Model.ProductCode)"
-                               disabled />
+                        <input asp-for="ProductCode" class="form-control" readonly />
+                        <input type="hidden" asp-for="ProductCode" />
+                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
                     </div>
 
                     <div class="col-md-4 mb-3">
@@ -574,13 +574,13 @@
 
           const span = document.createElement("span");
           span.className = "badge bg-purple2 draggable-tag";
-          span.innerHTML = `
-            ${name}
-            <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
-            <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${name}" />
-            <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
-            <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg._tempId}" />
-          `;
+            span.innerHTML = `
+              ${cfg.GroupName}
+              <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
+              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.GroupName}" />
+              <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
+              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.SpecificationConfigId || cfg._tempId}" />
+            `;
           container.appendChild(span);
 
           document.getElementById("tagNameInput").value = "";
@@ -599,11 +599,11 @@
             const span = document.createElement("span");
             span.className = "badge bg-purple2 draggable-tag";
             span.innerHTML = `
-              ${cfg.groupName}
+              ${cfg.GroupName}
               <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
-              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.groupName}" />
+              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.GroupName}" />
               <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
-              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.specificationConfigId || cfg._tempId}" />
+              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.SpecificationConfigId || cfg._tempId}" />
             `;
             container.appendChild(span);
           });
@@ -616,20 +616,20 @@
         document.addEventListener("DOMContentLoaded", renderTagsFromModel);
 
         function removeTag(btn) {
-            const tag = btn.parentElement;
-            const name = tag.querySelector("input[type=hidden]").value;
+          const tag = btn.parentElement;
+          const name = tag.querySelector("input[name*='GroupName']").value;
 
-            // 1. 從全域 specConfigs 移除
-            specConfigs = specConfigs.filter(c => c.groupName !== name);
+          // 從全域 specConfigs 移除（注意這裡要比對 GroupName）
+          specConfigs = specConfigs.filter(c => c.GroupName !== name);
 
-            // 2. 移除畫面上的 badge
-            tag.remove();
+          // 移除畫面上的 badge
+          tag.remove();
 
-            // 3. 重新整理索引
-            refreshIndexes();
+          // 重新整理索引
+          refreshIndexes();
 
-            // 4. 重繪 SKU 規格值欄位
-            refreshSpecOptions();
+          // 重繪 SKU 規格值欄位
+          refreshSpecOptions();
         }
 
         function refreshIndexes() {
@@ -659,19 +659,33 @@
         function buildSpecOptions(skuIndex, values = {}) {
           if (!Array.isArray(specConfigs)) return "";
 
+          const skuIdInput = document.querySelector(`#specCards .spec-card:nth-child(${skuIndex + 1}) input[name*='SkuId']`);
+          const skuId = skuIdInput ? skuIdInput.value : 0;
+
           return specConfigs.map((cfg, j) => {
             const stableId = getStableConfigId(cfg);
+            const val = values[stableId] || {};
+
             return `
-              <div class="card p-2 flex-fill bg-warning bg-opacity-25" style="min-width:120px; max-width:200px;">
+              <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values" 
+                   style="min-width:120px; max-width:200px;">
                 <label class="form-label fw-bold small mb-1">${cfg.GroupName}</label>
 
                 <input type="hidden"
                        name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationConfigId"
                        value="${stableId}" />
 
+                <input type="hidden"
+                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationOptionId"
+                       value="${val.SpecificationOptionId || 0}" />
+
+                <input type="hidden"
+                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SkuId"
+                       value="${skuId}" />
+
                 <input type="text" class="form-control form-control-sm"
                        name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"
-                       value="${values[stableId]?.OptionName ?? ''}" />
+                       value="${val.OptionName || ''}" />
               </div>
             `;
           }).join('');
@@ -679,37 +693,29 @@
 
 
         // 更新所有 SKU 卡片的規格值區塊
-        function refreshSpecOptions() {
-            document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
-                const currentValues = {};
+       function refreshSpecOptions() {
+          document.querySelectorAll('#specCards .spec-card').forEach((card, skuIndex) => {
+            const skuId = card.querySelector("input[name*='SkuId']").value;
+            const currentValues = {};
 
-                // card.querySelectorAll(".spec-values input").forEach(input => {
-                //     // 同時支援 SpecOptions[x] 和 SpecConfigs[n].SpecOptions[x]
-                //     const match = input.name.match(/SpecOptions\[(\d+)\]/) 
-                //                || input.name.match(/SpecConfigs\[\d+\]\.SpecOptions\[(\d+)\]/);
+            card.querySelectorAll(".spec-values").forEach(block => {
+              const cfgId = block.querySelector("input[name*='SpecificationConfigId']").value;
+              const optionInput = block.querySelector("input[name*='OptionName']");
+              const optionIdInput = block.querySelector("input[name*='SpecificationOptionId']");
 
-                //     if (match) {
-                //         currentValues[match[1]] = input.value;
-                //     }
-                // });
-
-                // 每個規格值區塊，找 hidden 的 SpecificationConfigId
-                card.querySelectorAll(".spec-values").forEach(block => {
-                    const idInput = block.querySelector("input[name*='SpecificationConfigId']");
-                    const optionInput = block.querySelector("input[name*='OptionName']");
-                    if (idInput && optionInput) {
-                        const stableId = parseInt(idInput.value, 10);
-                        currentValues[stableId] = { OptionName: optionInput.value };
-                    }
-                });
-
-                const specValuesBlock = card.querySelector(".spec-values");
-                if (specValuesBlock) {
-                    specValuesBlock.innerHTML = buildSpecOptions(i, currentValues);
-                }
+              currentValues[cfgId] = {
+                OptionName: optionInput ? optionInput.value : "",
+                SpecificationOptionId: optionIdInput ? optionIdInput.value : 0,
+                SkuId: skuId
+              };
             });
-        }
 
+            const container = card.querySelector(".spec-values-container");
+            if (container) {
+              container.innerHTML = buildSpecOptions(skuIndex, currentValues);
+            }
+          });
+        }
         
         // 讓卡片可拖曳
         new Sortable(document.getElementById("specCards"), {

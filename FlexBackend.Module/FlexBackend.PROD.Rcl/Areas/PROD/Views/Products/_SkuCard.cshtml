@@ -89,26 +89,36 @@
             </div>
         </div>
 
-        <div class="spec-values col-12 d-flex flex-wrap gap-2">
-            @for (int j = 0; j < specConfigs.Count; j++)
-            {
-                var cfg = specConfigs[j];
-                for (int k = 0; k < cfg.SpecOptions.Count; k++)
-                {
-                    var opt = cfg.SpecOptions[k];
-                    <div class="card p-2 flex-fill bg-warning bg-opacity-25" style="min-width:120px; max-width:200px;">
-                        <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
+        <!-- spec-values 容器 (提供 JS 更新用) -->
+        <div class="spec-values-container d-flex flex-wrap gap-2">
+        @{
+            var cfgs = ViewData["SpecConfigs"] as List<ProdSpecificationConfigDto> ?? new();
+            var skuId = Model.SkuId;
+        }
 
-                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SkuId" value="@opt.SkuId" />
-                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationConfigId" value="@opt.SpecificationConfigId" />
-                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationOptionId" value="@opt.SpecificationOptionId" />
+@for (int j = 0; j < cfgs.Count; j++)
+{
+    var cfg = cfgs[j];
+    var options = cfg.SpecOptions?.Where(o => o.SkuId == skuId).ToList() ?? new();
 
-                        <input type="text" class="form-control form-control-sm"
-                               name="SpecConfigs[@j].SpecOptions[@k].OptionName"
-                               value="@opt.OptionName" />
-                    </div>
-                }
-            }
+    for (int k = 0; k < options.Count; k++)
+    {
+        var opt = options[k];
+
+        <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values"
+             style="min-width:120px; max-width:200px;">
+            <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
+
+            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationConfigId" value="@opt.SpecificationConfigId" />
+            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationOptionId" value="@opt.SpecificationOptionId" />
+            <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SkuId" value="@skuId" />
+
+            <input type="text" class="form-control form-control-sm"
+                   name="SpecConfigs[@j].SpecOptions[@k].OptionName"
+                   value="@opt.OptionName" />
+        </div>
+    }
+}
         </div>
 
 
