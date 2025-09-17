@@ -25,21 +25,14 @@
         <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
 
-             <!-- 品類下拉（改為打後端真資料） -->
-<div class="mr-3 d-flex align-items-center">
-  <span class="text-muted small mr-2">品類</span>
-  <select id="categorySelect" class="custom-select custom-select-sm" style="min-width: 180px;">
-    <option value="">全部</option> <!-- 其餘選項由 JS 動態注入 -->
-  </select>
-</div>
-
-
-                <!-- 維度切換（日/週/月） -->
-                <div class="btn-group btn-group-sm mr-3" role="group" aria-label="Dimension">
-                    <button class="btn btn-outline-primary active" data-dim="day">日</button>
-                    <button class="btn btn-outline-primary" data-dim="week">週</button>
-                    <button class="btn btn-outline-primary" data-dim="month">月</button>
+                <!-- 品類下拉（改為打後端真資料） -->
+                <div class="mr-3 d-flex align-items-center">
+                    <span class="text-muted small mr-2">品類</span>
+                    <select id="categorySelect" class="custom-select custom-select-sm" style="min-width: 180px;">
+                        <option value="">全部</option> <!-- 其餘選項由 JS 動態注入 -->
+                    </select>
                 </div>
+
 
                 <!-- 同期比較（UI 先放） -->
                 <div class="form-inline mr-3">
@@ -111,7 +104,7 @@
 
     <!-- 銷售 KPI（只留與銷售有關的四張卡片） -->
     <div class="row">
-		<!-- 近區間營收 -->
+        <!-- 近區間營收 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body d-flex justify-content-between align-items-center">
@@ -124,7 +117,7 @@
             </div>
         </div>
 
-		<!-- 訂單數 -->
+        <!-- 訂單數 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body d-flex justify-content-between align-items-center">
@@ -137,6 +130,7 @@
             </div>
         </div>
 
+        <!-- 售出數量 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body d-flex justify-content-between align-items-center">
@@ -149,7 +143,7 @@
             </div>
         </div>
 
-		<!-- 平均客單價 -->
+        <!-- 平均客單價 -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body d-flex justify-content-between align-items-center">
@@ -163,25 +157,40 @@
         </div>
     </div>
 
-    <!-- 圖表列：營收折線圖 -->
+    <!-- 圖表列：營收折線圖（可放大） -->
     <div class="row">
         <div class="col-xl-12 col-lg-12">
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4 chart-card">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">
                         營收概況 <small class="text-muted ml-2" id="filterHint" style="display:none">(已套用品類篩選)</small>
                     </h6>
+
+                    <!-- 維度切換（日/週/月） -->
+                    <div class="btn-group btn-group-sm" id="dimensionGroup">
+                        <button type="button" class="btn btn-gray active" data-dim="day">日</button>
+                        <button type="button" class="btn btn-gray" data-dim="week">週</button>
+                        <button type="button" class="btn btn-gray" data-dim="month">月</button>
+                    </div>
+
+
+                    <button class="btn btn-sm btn-outline-secondary js-zoom" data-zoom="#myAreaChart">
+                        <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                    </button>
                 </div>
                 <div class="card-body">
-                    <div class="chart-area"><canvas id="myAreaChart" height="120"></canvas></div>
+                    <div class="chart-wrap">
+                        <canvas id="myAreaChart" class="chart-canvas"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+
     <!-- 熱銷 Top + 品類排行 -->
     <div class="row">
-		<!-- 熱銷商品表格 -->
+        <!-- 熱銷商品表格 -->
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex align-items-center justify-content-between">
@@ -208,43 +217,180 @@
             </div>
         </div>
 
+        <!-- 品類銷售排行（營收，可放大） -->
         <div class="col-xl-4 col-lg-5">
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4 chart-card">
                 <div class="card-header py-3 d-flex align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">品類銷售排行（營收）</h6>
+                    <button class="btn btn-sm btn-outline-secondary js-zoom" data-zoom="#catBarChart">
+                        <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                    </button>
                 </div>
                 <div class="card-body">
-                    <canvas id="catBarChart" height="260"></canvas>
+                    <div class="chart-wrap">
+                        <canvas id="catBarChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    <!-- 新增：會員購買統計（長條） + 物流方式使用（圓餅） -->
+    <div class="row">
+        <!-- 會員購買統計：主要圖（吃 8 欄，夠高） -->
+        <div class="col-xl-8 col-lg-12 mb-4">
+            <div class="card shadow chart-card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">會員購買統計</h6>
+                    <div class="d-flex align-items-center">
+                        <small class="text-muted mr-2">近 <span id="mp-days">30</span> 天</small>
+
+                            <button class="btn btn-sm btn-outline-secondary js-zoom" data-zoom="#chartMemberPurchase">
+                                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                            </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrap">
+                        <canvas id="chartMemberPurchase" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 物流方式使用：次要圖（吃 4 欄，tab 切換指標） -->
+        <div class="col-xl-4 col-lg-12 mb-4">
+            <div class="card shadow chart-card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">物流方式使用</h6>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="LogisticsMetric">
+                        <button class="btn btn-outline-secondary" data-metric="使用次數">次數</button>
+                        <button class="btn btn-outline-secondary" data-metric="平均運費">平均運費</button>
+                        <button class="btn btn-outline-secondary" data-metric="總營業額">營業額</button>
+
+                            <button class="btn btn-outline-secondary ml-2 js-zoom" data-zoom="#chartLogisticsPie">
+                                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                            </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrap">
+                        <canvas id="chartLogisticsPie" class="chart-canvas"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-</div>
 
 <!-- Chart.js（v4） -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
-<style>
-    /* 小樣式微調：chips 間距與列印視圖 */
-    #globalToolbar .btn-group .btn {
-        margin: 2px;
-    }
+    <style>
+        /* 小樣式微調：chips 間距與列印視圖 */
+        #globalToolbar .btn-group .btn {
+            margin: 2px;
+        }
 
-   
-    @@media print {
-        #globalToolbar, #rangeSelect, #btnRefresh, .dropdown, .custom-select, .custom-control
+        @@media print {
+            #globalToolbar, #rangeSelect, #btnRefresh, .dropdown, .custom-select, .custom-control {
+                display: none !important;
+            }
 
-    {
-        display: none !important;
-    }
+            .card {
+                box-shadow: none !important;
+            }
+        }
 
-    .card {
-        box-shadow: none !important;
-    }
+        /* === 大小與排版（讓圖表變大變好看） === */
+        .chart-card {
+            min-height: 380px; /* 基礎高度 */
+        }
 
-    }
-</style>
+        @@media (min-width: 1200px) {
+            .chart-card {
+                min-height: 440px;
+            }
+            /* XL 螢幕再高一些 */
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: clamp(340px, 42vh, 560px); /* 依視窗高度自適應 */
+        }
+
+        .chart-canvas {
+            width: 100% !important;
+            height: 100% !important; /* 讓 Chart.js 吃父層高度 */
+        }
+
+        /* === 放大（全螢幕） === */
+        .chart-zooming {
+            position: fixed;
+            inset: 0;
+            z-index: 1080;
+            background: #fff;
+            margin: 0 !important;
+            border-radius: 0 !important;
+        }
+
+            .chart-zooming .chart-wrap {
+                height: calc(100vh - 4rem); /* 全螢幕時吃滿高度 */
+            }
+
+            :root {
+                --gray-50: #f9fafb;
+                --gray-150: #f3f4f6;
+                --gray-300: #d1d5db;
+                --gray-500: #6b7280;
+                --gray-700: #374151;
+            }
+
+            /* 灰色實心按鈕 */
+            .btn-gray {
+                background: var(--gray-50);
+                color: var(--gray-700);
+                border: 1px solid var(--gray-300);
+            }
+
+                .btn-gray:hover {
+                    background: var(--gray-150);
+                    border-color: var(--gray-500);
+                }
+
+                .btn-gray.active,
+                .btn-gray:active {
+                    background: var(--gray-700);
+                    color: #fff;
+                    border-color: var(--gray-700);
+                    box-shadow: 0 0 0 .2rem rgba(107, 114, 128, .35);
+                }
+
+            /* 灰色描邊按鈕（需要時用） */
+            .btn-outline-gray {
+                background: #fff;
+                color: var(--gray-500);
+                border: 1px solid var(--gray-300);
+            }
+
+                .btn-outline-gray:hover {
+                    background: var(--gray-50);
+                    border-color: var(--gray-500);
+                    color: var(--gray-700);
+                }
+
+                .btn-outline-gray.active,
+                .btn-outline-gray:active {
+                    background: var(--gray-700);
+                    color: #fff;
+                    border-color: var(--gray-700);
+                }
+
+
+    </style>
+
+
+
 
 <script>
     /* ====== 本地化格式工具 ====== */
@@ -264,6 +410,8 @@
 
     /* ====== 圖表實例 ====== */
     let areaChart = null, catBarChart = null;
+    // 新增：會員/物流圖表實例
+    let chartMember = null, chartLogistics = null;
 
     /* ====== 共用：CSV 下載器與 BOM（避免 Excel 亂碼） ====== */
     const CSV_BOM = '\uFEFF';
@@ -320,7 +468,7 @@
       document.getElementById('kpi-aov').textContent           = fmtMoney.format(k.aov ?? 0);
     }
 
-    /* ====== 折線圖 ====== */
+    /* ====== 折線圖（營收 & 訂單數） ====== */
     function buildAreaChart(labelsISO, net, orders) {
       const ctx = document.getElementById('myAreaChart'); if (!ctx) return;
       if (areaChart) areaChart.destroy();
@@ -357,6 +505,70 @@
         }
       });
     }
+                // 把 kpi.trend.previous 這種 [{date:'yyyy-MM-dd', revenue:數字}] 對齊到 ov.labels 的陣列
+            function alignRevenueSeries(labelsISO, trendList) {
+              const map = new Map((trendList || []).map(x => [x.date, Number(x.revenue || 0)]));
+              return labelsISO.map(d => map.get(d) || 0);
+            }
+
+            // 在現有 areaChart 上加/移除「同期（營收）虛線」
+            function applyCompareOverlay(prevRevenueSeries) {
+              if (!areaChart) return;
+              // 移除舊的 compare dataset
+              const idx = areaChart.data.datasets.findIndex(ds => ds._isCompare === true);
+              if (idx > -1) areaChart.data.datasets.splice(idx, 1);
+
+              // 若需要疊，就加一條虛線
+              if (state.compare.enabled && prevRevenueSeries && prevRevenueSeries.length) {
+                areaChart.data.datasets.push({
+                  label: state.compare.type === 'yoy' ? '去年同期（營收）' : '上期（營收）',
+                  data: prevRevenueSeries,
+                  borderWidth: 2,
+                  borderDash: [6, 4],
+                  fill: false,
+                  tension: 0.3,
+                  _isCompare: true   // 自訂旗標，方便下次移除
+                });
+              }
+              areaChart.update();
+            }
+                     // === 同期疊線：索引對齊（唯一版本；只留這組） ===
+
+            // 以「第幾天」對齊同期資料（不用日期比對）
+            function alignPrevByIndex(labelsISO, prevList) {
+              const len = labelsISO.length;
+              if (!prevList || !prevList.length) return Array(len).fill(0);
+
+              const sorted = [...prevList].sort((a,b) => a.date.localeCompare(b.date));
+              const t0 = new Date(sorted[0].date + 'T00:00:00');
+              const map = new Map(); // idx -> revenue
+
+              for (const x of sorted) {
+                const t = new Date(x.date + 'T00:00:00');
+                const idx = Math.floor((t - t0) / 86400000);
+                if (idx >= 0 && idx < len) map.set(idx, (map.get(idx) || 0) + Number(x.revenue || 0));
+              }
+              return Array.from({length: len}, (_, i) => map.get(i) || 0);
+            }
+
+            // 依目前粒度（day/week/month）產生要疊的同期序列
+            function buildCompareSeriesForCurrentDimByIndex() {
+              const ov  = state.cache.overview || { labels: [], net: [] };
+              const kpi = state.cache.kpi;
+              if (!kpi) { return []; }
+
+              // 先按索引對齊成本期「日」序列
+              const dayPrev = alignPrevByIndex(ov.labels, kpi.trend?.previous || []);
+
+              // 再依目前粒度聚合
+              if (state.dimension === 'day') {
+                return dayPrev;
+              }
+              const agg = aggregate(ov.labels, dayPrev, state.dimension);
+              return agg.data;
+            }
+
+
 
     /* ====== 橫向長條（品類營收） ====== */
     function buildCatBarChart(labels, revenue) {
@@ -376,6 +588,31 @@
         }
       });
     }
+            // 讓所有已建立的圖表重算尺寸
+        function resizeAllCharts() {
+          [areaChart, catBarChart, chartMember, chartLogistics].forEach(c => { if (c) c.resize(); });
+        }
+
+        // 綁定「放大」按鈕（加/移除全螢幕樣式）
+        function bindZoomButtons() {
+          document.querySelectorAll('.js-zoom').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const sel = btn.getAttribute('data-zoom');      // e.g. #chartMemberPurchase
+              const canvas = document.querySelector(sel);
+              if (!canvas) return;
+              const card = canvas.closest('.card');
+              card.classList.toggle('chart-zooming');
+              // 切換後重算一次尺寸
+              setTimeout(resizeAllCharts, 50);
+            });
+          });
+        }
+
+        // 監看卡片尺寸變化（收合側欄/視窗變動時讓圖表自動重繪）
+        const _ro = new ResizeObserver(() => resizeAllCharts());
+        document.addEventListener('DOMContentLoaded', () => {
+          document.querySelectorAll('.chart-card').forEach(el => _ro.observe(el));
+        });
 
     /* ====== 熱銷 Top 表格 ====== */
     function renderTopTable(list) {
@@ -405,161 +642,275 @@
       if (!resp.ok) throw new Error(`Overview HTTP ${resp.status}`);
       return await resp.json();
     }
-async function fetchTops(days, top = 10) {
-  const q = new URLSearchParams({
-    days: String(days),
-    top: String(top),
-    category: state.category || ''   // ★ 新增
-  }).toString();
-  const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?${q}`;
-  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
-  return await resp.json();
-}
+    async function fetchTops(days, top = 10) {
+      const q = new URLSearchParams({
+        days: String(days),
+        top: String(top),
+        category: state.category || ''   // ★ 後端依 category 篩選
+      }).toString();
+      const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?${q}`;
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
+      return await resp.json();
+    }
+                // 取「本期 vs 同期」KPI 與走勢（用我們新增的後端 /kpi）
+            async function fetchKpi(days, mode = 'prev', includeSim = true) {
+              const q = new URLSearchParams({
+                days: String(days),
+                mode: mode === 'yoy' ? 'yoy' : 'prev',
+                includeSim: String(includeSim) // true/false
+              }).toString();
+              const url = `${apiBase}/kpi?${q}`;
+              const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+              if (!resp.ok) throw new Error(`Kpi HTTP ${resp.status}`);
+              return await resp.json();
+            }
 
 
- 
+    // 新增：會員/物流 API
+    const apiBase = "@Url.Content("~/api/cs/dashboard")";
 
-    /* ====== 整體刷新 ====== */
-   async function refresh(days = state.days) {
-  try {
-    state.days = days;
+    /* ====== 會員購買統計（長條） ====== */
+    async function loadMemberBar() {
+      const days = state.days || 30;
+      document.getElementById('mp-days').innerText = String(days);
+      // 你也可以改 min/maxUser，這裡先用 1011~1050
+      const url = `${apiBase}/memberPurchaseStats?days=${days}&minUser=1011&maxUser=1050`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error(`memberPurchaseStats HTTP ${res.status}`);
+      const json = await res.json();
 
-    // 1) 折線圖
-    const ov = await fetchOverview(days);
-    state.cache.overview = ov;
+      const ctx = document.getElementById('chartMemberPurchase'); if (!ctx) return;
+      if (chartMember) chartMember.destroy();
 
-    // 2) KPI + Top + 分類（已由後端依 category 篩選）
-    const tp = await fetchTops(days, 10);
-    state.cache.tpsrc = tp;
+      // 用「消費總額」+「平均消費」雙軸
+      chartMember = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: json.labels,
+          datasets: [
+            { label: json.datasets[1].label, data: json.datasets[1].data, yAxisID: 'y' },  // 消費總額
+            { label: json.datasets[2].label, data: json.datasets[2].data, yAxisID: 'y1', type: 'line', borderWidth: 2 } // 平均
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            y:  { title: { display: true, text: '消費總額' }, ticks: { callback: v => fmtMoney.format(v) } },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '平均消費' },
+                  ticks: { callback: v => fmtMoney.format(v) } }
+          },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.dataset.yAxisID==='y' ? fmtMoney.format(c.parsed.y) : fmtMoney.format(c.parsed.y)}` } }
+          }
+        }
+      });
+    }
 
-    // 顯示「已套用品類篩選」
-    document.getElementById('filterHint').style.display = state.category ? '' : 'none';
+    /* ====== 物流方式使用（圓餅，可切換指標） ====== */
+    let logisticsMetric = "使用次數"; // 預設
+    async function loadLogisticsPie() {
+      const days = state.days || 30;
+      // 若想改用 OrderNo 區間，換成 &orderNoFrom=202501010000001&orderNoTo=202507309999999
+      const url = `${apiBase}/logisticsUsage?days=${days}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error(`logisticsUsage HTTP ${res.status}`);
+      const json = await res.json();
 
-    // KPI
-    updateSalesKpis(tp.kpi || {});
+      const ds = json.datasets.find(d => d.label === logisticsMetric) || json.datasets[0];
 
-    // 表格
-    const list = (tp.topProducts || []).map(x => ({
-      rank: x.rank, sku: x.sku, name: x.name, category: x.category,
-      qty: x.qty, revenue: x.revenue, share: x.share
-    }));
-    state.viewTopList = list;
-    renderTopTable(list);
+      const ctx = document.getElementById('chartLogisticsPie'); if (!ctx) return;
+      if (chartLogistics) chartLogistics.destroy();
 
-    // 品類長條
-    const labels = tp.categories?.labels || [];
-    const revenue = tp.categories?.revenue || [];
-    buildCatBarChart(labels, revenue);
+      chartLogistics = new Chart(ctx, {
+        type: 'pie',
+        data: { labels: json.labels, datasets: [{ label: ds.label, data: ds.data }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: c => `${c.label}: ${Number(c.parsed).toLocaleString()}` } }
+          }
+        }
+      });
+    }
 
-    // 折線圖
-    buildAreaChart(ov.labels, ov.net, ov.orders);
+    // 切換物流指標（圓餅）
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-metric]');
+      if (!btn) return;
+      logisticsMetric = btn.dataset.metric;
+      loadLogisticsPie();
+    });
 
-    // 其他 UI
-    document.getElementById('lastUpdated').textContent =
-      new Date().toLocaleString('zh-TW', { hour12: false });
+              /* ====== 整體刷新（取代原本版本） ====== */
+                        async function refresh(days = state.days) {
+              try {
+                state.days = days;
 
-    const anom = (tp.kpi?.aov ?? 0) <= 0 ? 1 : 0;
-    const badge = document.getElementById('badgeAnom');
-    badge.textContent = anom;
-    badge.style.display = anom > 0 ? '' : 'none';
+                // 併發撈資料：Overview + Tops +（若開同期）Kpi
+                const needKpi = state.compare.enabled;
+                const [ov, tp, kpi] = await Promise.all([
+                  fetchOverview(days),
+                  fetchTops(days, 10),
+                  needKpi ? fetchKpi(days, state.compare.type === 'yoy' ? 'yoy' : 'prev', true) : Promise.resolve(null)
+                ]);
 
-  } catch (err) {
-    console.error('Dashboard refresh error:', err);
-  }
-}
+                state.cache.overview = ov;
+                state.cache.tpsrc = tp;
+                state.cache.kpi = kpi; // ← 只設一次
+
+                // 顯示「已套用品類篩選」
+                document.getElementById('filterHint').style.display = state.category ? '' : 'none';
+
+                // KPI：用 Kpi 的「營收/訂單/AOV」，售出數量仍用 Tops 的 UnitsSold
+                const mergedKpi = {
+                  totalRevenue: kpi?.current?.revenue ?? tp.kpi?.totalRevenue ?? 0,
+                  totalOrders : kpi?.current?.orders  ?? tp.kpi?.totalOrders  ?? 0,
+                  unitsSold   : tp.kpi?.unitsSold     ?? 0,
+                  aov         : kpi?.current?.aov     ?? tp.kpi?.aov         ?? 0
+                };
+                updateSalesKpis(mergedKpi);
+
+                // Top 表格
+                const list = (tp.topProducts || []).map(x => ({
+                  rank: x.Rank ?? x.rank, sku: x.Sku ?? x.sku, name: x.Name ?? x.name,
+                  category: x.Category ?? x.category, qty: x.Qty ?? x.qty,
+                  revenue: x.Revenue ?? x.revenue, share: x.Share ?? x.share
+                }));
+                state.viewTopList = list;
+                renderTopTable(list);
+
+                // 品類長條
+                buildCatBarChart(tp.categories?.labels || [], tp.categories?.revenue || []);
+
+                // 折線圖（本期）
+                buildAreaChart(ov.labels, ov.net, ov.orders);
+
+                // 同期虛線（有資料才疊）
+                const hasPrevData = !!kpi && ((kpi.previous?.revenue ?? 0) !== 0 || (kpi.previous?.orders ?? 0) !== 0);
+                const compSeries = (needKpi && hasPrevData) ? buildCompareSeriesForCurrentDimByIndex() : [];
+                applyCompareOverlay(compSeries);
+
+                // 其他圖
+                await Promise.all([loadMemberBar(), loadLogisticsPie()]);
+
+                // UI
+                document.getElementById('lastUpdated').textContent =
+                  new Date().toLocaleString('zh-TW', { hour12: false });
+
+                const anom = (mergedKpi.aov ?? 0) <= 0 ? 1 : 0;
+                const badge = document.getElementById('badgeAnom');
+                badge.textContent = anom;
+                badge.style.display = anom > 0 ? '' : 'none';
+
+              } catch (err) {
+                console.error('Dashboard refresh error:', err);
+              }
+            }
+
 
     // 取品類清單（打後端）
-async function fetchProductTypes() {
-  const url = '@Url.Content("~/api/cs/dashboard/productTypes")';
-  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    async function fetchProductTypes() {
+      const url = '@Url.Content("~/api/cs/dashboard/productTypes")';
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
-  // 先讀文字，方便 debug
-  const text = await resp.text();
-  const ct = resp.headers.get('content-type') || '';
+      // 先讀文字，方便 debug
+      const text = await resp.text();
+      const ct = resp.headers.get('content-type') || '';
 
-  if (!resp.ok) {
-    console.error('productTypes HTTP', resp.status, text);
-    throw new Error(`productTypes HTTP ${resp.status}`);
-  }
+      if (!resp.ok) {
+        console.error('productTypes HTTP', resp.status, text);
+        throw new Error(`productTypes HTTP ${resp.status}`);
+      }
 
-  if (!ct.includes('application/json')) {
-    console.error('⚠️ productTypes 回傳的不是 JSON，內容前 200 字：', text.slice(0, 200));
-    throw new Error('productTypes 回傳 HTML（可能是登入頁/錯誤頁），不是 JSON');
-  }
+      if (!ct.includes('application/json')) {
+        console.error('⚠️ productTypes 回傳的不是 JSON，內容前 200 字：', text.slice(0, 200));
+        throw new Error('productTypes 回傳 HTML（可能是登入頁/錯誤頁），不是 JSON');
+      }
 
-  return JSON.parse(text);
-}
+      return JSON.parse(text);
+    }
 
+    // 建立下拉選單（正確）
+    async function loadCategories() {
+      const sel = document.getElementById('categorySelect');
+      if (!sel) return;
 
-// 建立下拉選單
-// 建立下拉選單（正確）
-async function loadCategories() {
-  const sel = document.getElementById('categorySelect');
-  if (!sel) return;
+      // 先放「全部」
+      sel.innerHTML = '<option value="">全部</option>';
 
-  // 先放「全部」
-  sel.innerHTML = '<option value="">全部</option>';
+      try {
+        const types = await fetchProductTypes(); // 期待 [{ code, name }, ...]
+        types.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.code;          // 例如 'HERB'、'VITA'、'__NULL__'
+          opt.textContent = t.name;    // 例如 '草本補充品'
+          sel.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('loadCategories failed:', err);
+      }
+    }
 
-  try {
-    const types = await fetchProductTypes(); // 期待 [{ code, name }, ...]
-    types.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.code;          // 例如 'HERB'、'VITA'、'__NULL__'
-      opt.textContent = t.name;    // 例如 '草本補充品'
-      sel.appendChild(opt);
-    });
-  } catch (err) {
-    console.error('loadCategories failed:', err);
-  }
-}
-
-
+    // 取得目前「最近 X 天」下拉框的值
+    function getSelectedDays(){ return parseInt(document.getElementById('rangeSelect')?.value,10) || 30; }
 
     /* ====== 初始化事件 ====== */
     (function init() {
-      // 先載入品類選項
-  loadCategories().then(() => refresh(30));
+      // 先載入品類選項，再刷新
+      loadCategories().then(() => refresh(30));
 
-  // 區間選擇 & 手動重新整理
-  document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
-  document.getElementById('btnRefresh').addEventListener('click', () => {
-    const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
-    refresh(days);
-  });
-
-  // 維度切換
-  document.querySelectorAll('[data-dim]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-dim]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.dimension = btn.dataset.dim;
-      const ov = state.cache.overview || { labels:[], net:[], orders:[] };
-      buildAreaChart(ov.labels, ov.net, ov.orders);
-    });
-  });
-
-  // 品類下拉：變更就刷新（後端會依 category 篩選）
-  document.getElementById('categorySelect').addEventListener('change', (e) => {
-    state.category = e.target.value || '';  // '' | '__NULL__' | 真實 Code
-    refresh(state.days);
-  });
-
-      // 同期比較（UI 先放）
-      const switchCompare = document.getElementById('switchCompare');
-      const compareType = document.getElementById('compareType');
-      switchCompare.addEventListener('change', () => {
-        state.compare.enabled = switchCompare.checked;
-        compareType.disabled = !switchCompare.checked;
-        state.compare.type = compareType.value;
-        // TODO: 之後你有 API 時，在這裡呼叫並疊第二條線
+      // 區間選擇 & 手動重新整理
+      document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
+      document.getElementById('btnRefresh').addEventListener('click', () => {
+        const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+        refresh(days);
       });
-      compareType.addEventListener('change', () => state.compare.type = compareType.value);
 
-     
+      // 維度切換（日/週/月）→ 只重畫折線圖（資料用快取）
+              document.querySelectorAll('[data-dim]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-dim]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.dimension = btn.dataset.dim;
+
+                const ov = state.cache.overview || { labels:[], net:[], orders:[] };
+                buildAreaChart(ov.labels, ov.net, ov.orders);
+
+                const hasPrevData = !!state.cache.kpi && ((state.cache.kpi.previous?.revenue ?? 0) !== 0 || (state.cache.kpi.previous?.orders ?? 0) !== 0);
+                const compSeries = (state.compare.enabled && hasPrevData) ? buildCompareSeriesForCurrentDimByIndex() : [];
+                applyCompareOverlay(compSeries);
+              });
+            });
+
+      // 品類下拉：變更就刷新（後端會依 category 篩選）
+      document.getElementById('categorySelect').addEventListener('change', (e) => {
+        state.category = e.target.value || '';  // '' | '__NULL__' | 真實 Code
+        refresh(state.days);
+      });
+
+    
+                 // 同期比較（真正接 API）
+            const switchCompare = document.getElementById('switchCompare');
+            const compareType = document.getElementById('compareType');
+
+            switchCompare.addEventListener('change', () => {
+              state.compare.enabled = switchCompare.checked;
+              compareType.disabled = !switchCompare.checked;
+              state.compare.type = compareType.value === 'yoy' ? 'yoy' : 'last';
+              refresh(state.days); // 重新取數＋重畫
+            });
+
+            compareType.addEventListener('change', () => {
+              state.compare.type = compareType.value === 'yoy' ? 'yoy' : 'last';
+              if (state.compare.enabled) refresh(state.days);
+            });
+
 
       /* ====== 匯出功能 ====== */
-
       // KPI -> CSV（UTF-8 BOM）
       document.getElementById('exportKpiCsv').addEventListener('click', (e) => {
         e.preventDefault();
@@ -575,17 +926,17 @@ async function loadCategories() {
         downloadFile(CSV_BOM + csv, `kpi_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
       });
 
-        // KPI -> Excel（呼叫後端 ClosedXML API + cache-busting）
-    const elExcel = document.getElementById('exportKpiExcel');
-    if (elExcel) {
-      elExcel.addEventListener('click', (e) => {
-        e.preventDefault();
-        const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
-        const url = '@Url.Content("~/api/cs/export/kpi")' + `?days=${days}&_=${Date.now()}`;
-        // 用 location.href 避免被視為彈窗而被瀏覽器擋掉
-        location.href = url;
-      });
-    }
+      // KPI -> Excel（呼叫後端 ClosedXML API + cache-busting）
+      const elExcel = document.getElementById('exportKpiExcel');
+      if (elExcel) {
+        elExcel.addEventListener('click', (e) => {
+          e.preventDefault();
+          const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+          const url = '@Url.Content("~/api/cs/export/kpi")' + `?days=${days}&_=${Date.now()}`;
+          // 用 location.href 避免被視為彈窗而被瀏覽器擋掉
+          location.href = url;
+        });
+      }
 
       // KPI -> PDF（瀏覽器列印）
       document.getElementById('exportKpiPdf').addEventListener('click', (e) => {
@@ -593,7 +944,7 @@ async function loadCategories() {
         window.print();
       });
 
-      // 異常清單 CSV / PDF
+      // 異常清單 CSV
       document.getElementById('exportAnomaliesCsv').addEventListener('click', (e) => {
         e.preventDefault();
         const k = state.cache.tpsrc?.kpi || {};
@@ -604,73 +955,58 @@ async function loadCategories() {
         const csv = rows.map(r => r.join(',')).join('\n');
         downloadFile(CSV_BOM + csv, `anomalies_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
       });
-        // 異常清單 -> PDF (原本缺少這段)
-    document.getElementById('exportAnomaliesPdf').addEventListener('click', (e) => {
-        e.preventDefault();
 
-        // 重複使用 CSV 的邏輯來抓取異常資料
+      // 異常清單 -> PDF（新視窗列印）
+      document.getElementById('exportAnomaliesPdf').addEventListener('click', (e) => {
+        e.preventDefault();
         const k = state.cache.tpsrc?.kpi || {};
         const anomalies = [];
         if ((k.aov ?? 0) <= 0) anomalies.push(['平均客單價', '為 0，可能有資料異常']);
         if ((k.totalRevenue ?? 0) < 1000) anomalies.push(['營收過低', k.totalRevenue ?? 0]);
 
-        // 產生一個簡單的 HTML 報表字串
         let htmlContent = `
-            <style>
-                body { font-family: sans-serif; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                th { background-color: #f2f2f2; }
-            </style>
-            <h2>異常清單報表</h2>
-            <p>報表產生時間：${new Date().toLocaleString('zh-TW')}</p>
-            <hr>
-            <table>
-                <thead>
-                    <tr>
-                        <th>項目</th>
-                        <th>說明</th>
-                    </tr>
-                </thead>
-                <tbody>
+          <style>
+            body { font-family: sans-serif; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+          <h2>異常清單報表</h2>
+          <p>報表產生時間：${new Date().toLocaleString('zh-TW')}</p>
+          <hr>
+          <table>
+            <thead><tr><th>項目</th><th>說明</th></tr></thead>
+            <tbody>
         `;
 
         if (anomalies.length > 0) {
-            anomalies.forEach(item => {
-                htmlContent += `<tr><td>${item[0]}</td><td>${item[1]}</td></tr>`;
-            });
+          anomalies.forEach(item => { htmlContent += `<tr><td>${item[0]}</td><td>${item[1]}</td></tr>`; });
         } else {
-            htmlContent += `<tr><td colspan="2">太棒了！目前沒有發現任何異常。</td></tr>`;
+          htmlContent += `<tr><td colspan="2">太棒了！目前沒有發現任何異常。</td></tr>`;
         }
 
-        htmlContent += `
-                </tbody>
-            </table>
-        `;
+        htmlContent += `</tbody></table>`;
 
-        // 開一個新視窗並觸發列印
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-    });
-        // 取得目前「最近 X 天」下拉框的值
-        function getSelectedDays(){ return parseInt(document.getElementById('rangeSelect')?.value,10) || 30; }
+        const w = window.open('', '_blank');
+        w.document.write(htmlContent);
+        w.document.close();
+        w.focus();
+        w.print();
+      });
 
-    document.getElementById('globalToolbar').addEventListener('click', (e) => {
-      const a = e.target.closest('a.js-export-orders, a.js-export-items');
-      if (!a) return;
-      e.preventDefault();
-      const days = getSelectedDays();
-      const base = a.classList.contains('js-export-orders')
-        ? '/api/cs/export/orders-csv'
-        : '/api/cs/export/order-items-csv';
-      location.href = `${base}?days=${days}&_=${Date.now()}`;
-    });
+      // 下載（示範：訂單/明細 CSV）
+      document.getElementById('globalToolbar').addEventListener('click', (e) => {
+        const a = e.target.closest('a.js-export-orders, a.js-export-items');
+        if (!a) return;
+        e.preventDefault();
+        const days = getSelectedDays();
+        const base = a.classList.contains('js-export-orders')
+          ? '/api/cs/export/orders-csv'
+          : '/api/cs/export/order-items-csv';
+        location.href = `${base}?days=${days}&_=${Date.now()}`;
+      });
 
-
-      // 異常提示鉤子
+      // 異常提示示範
       document.getElementById('btnAnomalies').addEventListener('click', () => {
         alert('異常清單（示範）：\n1) AOV 為 0（請檢查訂單金額或退款資料）');
       });
@@ -695,5 +1031,7 @@ async function loadCategories() {
         state.auto.ms = parseInt(autoInterval.value, 10) * 1000;
         state.auto.timer = setInterval(() => refresh(state.days), state.auto.ms);
       });
+             // ★ 新增：綁定放大按鈕（C-2）
+        bindZoomButtons();
     })();
 </script>
