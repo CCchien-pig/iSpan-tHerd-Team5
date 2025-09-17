@@ -258,8 +258,22 @@ namespace FlexBackend.Infra.Repository.PROD
             }
         }
 
-        // 修改
-        public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
+		/// <summary>
+		/// 檢查 條碼
+		/// </summary>
+		/// <param name="barcodes"></param>
+		/// <param name="excludeSkuIds"></param>
+		/// <returns></returns>
+		public async Task<List<string>> GetDuplicateBarcodesAsync(IEnumerable<string> barcodes, IEnumerable<int> excludeSkuIds)
+		{
+			return await _db.ProdProductSkus
+				.Where(s => barcodes.Contains(s.Barcode) && !excludeSkuIds.Contains(s.SkuId))
+				.Select(s => s.Barcode)
+				.ToListAsync();
+		}
+
+		// 修改
+		public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
             var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();

@@ -13,5 +13,7 @@ namespace FlexBackend.Core.Interfaces.PROD
 
         Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync();
         Task<IEnumerable<SysCodeDto>> GetSysCodes(string mod, List<string> ids);
-    }
+        Task<(bool IsValid, string ErrorMessage)> ValidateProductAsync(ProdProductDto dto);
+
+	}
 }
