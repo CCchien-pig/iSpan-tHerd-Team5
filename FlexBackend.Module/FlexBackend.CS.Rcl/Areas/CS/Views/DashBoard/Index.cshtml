@@ -68,8 +68,9 @@
 
                         <!-- 明細資料 -->
                         <h6 class="dropdown-header">📑 明細資料</h6>
-                        <a href="/api/cs/export/orders-csv" class="dropdown-item">訂單明細 (CSV)</a>
-                        <a href="/api/cs/export/order-items-csv" class="dropdown-item">商品明細 (CSV)</a>
+                        <a href="#" class="dropdown-item js-export-orders">訂單明細 (CSV)</a>
+                        <a href="#" class="dropdown-item js-export-items">商品明細 (CSV)</a>
+
 
                         <div class="dropdown-divider"></div>
 
@@ -557,15 +558,17 @@
         downloadFile(CSV_BOM + csv, `kpi_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
       });
 
-      // KPI -> Excel（呼叫後端 ClosedXML API）
-      const elExcel = document.getElementById('exportKpiExcel');
-      if (elExcel) {
-        elExcel.addEventListener('click', (e) => {
-          e.preventDefault();
-          const url = '@Url.Content("~/api/cs/export/kpi")' + `?days=${encodeURIComponent(state.days || 30)}`;
-          window.open(url, '_blank', 'noopener');
-        });
-      }
+        // KPI -> Excel（呼叫後端 ClosedXML API + cache-busting）
+    const elExcel = document.getElementById('exportKpiExcel');
+    if (elExcel) {
+      elExcel.addEventListener('click', (e) => {
+        e.preventDefault();
+        const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+        const url = '@Url.Content("~/api/cs/export/kpi")' + `?days=${days}&_=${Date.now()}`;
+        // 用 location.href 避免被視為彈窗而被瀏覽器擋掉
+        location.href = url;
+      });
+    }
 
       // KPI -> PDF（瀏覽器列印）
       document.getElementById('exportKpiPdf').addEventListener('click', (e) => {
@@ -573,28 +576,28 @@
         window.print();
       });
 
-      // 訂單明細 CSV
-      document.getElementById('exportOrdersCsv').addEventListener('click', (e) => {
-        e.preventDefault();
-        fetch('/api/cs/orders?days=' + (state.days || 30))
-          .then(r => r.json())
-          .then(list => {
-            const rows = [['訂單編號','日期','金額','狀態']];
-            list.forEach(o => rows.push([o.id, o.date, o.total, o.status]));
-            const csv = rows.map(r => r.join(',')).join('\n');
-            downloadFile(CSV_BOM + csv, `orders_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-          });
-      });
+      // // 訂單明細 CSV
+      // document.getElementById('exportOrdersCsv').addEventListener('click', (e) => {
+      //   e.preventDefault();
+      //   fetch('/api/cs/orders?days=' + (state.days || 30))
+      //     .then(r => r.json())
+      //     .then(list => {
+      //       const rows = [['訂單編號','日期','金額','狀態']];
+      //       list.forEach(o => rows.push([o.id, o.date, o.total, o.status]));
+      //       const csv = rows.map(r => r.join(',')).join('\n');
+      //       downloadFile(CSV_BOM + csv, `orders_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+      //     });
+      // });
 
-      // 商品明細 CSV（使用目前畫面 top list）
-      document.getElementById('exportProductsCsv').addEventListener('click', (e) => {
-        e.preventDefault();
-        const list = state.viewTopList || [];
-        const rows = [['排名','商品','SKU','分類','數量','營收','佔比']];
-        list.forEach(p => rows.push([p.rank, p.name, p.sku, p.category, p.qty, p.revenue, p.share]));
-        const csv = rows.map(r => r.join(',')).join('\n');
-        downloadFile(CSV_BOM + csv, `products_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-      });
+      // // 商品明細 CSV（使用目前畫面 top list）
+      // document.getElementById('exportProductsCsv').addEventListener('click', (e) => {
+      //   e.preventDefault();
+      //   const list = state.viewTopList || [];
+      //   const rows = [['排名','商品','SKU','分類','數量','營收','佔比']];
+      //   list.forEach(p => rows.push([p.rank, p.name, p.sku, p.category, p.qty, p.revenue, p.share]));
+      //   const csv = rows.map(r => r.join(',')).join('\n');
+      //   downloadFile(CSV_BOM + csv, `products_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+      // });
 
       // 異常清單 CSV / PDF
       document.getElementById('exportAnomaliesCsv').addEventListener('click', (e) => {
@@ -659,20 +662,17 @@
         printWindow.print();
     });
         // 取得目前「最近 X 天」下拉框的值
-    function getSelectedDays() {
-      return document.getElementById('rangeSelect')?.value ?? 30;
-    }
+        function getSelectedDays(){ return parseInt(document.getElementById('rangeSelect')?.value,10) || 30; }
 
-    document.querySelector('.js-export-orders')?.addEventListener('click', e => {
+    document.getElementById('globalToolbar').addEventListener('click', (e) => {
+      const a = e.target.closest('a.js-export-orders, a.js-export-items');
+      if (!a) return;
       e.preventDefault();
       const days = getSelectedDays();
-      location.href = `/api/cs/export/orders-csv?days=${days}`;
-    });
-
-    document.querySelector('.js-export-items')?.addEventListener('click', e => {
-      e.preventDefault();
-      const days = getSelectedDays();
-      location.href = `/api/cs/export/order-items-csv?days=${days}`;
+      const base = a.classList.contains('js-export-orders')
+        ? '/api/cs/export/orders-csv'
+        : '/api/cs/export/order-items-csv';
+      location.href = `${base}?days=${days}&_=${Date.now()}`;
     });
 
 
