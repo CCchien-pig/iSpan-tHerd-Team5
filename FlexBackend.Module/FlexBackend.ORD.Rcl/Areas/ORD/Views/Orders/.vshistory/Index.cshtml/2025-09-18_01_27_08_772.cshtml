@@ -727,14 +727,28 @@
                         shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
                         orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
                     }).done(function (res) {
-                        if (res.success) {
-                            Swal.fire({
-                                title: "更新成功",
-                                icon: "success",
-                                position: 'center'
-                            }).then(function() {
-                                location.reload();
-                            });
+                                if (res.success) {
+            Swal.fire({
+                title: "更新成功",
+                icon: "success",
+                position: 'center'
+            });
+
+            if (res.trackingNos && res.trackingNos.length > 0) {
+                var list = res.trackingNos.map(x => '訂單 ' + x.orderId + '：' + x.trackingNumber).join('<br/>');
+                Swal.fire({
+                    icon: 'info',
+                    title: '出貨單號已產生',
+                    html: list,
+                    confirmButtonText: '確定',
+                    position: 'center'
+                });
+            }
+
+            setTimeout(function () {
+                location.reload();
+            }, 1500);
+        }
                         } else {
                             Swal.fire({
                                 title: "更新失敗",
