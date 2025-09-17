@@ -41,7 +41,7 @@
                     <th>品牌</th>
                     <th>商品</th>
                     <th>到期日</th>
-                    <th>庫存量</th>
+                    <th>批次庫存量</th>
                     <th>再訂購點</th>
                     <th>安全庫存</th>
                     <th>規格</th>
@@ -547,7 +547,7 @@
             // ======= 定義 selectedSupplierId =======
             var selectedSupplierId = '';
 
-            // ======= 初始化庫存紀錄 DataTable =======
+            // ======= 初始化 1. 庫存紀錄 DataTable =======
             var stockBatchTable = $('#stockBatchTable').DataTable({
                 serverSide: true,   // 用後端搜排分業
                 processing: true,   // 顯示「正在處理中」的訊息（loading）
@@ -586,8 +586,8 @@
                         }
                     },
                     {
-                        data: 'qty', 
-                        title: '庫存量',
+                        data: 'qty',
+                        title: '批次庫存量',
                         className: 'text-center',
                         render: function (data, type, row) {
                             let stock = parseInt(data);
@@ -634,7 +634,7 @@
                 scrollY: "500px",
                 scrollCollapse: true,
                 colReorder: true,
-                order: [[1, 'asc']], // 第一欄是控制欄，不排序
+                //order: [[1, 'asc']], // 第一欄是控制欄，不排序
                 columnDefs: [
                     { targets: '_all', type: 'string' }
                 ],
@@ -664,7 +664,7 @@
                 }
             });
 
-            // ======= 初始化全站異動紀錄 DataTable =======
+            // ======= 初始化 2. 全站異動紀錄 DataTable =======
             var historyTable = $('#historyTable').DataTable({
                 serverSide: true,   // 用後端搜排分業
                 processing: true,   // 顯示「正在處理中」的訊息（loading）
@@ -808,18 +808,49 @@
             // ===== 編輯庫存異動 =====
             $('#stockBatchTable').on('click', '.edit-stock-btn', function() {
                 var id = $(this).data('id');
+
+                // 取得該筆異動資料
                 $.get(`/SUP/StockBatches/Edit/${id}`, function(html){
+                    // 將表單內容放入 modal
                     $('#stockBatchModalContent').html(html);
                     $('#stockBatchModalTitle').text("庫存異動");
                     $('#stockBatchModal').modal('show');
 
-                    // 初始化表單：固定 MovementType = Adjust，欄位唯讀顯示當前庫存/預計庫存等
-                    var selectedBrandId = $('#SelectedBrandId').val() || null;
-                    var selectedProductId = $('#SelectedProductId').val() || null;
-                    var selectedSkuId = $('#SelectedSkuId').val() || null;
-                    if(window.initStockBatchForm) window.initStockBatchForm(selectedBrandId, selectedProductId, selectedSkuId, { isEdit: true });
+                // 固定異動類型 Adjust
+                $('#MovementTypeSelect').val('Adjust').prop('disabled', true);
+                $('#AdjustOptions').show(); // 顯示 + / -
+
+                // 顯示批次現有庫存
+                updateChangeQtyLimitAndPredicted();
+
+                // radio 選擇事件
+                $('input[name="IsAdd"]').off('change').on('change', function() {
+                    updateChangeQtyLimitAndPredicted();
                 });
+
+                // input 變動事件
+                $('#ChangeQtyInput').off('input').on('input', function() {
+                    updateChangeQtyLimitAndPredicted();
+                });
+
+                // 儲存按鈕事件
+                $('#saveStockChangeBtn').off('click').on('click', function() {
+                    var formData = $('#stockBatchEditForm').serialize();
+                    $.post(`/SUP/StockBatches/Update/${id}`, formData, function(res){
+                        if(res.success){
+                            $('#stockBatchModal').modal('hide');
+                            // 可刷新表格或提示
+                        } else {
+                            alert(res.message);
+                        }
+                    });
+                    // 預計庫存 & 異動數量上限
+                    updateChangeQtyLimitAndPredicted();
+                });
+
             });
+        });
+
 
             // ===== 異動紀錄按鈕 =====
             $('#stockBatchTable').on('click', '.stock-history-btn', function() {
@@ -935,9 +966,9 @@
         // 計算上限
         function calcMaxAllowed(movementType, isAdd, currentStock, maxStock) {
             // 非 Adjust 當作增加
-            if (movementType !== 'Adjust') {
-                isAdd = true;
-            }
+            // if (movementType !== 'Adjust') {
+            //     isAdd = true;
+            // }
 
             if (isAdd) {
                 var allowed = (maxStock - currentStock);
@@ -957,7 +988,7 @@
             var movementType = $('#MovementTypeSelect').val() || '';
             // 當不是 Adjust 時，視為增加
             var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-            if (movementType !== 'Adjust') isAdd = true;
+            // if (movementType !== 'Adjust') isAdd = true;
 
             var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
 
