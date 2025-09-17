@@ -1,24 +1,41 @@
-﻿<h2>@Model.Title</h2>
+﻿@using System.Text.Json
+@using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels  
+
+<h2>@Model.Title</h2>
 
 @foreach (var block in Model.CntPageBlocks)
 {
-    if (block.BlockType == "richtext")
-    {
-        <div class="mb-3">@Html.Raw(block.Content)</div>
-    }
-    else if (block.BlockType == "image")
-    {
-        <img src="@block.Content" class="img-fluid mb-3" />
-    }
-    else if (block.BlockType == "video")
-    {
-        <div class="ratio ratio-16x9 mb-3">
-            <iframe src="@block.Content" frameborder="0" allowfullscreen></iframe>
-        </div>
-    }
-    else if (block.BlockType == "cta")
-    {
-        var cta = System.Text.Json.JsonSerializer.Deserialize<dynamic>(block.Content);
-        <a href="@cta?.url" class="btn btn-primary">@cta?.text</a>
-    }
+    <div class="page-block mb-3">
+        @if (!string.IsNullOrEmpty(block.Content))
+        {
+            switch (block.BlockType)
+            {
+                case "richtext":
+                    <div>@Html.Raw(block.Content)</div>
+                    break;
+
+                case "image":
+                    <img src="@block.Content" class="img-fluid" alt="Page Image" />
+                    break;
+
+                case "video":
+                    <div class="ratio ratio-16x9">
+                        <iframe src="@block.Content"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                    break;
+
+                case "cta":
+                    var cta = JsonSerializer.Deserialize<CtaBlock>(block.Content);
+                    if (cta != null)
+                    {
+                        <a href="@cta.Url" class="btn btn-primary">@cta.Text</a>
+                    }
+                    break;
+            }
+        }
+    </div>
 }
