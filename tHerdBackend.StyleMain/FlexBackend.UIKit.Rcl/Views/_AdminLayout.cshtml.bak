@@ -128,7 +128,7 @@
             <footer class="sticky-footer bg-white py-3">
                 <div class="container">
                     <div class="copyright text-center my-auto">
-                        <span>&copy; @DateTime.UtcNow.Year THerd Backend Web Site</span>
+                        <span>&copy; @DateTime.UtcNow.Year tHerd Backend Web Site</span>
                     </div>
                 </div>
             </footer>
