@@ -41,8 +41,21 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             }).ToList();
         }
 
-        // 取得系統代號
-        public async Task GetSysCodes()
+        // 取得產品分類
+		public async Task GetAllProductTypesAsync()
+		{
+			var Types = await _repo.GetAllProductTypesAsync();
+			ViewBag.TypeDtos = Types.Select(b => new LoadBrandOptionDto
+			{
+				BrandId = b.BrandId,
+				BrandName = b.BrandName,
+				BrandCode = b.BrandCode,
+				SupplierName = b.SupplierName
+			}).ToList();
+		}
+
+		// 取得系統代號
+		public async Task GetSysCodes()
         {
             var syss = await _repo.GetSysCodes("PROD", new List<string> { "01" });
             ViewBag.Units = syss.Select(b => new SelectListItem
