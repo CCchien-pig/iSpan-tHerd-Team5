@@ -12,5 +12,8 @@
 		public DateTime? BirthDate { get; set; }
 		public string? Address { get; set; }
 		public bool IsActive { get; set; }
+		// 新增：顯示 2FA 狀態
+		public bool TwoFactorEnabled { get; set; }
+		public bool HasAuthenticator { get; set; }
 	}
 }
