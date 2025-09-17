@@ -1,4 +1,5 @@
-﻿using FlexBackend.Core.DTOs.SUP;
+﻿using FlexBackend.Core.Abstractions;
+using FlexBackend.Core.DTOs.SUP;
 using FlexBackend.Core.Interfaces.SUP;
 using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
@@ -16,12 +17,14 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		private readonly tHerdDBContext _context;
 		private readonly IStockBatchService _stockBatchService;
 		private readonly IStockService _stockService;
+		private readonly ICurrentUser _me;
 
-		public StockBatchesController(tHerdDBContext context, IStockBatchService stockBatchService, IStockService stockService)
+		public StockBatchesController(tHerdDBContext context, IStockBatchService stockBatchService, IStockService stockService, ICurrentUser me)
 		{
 			_context = context;
 			_stockBatchService = stockBatchService;
 			_stockService = stockService;
+			_me = me;
 		}
 
 		// GET: /SUP/StockBatches/Index
@@ -36,141 +39,166 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		// POST: StockBatches/IndexJson
 		[HttpPost]
-		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null)
+		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
 		{
-
-			// 從 DataTables POST 取得參數
-			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
-			var start = Convert.ToInt32(Request.Form["start"].FirstOrDefault() ?? "0");
-			var length = Convert.ToInt32(Request.Form["length"].FirstOrDefault() ?? "10");
-			var searchValue = Request.Form["search[value]"].FirstOrDefault() ?? "";
-
-			// 取得排序資訊
-			var sortColumnIndex = Convert.ToInt32(Request.Form["order[0][column]"].FirstOrDefault() ?? "0");
-			var sortDirection = Request.Form["order[0][dir]"].FirstOrDefault() ?? "asc";
-
-			// 建立 join 查詢（SupStockBatches → Prod_ProductSku → ProdProducts → SupBrands）
-			var query = from sb in _context.SupStockBatches
-						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
-						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
-						join b in _context.SupBrands on p.BrandId equals b.BrandId
-						select new
-						{
-							SupplierId = b.SupplierId,
-
-							sb.StockBatchId,
-							SkuCode = sku.SkuCode,
-							sb.BatchNumber,
-							sb.ExpireDate,
-							sb.Qty,
-							sku.SafetyStockQty,
-							sku.ReorderPoint,
-							sb.IsSellable,
-
-							CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
-														  
-							// 展開要的
-							ProductName = p.ProductName,
-							BrandName = b.BrandName,
-							BrandCode = b.BrandCode,
-
-							// 規格陣列 群組 + 規格選項
-							Specifications = sb.Sku.SpecificationOptions
-								.OrderBy(o => o.OrderSeq)
-								.Select(o => new
-								{
-									GroupName = o.SpecificationConfig.GroupName,  // 群組名稱
-									OptionName = o.OptionName                     // 選項名稱
-								})
-								.ToArray()
-						};
-
-			// 如果有傳 SupplierId，就過濾對應品牌
-			if (!string.IsNullOrEmpty(supplierId) && int.TryParse(supplierId, out int sId))
+			try
 			{
-				query = query.Where(x => x.SupplierId == sId);
-			}
+				// 從 DataTables POST 取得參數
+				var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
+				var start = Convert.ToInt32(Request.Form["start"].FirstOrDefault() ?? "0");
+				var length = Convert.ToInt32(Request.Form["length"].FirstOrDefault() ?? "10");
+				var searchValue = Request.Form["search[value]"].FirstOrDefault() ?? "";
 
-			// 搜尋功能
-			if (!string.IsNullOrEmpty(searchValue))
-			{
-				query = query.Where(s =>
-					EF.Functions.Like(s.SkuCode, $"%{searchValue}%") ||
-					EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
-					EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
-					EF.Functions.Like(s.BrandName, $"%{searchValue}%") ||
-					EF.Functions.Like(s.BrandCode, $"%{searchValue}%")
-				);
-			}
+				// 取得排序資訊
+				var sortColumnIndex = Convert.ToInt32(Request.Form["order[0][column]"].FirstOrDefault() ?? "0");
+				var sortDirection = Request.Form["order[0][dir]"].FirstOrDefault() ?? "asc";
 
-			var totalRecords = await query.CountAsync();
+				// 建立 join 查詢（SupStockBatches → Prod_ProductSku → ProdProducts → SupBrands）
+				var query = from sb in _context.SupStockBatches
+							join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+							join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+							join b in _context.SupBrands on p.BrandId equals b.BrandId
+							select new
+							{
+								SupplierId = b.SupplierId,
 
-			// 欄位索引排序
-			// orderable: false，不會傳 0，不用算進來
-			query = sortColumnIndex switch
-			{
-				0 => sortDirection == "asc" ? query.OrderBy(s => s.SkuCode) : query.OrderByDescending(s => s.SkuCode),
-				// 點 BatchNumber 時改用 CreatedDate（或 ManufactureDate）排序，讓「按批號日期排序」正確
-				1 => sortDirection == "asc" ? query.OrderBy(s => s.CreatedDate) : query.OrderByDescending(s => s.CreatedDate),
-				2 => sortDirection == "asc" ? query.OrderBy(s => s.BrandName) : query.OrderByDescending(s => s.BrandName),
-				3 => sortDirection == "asc" ? query.OrderBy(s => s.ProductName) : query.OrderByDescending(s => s.ProductName),
-				4 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
-				5 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
-				6 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
-				7 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
-				_ => sortDirection == "asc" ? query.OrderBy(s => s.StockBatchId) : query.OrderByDescending(s => s.StockBatchId),
-			};
+								sb.StockBatchId,
+								SkuCode = sku.SkuCode,
+								sb.BatchNumber,
+								sb.ExpireDate,
+								sb.Qty,
+								sku.SafetyStockQty,
+								sku.ReorderPoint,
+								sb.IsSellable,
 
-			// 分頁
-			var data = await query
-				.Skip(start)
-				.Take(length)
-				.ToListAsync();
+								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
 
-			// 資料傳給前端
-			var result = data.Select(d => new
-			{
-				d.StockBatchId,
-				SkuCode = d.SkuCode ?? "",   // 保護 null
-				d.BatchNumber,
-				//d.ExpireDate,
-				ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
-				d.Qty,
-				SafetyStockQty = d.SafetyStockQty,  // 保護 null
-				ReorderPoint = d.ReorderPoint,      // 保護 null
+								// 展開要的
+								ProductName = p.ProductName,
+								BrandName = b.BrandName,
+								BrandCode = b.BrandCode,
 
-				// 展開列需要的
-				d.BrandName,
-				d.ProductName,
+								// 規格陣列 群組 + 規格選項
+								Specifications = sb.Sku.SpecificationOptions
+									.OrderBy(o => o.OrderSeq)
+									.Select(o => new
+									{
+										GroupName = o.SpecificationConfig.GroupName,  // 群組名稱
+										OptionName = o.OptionName                     // 選項名稱
+									})
+									.ToArray()
+							};
 
-				// 字串版規格，用斜線分隔
-				//Specifications = string.Join(" / ", d.Specifications),
-				// 陣列版規格
-				// 將 Specifications 轉成陣列，前端 render 時可用 map
-				Specifications = d.Specifications?.Select(s => new
+				// 如果有傳 SupplierId，就過濾對應品牌
+				if (!string.IsNullOrEmpty(supplierId) && int.TryParse(supplierId, out int sId))
 				{
-					GroupName = s.GroupName ?? "",
-					OptionName = s.OptionName ?? ""
-				}).ToArray() ?? Array.Empty<object>(),
-				// 新增：允許的操作類型
-				AllowedActions = new[] { "ADJUST" }, // 已有批號庫存，只允許手動調整
+					query = query.Where(x => x.SupplierId == sId);
+				}
 
-				CreatedDate = d.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")
+				// 到期日篩選
+				var today = DateTime.Today;
 
-			}).ToList();
+				if (!string.IsNullOrEmpty(expireFilter))
+				{
+					switch (expireFilter)
+					{
+						case "valid":
+							query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+							break;
+						case "expired":
+							query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+							break;
+					}
+				}
 
-			// ====== 測試輸出 JSON 到 Debug ======
-			System.Diagnostics.Debug.WriteLine(
-				JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })
-			);
 
-			return Json(new
+				// 搜尋功能
+				if (!string.IsNullOrEmpty(searchValue))
+				{
+					query = query.Where(s =>
+						EF.Functions.Like(s.SkuCode, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
+						EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BrandName, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BrandCode, $"%{searchValue}%")
+					);
+				}
+
+				var totalRecords = await query.CountAsync();
+
+				// 欄位索引排序
+				// orderable: false，不會傳 0，不用算進來
+				query = sortColumnIndex switch
+				{
+					0 => sortDirection == "asc" ? query.OrderBy(s => s.SkuCode) : query.OrderByDescending(s => s.SkuCode),
+					// 點 BatchNumber 時改用 CreatedDate（或 ManufactureDate）排序，讓「按批號日期排序」正確
+					1 => sortDirection == "asc" ? query.OrderBy(s => s.CreatedDate) : query.OrderByDescending(s => s.CreatedDate),
+					2 => sortDirection == "asc" ? query.OrderBy(s => s.BrandName) : query.OrderByDescending(s => s.BrandName),
+					3 => sortDirection == "asc" ? query.OrderBy(s => s.ProductName) : query.OrderByDescending(s => s.ProductName),
+					4 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
+					5 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
+					6 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
+					7 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
+					_ => sortDirection == "asc" ? query.OrderBy(s => s.StockBatchId) : query.OrderByDescending(s => s.StockBatchId),
+				};
+
+				// 分頁
+				var data = await query
+					.Skip(start)
+					.Take(length)
+					.ToListAsync();
+
+				// 資料傳給前端
+				var result = data.Select(d => new
+				{
+					d.StockBatchId,
+					SkuCode = d.SkuCode ?? "",   // 保護 null
+					d.BatchNumber,
+					//d.ExpireDate,
+					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
+					d.Qty,
+					SafetyStockQty = d.SafetyStockQty,  // 保護 null
+					ReorderPoint = d.ReorderPoint,      // 保護 null
+
+					// 展開列需要的
+					d.BrandName,
+					d.ProductName,
+
+					// 字串版規格，用斜線分隔
+					//Specifications = string.Join(" / ", d.Specifications),
+					// 陣列版規格
+					// 將 Specifications 轉成陣列，前端 render 時可用 map
+					Specifications = d.Specifications?.Select(s => new
+					{
+						GroupName = s.GroupName ?? "",
+						OptionName = s.OptionName ?? ""
+					}).ToArray() ?? Array.Empty<object>(),
+					// 新增：允許的操作類型
+					AllowedActions = new[] { "ADJUST" }, // 已有批號庫存，只允許手動調整
+
+					CreatedDate = d.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")
+
+				}).ToList();
+
+				// ====== 測試輸出 JSON 到 Debug ======
+				System.Diagnostics.Debug.WriteLine(
+					JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })
+				);
+
+				return Json(new
+				{
+					draw,
+					recordsTotal = totalRecords,
+					recordsFiltered = totalRecords,
+					data = result
+				});
+			}
+			catch (Exception ex)
 			{
-				draw,
-				recordsTotal = totalRecords,
-				recordsFiltered = totalRecords,
-				data = result
-			});
+				Console.WriteLine(ex.Message);
+				System.Diagnostics.Debug.WriteLine(ex.ToString());
+				return StatusCode(500, ex.Message);
+			}
 		}
 
 
@@ -485,6 +513,97 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 		#endregion
+
+
+		[HttpPost]
+		public async Task<IActionResult> GetAllStockHistory([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+		{
+			// 1. DataTables 參數
+			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
+			var start = Convert.ToInt32(Request.Form["start"].FirstOrDefault() ?? "0");
+			var length = Convert.ToInt32(Request.Form["length"].FirstOrDefault() ?? "10");
+			var searchValue = Request.Form["search[value]"].FirstOrDefault() ?? "";
+			var sortColumnIndex = Convert.ToInt32(Request.Form["order[0][column]"].FirstOrDefault() ?? "0");
+			var sortDirection = Request.Form["order[0][dir]"].FirstOrDefault() ?? "asc";
+
+			// 2. 基本查詢（join 相關表）
+			var query = from h in _context.SupStockHistories
+						join sb in _context.SupStockBatches on h.StockBatchId equals sb.StockBatchId
+						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+						join b in _context.SupBrands on p.BrandId equals b.BrandId
+						select new
+						{
+							h.StockHistoryId,
+							sb.StockBatchId,
+							SkuCode = sku.SkuCode,
+							sb.BatchNumber,
+							ExpireDate = sb.ExpireDate,
+							h.ChangeType,
+							h.BeforeQty,
+							h.ChangeQty,
+							h.AfterQty,
+							RevisedDate = h.RevisedDate,
+							Reviser = h.Reviser,
+							BrandCode = b.BrandCode,
+							SupplierId = b.SupplierId
+						};
+
+			// 3. 篩選供應商
+			if (!string.IsNullOrEmpty(supplierId) && int.TryParse(supplierId, out int sId))
+			{
+				query = query.Where(x => x.SupplierId == sId);
+			}
+
+			// 4. 到期日篩選
+			if (!string.IsNullOrEmpty(expireFilter))
+			{
+				var today = DateTime.Today;
+				if (expireFilter == "valid")
+					query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+				else if (expireFilter == "expired")
+					query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+			}
+
+			// 5. 搜尋
+			if (!string.IsNullOrEmpty(searchValue))
+			{
+				query = query.Where(x =>
+					EF.Functions.Like(x.SkuCode, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BatchNumber, $"%{searchValue}%") ||
+					EF.Functions.Like(x.ChangeType, $"%{searchValue}%") ||
+					EF.Functions.Like((x.Reviser.HasValue ? x.Reviser.Value.ToString() : ""), $"%{searchValue}%")
+				);
+			}
+
+			var totalRecords = await query.CountAsync();
+
+			// 6. 排序
+			query = sortColumnIndex switch
+			{
+				0 => sortDirection == "asc" ? query.OrderBy(x => x.SkuCode) : query.OrderByDescending(x => x.SkuCode),
+				1 => sortDirection == "asc" ? query.OrderBy(x => x.BatchNumber) : query.OrderByDescending(x => x.BatchNumber),
+				2 => sortDirection == "asc" ? query.OrderBy(x => x.ExpireDate) : query.OrderByDescending(x => x.ExpireDate),
+				3 => sortDirection == "asc" ? query.OrderBy(x => x.ChangeType) : query.OrderByDescending(x => x.ChangeType),
+				7 => sortDirection == "asc" ? query.OrderBy(x => x.RevisedDate) : query.OrderByDescending(x => x.RevisedDate),
+				_ => sortDirection == "asc" ? query.OrderBy(x => x.StockHistoryId) : query.OrderByDescending(x => x.StockHistoryId),
+			};
+
+			// 7. 分頁
+			var data = await query.Skip(start).Take(length).ToListAsync();
+
+			// 8. 回傳 JSON
+			return Json(new
+			{
+				draw,
+				recordsTotal = totalRecords,
+				recordsFiltered = totalRecords,
+				data
+			});
+		}
+
+
+
 
 
 		// GET: /SUP/StockBatches/Edit/5

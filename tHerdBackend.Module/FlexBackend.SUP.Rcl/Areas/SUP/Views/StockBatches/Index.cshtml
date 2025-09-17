@@ -7,31 +7,71 @@
     <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
 }
 
-<!-- 主庫存表格區塊 (.stockbatch-card) -->
-<div class="stockbatch-card">
-    <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-    <div class="legend">
-        <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
-        <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
-        <span><span class="dot normal"></span> 正常</span>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 id="tableTitle" class="mb-0">庫存紀錄</h5>
+    <button id="btnToggleStock" class="btn btn-outline-primary">
+        <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span> 顯示異動紀錄
+    </button>
+</div>
+
+<!-- 主庫存表格*2區塊 (.stockbatch-card) -->
+<div class="stockbatch-card">    
+    <!-- 庫存紀錄 -->
+    <div id="stockTableWrapper">
+        <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
+        <div class="legend">
+            <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
+            <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
+            <span><span class="dot normal"></span> 正常</span>
+        </div>    
+        <select id="stockExpireFilter" class="form-select form-select-sm mb-2">
+            <option value="">全部</option>
+            <option value="valid">未過期</option>
+            <option value="expired">已過期</option>
+        </select>
+        <table id="stockBatchTable" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>批號</th>
+                    <th>品牌</th>
+                    <th>商品</th>
+                    <th>到期日</th>
+                    <th>庫存量</th>
+                    <th>再訂購點</th>
+                    <th>安全庫存</th>
+                    <th>規格</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
-    <table id="stockBatchTable" class="display" style="width:100%">
-        <thead>
-            <tr>
-                <th>SKU</th>
-                <th>批號</th>
-                <th>品牌</th>
-                <th>商品</th>
-                <th>到期日</th>
-                <th>庫存量</th>
-                <th>再訂購點</th>
-                <th>安全庫存</th>
-                <th>規格</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <!-- 異動紀錄 -->   
+    <div id="historyTableWrapper" style="display:none;">
+        <select id="historyExpireFilter" class="form-select form-select-sm mb-2">
+            <option value="">全部</option>
+            <option value="valid">未過期</option>
+            <option value="expired">已過期</option>
+        </select>
+        <table id="historyTable" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>批號</th>
+                    <th>到期日</th>
+                    <th>異動類型</th>
+                    <th>異動前數量</th>
+                    <th>異動數量</th>
+                    <th>異動後數量</th>
+                    <th>異動時間</th>
+                    <th>異動人員</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
 
 <!-- 庫存操作 Modal (#stockBatchModal)（模態視窗） -->
@@ -469,32 +509,26 @@
             sessionStorage.removeItem('selectedBrandName');
 
             // ======= 定義 selectedSupplierId =======
-            var selectedSupplierId = ''; 
+            var selectedSupplierId = '';
 
-            // ======= 初始化庫存 DataTable =======
+            // ======= 初始化庫存紀錄 DataTable =======
             var stockBatchTable = $('#stockBatchTable').DataTable({
-                serverSide: true,
-                processing: true,
+                serverSide: true,   // 用後端搜排分業
+                processing: true,   // 顯示「正在處理中」的訊息（loading）
                 ajax: {
                     url: '/SUP/StockBatches/IndexJson',
                     type: 'POST',
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
+                        d.expireFilter = $('#stockExpireFilter').val(); // 傳到期日篩選值
                     },
                     dataSrc: function(json) {
                         console.log(json);      // 印出整個 JSON
-                        console.log(json.data); // 印出每筆 row
-                        return json.data;
+                        //console.log(json.data); // 印出每筆 row
+                       return json.data;
                     }
                 },
                 columns: [
-                    {
-                        className: 'dt-control text-center',
-                        orderable: false,
-                        data: null,
-                        defaultContent: '<i class="fa-solid fa-angle-down"></i>',
-                        width: '20px'
-                    },
                     { data: 'skuCode', title: 'SKU', className: 'text-center'},
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
                     { data: 'brandName', title: '品牌', className: 'text-center'},
@@ -502,6 +536,7 @@
                     {
                         data: 'expireDate',
                         title: '到期日',
+                        className: 'text-center',
                         render: function(data) {
                             if (!data) return '無';
                             let date = new Date(data);
@@ -515,7 +550,9 @@
                         }
                     },
                     {
-                        data: 'qty', title: '庫存量',
+                        data: 'qty', 
+                        title: '庫存量',
+                        className: 'text-center',
                         render: function (data, type, row) {
                             let stock = parseInt(data);
                             let reorder = parseInt(row.reorderPoint);
@@ -529,8 +566,8 @@
                             return `<span class="stock-normal" data-bs-toggle="tooltip" title="庫存正常">${stock}</span>`;
                         }
                     },
-                    { data: 'reorderPoint', title: '再訂購點' },
-                    { data: 'safetyStockQty', title: '安全庫存' },
+                    { data: 'reorderPoint', title: '再訂購點' , className: 'text-center'},
+                    { data: 'safetyStockQty', title: '安全庫存' , className: 'text-center'},
                     {
                         data: 'specifications',
                         className: 'text-center',
@@ -544,6 +581,7 @@
                     {
                         data: 'stockBatchId',
                         title: '操作',
+                        className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
                             return `
@@ -590,61 +628,152 @@
                 }
             });
 
+            // ======= 初始化全站異動紀錄 DataTable =======
+            var historyTable = $('#historyTable').DataTable({
+                serverSide: true,   // 用後端搜排分業
+                processing: true,   // 顯示「正在處理中」的訊息（loading）
+                ajax: {
+                    url:'/SUP/StockBatches/GetAllStockHistory',
+                    type: 'POST',
+                    data: function(d) {
+                        d.supplierId = selectedSupplierId; // 傳給 IndexJson
+                        d.expireFilter = $('#historyExpireFilter').val(); // 傳到期日篩選值
+                    },
+                    dataSrc: function(json) {
+                        console.log(json);      // 印出整個 JSON
+                        //console.log(json.data); // 印出每筆 row
+                       return json.data;
+                    }
+                },
+                columns: [
+                    { data: 'skuCode', title: 'SKU', className: 'text-center'},
+                    { data: 'batchNumber', title: '批號', className: 'text-center'},
+                    {
+                        data: 'expireDate',
+                        title: '到期日',
+                        className: 'text-center',
+                        render: function(d) {
+                            if (!d) return '無';
+                            let date = new Date(d);
+                            let today = new Date();
+                            let formatted = date.toLocaleDateString('zh-TW');
+
+                            if (date < new Date(today.setHours(0,0,0,0))) {
+                                return `<span class="text-danger">${formatted} (已過期)</span>`;
+                            }
+                            return formatted;
+                        }
+                    },
+                    { data: 'changeType', title: '異動類型' , className: 'text-center'},
+                    { data: 'beforeQty', title: '異動前數量', className: 'text-center'},
+                    { data: 'changeQty', title: '異動數量' , className: 'text-center'},
+                    { data: 'afterQty', title: '異動後數量', className: 'text-center'},
+                    {
+                        data: 'revisedDate',
+                        title: '異動時間',
+                        className: 'text-center',
+                        render: d => d ? new Date(d).toLocaleString() : ''
+                    },
+                    { data: 'reviser', title: '異動人員' , className: 'text-center'},
+                    {
+                        data: 'stockBatchId',
+                        title: '操作',
+                        className: 'text-center',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            return `
+                                <button class="btn btn-sm stock-history-btn" data-brandid="${row.BrandCode}" data-bs-toggle="tooltip" title="更改備註">
+                                    <i class="fa-solid fa-clock-rotate-left" style="color: #1c7ed6;"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
+                scrollY: "500px",
+                scrollCollapse: true,
+                colReorder: true,
+                columnDefs: [
+                    { targets: '_all', type: 'string' }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                },
+                order: [[7, 'desc']] // 預設依時間新到舊
+            });
+
+            // ======= 到期日篩選功能 =======
+            /*$.fn.dataTable.ext.search.push(function(settings, data) {
+                let filter, expireDateStr;
+
+                if (settings.nTable.id === 'stockBatchTable') {
+                    filter = $('#stockExpireFilter').val();
+                    expireDateStr = data[4]; // 庫存表到期日 index=4
+                } else if (settings.nTable.id === 'historyTable') {
+                    filter = $('#historyExpireFilter').val();
+                    expireDateStr = data[2]; // 異動表到期日 index=2
+                } else {
+                    return true;
+                }
+
+                if (!filter || filter === "") return true;   // 全部
+                if (!expireDateStr || expireDateStr === '無') return filter === 'valid';
+
+                let expireDate = new Date(expireDateStr.replace(/ \(已過期\)/, ''));
+                let today = new Date(); today.setHours(0,0,0,0);
+
+                if (filter === 'valid') return expireDate >= today;
+                if (filter === 'expired') return expireDate < today;
+
+                return true;
+            });
+            */
+
+            // 下拉選單事件
+            $('#stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
+            $('#historyExpireFilter').on('change', () => historyTable.ajax.reload());
+
+
+            // 點擊按鈕切換 datatable
+            $('#btnToggleStock').on('click', function () {
+                var btn = $(this);
+                var arrow = btn.find('.arrow i'); // 取到 <i class="...">
+
+                if ($('#stockTableWrapper').is(':visible')) {
+                    // 切換到異動紀錄
+                    // $('#stockTableWrapper, #tableTitle').fadeOut(200, function () {
+                    //     $('#tableTitle').text('全站異動紀錄').fadeIn(200);
+                    //     $('#historyTableWrapper').fadeIn(200);
+                    // });
+                    $('#stockTableWrapper').hide();
+                    $('#historyTableWrapper').show();
+                    $('#tableTitle').text('全站異動紀錄');
+
+                    btn.html('<span class="arrow"><i class="fa-solid fa-arrow-left"></i></span> 顯示庫存紀錄');
+                    historyTable.ajax.reload();
+                } else {
+                    // 切換回庫存紀錄
+                    // $('#historyTableWrapper, #tableTitle').fadeOut(200, function () {
+                    //     $('#tableTitle').text('庫存紀錄').fadeIn(200);
+                    //     $('#stockTableWrapper').fadeIn(200);
+                    // });
+
+                    $('#historyTableWrapper').hide();
+                    $('#stockTableWrapper').show();
+                    $('#tableTitle').text('庫存紀錄');
+
+                    btn.html('<span class="arrow"><i class="fa-solid fa-arrow-right"></i></span> 顯示異動紀錄');
+                    stockBatchTable.ajax.reload();
+                }
+            });
+
+
+
             // 每次 redraw 都重新初始化 tooltip
             stockBatchTable.on('draw', function() {
                 $('[data-bs-toggle="tooltip"]').each(function() {
                     new bootstrap.Tooltip(this);
                 });
-            });
-
-            // 綁定展開/收起事件
-            $('#stockTable tbody').on('click', 'td.dt-control', function () {
-                var tr = $(this).closest('tr');
-                var row = table.row(tr);
-
-                if (row.child.isShown()) {
-                    // 收起
-                    row.child.hide();
-                    tr.removeClass('shown');
-                    $(this).html('<i class="fa-solid fa-angle-down"></i>');
-                } else {
-                    // 展開，顯示異動紀錄
-                    var stockBatchId = row.data().stockBatchId;
-
-                    row.child('<div class="text-muted">載入中...</div>').show();
-                    tr.addClass('shown');
-                    $(this).html('<i class="fa-solid fa-angle-up"></i>');
-
-                    // 從後端取得異動紀錄
-                    $.getJSON('/SUP/StockBatches/GetStockHistory', { stockBatchId: stockBatchId })
-                        .done(function (data) {
-                            if (!data || data.length === 0) {
-                                row.child('<div class="text-danger">沒有異動紀錄</div>').show();
-                                return;
-                            }
-
-                            let html = `<table class="table table-sm table-bordered">
-                                <thead><tr>
-                                    <th>異動時間</th>
-                                    <th>異動類型</th>
-                                    <th>異動數量</th>
-                                    <th>操作人</th>
-                                </tr></thead><tbody>`;
-
-                            data.forEach(h => {
-                                html += `<tr>
-                                    <td>${new Date(h.revisedDate).toLocaleString()}</td>
-                                    <td>${h.movementType}</td>
-                                    <td>${h.changeQty}</td>
-                                    <td>${h.reviserName}</td>
-                                </tr>`;
-                            });
-
-                            html += `</tbody></table>`;
-                            row.child(html).show();
-                        })
-                        .fail(() => row.child('<div class="text-danger">載入失敗</div>').show());
-                }
             });
 
             // ===== 搜尋欄清空時重置 =====
@@ -844,3 +973,4 @@
 
     </script>
 }
+
