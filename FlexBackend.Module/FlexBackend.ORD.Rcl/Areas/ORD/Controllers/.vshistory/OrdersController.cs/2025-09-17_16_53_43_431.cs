@@ -299,6 +299,42 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 
 
 
+        //      // 即點即改訂單狀態 (AJAX)
+        //      [HttpPost]
+        //public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
+        //{
+        //	var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+        //	if (order == null)
+        //	{
+        //		return Json(new { success = false, message = "找不到訂單" });
+        //	}
+
+        //	try
+        //	{
+        //		switch (field)
+        //		{
+        //			case "PaymentStatus":
+        //				order.PaymentStatus = value; // 存 CodeNo
+        //				break;
+        //			case "ShippingStatusId":
+        //				order.ShippingStatusId = value;
+        //				break;
+        //			case "OrderStatusId":
+        //				order.OrderStatusId = value;
+        //				break;
+        //		}
+
+        //		await _db.SaveChangesAsync();
+        //		return Json(new { success = true });
+        //	}
+        //	catch (Exception ex)
+        //	{
+        //		return Json(new { success = false, message = ex.Message });
+        //	}
+        //}
+
+
+
         // 批量更新訂單狀態
         [HttpPost]
         public async Task<IActionResult> BulkUpdateOrders(
