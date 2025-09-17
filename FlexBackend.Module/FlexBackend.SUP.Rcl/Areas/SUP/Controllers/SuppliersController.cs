@@ -1,4 +1,5 @@
-﻿using FlexBackend.Infra.Models;
+﻿using FlexBackend.Core.Abstractions;
+using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,12 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 	public class SuppliersController : Controller
 	{
 		private readonly tHerdDBContext _context;
+		private readonly ICurrentUser _me;
 
-		public SuppliersController(tHerdDBContext context)
+		public SuppliersController(tHerdDBContext context, ICurrentUser me)
 		{
 			_context = context;
+			_me = me;
 		}
 
 		// GET: SUP/Suppliers/Index
@@ -197,7 +200,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					supEntity.Email = model.Email;
 					supEntity.IsActive = model.IsActive;
 
-					supEntity.Reviser = 111111; // TODO: 取登入ID
+					supEntity.Reviser = _me.UserNumberId; // 取登入ID
 					supEntity.RevisedDate = DateTime.Now;
 
 					_context.Update(supEntity);
@@ -237,7 +240,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					return Json(new { success = false, message = "找不到該供應商" });
 
 				supEntity.IsActive = isActive;
-				supEntity.Reviser = 111111; // TODO: 取登入ID
+				supEntity.Reviser = _me.UserNumberId; // 取登入ID
 				supEntity.RevisedDate = DateTime.Now;
 
 				await _context.SaveChangesAsync();
