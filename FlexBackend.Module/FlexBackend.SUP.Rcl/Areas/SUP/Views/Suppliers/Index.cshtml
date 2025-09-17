@@ -74,7 +74,7 @@
                         data: 'supplierName',
                         title: '供應商名稱',
                         render: function(data, type, row) {
-                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.supplierId}"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
+                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.supplierId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
                         }
                     },
                     { data: 'contactName', title: '聯絡人' },
@@ -96,12 +96,19 @@
                     {
                         data: 'supplierId',
                         title: '操作',
+                        className: 'text-center',
                         orderable: false,   // 禁止排序
                         render: function(data) {
                             return `
-                                <button class="btn btn-sm inventory-btn" data-id="${data}"><i class="fa-regular fa-truck" style="color: #dca91e;"></i> 庫存</button>
-                                <button class="btn btn-sm edit-btn" data-id="${data}" title="編輯" data-bs-toggle="tooltip"><i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i></button>
-                                <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除" data-bs-toggle="tooltip"><i class="fa-solid fa-trash" style="color: #6688b7;"></i></button>
+                                <button class="btn btn-sm inventory-btn" data-id="${data}" title="前往名下品牌庫存" data-bs-toggle="tooltip">
+                                    <i class="fa-regular fa-truck" style="color: #dca91e;"></i> 庫存
+                                </button>
+                                <button class="btn btn-sm edit-btn" data-id="${data}" title="編輯" data-bs-toggle="tooltip">
+                                    <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
+                                </button>
+                                <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
+                                </button>
                             `;
                         }
                     }
@@ -312,9 +319,49 @@
             });
 
             // ======= 點[庫存]跳轉 =======
-            $('#supplierTable').on('click', '.inventory-btn', function() {
-                var id = $(this).data('id');
-                window.location.href = stockBatchUrl + `?supplierId=${id}`;
+            $('#supplierTable').on('click', '.inventory-btn', function () {
+                var supplierId = $(this).data('id');
+                console.log('點擊[庫存]，取得 supplierId:', supplierId);
+
+                if (!supplierId) {
+                    console.error('❌ supplierId 為空，無法繼續跳轉');
+                    return;
+                }
+
+                // 傳進 URL 版
+                // var url = '/SUP/StockBatches/Index?supplierId=' + supplierId;
+                // window.location.href = url;
+
+                // 用 TempData 傳版
+                $.ajax({
+                    url: '/SUP/StockBatches/GetBrandNameBySupplier',
+                    type: 'GET',
+                    data: { supplierId: supplierId },
+                    success: function (brands) {
+                        console.log('AJAX 成功，取得 brands:', brands);
+
+                        if (!brands || brands.length === 0) {
+                            console.warn('⚠️ 沒有品牌資料，存空字串');
+                            sessionStorage.setItem('selectedBrandName', '');
+                        } else {
+                            // 注意這裡大小寫要對
+                            var brandName = brands[0].brandName;
+                            console.log('📌 取出的 brandName:', brandName);
+
+                            sessionStorage.setItem('selectedBrandName', brandName);
+                            console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
+                        }
+
+                        console.log('⏳ 10 秒後跳轉到 /SUP/StockBatches/Index ...');
+                        setTimeout(function () {
+                            window.location.href = '/SUP/StockBatches/Index';
+                        });
+                        //, 10000); //等十秒看主控台訊息
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('❌ AJAX 失敗:', status, error);
+                    }
+                });
             });
         });
     </script>

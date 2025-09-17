@@ -1,11 +1,13 @@
-﻿using FlexBackend.Composition;
+﻿using FlexBackend.Admin.Infrastructure.Auth;
+using FlexBackend.Composition;
+using FlexBackend.Core.Abstractions;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.CS.Rcl.Areas.CS.Controllers;
 using FlexBackend.Infra;
+using FlexBackend.Infra.Models;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
-using FlexBackend.Infra.Models;
-using FlexBackend.Core.DTOs.USER;
 using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -27,12 +29,15 @@ namespace FlexBackend.Admin
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString, sql =>
-		sql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+			sql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+			builder.Services.AddDefaultIdentity<ApplicationUser>(options => { options.SignIn.RequireConfirmedAccount = true; options.SignIn.RequireConfirmedEmail = false; })
 				.AddRoles<ApplicationRole>()
-				.AddEntityFrameworkStores<ApplicationDbContext>();
+				.AddEntityFrameworkStores<ApplicationDbContext>()
+				.AddDefaultTokenProviders();
+
+
 
 			//確保預設驗證方案是 Identity Cookie（避免被其他套件改成 JWT）
 			builder.Services.AddAuthentication(options =>
@@ -42,6 +47,7 @@ namespace FlexBackend.Admin
 				options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
 			});
 
+			// 電子郵件服務
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 			builder.Services.AddScoped<FlexBackend.USER.Rcl.Services.UserService>();
@@ -74,11 +80,11 @@ namespace FlexBackend.Admin
 
 				options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
 				options.User.RequireUniqueEmail = true;
-				options.SignIn.RequireConfirmedEmail = true;
+				options.SignIn.RequireConfirmedEmail = false;
 			});
 			builder.Services.ConfigureApplicationCookie(options =>
 			{
-				options.Cookie.HttpOnly = false;
+				options.Cookie.HttpOnly = true;
 				options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 				options.ExpireTimeSpan = TimeSpan.FromMinutes(14);
 				options.LoginPath = "/Identity/Account/AdminLogin";
@@ -86,7 +92,10 @@ namespace FlexBackend.Admin
 				options.SlidingExpiration = true;
 			});
 
-
+			// 使用自訂的 ClaimsPrincipalFactory 來加入額外的 Claims
+			builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, AppClaimsPrincipalFactory>();
+			builder.Services.AddHttpContextAccessor();
+			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 			//Data Protection 金鑰持久化（避免重啟就讓 Cookie 失效）
 			builder.Services.AddDataProtection()
 				.PersistKeysToFileSystem(new DirectoryInfo(

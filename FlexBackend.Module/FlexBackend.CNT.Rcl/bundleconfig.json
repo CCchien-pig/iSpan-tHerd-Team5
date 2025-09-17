@@ -1,0 +1,14 @@
+[
+  {
+    "outputFileName": "wwwroot/js/RichText.min.js",
+    "inputFiles": [
+      "wwwroot/js/RichText.js"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/js/site.min.js",
+    "inputFiles": [
+      "wwwroot/js/site.js"
+    ]
+  }
+]

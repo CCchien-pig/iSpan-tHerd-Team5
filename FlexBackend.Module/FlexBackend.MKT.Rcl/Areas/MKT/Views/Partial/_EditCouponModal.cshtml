@@ -8,9 +8,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
+                    <div class="text-center">
                         <label>優惠券ID</label>
-                        <input type="text" id="editCouponId" class="form-control" disabled />
+                        <input type="text" id="editCouponId" disabled />
                     </div>
                     <div class="mb-3">
                         <label>活動ID</label>
@@ -64,16 +64,14 @@
                         <input type="number" id="editValidHours" class="form-control" />
                     </div>
                     <div class="mb-3">
-                        <label>是否啟用</label><br />
-                        <div class="form-check form-check-inline">
-                            <input type="radio" name="editIsActive" value="true" class="form-check-input" />
-                            <label class="form-check-label">啟用</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input type="radio" name="editIsActive" value="false" class="form-check-input" />
-                            <label class="form-check-label">停用</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="editIsActive" id="editIsActive"
+                                   @(Model?.IsActive == true ? "checked" : "") />
+                            <label class="form-check-label" for="editIsActive">啟用</label>
                         </div>
                     </div>
+
+
                     <div class="mb-3">
                         <label>建立者</label>
                         <input type="text" id="editCreater" class="form-control" />
