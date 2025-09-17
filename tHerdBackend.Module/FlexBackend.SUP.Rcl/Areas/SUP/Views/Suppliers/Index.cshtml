@@ -50,6 +50,7 @@
 
     <script>
         $(document).ready(function() {
+            
             // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Suppliers/...）
             var indexJsonUrl = '@Url.Action("IndexJson", "Suppliers", new { area = "SUP" })';
             var createUrl = '@Url.Action("Create", "Suppliers", new { area = "SUP" })';
