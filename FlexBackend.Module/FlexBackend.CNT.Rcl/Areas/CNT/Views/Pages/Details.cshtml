@@ -6,7 +6,15 @@
 
 @section Styles{
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@ 
+        <style>
+        .bg-pink {
+            background-color: #d63384 !important; /* bootstrap pink */
+        }
+
+        .bg-purple {
+            background-color: #6f42c1 !important; /* bootstrap purple */
+        }</style>
 }
 @{
     ViewData["Title"] = "文章詳情";
@@ -24,29 +32,14 @@
 
             <dt class="col-sm-3">標題</dt>
             <dd class="col-sm-9">@Model.Title</dd>
-
-            <dt class="col-sm-3">狀態</dt>
-            <dd class="col-sm-9">
-                <span class="badge
-            @(Model.Status == PageStatus.Published ? "bg-success text-white border " :
-                                                            Model.Status == PageStatus.Draft ? "bg-secondary text-white " :
-                                                            Model.Status == PageStatus.Archived ? "bg-warning text-dark" :
-                                                            Model.Status == PageStatus.Deleted ? "bg-danger text-white" :
-                                                                                     "bg-light text-dark")">
-                    @Model.StatusText
-                </span>
-            </dd>
             <!-- pagetype -->
-            <dt class="col-sm-3">類別</dt>
+            <dt class="col-sm-3">文章分類</dt>
             <dd class="col-sm-9">
-                @if (Model.IsHomePage)
-                {
-                    <span class="badge bg-primary">首頁</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary">@Model.PageTypeName</span>
-                }
+                <span class="badge @Model.PageTypeBadgeClass">@Model.PageTypeName</span>
+            </dd>
+            <dt class="col-sm-3">文章狀態</dt>
+            <dd class="col-sm-9">
+                <span class="badge @Model.StatusBadgeClass">@Model.StatusText</span>
             </dd>
             <!-- tags -->
             <dt class="col-sm-3">標籤</dt>
