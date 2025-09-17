@@ -1,0 +1,55 @@
+﻿@* /Views/Shared/_AlertMessage.cshtml *@
+<div id="toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 2000;">
+    @if (TempData["Error"] != null)
+    {
+        <div class="toast align-items-center text-white bg-danger border-0 mb-2 show" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">❌ @TempData["Error"]</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+
+    @if (TempData["Msg"] != null)
+    {
+        <div class="toast align-items-center text-white bg-success border-0 mb-2 show" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">✅ @TempData["Msg"]</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="toast align-items-center text-white bg-warning border-0 mb-2 show" role="alert">
+            <div class="d-flex">
+                <div class="toast-body text-dark">⚠️ @TempData["Warning"]</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+
+    @if (TempData["Info"] != null)
+    {
+        <div class="toast align-items-center text-white bg-info border-0 mb-2 show" role="alert">
+            <div class="d-flex">
+                <div class="toast-body text-dark">ℹ️ @TempData["Info"]</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const toasts = document.querySelectorAll('#toast-container .toast');
+            toasts.forEach(toastEl => {
+                const toast = new bootstrap.Toast(toastEl, { delay: 2000 }); // 3 秒自動消失
+                toast.show();
+            });
+        });
+    </script>
+}
+
