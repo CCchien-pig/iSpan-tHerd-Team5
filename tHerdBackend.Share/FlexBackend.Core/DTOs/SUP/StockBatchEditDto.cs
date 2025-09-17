@@ -15,6 +15,9 @@
 		public bool IsAdd { get; set; } = true;    // + / - 選擇
 		public int ChangeQty { get; set; } = 0;    // 異動數量
 		public string Remark { get; set; } = string.Empty;  // 備註
+
+
+		public int SkuId { get; set; }
 	}
 
 }

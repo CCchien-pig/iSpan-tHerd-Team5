@@ -87,6 +87,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								BrandName = b.BrandName,
 								BrandCode = b.BrandCode,
 
+								// SKU 總庫存
+								TotalStock = sku.StockQty,
+
+								// SKU 顏色狀態
+								StockStatus = sku.StockQty <= sku.SafetyStockQty ? "danger" :
+									sku.StockQty <= sku.ReorderPoint ? "low" : "normal",
+
+								// 批次庫存顏色狀態
+								BatchStockStatus = sb.Qty <= sku.SafetyStockQty ? "danger" :
+								   sb.Qty <= sku.ReorderPoint ? "low" : "normal",
+
 								// 規格陣列 群組 + 規格選項
 								Specifications = sb.Sku.SpecificationOptions
 									.OrderBy(o => o.OrderSeq)
@@ -172,6 +183,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					// 展開列需要的
 					d.BrandName,
 					d.ProductName,
+
+					TotalStock = d.TotalStock,
 
 					// 陣列版規格
 					// 將 Specifications 轉成陣列，前端 render 時可用 map
@@ -292,9 +305,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					return Json(new { success = false, message = errMsg });
 				}
 
-				// 把 vm.ChangeQty 換成實際套用值（或直接傳 requestedQty 到 Service）
+				// 把 vm.ChangeQty 換成實際套用值
 				vm.ChangeQty = requestedQty;
-
 
 				string brandCode = sku?.Product?.Brand?.BrandCode ?? "XXX";
 
@@ -333,7 +345,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					return Json(new { success = false, message = "儲存失敗：" + ex.Message });
 				}
 
-				List<SupStockMovementDto> batchMovements = new(); // 用於回傳
+				// 初始化回傳
+				List<SupStockMovementDto> batchMovements = new();
+				int appliedChangeQty = 0;
+				int totalStockQty = sku.StockQty;
 
 				// 處理異動
 				if (!string.IsNullOrEmpty(vm.MovementType))
@@ -358,29 +373,24 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						// 使用服務回傳的 BatchMovements
 						batchMovements = result.BatchMovements ?? new List<SupStockMovementDto>();
 
-						return Json(new
-						{
-							success = true,
-							batchMovements = batchMovements,
-							batchNumber = stockBatch.BatchNumber,
-							newQty = stockBatch.Qty,
-							appliedChangeQty = result.AdjustedQty,  // 實際套用數量
-							totalStockQty = result.TotalStock       // 實際總庫存
-						});
-					}
+						appliedChangeQty = result.AdjustedQty;
+						totalStockQty = result.TotalStock;
+					}					
 					catch (NotImplementedException ex)
 					{
 						return Json(new { success = false, message = ex.Message });
 					}
 				}
 
+				// 統一回傳格式
 				return Json(new
 				{
 					success = true,
-					batchMovements = new List<SupStockMovementDto>(), // 空陣列
+					batchMovements,
 					batchNumber = stockBatch.BatchNumber,
 					newQty = stockBatch.Qty,
-					totalStockQty = sku.StockQty
+					appliedChangeQty,   // 實際套用數量
+					totalStockQty = totalStockQty       // 實際總庫存
 				});
 			}
 			catch (Exception ex)
@@ -488,13 +498,16 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					sku.SkuId,
 					sku.SkuCode,
-					CurrentStock = sku.StockQty,      // 當前庫存
+					CurrentStock = sku.StockQty,      // 當前庫存qty
+					//TotalStock = sku.StockQty,        // 這裡改成整個 SKU 的總庫存量
 					ExpectedStock = 0,                // 預計庫存，初始為 0，可前端計算
 					sku.ReorderPoint,                 // 再訂購點
 					sku.SafetyStockQty,               // 安全庫存量
 					sku.MaxStockQty,                  // 最大庫存量
 					sku.IsAllowBackorder,             // 是否可缺貨預購
-					IsSellable = sku.Product.IsPublished // 從商品表帶入
+					IsSellable = sku.Product.IsPublished, // 從商品表帶入
+					//StockStatus = sku.StockQty <= sku.SafetyStockQty ? "danger" :
+					//	  sku.StockQty <= sku.ReorderPoint ? "low" : "normal"
 				})
 				.ToListAsync();
 			return Ok(skus);
@@ -513,12 +526,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					sku.SkuId,
 					sku.SkuCode,
-					CurrentStock = sku.StockQty,
+					CurrentStock = sku.StockQty,      // 批次庫存 qty
+					//TotalStock = sku.StockQty,        // 這裡改成整個 SKU 的總庫存量
 					ExpectedStock = 0,                // 預計庫存初始為 0
 					sku.ReorderPoint,
 					sku.SafetyStockQty,
 					sku.MaxStockQty,
-					sku.IsAllowBackorder
+					sku.IsAllowBackorder,
+					//StockStatus = sku.StockQty <= sku.SafetyStockQty ? "danger" :
+					//	sku.StockQty <= sku.ReorderPoint ? "low" : "normal"					
 				})
 				.FirstOrDefaultAsync();
 
@@ -695,7 +711,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				stockBatchWithInfo.Remark = lastRemark ?? "";
 
 				// 回傳 PartialView
-				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchInfoPartial.cshtml", stockBatchWithInfo);
+				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchEditPartial.cshtml", stockBatchWithInfo);
 			}
 			catch (Exception ex)
 			{
@@ -753,14 +769,12 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Json(new { success = true });
 		}
 
-
-
 		private bool SupStockBatchExists(int id)
 		{
 			return _context.SupStockBatches.Any(e => e.StockBatchId == id);
 		}
 
-		// 初始化所有 SKU 批號
+		#region 初始化所有 SKU 批號
 		[HttpPost]
 		public async Task<IActionResult> InitializeBatches()
 		{
@@ -818,6 +832,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			await _context.SaveChangesAsync();
 		}
-
+		#endregion
 	}
 }
