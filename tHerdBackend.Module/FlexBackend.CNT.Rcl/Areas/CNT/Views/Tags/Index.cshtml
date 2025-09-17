@@ -1,19 +1,19 @@
 ﻿@using X.PagedList
 @using X.PagedList.Mvc.Core
 @model X.PagedList.IPagedList<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.TagListVM>
-@section Styles{
-    
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fixedtable.css" asp-append-version="true" />@* 固定欄位樣式 *@          
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
 
+@section Styles {
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fixedtable.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 }
 
 @{
     ViewData["Title"] = "標籤管理";
 }
-<form asp-action="Index" method="get"
-      class="mb-2 d-flex align-items-center">
+
+<!-- 🔍 查詢表單 -->
+<form asp-action="Index" method="get" class="mb-2 d-flex align-items-center">
 
     <!-- 左邊：功能按鈕 -->
     <div class="d-flex align-items-center me-auto">
@@ -23,7 +23,7 @@
         </a>
     </div>
 
-    <!-- 中間：查詢條件（置中） -->
+    <!-- 中間：查詢條件 -->
     <div class="mx-auto">
         <div class="input-group input-group-sm" style="max-width:720px;">
             <span class="input-group-text">每頁筆數</span>
@@ -52,91 +52,105 @@
                    placeholder="輸入標籤名稱..." />
 
             <button type="submit" class="btn btn-secondary btn-sm">🔍 搜尋</button>
-            <!-- ⭐ 清除篩選按鈕 -->
             <a asp-action="Index" class="btn btn-outline-dark btn-sm">❌ 清除</a>
         </div>
     </div>
 </form>
+
+<!-- ⭐ 篩選條件列 -->
+@if (!string.IsNullOrEmpty(ViewBag.Keyword) || !string.IsNullOrEmpty(ViewBag.StatusName))
+{
+    <div class="alert alert-info border rounded p-2 mb-2 d-flex align-items-center flex-wrap">
+        <span class="fw-bold me-2">🔎 篩選條件：</span>
+
+        @* 關鍵字 *@
+        @if (!string.IsNullOrEmpty(ViewBag.Keyword))
+        {
+            <span class="badge bg-primary d-flex align-items-center me-2">
+                關鍵字：「@ViewBag.Keyword」
+                <a asp-action="Index"
+                   asp-route-status="@ViewBag.Status"
+                   asp-route-pageSize="@ViewBag.PageSize"
+                   class="btn-close btn-close-white ms-2"
+                   title="移除關鍵字"></a>
+            </span>
+        }
+
+        @* 狀態 *@
+        @if (!string.IsNullOrEmpty(ViewBag.StatusName))
+        {
+            <span class="badge bg-success d-flex align-items-center me-2">
+                狀態：@ViewBag.StatusName
+                <a asp-action="Index"
+                   asp-route-keyword="@ViewBag.Keyword"
+                   asp-route-pageSize="@ViewBag.PageSize"
+                   class="btn-close btn-close-white ms-2"
+                   title="移除狀態"></a>
+            </span>
+        }
+
+        <a asp-action="Index" class="btn btn-outline-dark btn-sm">❌ 清除全部</a>
+    </div>
+}
 
 <div class="card shadow-sm">
     <div class="card-header bg-secondary-subtle text-dark fw-bold d-flex align-items-center">
         📑 標籤管理
     </div>
     <div class="card-body">
-       @* 🔍 查詢表單 *@
-                   
         <!-- 標籤列表 -->
         <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
             <thead class="table-dark">
-                <tr>
                 <tr>
                     <th># ID</th>
                     <th>📄 標籤名稱</th>
                     <th>📌 狀態</th>
                     <th>⏰ 最後修改日期</th>
                     <th>⚡ 動作</th>
-                </tr>                
+                </tr>
             </thead>
             <tbody>
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <!-- 標籤 ID 灰色小字 -->
-                        <td>
-                            <span class="text-muted">#@item.TagId</span>
-                        </td>
-
-                        <!-- 標籤名稱：加上 badge 讓它像「標籤貼紙」 -->
+                        <td><span class="text-muted">#@item.TagId</span></td>
                         <td>
                             <span class="badge rounded-pill bg-light text-dark border px-3 py-2 shadow-sm">
                                 🏷️ @item.TagName
                             </span>
                         </td>
-
-                        <!-- 狀態：用 badge 呈現 -->
                         <td>
-                            <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary") ">
+                            <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">
                                 @(item.IsActive ? "啟用" : "停用")
                             </span>
                         </td>
-                        <!-- 最後修改時間 -->
                         <td>
                             <span class="text-muted">
                                 @item.RevisedDate?.ToString("yyyy-MM-dd HH:mm")
                             </span>
                         </td>
-                        <td>                            
+                        <td>
                             <a asp-action="Edit" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-warning">✏️ 編輯</a>
                             <a asp-action="Details" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-info">👁 檢視</a>
-                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>                            
+                            <a asp-action="Delete" asp-route-id="@item.TagId" class="btn btn-sm btn-outline-danger">🗑️ 刪除</a>
                         </td>
-                        <!-- 操作按鈕群組化 -->
-                        @* <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a asp-action="Edit" asp-route-id="@item.TagId"
-                                   class="btn btn-outline-warning">✏️ 編輯</a>
-                                <a asp-action="Details" asp-route-id="@item.TagId"
-                                   class="btn btn-outline-info">👁 檢視</a>
-                                <a asp-action="Delete" asp-route-id="@item.TagId"
-                                   class="btn btn-outline-danger">🗑️ 刪除</a>
-                            </div>
-                        </td> *@
                     </tr>
                 }
-
             </tbody>
         </table>
+
         <!-- ⬆️ 回頂部 -->
         <button onclick="scrollToTop()" id="btnTop"
                 class="btn rounded-circle shadow-lg"
                 data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
             <i class="bi bi-arrow-up-short fs-2"></i>
         </button>
+
         <!-- 分頁控制 -->
         <div class="d-flex justify-content-center">
             @Html.PagedListPager(
             Model,
-            page => Url.Action("Index", new { page, keyword = ViewBag.Keyword, pageSize = ViewBag.PageSize }),
+            page => Url.Action("Index", new { page, keyword = ViewBag.Keyword, status = ViewBag.Status, pageSize = ViewBag.PageSize }),
                         new PagedListRenderOptions
                         {
                             DisplayLinkToFirstPage = PagedListDisplayMode.Always,
@@ -150,9 +164,10 @@
         </div>
     </div>
 </div>
+
 @section Scripts {
     <script>
-              function scrollToTop() {
+        function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -164,6 +179,5 @@
                 btn.classList.remove("show");
             }
         });
-
     </script>
 }

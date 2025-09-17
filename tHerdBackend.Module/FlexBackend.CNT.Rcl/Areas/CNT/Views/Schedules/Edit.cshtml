@@ -1,0 +1,39 @@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.ScheduleEditVM
+
+<h2>編輯排程</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="ScheduleId" />
+
+    <div class="mb-3">
+        <label class="form-label">文章</label>
+        <input class="form-control" value="@Model.PageTitle (@Model.PageTypeName)" readonly />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ActionType" class="form-label">動作</label>
+        <select asp-for="ActionType" class="form-select">
+            <option value="0">發布文章</option>
+            <option value="1">下架文章</option>
+            <option value="2">發布優惠券</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ScheduledDate" class="form-label">預定時間</label>
+        <input asp-for="ScheduledDate" type="datetime-local" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Status" class="form-label">狀態</label>
+        <select asp-for="Status" class="form-select">
+            <option value="0">待執行</option>
+            <option value="1">處理中</option>
+            <option value="2">完成</option>
+            <option value="9">失敗</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">儲存</button>
+    <a asp-action="Index" class="btn btn-secondary">返回</a>
+</form>

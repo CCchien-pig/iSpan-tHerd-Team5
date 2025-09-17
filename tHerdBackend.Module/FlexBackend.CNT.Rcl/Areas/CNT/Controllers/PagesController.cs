@@ -1,6 +1,7 @@
 ﻿using FlexBackend.CNT.Rcl.Areas.CNT.Services;
 using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels;
 using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+using FlexBackend.CNT.Rcl.Helpers;// ⭐ 引用共用下拉 Helper//尚未實作修改程式碼引用
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,7 +11,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using X.PagedList;
 using X.PagedList.Extensions;
-using FlexBackend.CNT.Rcl.Helpers;// ⭐ 引用共用下拉 Helper//尚未實作修改程式碼引用
+using System.Globalization;
 
 namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 {
@@ -428,22 +429,21 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			// 更新 Page 資料
 			// ===============================
 			pageEntity.Title = model.Title;
-			pageEntity.Status = ((int)model.Status).ToString();
+			pageEntity.Status = ((int)model.Status).ToString(CultureInfo.InvariantCulture);
 			pageEntity.RevisedDate = DateTime.Now;
 
 			// ===============================
-			// 防呆：首頁 PageTypeId 不允許修改
+			// PageType 更新
 			// ===============================
 			if (model.PageTypeId == HomePageTypeId)
 			{
-				// 找到實際的首頁
-				var homePageEntity = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
-				if (homePageEntity != null)
-				{
-					// 強制保持首頁類別
-					model.PageTypeId = HomePageTypeId;
-					homePageEntity.PageTypeId = HomePageTypeId;
-				}
+				// 強制保持首頁類別
+				pageEntity.PageTypeId = HomePageTypeId;
+			}
+			else
+			{
+				// ✅ 非首頁才允許修改分類
+				pageEntity.PageTypeId = model.PageTypeId;
 			}
 
 			// ======= 這裡不再「全部清空」舊排程 =======
@@ -661,32 +661,37 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
 			});
 		}
-
 		// ================================
 		// 回收桶列表 (RecycleBin)
 		// ================================
-		// ================================
-		// 回收桶列表 (RecycleBin)
-		// ================================
-		public IActionResult RecycleBin(int? page, string? keyword, int pageSize = 10, string? status = null)
+		public IActionResult RecycleBin(
+			int? page,
+			string? keyword,
+			int pageSize = 10,
+			string? status = null,
+			int? pageTypeId = null)
 		{
-			// ⭐ 先從 QueryString 抓出共用狀態
-			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
+			int pageNumber = Math.Max(page ?? 1, 1);
+			pageSize = pageSize > 0 ? pageSize : 10;
 
-			int pageNumber = Math.Max(page ?? qPage ?? 1, 1);
-			pageSize = (pageSize > 0) ? pageSize : qSize;
+			// ✅ 固定只顯示已刪除文章
+			var query = _db.CntPages
+				.Where(p => p.Status == ((int)PageStatus.Deleted).ToString());
 
-			var query = _db.CntPages.Where(p => p.Status == ((int)PageStatus.Deleted).ToString());
-
-			// 搜尋條件
-			var finalKeyword = !string.IsNullOrWhiteSpace(keyword) ? keyword : qKeyword;
-			if (!string.IsNullOrWhiteSpace(finalKeyword))
+			// 🔍 關鍵字搜尋
+			if (!string.IsNullOrWhiteSpace(keyword))
 			{
-				finalKeyword = finalKeyword.Trim();
-				if (int.TryParse(finalKeyword, out int idValue))
-					query = query.Where(p => p.PageId == idValue || p.Title.Contains(finalKeyword));
+				keyword = keyword.Trim();
+				if (int.TryParse(keyword, out int idValue))
+					query = query.Where(p => p.PageId == idValue || p.Title.Contains(keyword));
 				else
-					query = query.Where(p => p.Title.Contains(finalKeyword));
+					query = query.Where(p => p.Title.Contains(keyword));
+			}
+
+			// 🔍 分類 (PageType) 篩選
+			if (pageTypeId.HasValue && pageTypeId > 0)
+			{
+				query = query.Where(p => p.PageTypeId == pageTypeId.Value);
 			}
 
 			var deletedPages = query
@@ -697,17 +702,36 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 					Title = p.Title,
 					Status = (PageStatus)int.Parse(p.Status),
 					CreatedDate = p.CreatedDate,
-					RevisedDate = p.RevisedDate
+					RevisedDate = p.RevisedDate,
+					PageTypeName = p.PageType.TypeName
 				});
 
-			// ✅ 保留狀態到 ViewBag，方便搜尋框/分頁 UI 回填
-			ViewBag.Keyword = finalKeyword;
-			ViewBag.Status = status ?? qStatus;
+			// ✅ 保留條件到 ViewBag，方便 UI 回填
+			ViewBag.Keyword = keyword;
+			ViewBag.Status = status;
+			ViewBag.PageTypeId = pageTypeId;
+
+			// 頁數選單
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100 }, pageSize);
+
+			// 分類下拉（加「全部分類」選項）
+			var pageTypeOptions = _db.CntPageTypes
+				.Select(pt => new { pt.PageTypeId, pt.TypeName })
+				.ToList();
+
+			pageTypeOptions.Insert(0, new { PageTypeId = 0, TypeName = "全部分類" });
+
+			ViewBag.PageTypeList = new SelectList(pageTypeOptions, "PageTypeId", "TypeName", pageTypeId ?? 0);
+
+			// ✅ 狀態下拉：提供「全部」和「已刪除」
+			ViewBag.StatusList = new SelectList(new[]
+			{
+		new { Value = "", Text = "全部" },
+		new { Value = "deleted", Text = "已刪除" }
+	}, "Value", "Text", status);
 
 			return View(deletedPages.ToPagedList(pageNumber, pageSize));
 		}
-
 
 		// ================================
 		// 復原 (Restore)
