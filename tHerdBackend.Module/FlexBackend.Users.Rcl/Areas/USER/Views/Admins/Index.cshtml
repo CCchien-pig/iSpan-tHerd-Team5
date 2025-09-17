@@ -24,15 +24,15 @@
         <table id="tblUsers" class="table table-striped w-100">
             <thead>
                 <tr>
-                    <th>員編</th>
-                    <th>姓</th>
-                    <th>名</th>
-                    <th>Email</th>
-                    <th>電話</th>
-                    <th>角色</th>
-                    <th>啟用</th>
-                    <th>建立時間</th>
-                    <th>操作</th>
+                    <th class="text-center">員編</th>
+                    <th class="text-center">姓</th>
+                    <th class="text-center">名</th>
+                    <th class="text-center">Email</th>
+                    <th class="text-center">電話</th>
+                    <th class="text-center">角色</th>
+                    <th class="text-center">啟用</th>
+                    <th class="text-center">建立時間</th>
+                    <th class="text-center">操作</th>
                 </tr>
             </thead>
         </table>
@@ -227,21 +227,21 @@
               data: d => { d.roleId = document.getElementById('roleFilter').value; }
             },
             columns: [
-              { data: 'number' }, //0
-              { data: 'lastName',
+              { data: 'number',className: 'text-center' }, //0
+              { data: 'lastName',className: 'text-center',
                 render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="lastName" contenteditable="false">${escapeHtml(d)}</span>` }, //1
-              { data: 'firstName',
+              { data: 'firstName',className: 'text-center',
                 render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="firstName" contenteditable="false">${escapeHtml(d)}</span>` }, //2
-              { data: 'email',
+              { data: 'email',className: 'text-center',
                 render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="email" contenteditable="false">${escapeHtml(d)}</span>` }, //3
-              { data: 'phoneNumber',
+              { data: 'phoneNumber',className: 'text-center',
                 render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="phoneNumber" contenteditable="false">${escapeHtml(d)}</span>` }, //4
-              { data: 'roleId', orderable:false,
+              { data: 'roleId', orderable:false,className: 'text-center',
                 render: (d, t, row)=> roleSelectHtml(row.id, d) }, //5
               { data: 'isActive',
                 render: (d, t, row)=> activeSwitchHtml(row.id, d), className:'text-center' }, //6
-              { data: 'createdDate' }, //7
-              { data: null, orderable:false, searchable:false, //8
+              { data: 'createdDate',className: 'text-center' }, //7
+              { data: null, orderable:false, searchable:false,className: 'text-center', //8
                 render: (d,t,row)=> `
                         <div class="btn-group btn-group-sm gap-2" role="group">
           <button class="btn btn-outline-primary btn-detail btn-sm" data-id="${row.id}">詳細</button>
