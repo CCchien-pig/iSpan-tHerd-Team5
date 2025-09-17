@@ -285,12 +285,6 @@
                     </div>
 
                     <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold required">商品簡碼</label>
-                        <input asp-for="ProductCode" class="form-control" />
-                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold required">重量(KG)</label>
                         <input asp-for="Weight" class="form-control" />
                         <span asp-validation-for="Weight" class="text-danger small"></span>
@@ -311,6 +305,13 @@
                         <span asp-validation-for="VolumeUnit" class="text-danger small"></span>
                     </div>
 
+                    <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsPublished" class="form-check-input publish-toggle" />
+                            <label class="form-check-label fw-bold ms-2">上架</label>
+                        </div>
+                    </div>
+
                     <div class="col-12 mb-3">
                         <label class="form-label fw-bold required">商品簡述</label>
                         <textarea asp-for="ShortDesc" class="form-control" rows="2"></textarea>
@@ -323,11 +324,11 @@
                         <span asp-validation-for="FullDesc" class="text-danger small"></span>
                     </div>
 
-                    <div class="col-md-4 mb-3 d-flex justify-content-center align-items-center">
-                        <div class="form-check form-switch">
-                            <input asp-for="IsPublished" class="form-check-input publish-toggle" />
-                            <label class="form-check-label fw-bold ms-2">上架</label>
-                        </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">商品簡碼</label>
+                        <input class="form-control" 
+                               value="@(string.IsNullOrEmpty(Model?.ProductCode) ? "待系統產生" : Model.ProductCode)"
+                               disabled />
                     </div>
 
                     <div class="col-md-4 mb-3">
@@ -409,10 +410,15 @@
                             </div>
 
                         <div class="row p-3">
-                            <div id="specCards">
+                              <div id="specCards">
                                 @for (var i = 0; i < Model?.Skus.Count; i++)
                                 {
-                                    @Html.Partial("_SkuCard", Model.Skus[i], new ViewDataDictionary(ViewData) { { "Index", i } })
+                                    @Html.Partial("_SkuCard",
+                                        Model.Skus[i],
+                                        new ViewDataDictionary(ViewData) {
+                                            { "Index", i },
+                                            { "SpecConfigs", Model.SpecConfigs }  // 多傳這個
+                                        })
                                 }
                             </div>
                             <!-- 左邊跨 3 欄 & 4 列 -->
@@ -552,18 +558,17 @@
           const name = document.getElementById("tagNameInput").value.trim();
           if (!name) return;
 
-          // 重名檢查
-          if (specConfigs.some(c => c.groupName === name)) {
+          // 重名檢查：注意大小寫一致
+          if (specConfigs.some(c => c.GroupName === name)) {
             alert("已有相同名稱的分類，請勿重複新增！");
             return;
           }
 
-          // 建立前端分類物件（沒有正式 Id）
-          const cfg = { specificationConfigId: 0, groupName: name, orderSeq: specConfigs.length, productId: 0 };
-          cfg._tempId = genTempId();           // 立刻配一顆負數臨時 Id
+          // 建立前端分類物件（注意大寫 G）
+          const cfg = { SpecificationConfigId: 0, GroupName: name, OrderSeq: specConfigs.length, ProductId: 0 };
+          cfg._tempId = genTempId();
           specConfigs.push(cfg);
 
-          // 畫面上的 badge + 3 個 hidden（GroupName / OrderSeq / SpecificationConfigId）
           const container = document.getElementById("specConfigTags");
           const i = container.querySelectorAll(".draggable-tag").length;
 
@@ -581,9 +586,34 @@
           document.getElementById("tagNameInput").value = "";
           bootstrap.Modal.getInstance(document.getElementById('tagModal')).hide();
 
-          refreshIndexes();    // 你的既有函式：重排 name 索引
-          refreshSpecOptions(); // 讓所有 SKU 卡上的規格值區塊重建
+          refreshIndexes();
+          refreshSpecOptions();
         }
+
+        // === 預設載入 SpecConfigs 到標籤區 ===
+        function renderTagsFromModel() {
+          const container = document.getElementById("specConfigTags");
+          container.innerHTML = ""; // 先清空，避免重複
+
+          specConfigs.forEach((cfg, i) => {
+            const span = document.createElement("span");
+            span.className = "badge bg-purple2 draggable-tag";
+            span.innerHTML = `
+              ${cfg.groupName}
+              <button type="button" class="btn-close btn-close-white ms-1" onclick="removeTag(this)"></button>
+              <input type="hidden" name="SpecConfigs[${i}].GroupName" value="${cfg.groupName}" />
+              <input type="hidden" name="SpecConfigs[${i}].OrderSeq" value="${i}" />
+              <input type="hidden" name="SpecConfigs[${i}].SpecificationConfigId" value="${cfg.specificationConfigId || cfg._tempId}" />
+            `;
+            container.appendChild(span);
+          });
+
+          refreshIndexes();
+          refreshSpecOptions(); // 重繪每張 SKU 卡的規格值區塊
+        }
+
+        // 頁面載入時自動跑一次
+        document.addEventListener("DOMContentLoaded", renderTagsFromModel);
 
         function removeTag(btn) {
             const tag = btn.parentElement;
@@ -630,31 +660,46 @@
           if (!Array.isArray(specConfigs)) return "";
 
           return specConfigs.map((cfg, j) => {
-            const stableId = getStableConfigId(cfg); // 可能是正式 Id（正整數），或臨時 Id（負數）
+            const stableId = getStableConfigId(cfg);
             return `
               <div class="card p-2 flex-fill bg-warning bg-opacity-25" style="min-width:120px; max-width:200px;">
-                <label class="form-label fw-bold small mb-1">${cfg.groupName}</label>
+                <label class="form-label fw-bold small mb-1">${cfg.GroupName}</label>
 
                 <input type="hidden"
-                       name="Skus[${skuIndex}].SpecOptions[${j}].SpecificationConfigId"
+                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].SpecificationConfigId"
                        value="${stableId}" />
 
                 <input type="text" class="form-control form-control-sm"
-                       name="Skus[${skuIndex}].SpecOptions[${j}].OptionName"
+                       name="SpecConfigs[${j}].SpecOptions[${skuIndex}].OptionName"
                        value="${values[stableId]?.OptionName ?? ''}" />
               </div>
             `;
           }).join('');
         }
 
+
         // 更新所有 SKU 卡片的規格值區塊
         function refreshSpecOptions() {
             document.querySelectorAll("#specCards .spec-card").forEach((card, i) => {
                 const currentValues = {};
-                card.querySelectorAll(".spec-values input").forEach(input => {
-                    const match = input.name.match(/SpecOptions\[(\d+)\]/);
-                    if (match) {
-                        currentValues[match[1]] = input.value;
+
+                // card.querySelectorAll(".spec-values input").forEach(input => {
+                //     // 同時支援 SpecOptions[x] 和 SpecConfigs[n].SpecOptions[x]
+                //     const match = input.name.match(/SpecOptions\[(\d+)\]/) 
+                //                || input.name.match(/SpecConfigs\[\d+\]\.SpecOptions\[(\d+)\]/);
+
+                //     if (match) {
+                //         currentValues[match[1]] = input.value;
+                //     }
+                // });
+
+                // 每個規格值區塊，找 hidden 的 SpecificationConfigId
+                card.querySelectorAll(".spec-values").forEach(block => {
+                    const idInput = block.querySelector("input[name*='SpecificationConfigId']");
+                    const optionInput = block.querySelector("input[name*='OptionName']");
+                    if (idInput && optionInput) {
+                        const stableId = parseInt(idInput.value, 10);
+                        currentValues[stableId] = { OptionName: optionInput.value };
                     }
                 });
 
@@ -664,6 +709,7 @@
                 }
             });
         }
+
         
         // 讓卡片可拖曳
         new Sortable(document.getElementById("specCards"), {
@@ -682,26 +728,22 @@
             const index = document.querySelectorAll("#specCards .spec-card").length; // 保證取現有數量
 
             $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
-                const card = document.createElement("div");
-                card.classList.add("col-md-12", "spec-card");
-                card.dataset.index = index; // dataset 更直覺
-                card.innerHTML = html;
-                container.appendChild(card);
+                container.insertAdjacentHTML("beforeend", html);
             });
         }
 
         // 複製 SKU 卡片（插入在原卡片後）
         function copyCard(button) {
+            // 取得要複製的卡片
             const card = button.closest(".spec-card");
             const index = document.querySelectorAll("#specCards .spec-card").length;
 
             $.get('/PROD/Products/AddSkuCard', { index: index }, function (html) {
-                const newCard = document.createElement("div");
-                newCard.classList.add("col-md-12", "spec-card");
-                newCard.setAttribute("data-index", index);
-                newCard.innerHTML = html;
+                // 直接插 partial（它本身已經有 .spec-card 外框）
+                 card.insertAdjacentHTML("afterend", html);
 
-                card.insertAdjacentElement("afterend", newCard);
+                // 取得新插入的卡片
+                const newCard = card.nextElementSibling;
 
                 // 複製舊卡片的值到新卡片
                 const oldInputs = card.querySelectorAll("input, select, textarea");
