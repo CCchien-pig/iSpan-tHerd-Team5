@@ -45,12 +45,11 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 		public async Task GetAllProductTypesAsync()
 		{
 			var Types = await _repo.GetAllProductTypesAsync();
-			ViewBag.TypeDtos = Types.Select(b => new LoadBrandOptionDto
-			{
-				BrandId = b.BrandId,
-				BrandName = b.BrandName,
-				BrandCode = b.BrandCode,
-				SupplierName = b.SupplierName
+			ViewBag.TypeDtos = Types.Select(b => new ProdProductTypeConfigDto
+            {
+                ProductTypeId = b.ProductTypeId,
+                ProductTypeCode = b.ProductTypeCode,
+                ProductTypeName = b.ProductTypeName
 			}).ToList();
 		}
 
@@ -72,6 +71,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             ViewData["Area"] = "PROD";
             await GetSysCodes();
             await LoadBrandOptionsAsync();
+            await GetAllProductTypesAsync();
         }
 
 		//      public IActionResult AddSkuCard(int index)
@@ -131,7 +131,14 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 				ModelState.Remove(nameof(dto.ProductCode)); // 關鍵！
 			}
 
-			var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
+            foreach (var i in dto.Types) {
+                if (i.ProductId == null)
+                {
+                    i.ProductId = 0;
+                }
+            }
+
+            var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
 			if (!isValid)
 			{
 				ViewBag.ErrorMessage = errorMsg;
