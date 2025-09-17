@@ -138,7 +138,9 @@ namespace FlexBackend.USER.Rcl.Areas.USER.Controllers
 				Gender = u.Gender ?? "N/A",
 				BirthDate = u.BirthDate,
 				Address = u.Address,
-				IsActive = u.IsActive
+				IsActive = u.IsActive,
+				TwoFactorEnabled = await _userMgr.GetTwoFactorEnabledAsync(u),
+				HasAuthenticator = !string.IsNullOrEmpty(await _userMgr.GetAuthenticatorKeyAsync(u))
 			};
 			return View(vm); // 會找 Areas/USER/Views/Me/Index.cshtml
 		}
