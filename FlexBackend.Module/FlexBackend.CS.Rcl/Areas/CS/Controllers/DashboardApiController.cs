@@ -32,6 +32,177 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
                 ?? cfg.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("找不到資料庫連線字串（THerdDB 或 DefaultConnection）。");
         }
+        // ===== KPI + 同期比較（對上期/去年同期）+ 每日走勢 =====
+        // GET /api/cs/dashboard/kpi?days=30&mode=prev&includeSim=1
+        [HttpGet("kpi")]
+        public async Task<IActionResult> Kpi(
+            [FromQuery] int days = 30,
+            [FromQuery] string mode = "prev",      // prev=對上期, yoy=去年同期
+            [FromQuery] bool includeSim = true     // 先預設含測試款，Demo 比較有數字；上線可改 false
+        )
+        {
+            if (days < 1) days = 30;
+            mode = (mode ?? "prev").ToLower();
+            if (mode != "prev" && mode != "yoy") mode = "prev";
+
+            var sql = @"
+DECLARE @Days int = @p_days;
+DECLARE @CompareMode varchar(8) = @p_mode;
+DECLARE @IncludeSim bit = @p_includeSim;
+
+DECLARE @today date = CAST(GETDATE() AS date);
+DECLARE @curr_start date = DATEADD(day, 1-@Days, @today);
+DECLARE @curr_end   date = DATEADD(day, 1, @today);   -- 右開 [start, end)
+
+DECLARE @prev_start date, @prev_end date;
+IF (@CompareMode='yoy')
+BEGIN
+    SET @prev_start = DATEADD(year, -1, @curr_start);
+    SET @prev_end   = DATEADD(year, -1, @curr_end);
+END
+ELSE
+BEGIN
+    SET @prev_start = DATEADD(day, -@Days, @curr_start);
+    SET @prev_end   = @curr_start;
+END;
+
+IF OBJECT_ID('tempdb..#pay')      IS NOT NULL DROP TABLE #pay;
+IF OBJECT_ID('tempdb..#curr_pay') IS NOT NULL DROP TABLE #curr_pay;
+IF OBJECT_ID('tempdb..#prev_pay') IS NOT NULL DROP TABLE #prev_pay;
+
+-- 付款母集合（僅 success/refund；includeSim=0 時會排除模擬付款）
+SELECT
+    p.OrderId,
+    CAST(COALESCE(p.TradeDate, p.CreatedDate) AS date) AS PayDate,
+    CAST(p.Amount AS decimal(20,2)) AS Amount,
+    p.Status
+INTO #pay
+FROM dbo.ORD_Payment p
+WHERE p.Status IN ('success','refund')
+  AND ( @IncludeSim = 1 OR p.SimulatePaid = 0 )
+  AND COALESCE(p.TradeDate, p.CreatedDate) >= @prev_start
+  AND COALESCE(p.TradeDate, p.CreatedDate) <  @curr_end;
+
+-- 分期
+SELECT * INTO #curr_pay FROM #pay WHERE PayDate >= @curr_start AND PayDate < @curr_end;
+SELECT * INTO #prev_pay FROM #pay WHERE PayDate >= @prev_start AND PayDate < @prev_end;
+
+;WITH cs AS (
+    SELECT
+        SUM(CASE WHEN p.Status='success' THEN p.Amount ELSE 0 END) AS SuccessRevenue,  -- 成功收款總額
+        SUM(CASE WHEN p.Status='refund'  THEN p.Amount ELSE 0 END) AS RefundAmount,   -- 退款總額
+        SUM(CASE WHEN p.Status='success' THEN p.Amount ELSE 0 END)
+      - SUM(CASE WHEN p.Status='refund'  THEN p.Amount ELSE 0 END) AS Revenue,        -- 淨額（維持給營收用）
+        COUNT(DISTINCT CASE WHEN p.Status='success' THEN p.OrderId END)       AS Orders,
+        COUNT(DISTINCT CASE WHEN p.Status='success' THEN o.UserNumberId END)  AS Customers
+    FROM #curr_pay p
+    LEFT JOIN dbo.ORD_Order o ON o.OrderId = p.OrderId
+),
+ps AS (
+    SELECT
+        SUM(CASE WHEN p.Status='success' THEN p.Amount ELSE 0 END) AS SuccessRevenue,
+        SUM(CASE WHEN p.Status='refund'  THEN p.Amount ELSE 0 END) AS RefundAmount,
+        SUM(CASE WHEN p.Status='success' THEN p.Amount ELSE 0 END)
+      - SUM(CASE WHEN p.Status='refund'  THEN p.Amount ELSE 0 END) AS Revenue,
+        COUNT(DISTINCT CASE WHEN p.Status='success' THEN p.OrderId END)       AS Orders,
+        COUNT(DISTINCT CASE WHEN p.Status='success' THEN o.UserNumberId END)  AS Customers
+    FROM #prev_pay p
+    LEFT JOIN dbo.ORD_Order o ON o.OrderId = p.OrderId
+)
+-- 結果集 1：KPI（本期/同期 + AOV）
+SELECT 
+    ISNULL(cs.Revenue,0)  AS curr_revenue,       -- 仍然是淨額
+    ISNULL(ps.Revenue,0)  AS comp_revenue,
+    ISNULL(cs.Orders,0)   AS curr_orders,
+    ISNULL(ps.Orders,0)   AS comp_orders,
+    ISNULL(cs.Customers,0) AS curr_customers,
+    ISNULL(ps.Customers,0) AS comp_customers,
+    CAST(ISNULL(cs.SuccessRevenue,0) / NULLIF(ISNULL(cs.Orders,0),0) AS decimal(20,2)) AS curr_aov, -- ★ AOV 用成功收款
+    CAST(ISNULL(ps.SuccessRevenue,0) / NULLIF(ISNULL(ps.Orders,0),0) AS decimal(20,2)) AS comp_aov  -- ★
+FROM cs CROSS JOIN ps;
+
+
+-- 結果集 2：每日走勢（本期/同期）
+SELECT
+    'current' AS which, PayDate AS [date],
+    SUM(CASE WHEN Status='success' THEN Amount ELSE 0 END)
+      - SUM(CASE WHEN Status='refund'  THEN Amount ELSE 0 END) AS Revenue,
+    COUNT(DISTINCT CASE WHEN Status='success' THEN OrderId END) AS Orders
+FROM #curr_pay
+GROUP BY PayDate
+
+UNION ALL
+
+SELECT
+    'previous', PayDate,
+    SUM(CASE WHEN Status='success' THEN Amount ELSE 0 END)
+      - SUM(CASE WHEN Status='refund'  THEN Amount ELSE 0 END) AS Revenue,
+    COUNT(DISTINCT CASE WHEN Status='success' THEN OrderId END) AS Orders
+FROM #prev_pay
+GROUP BY PayDate
+ORDER BY which, [date];
+
+DROP TABLE #prev_pay; DROP TABLE #curr_pay; DROP TABLE #pay;
+";
+
+            await using var cn = new SqlConnection(_connStr);
+            await cn.OpenAsync();
+            await using var cmd = new SqlCommand(sql, cn);
+            cmd.Parameters.AddWithValue("@p_days", days);
+            cmd.Parameters.AddWithValue("@p_mode", mode);
+            cmd.Parameters.AddWithValue("@p_includeSim", includeSim ? 1 : 0);
+
+            using var rd = await cmd.ExecuteReaderAsync();
+
+            // 讀 KPI
+            decimal curRevenue = 0, prevRevenue = 0, curAov = 0, prevAov = 0;
+            int curOrders = 0, prevOrders = 0, curCustomers = 0, prevCustomers = 0;
+            if (await rd.ReadAsync())
+            {
+                curRevenue = rd.GetDecimal(0);
+                prevRevenue = rd.GetDecimal(1);
+                curOrders = rd.GetInt32(2);
+                prevOrders = rd.GetInt32(3);
+                curCustomers = rd.GetInt32(4);
+                prevCustomers = rd.GetInt32(5);
+                curAov = rd.IsDBNull(6) ? 0 : rd.GetDecimal(6);
+                prevAov = rd.IsDBNull(7) ? 0 : rd.GetDecimal(7);
+            }
+
+            // 讀每日走勢
+            var cur = new List<object>();
+            var prev = new List<object>();
+            await rd.NextResultAsync();
+            while (await rd.ReadAsync())
+            {
+                var which = rd.GetString(0);
+                var d = rd.GetDateTime(1);
+                var rev = rd.GetDecimal(2);
+                var ord = rd.GetInt32(3);
+                var row = new { date = d.ToString("yyyy-MM-dd"), revenue = rev, orders = ord };
+                if (which == "current") cur.Add(row); else prev.Add(row);
+            }
+
+            decimal pct(decimal a, decimal b) => b == 0 ? (a == 0 ? 0 : 100) : Math.Round((a - b) / b * 100, 2);
+
+            return Ok(new
+            {
+                mode,
+                days,
+                includeSim,
+                current = new { revenue = curRevenue, orders = curOrders, customers = curCustomers, aov = curAov },
+                previous = new { revenue = prevRevenue, orders = prevOrders, customers = prevCustomers, aov = prevAov },
+                delta = new
+                {
+                    revenue_pct = pct(curRevenue, prevRevenue),
+                    orders_pct = pct(curOrders, prevOrders),
+                    customers_pct = pct(curCustomers, prevCustomers),
+                    aov_pct = pct(curAov, prevAov)
+                },
+                trend = new { current = cur, previous = prev }
+            });
+        }
+
 
         /// <summary>
         /// 折線圖：近 N 天每日淨營收(net)與訂單數(orders) + KPI
