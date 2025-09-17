@@ -1,5 +1,4 @@
 ﻿@model FlexBackend.Infra.Models.MktCoupon
-
 <div class="modal fade" id="createCouponModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -13,7 +12,7 @@
                     <div class="mb-3">
                         <label class="form-label">活動</label>
                         <select id="createCampaignId" name="CampaignId" class="form-select" required>
-                            <option value="">-- 請選擇活動 --</option>
+                            <option value="">請選擇活動</option>
                             @if (ViewBag.Campaigns != null)
                             {
                                 foreach (var campaign in ViewBag.Campaigns)
@@ -27,10 +26,12 @@
                         </select>
                     </div>
 
+                    <!-- 規則下拉選單 -->
                     <div class="mb-3">
-                        <label class="form-label">規則ID</label>
-                        <input type="number" id="createRuleId" name="RuleId" class="form-control" required
-                               value="@Model?.RuleId" />
+                        <label for="createRuleId" class="form-label">規則條件</label>
+                        <select id="createRuleId" name="RuleId" class="form-select" required>
+                            <option value="">請選擇規則</option>
+                        </select>
                     </div>
 
                     <div class="mb-3">
@@ -48,16 +49,17 @@
                     <div class="mb-3">
                         <label class="form-label">優惠券狀態</label>
                         <select id="createStatus" name="Status" class="form-select" required>
-                            <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>未啟用</option>
-                            <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>啟用</option>
+                            <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>下架</option>
+                            <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>上架</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">開始時間</label>
                         <input type="datetime-local" id="createStartDate" name="StartDate" class="form-control" required
-                               value="@(Model != null ? Model.StartDate.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                               value="" />
                     </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">結束時間</label>
@@ -71,31 +73,31 @@
                                value="@Model?.DiscountAmount" />
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3 d-none">
                         <label class="form-label">折扣百分比</label>
                         <input type="number" id="createDiscountPercent" name="DiscountPercent" class="form-control" step="0.01"
-                               value="@Model?.DiscountPercent" />
+                               value="" />
                     </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">總數量</label>
                         <input type="number" id="createTotQty" name="TotQty" class="form-control" required
-                               value="@Model?.TotQty" />
+                               value="" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">每人限領</label>
                         <input type="number" id="createUserLimit" name="UserLimit" class="form-control" required
-                               value="@Model?.UserLimit" />
+                               value="" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">有效時數</label>
                         <input type="number" id="createValidHours" name="ValidHours" class="form-control" required
-                               value="@Model?.ValidHours" />
+                               value="" />
                     </div>
 
-                    <!-- IsActive 開關 -->
                     <div class="form-check form-switch mb-3">
                         <input type="checkbox" id="createIsActive" name="IsActive" class="form-check-input"
                                @(Model?.IsActive ?? true ? "checked" : "") />
@@ -105,7 +107,7 @@
                     <div class="mb-3">
                         <label class="form-label">建立者</label>
                         <input type="number" id="createCreator" name="Creator" class="form-control" required
-                               value="@Model?.Creator" />
+                               value="" />
                     </div>
                 </div>
 
@@ -117,3 +119,77 @@
         </div>
     </div>
 </div>
+
+<script>
+    // 打開 modal 時載入規則
+    function loadActiveRules() {
+        $.get('/MKT/Coupons/GetActiveRules', function (rules) {
+            var $ruleSelect = $("#createRuleId");
+            $ruleSelect.empty().append('<option value="">請選擇規則</option>');
+            rules.forEach(function (r) {
+                $ruleSelect.append('<option value="' + r.RuleId + '">' + r.DefaultCondition + '</option>');
+            });
+        }).fail(function(err){
+            console.error("載入規則失敗", err);
+        });
+    }
+
+    $("#CreateCoupon").off("click").on("click", function () {
+        loadActiveRules();  // 載入規則
+        $("#createCouponModal").modal("show");
+    });
+
+    // 新增優惠券
+    $("#createCouponSubmitBtn").off('click').on('click', function(e) {
+        e.preventDefault();
+        var form = $("#createCouponForm");
+        var data = {
+            CampaignId: parseInt(form.find("#createCampaignId").val()),
+            RuleId: parseInt(form.find("#createRuleId").val()),
+            CouponName: form.find("#createCouponName").val().trim(),
+            CouponCode: form.find("#createCouponCode").val().trim(),
+            Status: form.find("#createStatus").val(),
+            StartDate: form.find("#createStartDate").val(),
+            EndDate: form.find("#createEndDate").val() || null,
+            DiscountAmount: parseFloat(form.find("#createDiscountAmount").val()) || null,
+            DiscountPercent: parseFloat(form.find("#createDiscountPercent").val()) || null,
+            TotQty: parseInt(form.find("#createTotQty").val()),
+            LeftQty: parseInt(form.find("#createTotQty").val()),
+            UserLimit: parseInt(form.find("#createUserLimit").val()),
+            ValidHours: parseInt(form.find("#createValidHours").val()),
+            IsActive: form.find("#createIsActive").is(":checked"),
+            Creator: parseInt(form.find("#createCreator").val())
+        };
+
+        // 前端檢查
+        if(!data.CampaignId) return Swal.fire("錯誤","請選擇活動","error");
+        if(!data.RuleId) return Swal.fire("錯誤","請選擇優惠規則","error");
+        if(!data.CouponName || !data.CouponCode) return Swal.fire("錯誤","優惠券名稱與代碼必填","error");
+        if(!data.StartDate) return Swal.fire("錯誤","請選擇開始時間","error");
+        if(!data.TotQty || !data.UserLimit || !data.ValidHours || !data.Creator)
+            return Swal.fire("錯誤","數量、每人限領、有效時數與建立者必填","error");
+        if(data.DiscountAmount===null && data.DiscountPercent===null)
+            return Swal.fire("錯誤","折扣金額或折扣百分比至少要填一個","error");
+        if(data.EndDate && new Date(data.EndDate) < new Date(data.StartDate))
+            return Swal.fire("錯誤","結束日期不能早於開始日期","error");
+        if(data.Status==="pInactive" && data.IsActive)
+            return Swal.fire("錯誤","下架狀態時，IsActive 必須為停用","error");
+
+        $.ajax({
+            url: '@Url.Action("CreateCoupon", "Coupons", new { area = "MKT" })',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res){
+                if(res.success){
+                    Swal.fire("成功","優惠券已新增！","success").then(()=> {
+                        $("#createCouponModal").modal("hide");
+                        form[0].reset();
+                        if(window.calendar) window.calendar.refetchEvents();
+                    });
+                } else Swal.fire("錯誤","新增失敗：" + res.message,"error");
+            },
+            error: function(err){ console.error(err); Swal.fire("錯誤","新增失敗","error"); }
+        });
+    });
+</script>
