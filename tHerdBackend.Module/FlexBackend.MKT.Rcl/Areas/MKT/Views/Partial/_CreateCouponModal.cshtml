@@ -46,13 +46,20 @@
                                value="@Model?.CouponCode" />
                     </div>
 
-                    <div class="mb-3">
+                    @* <div class="mb-3">
                         <label class="form-label">優惠券狀態</label>
                         <select id="createStatus" name="Status" class="form-select" required>
                             <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>下架</option>
                             <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>上架</option>
                         </select>
+                    </div> *@
+                    <!-- 隱藏優惠券狀態欄位，固定回傳 pActive -->
+                    <div class="mb-3" style="display:none;">
+                        <label class="form-label">優惠券狀態</label>
+                        <input type="hidden" id="createStatus" name="Status" value="pActive" />
                     </div>
+
+
 
                     <div class="mb-3">
                         <label class="form-label">開始時間</label>
@@ -92,11 +99,12 @@
                                value="" />
                     </div>
 
-                    <div class="mb-3">
+                    <!-- 隱藏輸入欄位，固定回傳24 -->
+                    <div class="mb-3" style="display:none;">
                         <label class="form-label">有效時數</label>
-                        <input type="number" id="createValidHours" name="ValidHours" class="form-control" required
-                               value="" />
+                        <input type="hidden" id="createValidHours" name="ValidHours" value="24" />
                     </div>
+
 
                     <div class="form-check form-switch mb-3">
                         <input type="checkbox" id="createIsActive" name="IsActive" class="form-check-input"

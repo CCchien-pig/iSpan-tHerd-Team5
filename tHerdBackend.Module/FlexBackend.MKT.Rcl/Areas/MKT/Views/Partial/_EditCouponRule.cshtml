@@ -7,6 +7,8 @@
 
 <div class="modal-body">
     <form id="editRuleForm">
+        @Html.AntiForgeryToken()
+
         <!-- RuleId -->
         <div class="mb-3">
             <label class="form-label">規則編號 (RuleId)</label>
@@ -16,7 +18,7 @@
         <!-- CouponType 隱藏回傳 pmd -->
         <input type="hidden" name="CouponType" value="pmd" />
 
-        <!-- DefaultCondition 下拉選單 -->
+        <!-- DefaultCondition -->
         <div class="mb-3">
             <label class="form-label">預設條件</label>
             <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
@@ -30,7 +32,7 @@
             <textarea name="Description" id="editDescription" class="form-control" readonly></textarea>
         </div>
 
-        <!-- IsActive Toggle -->
+        <!-- IsActive -->
         <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive" disabled />
             <label class="form-check-label" for="editIsActive">啟用</label>
@@ -46,7 +48,7 @@
 
 <script>
     $(document).ready(function () {
-        // 載入所有規則（包含停用）
+        // 載入所有規則
         $.get('/MKT/Coupons/GetActiveRules', function (rules) {
             var $select = $("#editDefaultCondition");
             rules.forEach(function (r) {
@@ -75,7 +77,7 @@
         });
 
         // 儲存變更
-        $("#updateRuleBtn").off("click").on("click", function () {
+        $("#updateRuleBtn").click(function () {
             var data = {
                 RuleId: $("#editRuleId").val(),
                 CouponType: $("input[name='CouponType']").val(),
@@ -104,8 +106,8 @@
         });
 
         // 刪除規則
-        $("#deleteRuleBtn").off("click").on("click", function () {
-            var ruleId = $("#editRuleId").val(); // 取得目前 RuleId
+        $("#deleteRuleBtn").click(function () {
+            var ruleId = $("#editRuleId").val();
             if (!ruleId) return Swal.fire("錯誤", "請先選擇規則", "error");
 
             Swal.fire({
@@ -116,23 +118,21 @@
                 cancelButtonText: '取消'
             }).then(result => {
                 if (result.isConfirmed) {
-                    var token = $('input[name="__RequestVerificationToken"]').val(); // 取得 AntiForgeryToken
+                    var token = $('#editRuleForm input[name="__RequestVerificationToken"]').val();
 
                     $.ajax({
                         url: '/MKT/Coupons/DeleteRule/' + ruleId,
                         type: 'POST',
                         headers: { 'RequestVerificationToken': token },
-                        success: function (res) {
-                            if (res.success) {
+                        success: function(res) {
+                            if(res.success){
                                 Swal.fire('已刪除', '規則已刪除', 'success');
-                                // 清空表單
                                 $("#editRuleForm")[0].reset();
-                                // 從下拉選單移除該筆規則
                                 $("#editDefaultCondition option[value='" + ruleId + "']").remove();
                                 if (typeof loadRules === "function") loadRules("#editRuleId");
                             } else Swal.fire('錯誤', res.message, 'error');
                         },
-                        error: function (err) {
+                        error: function(err){
                             console.error(err);
                             Swal.fire('錯誤', '刪除失敗', 'error');
                         }
@@ -140,5 +140,6 @@
                 }
             });
         });
+
     });
 </script>

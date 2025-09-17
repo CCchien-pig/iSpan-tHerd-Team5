@@ -126,10 +126,30 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             if (!ModelState.IsValid)
                 return Json(new { success = false, message = "資料驗證失敗" });
 
-            _context.MktCoupons.Update(model);
+            var coupon = _context.MktCoupons.FirstOrDefault(c => c.CouponId == model.CouponId);
+            if (coupon == null)
+                return Json(new { success = false, message = "找不到優惠券" });
+
+            // 只更新可編輯欄位
+            coupon.CouponName = model.CouponName;
+            coupon.CouponCode = model.CouponCode;
+            coupon.Status = model.Status;
+            coupon.StartDate = model.StartDate;
+            coupon.EndDate = model.EndDate;
+            coupon.DiscountAmount = model.DiscountAmount;
+            coupon.DiscountPercent = model.DiscountPercent;
+            coupon.TotQty = model.TotQty;
+            coupon.UserLimit = model.UserLimit;
+            coupon.ValidHours = model.ValidHours;
+            coupon.IsActive = model.IsActive;
+
+            // 不更新 CreatedDate
+            // coupon.CreatedDate = coupon.CreatedDate;
+
             _context.SaveChanges();
             return Json(new { success = true });
         }
+
 
         [HttpPost("{id}")]
         public IActionResult DeleteCoupon(int id)
@@ -222,23 +242,23 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         }
 
 
+        // 取得所有規則（包含停用）
         [HttpGet]
         public IActionResult GetActiveRules()
         {
             var rules = _context.MktCouponRules
+                .Where(r => r.IsActive)
                 .Select(r => new {
                     r.RuleId,
                     r.DefaultCondition,
-                    r.IsActive,
-                    r.Description
-                })
-                .ToList();
+                    r.Description,
+                    r.IsActive
+                }).ToList();
 
             return Json(rules);
         }
 
-
-        // 取得單一規則詳細資料（選擇下拉用）
+        // 取得單一規則
         [HttpGet]
         public IActionResult GetRuleById(int id)
         {
@@ -259,12 +279,12 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         [HttpPost]
         public IActionResult UpdateRule([FromBody] MktCouponRule model)
         {
-            if (!ModelState.IsValid) return Json(new { success = false, message = "資料驗證失敗" });
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
 
             var rule = _context.MktCouponRules.FirstOrDefault(r => r.RuleId == model.RuleId);
             if (rule == null) return Json(new { success = false, message = "找不到規則" });
 
-            // 只更新可編輯欄位
             rule.Description = model.Description;
             rule.IsActive = model.IsActive;
 
@@ -279,8 +299,9 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             }
         }
 
+        // 刪除規則
         [HttpPost]
-        [ValidateAntiForgeryToken] // 保留驗證
+        [ValidateAntiForgeryToken]
         public IActionResult DeleteRule(int id)
         {
             try
@@ -299,7 +320,6 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
-
     }
 
 }
