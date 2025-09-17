@@ -13,11 +13,19 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public DateTime CreatedDate { get; set; }
 		public DateTime? RevisedDate { get; set; }
 
+		//頁面類型
+		public int PageTypeId { get; set; }
+		public string PageTypeName { get; set; } = "";  // ⭐ 類別顯示用
+		public bool IsHomePage => PageTypeId == 1000;
+
 		// ⭐ 顯示標籤名稱（不是 Id）
 		public List<string> TagNames { get; set; } = new();
 
 		// ⭐ 加上 Blocks
 		public List<CntPageBlock> Blocks { get; set; } = new();
+
+		// ⭐ 新增：排程清單
+		public List<ScheduleVM> Schedules { get; set; } = new();
 
 		// 🔑 新增：用來保留分頁與篩選狀態
 		public int? Page { get; set; }

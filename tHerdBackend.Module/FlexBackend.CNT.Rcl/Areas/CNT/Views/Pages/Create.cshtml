@@ -1,9 +1,5 @@
 ﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.PageEditVM
-@{
-    ViewData["Title"] = "新增文章";
-    const int HomePageId = 1000;
-    bool isHome = Model.PageId == HomePageId;
-}
+
 @{
     ViewData["Title"] = "新增文章";
 }
@@ -11,7 +7,8 @@
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@      
+            
 }
 
 <div class="card shadow-sm border-0">
@@ -45,28 +42,13 @@
             <!-- 標籤 -->
             <div class="mb-3">
                 <label class="form-label">標籤</label>
-
-                @if (isHome)
-                {
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            data-val="false">
-                        <!-- 關閉驗證 -->
-                    </select>
-                    <small class="text-muted">首頁不需要標籤。</small>
-                }
-                else
-                {
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            required>
-                    </select>
-                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
-                }
+                <select asp-for="SelectedTagIds"
+                        asp-items="Model.TagOptions"
+                        multiple="multiple"
+                        class="tag-selector w-100"
+                        required>
+                </select>
+                <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
             </div>
 
             <!-- 🔑 保留查詢狀態 -->
@@ -74,6 +56,23 @@
             <input type="hidden" asp-for="PageSize" />
             <input type="hidden" asp-for="Keyword" />
             <input type="hidden" asp-for="StatusFilter" />
+
+            <!-- 排程時間 -->
+            <div class="mb-3">
+                <label asp-for="ScheduledDate" class="form-label"></label>
+                <input asp-for="ScheduledDate" type="datetime-local" class="form-control"
+                       min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+            </div>
+            <!-- 排程動作 -->
+            <div class="mb-3">
+                <label asp-for="ActionType" class="form-label">排程動作</label>
+                <select asp-for="ActionType" asp-items="Html.GetEnumSelectList<ActionType>()" class="form-select">
+                    <option value="">-- 不使用排程 --</option>
+                </select>
+                <span asp-validation-for="ActionType" class="text-danger"></span>
+            </div>
+
             
             <div class="d-flex gap-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
@@ -120,6 +119,8 @@
         });
 
     </script>
+
+
 }
 
 
