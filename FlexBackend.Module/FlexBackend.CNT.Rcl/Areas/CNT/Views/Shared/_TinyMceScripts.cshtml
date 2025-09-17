@@ -10,30 +10,36 @@
     const uploadImageUrl = '@Url.Action("Image", "Upload", new { area = "CNT" })';
     const uploadMediaUrl = '@Url.Action("Media", "Upload", new { area = "CNT" })';
 
-        const placeholders = [
-          "「用文字征服世界。」",
-          "「寫吧，這裡是你的戰場！」",
-          "「別怕，打錯字不會被扣薪水。」",
-          "「用文字征服世界。」",
-          "「字越多，力量越大。」",
-          "「來，發表你的偉大言論。」",
-          "「這裡可以容納你的一切靈感，除了你昨晚的爛笑話。」",
-          "「不管是生旦淨末丑，跑龍套也能讓你激昂，寧願捨一頓飯也聽你唱。」",
-          "「這是一首簡單的小情歌，唱著我們心頭的白鴿。」",
-          "「想說好多話，可不知從何說起？」"
-        ];
-        // 隨機挑選一個
-        const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+            const placeholders = [
+      "「用文字征服世界。」",
+      "「寫吧，這裡是你的戰場！」",
+      "「別怕，打錯字不會被扣薪水。」",
+      "「字越多，力量越大。」",
+      "「來，發表你的偉大言論。」",
+      "「這裡可以容納你的一切靈感，除了你昨晚的爛笑話。」",
+      "「不管是生旦淨末丑，跑龍套也能讓你激昂，寧願捨一頓飯也聽你唱。」",
+      "「這是一首簡單的小情歌，唱著我們心頭的白鴿。」",
+      "「想說好多話，可不知從何說起？」"
+    ];
+
+    const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+    const randomPlaceholder1 = placeholders[Math.floor(Math.random() * placeholders.length)];
+
+    // ✅ 組合成多行字串（用換行 \n 或 template literal）
+    const combinedPlaceholder = `什麼時候兩段會一樣呢？${randomPlaceholder}\n${randomPlaceholder1}`;
 
         tinymce.init({
            selector: '#editor',
             height: 600,              // ✅ 固定高度
-            placeholder: randomPlaceholder,   // ✅ 隨機 placeholder
+            placeholder: combinedPlaceholder,   // ✅ 隨機 placeholder
             content_style: `
             body.mce-content-body[data-mce-placeholder]:empty::before {
             font-size: 20px !important;
             font-style: italic;
-            color: #e63946;}`,
+            color: #e63946;
+            white-space: pre-line !important; /* ✅ 保留換行 */
+            display: block;                  /* ✅ 讓 \n 真的換行 */
+            }`,
             menubar: true,
             statusbar: true,          // ✅ 保留底部狀態列
             resize: true,            // ❌ 禁止使用者手動拖曳高度
