@@ -314,70 +314,22 @@ namespace FlexBackend.Infra.Repository.PROD
 
         private async Task UpsertRelationsAsync(IDbConnection conn, IDbTransaction tran, ProdProductDto dto)
         {
-            var ptc = _db.ProdProductTypes
-                .Where(t => t.ProductId == dto.ProductId && t.IsPrimary)
-                .FirstOrDefault()?.ProductTypeId;
+			// === SKU處理邏輯 ===
+			foreach (var sku in dto.Skus ?? new())
+			{
+				// 需要新建 SkuCode
+				if (sku.SkuId == 0)
+				{
+					var maxSeq = (await conn.ExecuteScalarAsync<int?>(
+						"SELECT ISNULL(MAX(SkuId),0) FROM PROD_ProductSku;", transaction: tran)) ?? 0;
 
-            string? typeCode = null;
+					sku.SkuCode = GenerateSkuCode(dto.BrandCode, dto.ProductTypeCode, dto.ProductCode, maxSeq + 1, sku.SpecCode);
+				}
 
-            if (ptc != null)
-            {
-                typeCode = _db.ProdProductTypeConfigs
-                    .Where(t => t.ProductTypeId == ptc)
-                    .Select(t => t.ProductTypeCode)
-                    .FirstOrDefault();
-            }
-
-            dto.ProductTypeCode = typeCode ?? "PT";
-
-            // === 規格群組 & 規格選項 ===
-            foreach (var cfg in dto.SpecConfigs ?? new())
-            {
-                var cfgId = cfg.SpecificationConfigId > 0
-                    ? cfg.SpecificationConfigId
-                    : await conn.ExecuteScalarAsync<int>(
-                        @"INSERT INTO PROD_SpecificationConfig (ProductId, GroupName, OrderSeq)
-                  OUTPUT INSERTED.SpecificationConfigId
-                  VALUES (@ProductId, @GroupName, @OrderSeq);",
-                        new { dto.ProductId, cfg.GroupName, cfg.OrderSeq }, tran);
-
-                foreach (var opt in cfg.SpecOptions ?? new())
-                {
-                    if (opt.SpecificationOptionId is > 0)
-                    {
-                        await conn.ExecuteAsync(
-                            @"UPDATE PROD_SpecificationOption
-                      SET OptionName=@OptionName, OrderSeq=@OrderSeq
-                      WHERE SpecificationOptionId=@SpecificationOptionId",
-                            new { opt.OptionName, opt.OrderSeq, opt.SpecificationOptionId }, tran);
-                    }
-                    else
-                    {
-                        opt.SpecificationOptionId = await conn.ExecuteScalarAsync<int>(
-                            @"INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
-                      OUTPUT INSERTED.SpecificationOptionId
-                      VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);",
-                            new { SpecificationConfigId = cfgId, opt.OptionName, opt.OrderSeq }, tran);
-                    }
-                }
-            }
-
-            // === SKU 與規格值 ===
-            foreach (var sku in dto.Skus ?? new())
-            {
-                // 需要新建 SkuCode
-                if (sku.SkuId == 0 || string.IsNullOrEmpty(sku.SkuCode) || sku.SkuCode.StartsWith("TEMP-"))
-                {
-                    var maxSeq = (await conn.ExecuteScalarAsync<int?>(
-                        "SELECT ISNULL(MAX(SkuId),0) FROM PROD_ProductSku;", transaction: tran)) ?? 0;
-
-                    sku.SkuCode = GenerateSkuCode(dto.BrandCode, dto.ProductTypeCode, dto.ProductCode, maxSeq + 1, sku.SpecCode);
-                }
-
-                if (sku.SkuId == 0)
-                {
-                    sku.SkuId = await conn.ExecuteScalarAsync<int>(
-                        @"INSERT INTO PROD_ProductSku
+				if (sku.SkuId == 0)
+				{
+					sku.SkuId = await conn.ExecuteScalarAsync<int>(
+						@"INSERT INTO PROD_ProductSku
                   (ProductId, SpecCode, SkuCode, Barcode,
                    CostPrice, ListPrice, UnitPrice, SalePrice,
                    StockQty, SafetyStockQty, ReorderPoint, MaxStockQty,
@@ -388,53 +340,108 @@ namespace FlexBackend.Infra.Repository.PROD
                    @CostPrice, @ListPrice, @UnitPrice, @SalePrice,
                    @StockQty, @SafetyStockQty, @ReorderPoint, @MaxStockQty,
                    @IsAllowBackorder, @ShelfLifeDays, @StartDate, @EndDate, @IsActive);",
-                        new
-                        {
-                            dto.ProductId,
-                            sku.SpecCode,
-                            sku.SkuCode,
-                            sku.Barcode,
-                            sku.CostPrice,
-                            sku.ListPrice,
-                            sku.UnitPrice,
-                            sku.SalePrice,
-                            sku.StockQty,
-                            sku.SafetyStockQty,
-                            sku.ReorderPoint,
-                            sku.MaxStockQty,
-                            sku.IsAllowBackorder,
-                            sku.ShelfLifeDays,
-                            sku.StartDate,
-                            sku.EndDate,
-                            sku.IsActive
-                        }, tran);
-                }
-                else
-                {
-                    await conn.ExecuteAsync(
-                        @"UPDATE PROD_ProductSku
+						new
+						{
+							dto.ProductId,
+							sku.SpecCode,
+							sku.SkuCode,
+							sku.Barcode,
+							sku.CostPrice,
+							sku.ListPrice,
+							sku.UnitPrice,
+							sku.SalePrice,
+							sku.StockQty,
+							sku.SafetyStockQty,
+							sku.ReorderPoint,
+							sku.MaxStockQty,
+							sku.IsAllowBackorder,
+							sku.ShelfLifeDays,
+							sku.StartDate,
+							sku.EndDate,
+							sku.IsActive
+						}, tran);
+				}
+				var ptc = _db.ProdProductTypes
+	                .Where(t => t.ProductId == dto.ProductId && t.IsPrimary)
+	                .FirstOrDefault()?.ProductTypeId;
+
+				string? typeCode = null;
+
+				if (ptc != null)
+				{
+					typeCode = _db.ProdProductTypeConfigs
+						.Where(t => t.ProductTypeId == ptc)
+						.Select(t => t.ProductTypeCode)
+						.FirstOrDefault();
+				}
+
+				dto.ProductTypeCode = typeCode ?? "PT";
+
+				// === 不論新增 / 修改，都重新生成正式的 SkuCode ===
+				sku.SkuCode = GenerateSkuCode(
+					dto.BrandCode,
+					dto.ProductTypeCode,
+					dto.ProductCode,
+					sku.SkuId,
+					sku.SpecCode);
+
+				await conn.ExecuteAsync(
+					        @"UPDATE PROD_ProductSku
                   SET SpecCode=@SpecCode, SkuCode=@SkuCode, Barcode=@Barcode,
                       CostPrice=@CostPrice, ListPrice=@ListPrice, UnitPrice=@UnitPrice, SalePrice=@SalePrice,
                       StockQty=@StockQty, SafetyStockQty=@SafetyStockQty, ReorderPoint=@ReorderPoint, MaxStockQty=@MaxStockQty,
                       IsAllowBackorder=@IsAllowBackorder, ShelfLifeDays=@ShelfLifeDays, StartDate=@StartDate, EndDate=@EndDate, IsActive=@IsActive
                   WHERE SkuId=@SkuId",
-                        sku, tran);
-                }
+					        sku, tran);
+			}
 
-                // 刪除舊的 SKU 規格值
-                await conn.ExecuteAsync("DELETE FROM PROD_SkuSpecificationValue WHERE SkuId=@SkuId",
-                    new { sku.SkuId }, tran);
+			// === 規格群組 & 規格選項 ===
+			// === Step 2: 刪除舊的 Config / Option / Relation ===
+			var cfgIds = await conn.QueryAsync<int>(
+				"SELECT SpecificationConfigId FROM PROD_SpecificationConfig WHERE ProductId=@ProductId",
+				new { dto.ProductId }, tran);
 
-                // 重建 SKU 規格值
-                foreach (var opt in sku.SpecValues ?? new())
-                {
-                    if (opt.SpecificationOptionId > 0)
-                    {
-                        await conn.ExecuteAsync(
-                            "INSERT INTO PROD_SkuSpecificationValue (SkuId, SpecificationOptionId) VALUES (@SkuId, @SpecificationOptionId);",
-                            new { SkuId = sku.SkuId, opt.SpecificationOptionId }, tran);
-                    }
-                }
+			if (cfgIds.Any())
+			{
+				await conn.ExecuteAsync(
+					"DELETE FROM PROD_SkuSpecificationValue WHERE SpecificationOptionId IN (SELECT SpecificationOptionId FROM PROD_SpecificationOption WHERE SpecificationConfigId IN @Ids)",
+					new { Ids = cfgIds }, tran);
+
+				await conn.ExecuteAsync(
+					"DELETE FROM PROD_SpecificationOption WHERE SpecificationConfigId IN @Ids",
+					new { Ids = cfgIds }, tran);
+
+				await conn.ExecuteAsync(
+					"DELETE FROM PROD_SpecificationConfig WHERE SpecificationConfigId IN @Ids",
+					new { Ids = cfgIds }, tran);
+			}
+
+			// === Step 3: 重建 SpecConfigs & SpecOptions & Relations ===
+			foreach (var cfg in dto.SpecConfigs ?? new())
+			{
+				var cfgId = await conn.ExecuteScalarAsync<int>(
+					@"INSERT INTO PROD_SpecificationConfig (ProductId, GroupName, OrderSeq)
+                      OUTPUT INSERTED.SpecificationConfigId
+                      VALUES (@ProductId, @GroupName, @OrderSeq);",
+					new { dto.ProductId, cfg.GroupName, cfg.OrderSeq }, tran);
+
+				foreach (var opt in cfg.SpecOptions ?? new())
+				{
+					var optionId = await conn.ExecuteScalarAsync<int>(
+						@"INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
+                          OUTPUT INSERTED.SpecificationOptionId
+                          VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);",
+						new { SpecificationConfigId = cfgId, opt.OptionName, opt.OrderSeq }, tran);
+
+					// 關聯到 SKU
+					if (opt.SkuId > 0)
+					{
+						await conn.ExecuteAsync(
+							@"INSERT INTO PROD_SkuSpecificationValue (SkuId, SpecificationOptionId)
+                              VALUES (@SkuId, @SpecificationOptionId);",
+							new { opt.SkuId, SpecificationOptionId = optionId }, tran);
+					}
+				}
             }
         }
 
