@@ -1,0 +1,206 @@
+﻿@using FlexBackend.Core.DTOs.PROD
+@model ProdProductSkuDto
+@{
+    var index = (int)ViewData["Index"];  // 從 Controller 傳進來的索引
+    var isTemp = !string.IsNullOrEmpty(Model.SkuCode) && Model.SkuCode.StartsWith("TEMP");
+    var uniqueId = $"Skus_{index}_{Model.SkuCode ?? "TEMP"}";
+    var specConfigs = ViewData["SpecConfigs"] as List<ProdSpecificationConfigDto>;
+}
+
+<div class="spec-card card shadow-sm mt-3 mb-3" data-index="@index">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Sku 代碼</span>
+        <div class="col-md-7 mb-0 justify-content-start">
+            <!-- 保證送回 -->
+            <input type="hidden" name="Skus[@index].SkuCode" value="@Model.SkuCode" />
+
+            @if (!isTemp)
+            {
+                <!-- 顯示已存在的 SkuCode -->
+                <input class="form-control" value="@Model.SkuCode" readonly />
+            }
+            else
+            {
+                <!-- TEMP 開頭不顯示 -->
+                <input class="form-control text-muted" value="" placeholder="尚未產生" readonly />
+            }
+        </div>
+
+        <!-- 複製 / 刪除 -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyCard(this)">
+                <i class="fas fa-copy"></i>
+            </button>
+             @if (isTemp)
+            {
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="markDeleted(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            
+            }
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row">
+            <!-- 規格碼 -->
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold required" for="@($"{uniqueId}_SpecCode")">Sku 規格碼</label>
+                <input type="text"
+                       name="Skus[@index].SpecCode"
+                       id="@($"{uniqueId}_SpecCode")"
+                       value="@Model.SpecCode"
+                       class="form-control" />
+                <span class="text-danger small" data-valmsg-for="Skus[@index].SpecCode"></span>
+            </div>
+
+            <!-- 條碼 -->
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold" for="@($"{uniqueId}_Barcode")">條碼</label>
+                <input type="text"
+                       name="Skus[@index].Barcode"
+                       id="@($"{uniqueId}_Barcode")"
+                       value="@Model.Barcode"
+                       class="form-control" />
+            </div>
+
+            <!-- 啟用 -->
+            <div class="col-md-3 mb-3 d-flex justify-content-center align-items-center">
+                <div class="form-check form-switch">
+                    <input type="hidden" name="Skus[@index].IsActive" value="false" />
+                    <input type="checkbox"
+                           name="Skus[@index].IsActive"
+                           id="@($"{uniqueId}_IsActive")"
+                           class="form-check-input"
+                           value="true" @(Model.IsActive ? "checked" : "") />
+                    <label class="form-check-label fw-bold" for="@($"{uniqueId}_IsActive")">啟用</label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold text-danger">Sku 編號</label>
+
+                <!-- 隱藏欄位，確保回傳 -->
+                <input type="hidden" name="Skus[@index].SkuId" value="@Model.SkuId" />
+
+                <!-- 唯讀顯示 -->
+                <input class="form-control text-muted"
+                       value="@(Model.SkuId == 0 ? "" : Model.SkuId.ToString())"
+                       readonly placeholder="新增卡片 (尚未有 ID)" />
+            </div>
+        </div>
+
+        <!-- spec-values 容器 (提供 JS 更新用) -->
+        <div class="spec-values-container d-flex flex-wrap gap-2">
+        @{
+            var cfgs = ViewData["SpecConfigs"] as List<ProdSpecificationConfigDto> ?? new();
+            var skuId = Model.SkuId;
+        }
+
+            @for (int j = 0; j < cfgs.Count; j++)
+            {
+                var cfg = cfgs[j];
+                var options = cfg.SpecOptions?.Where(o => o.SkuId == skuId).ToList() ?? new();
+
+                for (int k = 0; k < options.Count; k++)
+                {
+                    var opt = options[k];
+                    <div class="card p-2 flex-fill bg-warning bg-opacity-25 spec-values">
+                        <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
+
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SpecificationConfigId" value="@opt.SpecificationConfigId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SpecificationOptionId" value="@opt.SpecificationOptionId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@index].SkuId" value="@skuId" />
+                        <input type="text" class="form-control form-control-sm"
+                               name="SpecConfigs[@j].SpecOptions[@index].OptionName"
+                               value="@opt.OptionName" />
+
+                    </div>
+                }
+            }
+        </div>
+
+
+        <!-- 價格設定 -->
+        <fieldset class="group-box mb-3">
+            <legend>價格設定</legend>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">成本價</label>
+                    <input type="number" step="0.01"
+                           name="Skus[@index].CostPrice"
+                           value="@Model.CostPrice"
+                           class="form-control" required />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">原價</label>
+                    <input type="number" step="0.01"
+                           name="Skus[@index].ListPrice"
+                           value="@Model.ListPrice"
+                           class="form-control" required />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">單價</label>
+                    <input type="number" step="0.01"
+                           name="Skus[@index].UnitPrice"
+                           value="@Model.UnitPrice"
+                           class="form-control" required />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">優惠價</label>
+                    <input type="number" step="0.01"
+                           name="Skus[@index].SalePrice"
+                           value="@Model.SalePrice"
+                           class="form-control" required />
+                    <span class="text-danger small" data-valmsg-for="Skus[@index].SalePrice"></span>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- 庫存控管 -->
+        <fieldset class="group-box mb-3">
+            <legend>庫存控管</legend>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold">目前庫存</label>
+                    <input type="hidden" name="Skus[@index].StockQty" value="@Model.StockQty" />
+                    <input class="form-control" value="@Model.StockQty" readonly />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">安全庫存量</label>
+                    <input type="number" name="Skus[@index].SafetyStockQty"
+                           value="@Model.SafetyStockQty" class="form-control" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">再訂購點</label>
+                    <input type="number" name="Skus[@index].ReorderPoint"
+                           value="@Model.ReorderPoint" class="form-control" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">最大庫存量</label>
+                    <input type="number" name="Skus[@index].MaxStockQty"
+                           value="@Model.MaxStockQty" class="form-control" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold">有效天數</label>
+                    <input type="number" name="Skus[@index].ShelfLifeDays"
+                           value="@Model.ShelfLifeDays" class="form-control" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold required">上架日期</label>
+                    <input type="date" name="Skus[@index].StartDate"
+                           value="@(Model.StartDate == default ? "" : Model.StartDate.ToString("yyyy-MM-dd"))"
+                           class="form-control" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-bold">下架日期</label>
+                    <input type="date" name="Skus[@index].EndDate"
+                           value="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+                           class="form-control" />
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- 刪除標記 -->
+        <input type="hidden" name="Skus[@index].IsDeleted" value="false" />
+    </div>
+</div>
