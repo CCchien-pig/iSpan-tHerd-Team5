@@ -279,27 +279,43 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken] // 保留驗證
-        public IActionResult DeleteRule(int id)
-        {
-            try
-            {
-                var rule = _context.MktCouponRules.FirstOrDefault(r => r.RuleId == id);
-                if (rule == null)
-                    return Json(new { success = false, message = "找不到此規則" });
+		[HttpPost("{id:int}")]
+		[ValidateAntiForgeryToken]
+		public IActionResult DeleteRule(int id)
+		{
+			try
+			{
+				var inUseCount = _context.MktCoupons.Count(c => c.RuleId == id);
+				if (inUseCount > 0)
+				{
+					return Json(new
+					{
+						success = false,
+						message = $"此規則正被 {inUseCount} 張優惠券使用，無法刪除。請先改用其他規則或刪除/停用那些優惠券。"
+					});
+				}
 
-                _context.MktCouponRules.Remove(rule);
-                _context.SaveChanges();
+				var rule = _context.MktCouponRules.Find(id);
+				if (rule == null)
+					return Json(new { success = false, message = "找不到此規則" });
 
-                return Json(new { success = true, message = "刪除成功" });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
+				_context.MktCouponRules.Remove(rule);
+				_context.SaveChanges();
+				return Json(new { success = true, message = "刪除成功" });
+			}
+			catch (DbUpdateException ex)
+			{
+				// 取最底層 inner exception 訊息（SQL 外鍵錯誤會在這裡）
+				var inner = ex as Exception;
+				while (inner.InnerException != null) inner = inner.InnerException;
+				return Json(new { success = false, message = inner.Message });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
 
-    }
+	}
 
 }
