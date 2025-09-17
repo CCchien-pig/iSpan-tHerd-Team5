@@ -833,7 +833,8 @@
             });
 
             // ===== 載入訂單明細 =====
-            function loadDetail($tr, orderId, row){
+        // ===== 載入訂單明細 =====
+        function loadDetail($tr, orderId, row){
             $.getJSON('/ORD/Orders/GetOrderDetails', { orderId: orderId })
                 .done(function (data) {
                     if (!data || data.error) {
@@ -872,17 +873,17 @@
                     for (var i = 0; i < items.length; i++) {
                         var item = items[i];
                         html += '<tr>' +
-                            '<td>' + item.productName + '</td>' +
-                            '<td>' + item.skuSpec + '</td>' +
-                            '<td>' + Number(item.unitPrice).toLocaleString() + '</td>' +
-                            '<td>' + item.qty + '</td>' +
-                            '<td>' + Number(item.subtotal).toLocaleString() + '</td>' +
+                            '<td>' + (item.productName || '-') + '</td>' +
+                            '<td>' + (item.skuSpec || '-') + '</td>' +
+                            '<td>' + Number(item.unitPrice || 0).toLocaleString() + '</td>' +
+                            '<td>' + (item.qty || 0) + '</td>' +
+                            '<td>' + Number(item.subtotal || 0).toLocaleString() + '</td>' +
                             '</tr>';
                     }
 
                     html += '</tbody></table>' +
                         '<div class="order-summary">' +
-                        '<p><strong>優惠券：</strong>' + (o.couponName || '-') + '</p>'+
+                        '<p><strong>優惠券：</strong>' + (o.couponName || '-') + '</p>' +
                         '<p><strong>優惠折扣：</strong>' + Number(o.discountTotal || 0).toLocaleString() + '</p>' +
                         '<p><strong>運費：</strong>' + Number(o.shippingFee || 0).toLocaleString() + '</p>' +
                         '<p><strong>總金額：</strong>' + Number(o.totalAmount || 0).toLocaleString() + '</p>' +
@@ -894,6 +895,7 @@
                     console.error('載入明細失敗:', error);
                     row.child('<div class="text-danger">載入失敗：' + error + '</div>').show();
                 });
+        }
         }
         
 
