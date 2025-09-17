@@ -6,6 +6,7 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Linq;
 using static Dapper.SqlMapper;
 
 namespace FlexBackend.Infra.Repository.PROD
@@ -148,31 +149,41 @@ namespace FlexBackend.Infra.Repository.PROD
                 {
                     item.Skus = new List<ProdProductSkuDto>(); // 沒有的話給空集合，避免 null reference
                 }
-                // 找出所有該商品用到的「規格群組」
-                var specConfigIds = item.Skus
-                    .SelectMany(s => s.SpecValues)
-                    .Select(o => o.SpecificationOptionId)
-                    .Distinct()
-                    .ToList();
+				// 找出所有該商品用到的「規格群組」
+				var specOptionIds = item.Skus
+					.SelectMany(s => s.SpecValues.Select(v => v.SpecificationOptionId))
+					.Distinct()
+					.ToList();
 
-                if (specConfigIds.Any())
+
+				if (specOptionIds.Any())
                 {
-                    var specConfigs = await _db.ProdSpecificationConfigs
-                        .Where(c => specConfigIds.Contains(c.SpecificationConfigId))
+                    var specOptions= await _db.ProdSpecificationOptions
+                        .Where(c => specOptionIds.Contains(c.SpecificationOptionId))
                         .ToListAsync();
 
-                    item.SpecConfigs = specConfigs.Select(c => new ProdSpecificationConfigDto
+                    var specConfigIds = await _db.ProdSpecificationConfigs
+                        .Where(c => specOptions.Select(o => o.SpecificationConfigId).Distinct().Contains(c.SpecificationConfigId))
+                        .ToListAsync();
+
+                    item.SpecConfigs = specConfigIds.Select(c => new ProdSpecificationConfigDto
                     {
                         SpecificationConfigId = c.SpecificationConfigId,
                         GroupName = c.GroupName,
                         OrderSeq = c.OrderSeq,
-						SpecOptions = c.ProdSpecificationOptions.Select(o => new ProdSpecificationOptionDto
-						{
-							SpecificationOptionId = o.SpecificationOptionId,
-							SpecificationConfigId = o.SpecificationConfigId,
-							OptionName = o.OptionName,
-							OrderSeq = o.OrderSeq
-						}).ToList()
+                        SpecOptions = specOptions
+                            .Where(o => o.SpecificationConfigId == c.SpecificationConfigId)
+                            .Select(o => new ProdSpecificationOptionDto
+                            {
+                                SpecificationOptionId = o.SpecificationOptionId,
+                                SpecificationConfigId = o.SpecificationConfigId,
+                                OptionName = o.OptionName,
+                                OrderSeq = o.OrderSeq,
+                                // 找對應的 SkuId
+                                SkuId = item.Skus
+                                    .FirstOrDefault(s => s.SpecValues.Any(v => v.SpecificationOptionId == o.SpecificationOptionId))
+                                    ?.SkuId ?? 0
+                            }).ToList()
 					}).ToList();
                 }
                 else

@@ -384,6 +384,11 @@ public partial class ProdSpecificationOptionDto
     [Display(Name = "顯示順序")]
     [Range(0, 999, ErrorMessage = "{0} 必須大於等於 {1}")]
     public int OrderSeq { get; set; }
+
+	/// <summary>
+	/// 歸屬SKU編碼 (PROD_SkuSpecificationValue.SkuId)
+	/// </summary>
+	public int SkuId { get; set; }
 }
 
 /// <summary>

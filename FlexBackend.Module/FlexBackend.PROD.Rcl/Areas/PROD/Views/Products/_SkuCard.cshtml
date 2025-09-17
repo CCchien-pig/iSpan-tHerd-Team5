@@ -4,9 +4,10 @@
     var index = (int)ViewData["Index"];  // 從 Controller 傳進來的索引
     var isTemp = !string.IsNullOrEmpty(Model.SkuCode) && Model.SkuCode.StartsWith("TEMP");
     var uniqueId = $"Skus_{index}_{Model.SkuCode ?? "TEMP"}";
+    var specConfigs = ViewData["SpecConfigs"] as List<ProdSpecificationConfigDto>;
 }
 
-<div class="card shadow-sm mt-3 mb-3" data-index="@index">
+<div class="spec-card card shadow-sm mt-3 mb-3" data-index="@index">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-bold">Sku 代碼</span>
         <div class="col-md-7 mb-0 justify-content-start">
@@ -87,6 +88,29 @@
                        readonly placeholder="新增卡片 (尚未有 ID)" />
             </div>
         </div>
+
+        <div class="spec-values col-12 d-flex flex-wrap gap-2">
+            @for (int j = 0; j < specConfigs.Count; j++)
+            {
+                var cfg = specConfigs[j];
+                for (int k = 0; k < cfg.SpecOptions.Count; k++)
+                {
+                    var opt = cfg.SpecOptions[k];
+                    <div class="card p-2 flex-fill bg-warning bg-opacity-25" style="min-width:120px; max-width:200px;">
+                        <label class="form-label fw-bold small mb-1">@cfg.GroupName</label>
+
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SkuId" value="@opt.SkuId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationConfigId" value="@opt.SpecificationConfigId" />
+                        <input type="hidden" name="SpecConfigs[@j].SpecOptions[@k].SpecificationOptionId" value="@opt.SpecificationOptionId" />
+
+                        <input type="text" class="form-control form-control-sm"
+                               name="SpecConfigs[@j].SpecOptions[@k].OptionName"
+                               value="@opt.OptionName" />
+                    </div>
+                }
+            }
+        </div>
+
 
         <!-- 價格設定 -->
         <fieldset class="group-box mb-3">

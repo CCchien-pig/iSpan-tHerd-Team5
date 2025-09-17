@@ -60,6 +60,21 @@
                 box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
             }
 
+            #dataTable{
+                border-radius: 0.5rem;
+                overflow: hidden;
+                font-size: 0.95rem;
+                background-color: #ffffff;
+            }
+
+            #dataTable thead th{
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background: linear-gradient(135deg, #4a90e2, #007bff);
+                color: #fff;
+            }
+
     </style>
 }
 
@@ -99,23 +114,13 @@
 @section Scripts {
     @await Html.PartialAsync("_SweetAlertPartial")
     <script>
-        $('#dataTable').DataTable({
-            scrollY: 'auto',       // 高度等一下用 JS 計算
-            scrollCollapse: true,
-            paging: true,
-            info: true,
-            ordering: true,
-            searching: true,
-            // fixedHeader: true,  // ❌ 先關掉，避免複製 thead
-        });
-
+      $(function () {
         // Razor 端輸出 → 正確 JSON 陣列
         var dataJson = @Html.Raw(JsonSerializer.Serialize(
             Model ?? Enumerable.Empty<ProdProductDto>(),
             new JsonSerializerOptions { PropertyNamingPolicy = null }
         ));
 
-            $(function () {
         var $table = $('#dataTable');
 
             // 定義要顯示的子資料內容
@@ -170,13 +175,13 @@
             ordering: true, // 啟用排序
 
             // 捲動／凍結
-            scrollY: initH + 'px', // 表格高度 (px)
+            scrollY: "500px", // 表格高度 (px)
             scrollX: true, // 啟用水平捲軸
             scrollCollapse: true,
-            fixedHeader: {            // 若有固定頂部導航列時，用 offset 防止蓋住表頭
-              header: true,
-              headerOffset: topbarH
-            },
+            // fixedHeader: {            // 若有固定頂部導航列時，用 offset 防止蓋住表頭
+            //   header: false,
+            //   headerOffset: topbarH
+            // },
             fixedColumns: {
                 leftColumns: 1, // 凍結左邊第一欄
                 rightColumns: 1 // 如果要凍結右邊也可以加這個
@@ -256,9 +261,11 @@
                 }
             }
           ],
+          colReorder: true, 
         columnDefs: [
           {
             targets: "_all",
+            type: "string",
             className: "text-center align-middle"
           }
             ]
