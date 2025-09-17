@@ -1,8 +1,6 @@
 ﻿using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.ComponentModel;
 using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
 
 namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
@@ -24,14 +22,14 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             return View();
         }
 
-        // GET: MKT/Campaigns/CreateCampaign(新增活動頁面)
+        // GET: MKT/Campaigns/CreateCampaign
         [HttpGet]
         public IActionResult CreateCampaign()
         {
             return View();
         }
 
-        // POST: MKT/Campaigns/CreateCampaign(新增活動)
+        // POST: 新增活動
         [HttpPost]
         public IActionResult CreateCampaign([FromBody] MktCampaign model)
         {
@@ -44,13 +42,13 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             return Json(new { success = true });
         }
 
-        //GET: MKT/Campaigns/GetEvents(抓資料表的活動顯示在fullcalendar)
+        // GET: 取得活動事件
         [HttpGet]
         public async Task<IActionResult> GetEvents()
         {
             var campaigns = await _context.MktCampaigns
                 .AsNoTracking()
-                .ToListAsync(); // 先取出資料到記憶體
+                .ToListAsync();
 
             var events = campaigns.Select(c => new
             {
@@ -59,12 +57,12 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 start = c.StartDate,
                 end = c.EndDate.HasValue ? c.EndDate : null,
                 color = ColorHelper.RandomColor()
-        }).ToList();
+            }).ToList();
 
-            return Ok(events); // 回傳 JSON 給 FullCalendar
+            return Ok(events);
         }
 
-        //GET: MKT/Campaigns/GetEventById()
+        // GET: 取得單筆活動
         [HttpGet]
         public async Task<IActionResult> GetEventById(int id)
         {
@@ -96,6 +94,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             return Ok(campaign);
         }
 
+        // POST: 刪除活動
         [HttpPost]
         public IActionResult DeleteCampaign(int id)
         {
@@ -106,6 +105,14 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context.MktCampaigns.Remove(campaign);
             _context.SaveChanges();
             return Json(new { success = true });
+        }
+
+        // GET: 取得活動總數
+        [HttpGet]
+        public IActionResult GetTotalCount()
+        {
+            var count = _context.MktCampaigns.Count();
+            return Json(new { count });
         }
     }
 }
