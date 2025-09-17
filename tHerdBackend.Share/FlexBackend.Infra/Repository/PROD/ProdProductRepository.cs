@@ -6,7 +6,6 @@ using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Linq;
 using static Dapper.SqlMapper;
 
 namespace FlexBackend.Infra.Repository.PROD
@@ -21,8 +20,32 @@ namespace FlexBackend.Infra.Repository.PROD
             _factory = factory;
             _db = db;
         }
+        /// <summary>
+        /// 取得所有有效分類
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+        {
+            string sql = @"SELECT ProductTypeId, ParentId, ProductTypeCode, 
+                            ProductTypeName
+                            FROM PROD_ProductTypeConfig
+                            WHERE IsActive=1
+                            ORDER BY OrderSeq";
 
-        public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var cmd = new CommandDefinition(sql, transaction: tx, cancellationToken: ct);
+                return conn.Query<ProdProductTypeConfigDto>(cmd).ToList();
+			}
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+		public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
         {
             string sql = @"SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                 p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
