@@ -7,6 +7,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
+    <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
 }
 
 <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
@@ -209,6 +210,10 @@
         const dt = new DataTable('#tblUsers', {
             processing: true,
             serverSide: true,
+                language: {
+          url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+          processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+        },
             searchDelay: 400,
             ajax: {
                 url: '/USER/Members/Users',
