@@ -112,8 +112,8 @@
                                 <span class="mr-2 d-none d-lg-inline text-gray-600 small"><span class="mr-2 d-none d-lg-inline text-gray-600 small">
     @(!string.IsNullOrWhiteSpace(Me.FullName) ? Me.FullName : User?.Identity?.Name ?? User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)
 </span></span>
-                                <img class="img-profile rounded-circle"
-                                    src="img/undraw_profile.svg">
+                                <img class="img-profile rounded-circle" src="~/_content/FlexBackend.UIKit.Rcl/img/undraw_profile.svg">
+
                             </a>
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
@@ -167,7 +167,7 @@
             <footer class="sticky-footer bg-white py-3">
                 <div class="container">
                     <div class="copyright text-center my-auto">
-                        <span>&copy; @DateTime.UtcNow.Year THerd Backend Web Site</span>
+                        <span>&copy; @DateTime.UtcNow.Year tHerd Backend Web Site</span>
                     </div>
                 </div>
             </footer>
