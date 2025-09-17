@@ -1,4 +1,6 @@
-﻿<div class="modal fade" id="createCouponModal" tabindex="-1">
+﻿@model FlexBackend.Infra.Models.MktCoupon
+
+<div class="modal fade" id="createCouponModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="createCouponForm">
@@ -9,69 +11,78 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">活動ID</label>
-                        <input type="number" name="CampaignId" class="form-control" required />
+                        <input type="number" name="CampaignId" class="form-control" required
+                               value="@Model?.CampaignId" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">規則ID</label>
-                        <input type="number" name="RuleId" class="form-control" required />
+                        <input type="number" name="RuleId" class="form-control" required
+                               value="@Model?.RuleId" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">優惠券名稱</label>
-                        <input type="text" name="CouponName" class="form-control" required />
+                        <input type="text" name="CouponName" class="form-control" required
+                               value="@Model?.CouponName" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">優惠碼</label>
-                        <input type="text" name="CouponCode" class="form-control" required />
+                        <input type="text" name="CouponCode" class="form-control" required
+                               value="@Model?.CouponCode" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">優惠券狀態</label>
                         <select name="Status" class="form-select" required>
-                            <option value="pInactive">未啟用</option>
-                            <option value="pActive">啟用</option>
+                            <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>未啟用</option>
+                            <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>啟用</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">開始時間</label>
-                        <input type="datetime-local" name="StartDate" class="form-control" required />
+                        <input type="datetime-local" name="StartDate" class="form-control" required
+                               value="@Model?.StartDate.ToString("yyyy-MM-ddTHH:mm")" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">結束時間</label>
-                        <input type="datetime-local" name="EndDate" class="form-control" />
+                        <input type="datetime-local" name="EndDate" class="form-control"
+                               value="@(Model?.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">折扣金額</label>
-                        <input type="number" name="DiscountAmount" class="form-control" step="0.01" />
+                        <input type="number" name="DiscountAmount" class="form-control" step="0.01"
+                               value="@Model?.DiscountAmount" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">折扣百分比</label>
-                        <input type="number" name="DiscountPercent" class="form-control" step="0.01" />
+                        <input type="number" name="DiscountPercent" class="form-control" step="0.01"
+                               value="@Model?.DiscountPercent" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">總數量</label>
-                        <input type="number" name="TotQty" class="form-control" required />
+                        <input type="number" name="TotQty" class="form-control" required
+                               value="@Model?.TotQty" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">每人限領</label>
-                        <input type="number" name="UserLimit" class="form-control" required />
+                        <input type="number" name="UserLimit" class="form-control" required
+                               value="@Model?.UserLimit" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">有效時數</label>
-                        <input type="number" name="ValidHours" class="form-control" required />
+                        <input type="number" name="ValidHours" class="form-control" required
+                               value="@Model?.ValidHours" />
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">是否啟用</label><br />
-                        <div class="form-check form-check-inline">
-                            <input type="radio" name="IsActive" value="true" class="form-check-input" checked />
-                            <label class="form-check-label">啟用</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input type="radio" name="IsActive" value="false" class="form-check-input" />
-                            <label class="form-check-label">停用</label>
-                        </div>
+
+                    <!-- IsActive 改成 Bootstrap Toggle -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="IsActive" id="createIsActive"
+                               @(Model?.IsActive ?? true ? "checked" : "") />
+                        <label class="form-check-label" for="createIsActive">啟用</label>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">建立者</label>
-                        <input type="number" name="Creator" class="form-control" required />
+                        <input type="number" name="Creator" class="form-control" required
+                               value="@Model?.Creator" />
                     </div>
                 </div>
                 <div class="modal-footer">
