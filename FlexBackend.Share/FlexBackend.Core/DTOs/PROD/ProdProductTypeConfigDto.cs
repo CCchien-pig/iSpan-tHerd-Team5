@@ -44,12 +44,4 @@ public partial class ProdProductTypeConfigDto
     /// 是否啟用分類（0=否，1=是）
     /// </summary>
     public bool IsActive { get; set; }
-
-    public virtual ICollection<ProdProductTypeConfigDto> InverseParent { get; set; } = new List<ProdProductTypeConfigDto>();
-
-    public virtual ProdProductTypeConfigDto Parent { get; set; }
-
-    public virtual ICollection<ProdProductType> ProdProductTypes { get; set; } = new List<ProdProductType>();
-
-    public virtual SysSeoMetum Seo { get; set; }
 }
