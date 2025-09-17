@@ -104,6 +104,23 @@ namespace FlexBackend.Services.PROD
 		}
 
 		/// <summary>
+		/// 商品完整分類清單
+		/// </summary>
+		/// <returns></returns>
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync()
+		{
+			try
+			{
+				return await _repo.GetAllProductTypesAsync();
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+
+		/// <summary>
 		/// 商品完整資料清單
 		/// </summary>
 		/// <returns></returns>

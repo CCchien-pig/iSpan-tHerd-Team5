@@ -15,7 +15,7 @@ namespace FlexBackend.Core.Interfaces.Products
         Task<IEnumerable<LoadBrandOptionDto>> LoadBrandOptionsAsync(CancellationToken ct = default);
         Task<List<string>> GetDuplicateBarcodesAsync(IEnumerable<string> barcodes, IEnumerable<int> excludeSkuIds);
 
-
+		Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default);
 	}
 
 	// 簡化的查詢模型與分頁結果
