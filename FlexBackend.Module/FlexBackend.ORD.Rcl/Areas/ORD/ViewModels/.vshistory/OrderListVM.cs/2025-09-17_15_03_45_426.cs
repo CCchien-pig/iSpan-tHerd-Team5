@@ -342,6 +342,10 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// </summary>
 		public int PageSize { get; set; } = 10;
 
+        StartDate = StartDate?.Date, 
+		EndDate   = EndDate?.Date
+
+
     }
 
 	/// <summary>
