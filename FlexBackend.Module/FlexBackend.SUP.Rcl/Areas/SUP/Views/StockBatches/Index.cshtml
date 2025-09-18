@@ -878,10 +878,10 @@
             $('#stockBatchTable').on('click', '.stock-history-btn', function() {
     console.log('clicked button:', this); 
                 // 取得該列 brandName
-                var brandName = $(this).data('brandName');
-    console.log('brandName from button data:', brandName);
+                var brandname = $(this).data('brandname');
+    console.log('brandName from button data:', brandname);
 
-                if (!brandName) return console.warn('brandName is undefined!');
+                if (!brandname) return console.warn('brandname is undefined!');
 
                 // 切換顯示 table
                 $('#stockTableWrapper').hide();
@@ -890,16 +890,16 @@
         console.log('historyTable before search:', historyTable);
 
                 // DataTable 搜尋並刷新
-                historyTable.search(brandName).draw();
+                historyTable.search(brandname).draw();
 
                 // 將搜尋欄文字填入
-                $('#historyTable_filter input').val(brandName);
+                $('#historyTable_filter input').val(brandname);
 
                 // 提示訊息
                 Swal.fire({
                     icon: 'info',
                     title: '已篩選',
-                    text: `目前顯示品牌 "${brandName}" 的異動紀錄`,
+                    text: `目前顯示品牌 "${brandname}" 的異動紀錄`,
                     timer: 2000,
                     showConfirmButton: false
                 });
