@@ -19,7 +19,7 @@
 
         <!-- RuleId -->
         <div class="mb-3">
-            <label class="form-label">規則編號 (RuleId)</label>
+            <label class="form-label">規則編號</label>
             <input type="text" name="RuleId" id="editRuleId" class="form-control" readonly />
         </div>
 
@@ -68,12 +68,18 @@
 
             $("#editRuleId").val(ruleId);
 
-            $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (data) {
-                $("#editDescription").prop("readonly", false).val(data.description || "");
-                $("#editIsActive").prop("disabled", false).prop("checked", data.isActive);
+                $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (res) {
+                if (!res || res.success === false) {
+                    Swal.fire("錯誤", res.message || "無法取得規則資料", "error");
+                    return;
+                }
+
+                $("#editDescription").prop("readonly", false).val(res.description || "");
+                $("#editIsActive").prop("disabled", false).prop("checked", res.isActive === true || res.isActive === 1);
             }).fail(function () {
-                Swal.fire("錯誤", "取得規則資料失敗", "error");
+                Swal.fire("錯誤", "伺服器發生錯誤", "error");
             });
+
         });
 
         // 儲存變更
@@ -87,7 +93,7 @@
             };
 
             $.ajax({
-                url: '/MKT/Coupons/UpdateRule',
+                url: '/MKT/Coupons/EditRule',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(data),
