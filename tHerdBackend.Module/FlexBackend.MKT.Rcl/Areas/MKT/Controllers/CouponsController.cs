@@ -1,14 +1,10 @@
 ﻿using FlexBackend.Infra.Models;
-using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
-using FlexBackend.MKT.Rcl.Areas.MKT.ViewModels;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 {
     [Area("MKT")]
-    [Route("MKT/[controller]/[action]")]
     public class CouponsController : Controller
     {
         private readonly tHerdDBContext _context;
@@ -17,324 +13,188 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
-        {
-            var campaigns = _context.MktCampaigns
-                .Select(c => new CampaignDTO { CampaignId = c.CampaignId, CampaignName = c.CampaignName })
-                .ToList();
-
-            ViewBag.Campaigns = campaigns;
-
-            // 將一個空的 Coupon 傳給 Partial 避免 null
-            var couponModel = new MktCoupon();
-            return View(couponModel);
-        }
-
-
-        // 新增 GET 方法，給新增優惠券的 Modal 用
+        // 頁面 Index
         [HttpGet]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Index()
         {
-            // 取得所有活動列表
-            var campaigns = await _context.MktCampaigns
-                                          .Select(c => new { c.CampaignId, c.CampaignName })
-                                          .ToListAsync();
-            ViewBag.Campaigns = campaigns;
+            try
+            {
+                var campaigns = await _context.MktCampaigns
+                    .AsNoTracking()
+                    .ToListAsync();
 
-            return View(new MktCoupon());
+                ViewBag.Campaigns = campaigns;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                // 除錯時先這樣寫，正式環境請用 Log
+                return Content("載入 Coupons 頁面時發生錯誤：" + ex.Message);
+            }
         }
 
         // 取得日曆事件
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetEvents()
         {
-            var coupons = await _context.MktCoupons.AsNoTracking().ToListAsync();
+            var coupons = await _context.MktCoupons
+                .AsNoTracking()
+                .Include(c => c.Campaign)
+                .ToListAsync();
+
             var events = coupons.Select(c => new
             {
                 id = c.CouponId,
                 title = c.CouponName,
-                start = c.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"),
-                end = c.EndDate.HasValue ? c.EndDate.Value.ToString("yyyy-MM-ddTHH:mm:ss") : null,
-                color = ColorHelper.RandomColor()
-            }).ToList();
+                start = c.StartDate,
+                end = c.EndDate,
+                color = c.IsActive ? "#6a1b9a" : "#9e9e9e"
+            });
 
             return Json(events);
         }
 
-        [HttpGet("{id}")]
-        [AllowAnonymous]
+        // 取得優惠券總數
+        [HttpGet]
+        public async Task<IActionResult> GetTotalCount()
+        {
+            var count = await _context.MktCoupons.CountAsync();
+            return Json(new { count });
+        }
+
+        // 依 ID 取得優惠券
+        [HttpGet]
         public async Task<IActionResult> GetCouponById(int id)
         {
-            var c = await _context.MktCoupons.AsNoTracking().FirstOrDefaultAsync(x => x.CouponId == id);
-            if (c == null) return NotFound();
+            var coupon = await _context.MktCoupons
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CouponId == id);
 
-            var result = new
-            {
-                c.CouponId,
-                c.CampaignId,
-                c.RuleId,
-                c.CouponName,
-                c.CouponCode,
-                c.Status,
-                StartDate = c.StartDate.ToString("yyyy-MM-ddTHH:mm"),
-                EndDate = c.EndDate.HasValue ? c.EndDate.Value.ToString("yyyy-MM-ddTHH:mm") : null,
-                c.DiscountAmount,
-                c.DiscountPercent,
-                c.TotQty,
-                c.LeftQty,
-                c.UserLimit,
-                c.ValidHours,
-                c.IsActive,
-                c.Creator,
-                CreatedDate = c.CreatedDate.ToString("yyyy-MM-ddTHH:mm")
-            };
+            if (coupon == null)
+                return Json(null);
 
-            return Json(result, new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNamingPolicy = null
-            });
+            return Json(coupon);
+        }
+
+        // 取得有效規則
+        [HttpGet]
+        public async Task<IActionResult> GetActiveRules()
+        {
+            var rules = await _context.MktCouponRules
+                .Where(r => r.IsActive)
+                .Select(r => new
+                {
+                    ruleId = r.RuleId,
+                    defaultCondition = r.DefaultCondition
+                })
+                .ToListAsync();
+
+            return Json(rules);
+        }
+
+        // GET: 新增規則 Partial
+        [HttpGet]
+        public IActionResult CreateRulePartial()
+        {
+            return PartialView("~/Areas/MKT/Views/Partial/_CreateCouponRuleModal.cshtml");
+        }
+
+        // GET: 修改規則 Partial
+        [HttpGet]
+        public IActionResult EditRulePartial()
+        {
+            return PartialView("~/Areas/MKT/Views/Partial/_EditCouponRuleModal.cshtml");
         }
 
         [HttpPost]
-        public IActionResult CreateCoupon([FromBody] MktCoupon coupon)
+        public IActionResult CreateCoupon([FromBody] MktCoupon model)
         {
-            try
-            {
-                // 新增 LeftQty = TotQty
-                coupon.LeftQty = coupon.TotQty;
-                coupon.CreatedDate = DateTime.Now;
+            Console.WriteLine($"[DEBUG] CouponCode={model.CouponCode}, Raw Request={HttpContext.Request.Body}");
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
 
-                _context.MktCoupons.Add(coupon);
-                _context.SaveChanges();
-                return Json(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                // 取得最內層 exception 訊息
-                var inner = ex;
-                while (inner.InnerException != null) inner = inner.InnerException;
+            // 強制 Trim
+            model.CouponCode = model.CouponCode?.Trim();
 
-                return Json(new { success = false, message = inner.Message });
-            }
+            if (string.IsNullOrWhiteSpace(model.CouponCode))
+                return Json(new { success = false, message = "優惠券代碼 不可以為空" });
+
+            var campaign = _context.MktCampaigns.Find(model.CampaignId);
+            if (campaign == null)
+                return Json(new { success = false, message = "找不到對應的活動" });
+
+            // ===== 時間驗證 =====
+            if (model.StartDate < campaign.StartDate)
+                return Json(new { success = false, message = "優惠券開始日期 不可以早於 活動開始日期" });
+
+            if (campaign.EndDate.HasValue && model.StartDate > campaign.EndDate.Value)
+                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 活動結束日期" });
+
+            if (model.EndDate.HasValue && campaign.EndDate.HasValue && model.EndDate > campaign.EndDate.Value)
+                return Json(new { success = false, message = "優惠券結束日期 不可以晚於 活動結束日期" });
+
+            if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
+                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 優惠券結束日期" });
+
+            model.CreatedDate = DateTime.Now;
+            model.LeftQty = model.TotQty;
+
+            _context.MktCoupons.Add(model);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
         }
 
 
+        // POST: 修改優惠券
         [HttpPost]
         public IActionResult UpdateCoupon([FromBody] MktCoupon model)
         {
             if (!ModelState.IsValid)
                 return Json(new { success = false, message = "資料驗證失敗" });
 
-            var coupon = _context.MktCoupons.FirstOrDefault(c => c.CouponId == model.CouponId);
+            var campaign = _context.MktCampaigns.Find(model.CampaignId);
+            if (campaign == null)
+                return Json(new { success = false, message = "找不到對應的活動" });
+
+            // ===== 時間驗證 =====
+            if (model.StartDate < campaign.StartDate)
+                return Json(new { success = false, message = "優惠券開始日期 不可以早於 活動開始日期" });
+
+            if (campaign.EndDate.HasValue && model.StartDate > campaign.EndDate.Value)
+                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 活動結束日期" });
+
+            if (model.EndDate.HasValue && model.EndDate.Value < campaign.StartDate)
+                return Json(new { success = false, message = "優惠券結束日期 不可以早於 活動開始日期" });
+
+            if (model.EndDate.HasValue && campaign.EndDate.HasValue && model.EndDate > campaign.EndDate.Value)
+                return Json(new { success = false, message = "優惠券結束日期 不可以晚於 活動結束日期" });
+
+            if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
+                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 優惠券結束日期" });
+
+            // ===== 必填檢查 =====
+            if (string.IsNullOrWhiteSpace(model.CouponCode))
+                return Json(new { success = false, message = "優惠券代碼 不可以為空" });
+
+            _context.MktCoupons.Update(model);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+
+        // POST: 刪除優惠券
+        [HttpPost]
+        public IActionResult DeleteCoupon(int id)
+        {
+            var coupon = _context.MktCoupons.Find(id);
             if (coupon == null)
                 return Json(new { success = false, message = "找不到優惠券" });
 
-            // 只更新可編輯欄位
-            coupon.CouponName = model.CouponName;
-            coupon.CouponCode = model.CouponCode;
-            coupon.Status = model.Status;
-            coupon.StartDate = model.StartDate;
-            coupon.EndDate = model.EndDate;
-            coupon.DiscountAmount = model.DiscountAmount;
-            coupon.DiscountPercent = model.DiscountPercent;
-            coupon.TotQty = model.TotQty;
-            coupon.UserLimit = model.UserLimit;
-            coupon.ValidHours = model.ValidHours;
-            coupon.IsActive = model.IsActive;
-
-            // 不更新 CreatedDate
-            // coupon.CreatedDate = coupon.CreatedDate;
-
+            _context.MktCoupons.Remove(coupon);
             _context.SaveChanges();
+
             return Json(new { success = true });
         }
-
-
-        [HttpPost("{id}")]
-        public IActionResult DeleteCoupon(int id)
-        {
-            var c = _context.MktCoupons.Find(id);
-            if (c == null) return Json(new { success = false, message = "找不到優惠券" });
-            _context.MktCoupons.Remove(c);
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult GetTotalCount()
-        {
-            var count = _context.MktCoupons.Count();
-            return Json(new { count });
-        }
-
-
-        [HttpGet]
-        public IActionResult CreateRulePartial()
-        {
-            try
-            {
-                var model = new MktCouponRule(); // 初始化模型
-                return PartialView("~/Areas/MKT/Views/Partial/_CouponRule.cshtml", model);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-
-        [HttpPost]
-        public IActionResult CreateRule([FromBody] MktCouponRule model)
-        {
-            if (model == null)
-                return Json(new { success = false, message = "接收到空資料" });
-
-            // 基本驗證
-            if (string.IsNullOrWhiteSpace(model.CouponType))
-                return Json(new { success = false, message = "CouponType 必填" });
-
-            if (string.IsNullOrWhiteSpace(model.DefaultCondition))
-                model.DefaultCondition = "";
-
-            if (string.IsNullOrWhiteSpace(model.Description))
-                model.Description = "";
-
-            // 設定建立時間
-            model.CreatedDate = DateTime.Now;
-
-            // 若前端沒有傳 IsActive/Creator，設定預設值
-            model.IsActive = model.IsActive;
-            model.Creator = model.Creator > 0 ? model.Creator : 1;
-
-            try
-            {
-                _context.MktCouponRules.Add(model);
-                _context.SaveChanges();
-                return Json(new { success = true, message = "新增成功", ruleId = model.RuleId });
-            }
-            catch (Exception ex)
-            {
-                // 取 inner exception 最底層訊息
-                var errorMessage = ex.InnerException?.Message ?? ex.Message;
-                return Json(new { success = false, message = errorMessage });
-            }
-        }
-
-        [HttpGet]
-        public IActionResult EditRulePartial(int id = 1000)
-        {
-            var rule = _context.MktCouponRules.FirstOrDefault(r => r.RuleId == id);
-            if (rule == null) return NotFound();
-
-            // 把所有 DefaultCondition 抓出來給下拉選單用
-            var allConditions = _context.MktCouponRules
-                .Select(r => r.DefaultCondition)
-                .Where(c => c != null && c != "")
-                .Distinct()
-                .ToList();
-
-            ViewBag.DefaultConditions = allConditions;
-
-            return PartialView("~/Areas/MKT/Views/Partial/_EditCouponRule.cshtml", rule);
-        }
-
-
-        // 取得所有規則（包含停用）
-        [HttpGet]
-        public IActionResult GetActiveRules()
-        {
-            var rules = _context.MktCouponRules
-                .Where(r => r.IsActive)
-                .Select(r => new {
-                    r.RuleId,
-                    r.DefaultCondition,
-                    r.Description,
-                    r.IsActive
-                }).ToList();
-
-            return Json(rules);
-        }
-
-        // 取得單一規則
-        [HttpGet]
-        public IActionResult GetRuleById(int id)
-        {
-            var rule = _context.MktCouponRules
-                .Where(r => r.RuleId == id)
-                .Select(r => new {
-                    r.RuleId,
-                    r.DefaultCondition,
-                    r.Description,
-                    r.IsActive
-                }).FirstOrDefault();
-
-            if (rule == null) return NotFound();
-            return Json(rule);
-        }
-
-        // 更新規則
-        [HttpPost]
-        public IActionResult UpdateRule([FromBody] MktCouponRule model)
-        {
-            if (!ModelState.IsValid)
-                return Json(new { success = false, message = "資料驗證失敗" });
-
-            var rule = _context.MktCouponRules.FirstOrDefault(r => r.RuleId == model.RuleId);
-            if (rule == null) return Json(new { success = false, message = "找不到規則" });
-
-            rule.Description = model.Description;
-            rule.IsActive = model.IsActive;
-
-            try
-            {
-                _context.SaveChanges();
-                return Json(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-
-		[HttpPost("{id:int}")]
-		[ValidateAntiForgeryToken]
-		public IActionResult DeleteRule(int id)
-		{
-			try
-			{
-				var inUseCount = _context.MktCoupons.Count(c => c.RuleId == id);
-                if (inUseCount > 0)
-                {
-                    return Json(new
-                    {
-                        success = false,
-                        message = $"此規則正被 {inUseCount} 張優惠券使用，無法刪除。請先改用其他規則或刪除/停用那些優惠券。"
-                    });
-                }
-
-				var rule = _context.MktCouponRules.Find(id);
-				if (rule == null)
-					return Json(new { success = false, message = "找不到此規則" });
-				_context.MktCouponRules.Remove(rule);
-				_context.SaveChanges();
-				return Json(new { success = true, message = "刪除成功" });
-			}
-			catch (DbUpdateException ex)
-			{
-				// 取最底層 inner exception 訊息（SQL 外鍵錯誤會在這裡）
-				var inner = ex as Exception;
-				while (inner.InnerException != null) inner = inner.InnerException;
-				return Json(new { success = false, message = inner.Message });
-			}
-			catch (Exception ex)
-			{
-				return Json(new { success = false, message = ex.Message });
-			}
-		}
-
-	}
+    }
 }
