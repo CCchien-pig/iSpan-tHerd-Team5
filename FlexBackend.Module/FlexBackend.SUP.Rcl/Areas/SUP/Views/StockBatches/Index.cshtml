@@ -228,16 +228,32 @@
                     // var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
                     var isAllowBackorder = info.isAllowBackorder;
 
+                    // var isAdd;
+                    // if(movementType === 'Purchase') {
+                    //     isAdd = true; 採購入庫一定是增加
+                    // } else if(movementType === 'Adjust') {
+                    //     isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                    // } else {
+                    //     isAdd = true; 其他類型預設增加
+                    // }
+                    // console.log('[SKU Info] Is Add:', isAdd);
+
+                    // 判斷異動方向
+                    var movementType = $('#MovementTypeSelect').val();
                     var isAdd;
-                    if(movementType === 'Purchase') {
-                        isAdd = true; // 採購入庫一定是增加
-                    } else if(movementType === 'Adjust') {
-                        isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                    } else {
-                        isAdd = true; // 其他類型預設增加
+                    switch(movementType) {
+                        case 'Purchase':
+                            isAdd = true; // 採購入庫一定是增加
+                            break;
+                        case 'Adjust':
+                            isAdd = $('input[name="IsAdd"]:checked').val() === 'true'; // 手動調整依使用者選擇
+                            break;
+                        default:
+                            isAdd = true; // 其他類型預設增加
                     }
                     console.log('[SKU Info] Is Add:', isAdd);
 
+                    // 計算異動上限
                     var maxChange = 0;
                     if (movementType === 'Adjust') {
                         // 調整型 → 不限制，交給使用者
@@ -311,7 +327,7 @@
                     }
 
                     // 異動類型切換時，立即刷新數量上限與預計庫存
-                    updatePredictedStock();
+                        updateChangeQtyLimitAndPredicted();
                 });
 
             });
@@ -716,7 +732,14 @@
                             return formatted;
                         }
                     },
-                    { data: 'changeType', title: '異動類型' , className: 'text-center'},
+                    { 
+                        data: 'changeType', 
+                        title: '異動類型' , 
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            return getMovementTypeText(data);
+                        }
+                    },
                     { data: 'beforeQty', title: '異動前數量', className: 'text-center'},
                     { data: 'changeQty', title: '異動數量' , className: 'text-center'},
                     { data: 'afterQty', title: '異動後數量', className: 'text-center'},
@@ -869,7 +892,6 @@
                     // 預計庫存 & 異動數量上限
                     updateChangeQtyLimitAndPredicted();
                 });
-
             });
         });
 
@@ -1015,9 +1037,9 @@
         // 計算上限
         function calcMaxAllowed(movementType, isAdd, currentStock, maxStock) {
             // 非 Adjust 當作增加
-            // if (movementType !== 'Adjust') {
-            //     isAdd = true;
-            // }
+            if (movementType !== 'Adjust') {
+                isAdd = true;
+            }
 
             if (isAdd) {
                 var allowed = (maxStock - currentStock);
@@ -1035,11 +1057,21 @@
             var currentStock = parseInt($('#CurrentQty').text()) || 0;
             var maxStock = parseInt($('#MaxStockQty').text()) || 0;
             var movementType = $('#MovementTypeSelect').val() || '';
-            // 當不是 Adjust 時，視為增加
-            var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-            // if (movementType !== 'Adjust') isAdd = true;
+
+            // 預設 trsue
+            var isAdd = true;
+
+            // 只有 "手動調整" 才用 radio 判斷
+            if (movementType === 'Adjust') {
+                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+            }
+
+            console.log('currentStock:', $('#CurrentQty').text(), '=>', currentStock);
+            console.log('maxStock:', $('#MaxStockQty').text(), '=>', maxStock);
+            console.log('movementType:', movementType, 'isAdd:', isAdd);
 
             var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
+            console.log('maxAllowed:', maxAllowed);
 
             var $input = $('#ChangeQtyInput');
             var curVal = parseInt($input.val()) || 0;
