@@ -252,7 +252,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
 
 				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
-				//item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
+				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
 
 				return item;
 			}
