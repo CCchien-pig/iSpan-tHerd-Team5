@@ -9,6 +9,14 @@
     <form id="editRuleForm">
         @Html.AntiForgeryToken()
 
+        <!-- DefaultCondition -->
+        <div class="mb-3">
+            <label class="form-label">使用門檻</label>
+            <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
+                <option value="">請選擇欲修改的使用門檻</option>
+            </select>
+        </div>
+
         <!-- RuleId -->
         <div class="mb-3">
             <label class="form-label">規則編號 (RuleId)</label>
@@ -18,14 +26,7 @@
         <!-- CouponType 隱藏回傳 pmd -->
         <input type="hidden" name="CouponType" value="pmd" />
 
-        <!-- DefaultCondition -->
-        <div class="mb-3">
-            <label class="form-label">預設條件</label>
-            <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
-                <option value="">請選擇預設條件</option>
-            </select>
-        </div>
-
+        
         <!-- Description -->
         <div class="mb-3">
             <label class="form-label">說明</label>
