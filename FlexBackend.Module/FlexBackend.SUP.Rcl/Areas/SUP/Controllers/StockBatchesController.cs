@@ -81,6 +81,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								sb.IsSellable,
 
 								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
+								RevisedDate=sb.RevisedDate,
+								// 非 null 排序欄位
+								SortDate = sb.RevisedDate ?? sb.CreatedDate,
 
 								// 展開要的
 								ProductName = p.ProductName,
@@ -91,12 +94,16 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								TotalStock = sku.StockQty,
 
 								// SKU 顏色狀態
-								StockStatus = sku.StockQty <= sku.SafetyStockQty ? "danger" :
-									sku.StockQty <= sku.ReorderPoint ? "low" : "normal",
+								BatchStockStatus = sku.StockQty < sku.SafetyStockQty ? "danger" :
+									(sku.StockQty >= sku.SafetyStockQty && sku.StockQty < sku.ReorderPoint ? "low" : "normal"),
 
 								// 批次庫存顏色狀態
-								BatchStockStatus = sb.Qty <= sku.SafetyStockQty ? "danger" :
-								   sb.Qty <= sku.ReorderPoint ? "low" : "normal",
+								// SKU總庫存量 X，安全庫存 Y，再訂購點 Z
+								// 後端 BatchStockStatus
+								//BatchStockStatus = sku.StockQty < sku.SafetyStockQty ? "danger" :
+								//   (sku.StockQty >= sku.SafetyStockQty && sku.StockQty < sku.ReorderPoint ? "low" : "normal"),
+
+
 
 								// 規格陣列 群組 + 規格選項
 								Specifications = sb.Sku.SpecificationOptions
@@ -147,20 +154,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				var totalRecords = await query.CountAsync();
 
 				// 欄位索引排序
-				// orderable: false，不會傳 0，不用算進來
 				query = sortColumnIndex switch
 				{
-					0 => sortDirection == "asc" ? query.OrderBy(s => s.SkuCode) : query.OrderByDescending(s => s.SkuCode),
-					// 點 BatchNumber 時改用 CreatedDate（或 ManufactureDate）排序，讓「按批號日期排序」正確
-					1 => sortDirection == "asc" ? query.OrderBy(s => s.CreatedDate) : query.OrderByDescending(s => s.CreatedDate),
-					2 => sortDirection == "asc" ? query.OrderBy(s => s.BrandName) : query.OrderByDescending(s => s.BrandName),
-					3 => sortDirection == "asc" ? query.OrderBy(s => s.ProductName) : query.OrderByDescending(s => s.ProductName),
-					4 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
-					5 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
-					6 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
-					7 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
+					0 => sortDirection == "asc" ? query.OrderBy(s => s.SortDate)
+												: query.OrderByDescending(s => s.SortDate),
+					1 => sortDirection == "asc" ? query.OrderBy(s => s.SkuCode) : query.OrderByDescending(s => s.SkuCode),
+					2 => sortDirection == "asc" ? query.OrderBy(s => s.BatchNumber) : query.OrderByDescending(s => s.BatchNumber),
+					3 => sortDirection == "asc" ? query.OrderBy(s => s.BrandName) : query.OrderByDescending(s => s.BrandName),
+					4 => sortDirection == "asc" ? query.OrderBy(s => s.ProductName) : query.OrderByDescending(s => s.ProductName),
+					5 => sortDirection == "asc" ? query.OrderBy(s => s.ExpireDate) : query.OrderByDescending(s => s.ExpireDate),
+					6 => sortDirection == "asc" ? query.OrderBy(s => s.Qty) : query.OrderByDescending(s => s.Qty),
+					7 => sortDirection == "asc" ? query.OrderBy(s => s.ReorderPoint) : query.OrderByDescending(s => s.ReorderPoint),
+					8 => sortDirection == "asc" ? query.OrderBy(s => s.SafetyStockQty) : query.OrderByDescending(s => s.SafetyStockQty),
 					_ => sortDirection == "asc" ? query.OrderBy(s => s.StockBatchId) : query.OrderByDescending(s => s.StockBatchId),
 				};
+
 
 				// 分頁
 				var data = await query
@@ -176,6 +184,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					d.BatchNumber,
 					//d.ExpireDate,
 					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
+					RevisedDate = d.RevisedDate?.ToString("yyyy-MM-dd HH:mm:ss"),
+					SortDate = d.RevisedDate ?? d.CreatedDate,
 					d.Qty,
 					SafetyStockQty = d.SafetyStockQty,  // 保護 null
 					ReorderPoint = d.ReorderPoint,      // 保護 null
