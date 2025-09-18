@@ -155,9 +155,9 @@ public partial class ProdProductDto
     /// <summary>
     /// 分類敘述
     /// </summary>
-    public List<ProdProductTypeDto> Types { get; set; }
+    public List<ProdProductTypeDto> Types { get; set; } = new();
 
-    public PRODSeoConfigDto? Seo { get; set; }
+	public PRODSeoConfigDto? Seo { get; set; }
 
 	public List<ProdProductSkuDto> Skus { get; set; } = new List<ProdProductSkuDto>();
 	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
