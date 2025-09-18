@@ -2,6 +2,7 @@
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -91,6 +92,71 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAjax([FromForm] FaqEditVM vm, [FromForm] string? returnUrl = null)
+        {
+            if (!ModelState.IsValid)
+            {
+                var firstErr = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage
+                               ?? "資料驗證失敗。";
+                return BadRequest(new { message = firstErr });
+            }
+
+            // 唯一鍵預檢
+            bool dup = await _context.CsFaqs.AnyAsync(x =>
+                x.CategoryId == vm.CategoryId && x.OrderSeq == vm.OrderSeq);
+            if (dup)
+                return Conflict(new { message = "同一分類的排序不可重複。" });
+
+            var entity = new CsFaq
+            {
+                Title = vm.Title,
+                AnswerHtml = vm.AnswerHtml,
+                CategoryId = vm.CategoryId,
+                OrderSeq = (int)vm.OrderSeq,
+                IsActive = vm.IsActive,
+                LastPublishedTime = vm.IsActive && vm.LastPublishedTime == null
+                    ? DateTime.Now
+                    : vm.LastPublishedTime,
+                CreatedDate = DateTime.Now,
+                RevisedDate = DateTime.Now
+            };
+
+            _context.CsFaqs.Add(entity);
+
+            // 關鍵字（可有可無）
+            var kws = (vm.Keywords ?? new List<string>())
+                .Select(s => (s ?? "").Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(50)
+                .ToList();
+
+            foreach (var kw in kws)
+                _context.CsFaqKeywords.Add(new CsFaqKeyword { Faq = entity, Keyword = kw, CreatedDate = DateTime.Now });
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                var redirect = (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    ? returnUrl
+                    : Url.Action(nameof(Index), "Faqs", new { area = "CS" });
+
+                return Ok(new { ok = true, redirectUrl = redirect });
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException sql &&
+                                               (sql.Number == 2601 || sql.Number == 2627))
+            {
+                return Conflict(new { message = "同一分類的排序不可重複。" });
+            }
+            catch
+            {
+                return BadRequest(new { message = "新增時發生未預期錯誤，請稍後再試。" });
+            }
+        }
+
 
         // GET: CS/Faqs/Edit/1001
         public async Task<IActionResult> Edit(int? id, string? returnUrl)
@@ -135,6 +201,108 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             // ★ 這裡的 Edit.cshtml 之後要把 @model 換成 FaqEditVM
             return View(vm);
         }
+        // 放在 FaqsController 裡，和 Edit 同一層
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditAjax(
+            int id,
+            [FromForm] FaqEditVM vm,
+            [FromForm] bool publishNow = false,
+            [FromForm] string? returnUrl = null)
+        {
+            if (id != vm.FaqId)
+                return BadRequest(new { message = "表單識別不一致。" });
+
+            // 先做基本驗證
+            if (!ModelState.IsValid)
+            {
+                // 收集第一條錯誤訊息回前端
+                var firstErr = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage
+                               ?? "資料驗證失敗。";
+                return BadRequest(new { message = firstErr });
+            }
+
+            var db = await _context.CsFaqs
+                .Include(f => f.CsFaqKeywords) // 如果你的關聯是這個名稱；沒有就拿掉
+                .FirstOrDefaultAsync(x => x.FaqId == id);
+            if (db == null)
+                return NotFound(new { message = "找不到該 FAQ。" });
+
+            // --- 唯一鍵預檢：同分類排序不可重複 ---
+            bool dup = await _context.CsFaqs.AnyAsync(x =>
+                x.CategoryId == vm.CategoryId &&
+                x.OrderSeq == vm.OrderSeq &&
+                x.FaqId != vm.FaqId);
+            if (dup)
+                return Conflict(new { message = "同一分類的排序不可重複。" });
+
+            // --- 更新主資料 ---
+            db.Title = vm.Title;
+            db.AnswerHtml = vm.AnswerHtml;
+            db.CategoryId = vm.CategoryId;
+            db.OrderSeq = (int)vm.OrderSeq;
+            db.IsActive = vm.IsActive;
+
+            if (publishNow)
+            {
+                db.IsActive = true;
+                db.LastPublishedTime ??= DateTime.Now;
+            }
+            else if (db.IsActive && db.LastPublishedTime == null)
+            {
+                db.LastPublishedTime = DateTime.Now;
+            }
+            else
+            {
+                db.LastPublishedTime = vm.LastPublishedTime;
+            }
+
+            db.RevisedDate = DateTime.Now;
+
+            // --- 關鍵字差異同步 ---
+            var incoming = (vm.Keywords ?? new List<string>())
+                .Select(s => (s ?? "").Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(50)
+                .ToList();
+
+            var current = await _context.CsFaqKeywords
+                .Where(k => k.FaqId == id)
+                .ToListAsync();
+
+            var currentSet = current.Select(k => k.Keyword)
+                                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var toAdd = incoming.Where(s => !currentSet.Contains(s))
+                .Select(s => new CsFaqKeyword { FaqId = id, Keyword = s, CreatedDate = DateTime.Now })
+                .ToList();
+
+            var toDel = current.Where(k => !incoming.Contains(k.Keyword, StringComparer.OrdinalIgnoreCase)).ToList();
+
+            _context.CsFaqKeywords.RemoveRange(toDel);
+            _context.CsFaqKeywords.AddRange(toAdd);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                var redirect = (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    ? returnUrl
+                    : Url.Action(nameof(Index), "Faqs", new { area = "CS" });
+
+                return Ok(new { ok = true, redirectUrl = redirect });
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException sql &&
+                                               (sql.Number == 2601 || sql.Number == 2627))
+            {
+                return Conflict(new { message = "同一分類的排序不可重複。" });
+            }
+            catch
+            {
+                return BadRequest(new { message = "儲存時發生未預期錯誤，請稍後再試。" });
+            }
+        }
 
 
         // POST: CS/Faqs/Edit/1001
@@ -165,7 +333,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             db.Title = vm.Title;
             db.AnswerHtml = vm.AnswerHtml;
             db.CategoryId = vm.CategoryId;
-            db.OrderSeq = vm.OrderSeq;
+            db.OrderSeq = (int)vm.OrderSeq;
             db.IsActive = vm.IsActive;
 
             if (publishNow)

@@ -156,13 +156,16 @@
                 <!-- 啟用 -->
                 <td class="text-center">
                     <div class="form-check form-switch m-0 d-inline-flex align-items-center">
-                        <input id="@toggleId" class="form-check-input js-toggle-active" type="checkbox"
-                               data-id="@c.CategoryId" @(c.IsActive ? "checked" : "") />
-                        <label class="form-check-label ms-1" for="@toggleId">
-                            <span class="text-muted-70">@(c.IsActive ? "啟用" : "停用")</span>
-                        </label>
+                        <input id="@toggleId"
+                               class="form-check-input js-toggle-active"
+                               type="checkbox"
+                               data-id="@c.CategoryId"
+                               @(c.IsActive ? "checked" : "")
+                               aria-label="啟用狀態切換" />
+                        @* 原本的 label 整段刪掉 *@
                     </div>
                 </td>
+
 
                 <!-- 時間 -->
                 <td class="text-center">@c.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
@@ -262,14 +265,14 @@
                     type: 'POST',
                     headers: { 'RequestVerificationToken': antiToken },
                     data: { id, isActive },
-                    success: function (res) {
-                        if (!res || res.ok !== true) {
-                            $chk.prop('checked', !isActive);
-                            Swal.fire({ title: '切換失敗', icon: 'error' });
-                        } else {
-                            const txt = isActive ? '啟用' : '停用';
-                            $chk.closest('.form-check').find('.form-check-label').text(txt);
-                        }
+                            success: function (res) {
+            if (!res || res.ok !== true) {
+                $chk.prop('checked', !isActive);
+                Swal.fire({ title: '切換失敗', icon: 'error' });
+            }
+            // 不再更新任何文字
+        },
+
                     },
                     error: function () {
                         $chk.prop('checked', !isActive);
