@@ -114,5 +114,24 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             var count = _context.MktCampaigns.Count();
             return Json(new { count });
         }
+
+        [HttpPost]
+        public IActionResult UpdateCampaign([FromBody] MktCampaign model)
+        {
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
+
+            // 強制固定活動類型
+            model.CampaignType = "cmd";
+
+            // 更新時間
+            model.RevisedDate = DateTime.Now;
+
+            _context.MktCampaigns.Update(model);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+
     }
 }

@@ -12,7 +12,7 @@
 }
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-success text-white fw-bold">
+    <div class="card-header bg-success-subtle text-dark fw-bold">
         ➕ 新增文章
     </div>
     <div class="card-body">
@@ -28,7 +28,7 @@
             </div>
             <!-- 分類 -->
             <div class="mb-3">
-                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <label asp-for="PageTypeId" class="form-label">文章分類</label>
                 <select asp-for="PageTypeId" asp-items="ViewBag.PageTypeList" class="form-select"></select>
                 <span asp-validation-for="PageTypeId" class="text-danger"></span>
             </div>
