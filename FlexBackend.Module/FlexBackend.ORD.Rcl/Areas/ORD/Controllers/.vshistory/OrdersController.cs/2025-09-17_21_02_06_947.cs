@@ -208,9 +208,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     skuSpec = s.SpecCode,
                     unitPrice = i.UnitPrice,
                     qty = i.Qty,
-                    stockQty = _db.SupStockBatches
-                        .Where(st => st.SkuId == s.SkuId)
-                        .Sum(st => st.Qty),
                     subtotal = i.UnitPrice * i.Qty
                 }).ToListAsync();
 
@@ -299,6 +296,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+
 
         // 批量更新訂單狀態
         [HttpPost]
@@ -415,11 +414,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
 						.FirstOrDefault(),
-                    CouponName = _db.MktCoupons
-                        .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
-                        .FirstOrDefault(),
-                    Items = _db.OrdOrderItems
+					Items = _db.OrdOrderItems
 						.Where(i => i.OrderId == o.OrderId)
 						.Join(_db.ProdProducts, i => i.ProductId, p => p.ProductId,
 							(i, p) => new { i, p.ProductName })
@@ -430,7 +425,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 								SpecCode = s.SpecCode,
 								UnitPrice = ip.i.UnitPrice,
 								Qty = ip.i.Qty,
-                                Subtotal = ip.i.UnitPrice * ip.i.Qty
+								Subtotal = ip.i.UnitPrice * ip.i.Qty
 							})
 						.ToList()
 				})

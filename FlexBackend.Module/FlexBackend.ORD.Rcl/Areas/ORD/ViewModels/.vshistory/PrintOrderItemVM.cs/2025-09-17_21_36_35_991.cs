@@ -12,7 +12,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 		public string SpecCode { get; set; }
 		public decimal UnitPrice { get; set; }
 		public int Qty { get; set; }
-
-        public decimal Subtotal { get; set; }
+		public decimal Subtotal { get; set; }
 	}
 }

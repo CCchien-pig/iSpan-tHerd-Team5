@@ -11,7 +11,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
 	{
 			public OrdOrder Order { get; set; }
 			public string ShippingMethod { get; set; }
-			public string? CouponName { get; set; }
+			public string CouponName { get; set; } 
+			public string CouponCode { get; set; }
 			public List<PrintOrderItemVM> Items { get; set; }
 
 	}
