@@ -181,30 +181,33 @@
         <tbody>
             @foreach (var item in Model)
             {
-                var faqTitle = item.FaqTitle ?? "";
-             
-
                 <tr>
                     <td class="text-center">
                         <input type="checkbox" class="js-row-check" value="@item.KeywordId" />
                     </td>
                     <td>@item.Keyword</td>
                     <td>@item.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+
                     <td>
-                        <!-- 所屬 FAQ 欄位 -->
-                        @if (string.IsNullOrWhiteSpace(faqTitle))
+                        @if (item.Faqs == null || item.Faqs.Count == 0)
                         {
                             <span class="text-muted">（未對應 FAQ）</span>
                         }
                         else
                         {
-                            <a class="badge-faq line-clamp-1"
-                               asp-area="CS" asp-controller="Faqs" asp-action="Details"
-                               asp-route-id="@item.FaqId"
-                               asp-route-returnUrl="@backUrl"
-                               title="@faqTitle">@faqTitle</a>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var f in item.Faqs)
+                                {
+                                    <a class="badge-faq"
+                                       asp-area="CS" asp-controller="Faqs" asp-action="Details"
+                                       asp-route-id="@f.FaqId"
+                                       asp-route-returnUrl="@backUrl"
+                                       title="@f.Title">@f.Title</a>
+                                }
+                            </div>
                         }
                     </td>
+
                     <td class="text-nowrap">
                         <div class="btn-group" role="group" aria-label="Actions">
                             <a asp-area="CS" asp-controller="FaqKeywords" asp-action="Edit" asp-route-id="@item.KeywordId"
@@ -226,6 +229,7 @@
                 </tr>
             }
         </tbody>
+
     </table>
 </div>
 
@@ -271,6 +275,7 @@
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json" },
                 columnDefs: [
                     { targets: 0, orderable:false, searchable:false, className:"text-center", width:36 },
+                      { targets: 3,  orderable:false },
                     { targets: -1, orderable:false, searchable:false, className:"text-nowrap", width:120 }
                 ],
                 order: [[1, 'asc']]
