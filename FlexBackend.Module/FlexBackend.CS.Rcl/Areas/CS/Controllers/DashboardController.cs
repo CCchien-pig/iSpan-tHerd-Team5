@@ -2,12 +2,10 @@
 
 namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 {
-	[Area("CS")]
-	public class DashboardController : Controller
-	{
-		public IActionResult Index()
-		{
-			return View();
-		}
-	}
+    [Area("CS")]
+    public class DashboardController : Controller
+    {
+        // 只負責回傳 Razor View（/Areas/CS/Views/Dashboard/Index.cshtml）
+        public IActionResult Index() => View();
+    }
 }
