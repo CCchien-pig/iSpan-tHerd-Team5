@@ -161,6 +161,19 @@ public partial class ProdProductDto
 
 	public List<ProdProductSkuDto> Skus { get; set; } = new List<ProdProductSkuDto>();
 	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
+
+	public List<ProductImageDto>? Images { get; set; } = new();
+}
+
+public class ProductImageDto
+{
+	public int ImageId { get; set; }
+	public int ProductId { get; set; }
+	public int? SkuId { get; set; }
+	public bool IsMain { get; set; }
+	public int OrderSeq { get; set; }
+	public string FileUrl { get; set; } = string.Empty;
+	public string? AltText { get; set; }
 }
 
 /// <summary>
