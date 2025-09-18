@@ -11,17 +11,17 @@
                     <!-- 活動ID 下拉選單 -->
                     <div class="mb-3">
                         <label class="form-label">活動</label>
-                        <select id="createCampaignId" name="CampaignId" class="form-select" required>
+                        <select name="CampaignId" id="createCampaignId" class="form-select" required>
                             <option value="">請選擇活動</option>
-                            @if (ViewBag.Campaigns != null)
+                            @foreach (var c in ViewBag.Campaigns)
                             {
-                                foreach (var campaign in ViewBag.Campaigns)
-                                {
-                                    <option value="@campaign.CampaignId"
-                                            @(Model?.CampaignId == campaign.CampaignId ? "selected" : "")>
-                                        @campaign.CampaignName
-                                    </option>
-                                }
+                                var start = c.StartDate.ToString("MM/dd");
+                                var end = c.EndDate?.ToString("MM/dd") ?? "";
+                                <option value="@c.CampaignId"
+                                        data-start="@c.StartDate.ToString("yyyy-MM-ddTHH:mm")"
+                                        data-end="@(c.EndDate?.ToString("yyyy-MM-ddTHH:mm") ?? "")">
+                                    @c.CampaignName (@start ~ @end)
+                                </option>
                             }
                         </select>
                     </div>
@@ -36,67 +36,48 @@
 
                     <div class="mb-3">
                         <label class="form-label">優惠券名稱</label>
-                        <input type="text" id="createCouponName" name="CouponName" class="form-control" required
-                               value="@Model?.CouponName" />
+                        <input type="text" id="createCouponName" name="CouponName" class="form-control" required />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">優惠碼</label>
-                        <input type="text" id="createCouponCode" name="CouponCode" class="form-control" required
-                               value="@Model?.CouponCode" />
+                        <input type="text" id="createCouponCode" name="CouponCode" class="form-control" required />
                     </div>
 
-                    @* <div class="mb-3">
-                        <label class="form-label">優惠券狀態</label>
-                        <select id="createStatus" name="Status" class="form-select" required>
-                            <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>下架</option>
-                            <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>上架</option>
-                        </select>
-                    </div> *@
                     <!-- 隱藏優惠券狀態欄位，固定回傳 pActive -->
                     <div class="mb-3" style="display:none;">
                         <label class="form-label">優惠券狀態</label>
                         <input type="hidden" id="createStatus" name="Status" value="pActive" />
                     </div>
 
-
-
                     <div class="mb-3">
                         <label class="form-label">開始時間</label>
-                        <input type="datetime-local" id="createStartDate" name="StartDate" class="form-control" required
-                               value="" />
+                        <input type="datetime-local" id="createStartDate" name="StartDate" class="form-control" required min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
                     </div>
-
 
                     <div class="mb-3">
                         <label class="form-label">結束時間</label>
-                        <input type="datetime-local" id="createEndDate" name="EndDate" class="form-control"
-                               value="@(Model != null && Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                        <input type="datetime-local" id="createEndDate" name="EndDate" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">折扣金額</label>
-                        <input type="number" id="createDiscountAmount" name="DiscountAmount" class="form-control" step="0.01"
-                               value="@Model?.DiscountAmount" />
+                        <input type="number" id="createDiscountAmount" name="DiscountAmount" class="form-control" step="0.01" />
                     </div>
 
                     <div class="mb-3 d-none">
                         <label class="form-label">折扣百分比</label>
-                        <input type="number" id="createDiscountPercent" name="DiscountPercent" class="form-control" step="0.01"
-                               value="" />
+                        <input type="number" id="createDiscountPercent" name="DiscountPercent" class="form-control" step="0.01" />
                     </div>
-
 
                     <div class="mb-3">
                         <label class="form-label">總數量</label>
-                        <input type="number" id="createTotQty" name="TotQty" class="form-control" required
-                               value="" />
+                        <input type="number" id="createTotQty" name="TotQty" class="form-control" required />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">每人限領</label>
-                        <input type="number" id="createUserLimit" name="UserLimit" class="form-control" required
-                               value="" />
+                        <input type="number" id="createUserLimit" name="UserLimit" class="form-control" required />
                     </div>
 
                     <!-- 隱藏輸入欄位，固定回傳24 -->
@@ -105,17 +86,14 @@
                         <input type="hidden" id="createValidHours" name="ValidHours" value="24" />
                     </div>
 
-
                     <div class="form-check form-switch mb-3">
-                        <input type="checkbox" id="createIsActive" name="IsActive" class="form-check-input"
-                               @(Model?.IsActive ?? true ? "checked" : "") />
+                        <input type="checkbox" id="createIsActive" name="IsActive" class="form-check-input" checked />
                         <label class="form-check-label" for="createIsActive">啟用</label>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">建立者</label>
-                        <input type="number" id="createCreator" name="Creator" class="form-control" required
-                               value="" />
+                        <input type="number" id="createCreator" name="Creator" class="form-control" required />
                     </div>
                 </div>
 
@@ -137,25 +115,25 @@
             rules.forEach(function (r) {
                 $ruleSelect.append('<option value="' + r.RuleId + '">' + r.DefaultCondition + '</option>');
             });
-        }).fail(function(err){
+        }).fail(function (err) {
             console.error("載入規則失敗", err);
         });
     }
 
     $("#CreateCoupon").off("click").on("click", function () {
-        loadActiveRules();  // 載入規則
+        loadActiveRules();
         $("#createCouponModal").modal("show");
     });
 
     // 新增優惠券
-    $("#createCouponSubmitBtn").off('click').on('click', function(e) {
+    $("#createCouponSubmitBtn").off('click').on('click', function (e) {
         e.preventDefault();
         var form = $("#createCouponForm");
         var data = {
             CampaignId: parseInt(form.find("#createCampaignId").val()),
             RuleId: parseInt(form.find("#createRuleId").val()),
             CouponName: form.find("#createCouponName").val().trim(),
-            CouponCode: form.find("#createCouponCode").val().trim(),
+            CouponCode: form.find("#createCouponCode").val().trim(),  // ✅ PascalCase
             Status: form.find("#createStatus").val(),
             StartDate: form.find("#createStartDate").val(),
             EndDate: form.find("#createEndDate").val() || null,
@@ -170,34 +148,30 @@
         };
 
         // 前端檢查
-        if(!data.CampaignId) return Swal.fire("錯誤","請選擇活動","error");
-        if(!data.RuleId) return Swal.fire("錯誤","請選擇優惠規則","error");
-        if(!data.CouponName || !data.CouponCode) return Swal.fire("錯誤","優惠券名稱與代碼必填","error");
-        if(!data.StartDate) return Swal.fire("錯誤","請選擇開始時間","error");
-        if(!data.TotQty || !data.UserLimit || !data.ValidHours || !data.Creator)
-            return Swal.fire("錯誤","數量、每人限領、有效時數與建立者必填","error");
-        if(data.DiscountAmount===null && data.DiscountPercent===null)
-            return Swal.fire("錯誤","折扣金額或折扣百分比至少要填一個","error");
-        if(data.EndDate && new Date(data.EndDate) < new Date(data.StartDate))
-            return Swal.fire("錯誤","結束日期不能早於開始日期","error");
-        if(data.Status==="pInactive" && data.IsActive)
-            return Swal.fire("錯誤","下架狀態時，IsActive 必須為停用","error");
+        if (!data.CampaignId) return Swal.fire("錯誤", "請選擇活動", "error");
+        if (!data.RuleId) return Swal.fire("錯誤", "請選擇優惠規則", "error");
+        if (!data.CouponName || !data.CouponCode) return Swal.fire("錯誤", "優惠券名稱與代碼必填", "error");
 
         $.ajax({
             url: '@Url.Action("CreateCoupon", "Coupons", new { area = "MKT" })',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(data),
-            success: function(res){
-                if(res.success){
-                    Swal.fire("成功","優惠券已新增！","success").then(()=> {
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire("成功", "優惠券已新增！", "success").then(() => {
                         $("#createCouponModal").modal("hide");
                         form[0].reset();
-                        if(window.calendar) window.calendar.refetchEvents();
+                        if (window.calendar) window.calendar.refetchEvents();
                     });
-                } else Swal.fire("錯誤","新增失敗：" + res.message,"error");
+                } else {
+                    Swal.fire("錯誤", "新增失敗：" + res.message, "error");
+                }
             },
-            error: function(err){ console.error(err); Swal.fire("錯誤","新增失敗","error"); }
+            error: function (err) {
+                console.error(err);
+                Swal.fire("錯誤", "新增失敗", "error");
+            }
         });
     });
 </script>
