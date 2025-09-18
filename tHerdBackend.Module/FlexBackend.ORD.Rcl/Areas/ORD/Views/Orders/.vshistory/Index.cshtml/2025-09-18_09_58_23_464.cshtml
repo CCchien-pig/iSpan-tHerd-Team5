@@ -9,7 +9,7 @@
         /* ===== 你的原先樣式（明細卡等） ===== */
         td.order-toggle {
             cursor: pointer;
-            color: #622872;
+            color: #0d6efd;
             text-decoration: underline;
         }
 
@@ -38,6 +38,45 @@
 
         th.no-sort::after {
             display: none !important;
+        }
+
+        /* ==== 整列Hover/選取高亮（作用在 td/th，而不是 tr） ==== */
+        :root {
+            --brand: #652D77;
+            --row-hover: #f3e8ff;
+            --row-even: #f8fafc;
+        }
+
+        /* 斑馬紋（可留可不留；要壓過 table-striped 必須作用在 cell） */
+        table.rcl-table > tbody > tr:nth-of-type(even) > * {
+            background: var(--row-even) !important;
+        }
+
+        /* 列 hover：所有 cell 一起變色 */
+        table.rcl-table > tbody > tr:hover > *,
+        table.rcl-table > tbody > tr.is-selected > * {
+            background: var(--row-hover) !important;
+        }
+
+        /* 第一格做左側色條，不位移（預留透明邊框） */
+        table.rcl-table > tbody > tr > *:first-child {
+            border-left: 4px solid transparent;
+        }
+
+        table.rcl-table > tbody > tr:hover > *:first-child,
+        table.rcl-table > tbody > tr.is-selected > *:first-child {
+            border-left-color: var(--brand);
+        }
+
+        /* 平滑過渡 */
+        table.rcl-table > tbody > tr > * {
+            transition: background-color .18s ease, border-left-color .18s ease;
+        }
+
+        /* DataTables child 明細列別吃 hover */
+        table.rcl-table > tbody > tr.child > * {
+            background: inherit !important;
+            border-left-color: transparent !important;
         }
 
         /* SweetAlert2：批次視窗尺寸與內距修正 */
@@ -96,14 +135,7 @@
             gap: .5rem;
         }
 
-        /* 品牌紫 */
-        :root {
-            --brand-500: #652D77;
-            --brand-600: #7A3A8F;
-            --brand-700: #4E225D;
-            --bs-primary: var(--brand-500);
-            --bs-primary-rgb: 101,45,119;
-        }
+
 
         /* ===== 狀態徽章（保留，可依需要使用） ===== */
         .badge-status {
@@ -171,191 +203,6 @@
             background: #fff;
             border-top: 0;
         }
-
-        /* ——— 兩顆工具鍵：ghost/outline 紫（平常乾淨，hover 才上色） ——— */
-        #bulkUpdate.btn,
-        #bulkPrint.btn {
-            background: transparent !important;
-            border: 1px solid #997eb4 !important; 
-            color: var(--brand-500) !important;
-        }
-
-            #bulkUpdate.btn:hover,
-            #bulkPrint.btn:hover,
-            #bulkUpdate.btn:focus,
-            #bulkPrint.btn:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
-
-        /* ——— 套用：實心品牌紫（不改 class，用容器 + 類別鎖定） ——— */
-        #searchForm .btn.btn-primary {
-            --bs-btn-bg: var(--brand-500);
-            --bs-btn-border-color: var(--brand-500);
-            --bs-btn-hover-bg: var(--brand-600);
-            --bs-btn-hover-border-color: var(--brand-600);
-            --bs-btn-active-bg: var(--brand-700);
-            --bs-btn-active-border-color: var(--brand-700);
-        }
-       
-
-        /* 左側色條（整列 hover/被選取時顯示紫色導引） */
-        table.rcl-table > tbody > tr > *:first-child {
-            border-left: 4px solid transparent;
-        }
-
-        table.rcl-table > tbody > tr:hover > *:first-child,
-        table.rcl-table > tbody > tr.is-selected > *:first-child {
-            border-left-color: var(--brand-500);
-        }
-
-        /* child 明細列不吃 hover 色 */
-        table.rcl-table > tbody > tr.child > * {
-            background: inherit !important;
-            border-left-color: transparent !important;
-        }
-
-        /* 動畫 */
-        table.rcl-table > tbody > tr > * {
-            transition: background-color .18s ease, border-left-color .18s ease;
-        }
-
-        /* === 三顆按鈕：兩顆 ghost，套用實心紫（不改 class，不影響 JS）=== */
-        /* 批量更改、列印：ghost 紫 */
-        #bulkUpdate.btn,
-        #bulkPrint.btn {
-            background: transparent !important;
-            border: 1px solid #997eb4 !important; 
-            color: var(--brand-500) !important;
-        }
-
-            #bulkUpdate.btn:hover,
-            #bulkPrint.btn:hover,
-            #bulkUpdate.btn:focus,
-            #bulkPrint.btn:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
-
-        /* 套用：實心品牌紫（限制在搜尋表單內） */
-        #searchForm .btn.btn-primary {
-            --bs-btn-bg: var(--brand-500);
-            --bs-btn-border-color: var(--brand-500);
-            --bs-btn-hover-bg: var(--brand-600);
-            --bs-btn-hover-border-color: var(--brand-600);
-            --bs-btn-active-bg: var(--brand-700);
-            --bs-btn-active-border-color: var(--brand-700);
-        }
-
-        /* === Switch 顏色改成品牌紫 === */
-        .form-switch .form-check-input:checked {
-            background-color: var(--brand-500) !important;
-            border-color: var(--brand-500) !important;
-        }
-
-        .form-check-input:focus {
-            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important; 
-        }
-        /* 可選：disabled & checked 的顏色 */
-        .form-check-input:disabled:checked {
-            background-color: #9a72b0 !important; /
-            border-color: #9a72b0 !important;
-        }
-
-        /* === 唯一 :root（品牌色 + 表格條紋色）=== */
-        :root {
-            /* 品牌紫 */
-            --brand-500: #652D77;
-            --brand-600: #7A3A8F;
-            --brand-700: #4E225D;
-            --bs-primary: var(--brand-500);
-            --bs-primary-rgb: 101,45,119;
-            /* 表格條紋 / hover / 勾選色 */
-            --row-odd: #ffffff; /* 奇數列 */
-            --row-even: #ece7ed; /* 偶數列 */
-            --row-hover: #efe7f7; /* 滑過 */
-            --row-selected: #f3eaf9; /* 勾選（與 hover 分開） */
-        }
-
-        /* === 表格條紋 / hover / 勾選（作用在 cell，穩蓋 .table-striped）=== */
-        table.rcl-table > tbody > tr:nth-of-type(odd) > * {
-            background: var(--row-odd) !important;
-        }
-
-        table.rcl-table > tbody > tr:nth-of-type(even) > * {
-            background: var(--row-even) !important;
-        }
-
-        table.rcl-table > tbody > tr:hover > * {
-            background: var(--row-hover) !important;
-        }
-
-        table.rcl-table > tbody > tr.is-selected > * {
-            background: var(--row-selected) !important;
-        }
-
-        /* 左側導引色條 */
-        table.rcl-table > tbody > tr > *:first-child {
-            border-left: 4px solid transparent;
-        }
-
-        table.rcl-table > tbody > tr:hover > *:first-child,
-        table.rcl-table > tbody > tr.is-selected > *:first-child {
-            border-left-color: var(--brand-500);
-        }
-
-        /* child 明細列不吃 hover；過渡動畫 */
-        table.rcl-table > tbody > tr.child > * {
-            background: inherit !important;
-            border-left-color: transparent !important;
-        }
-
-        table.rcl-table > tbody > tr > * {
-            transition: background-color .18s ease, border-left-color .18s ease;
-        }
-
-        /* === 三顆按鈕：兩顆 ghost、套用實心紫（不改 class / 不影響 JS）=== */
-        /* 批量、列印 → ghost 紫 */
-        #bulkUpdate.btn, #bulkPrint.btn {
-            background: transparent !important;
-            border: 1px solid #997eb4 !important;
-            color: var(--brand-500) !important;
-        }
-
-            #bulkUpdate.btn:hover, #bulkPrint.btn:hover,
-            #bulkUpdate.btn:focus, #bulkPrint.btn:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
-        /* 套用 → 實心品牌紫（侷限在查詢表單） */
-        #searchForm .btn.btn-primary {
-            --bs-btn-bg: var(--brand-500);
-            --bs-btn-border-color: var(--brand-500);
-            --bs-btn-hover-bg: var(--brand-600);
-            --bs-btn-hover-border-color: var(--brand-600);
-            --bs-btn-active-bg: var(--brand-700);
-            --bs-btn-active-border-color: var(--brand-700);
-        }
-
-        /* === Switch（前台顯示）改成品牌紫 === */
-        .form-switch .form-check-input:checked {
-            background-color: var(--brand-500) !important;
-            border-color: var(--brand-500) !important;
-        }
-
-        .form-check-input:focus {
-            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important;
-        }
-
-        .form-check-input:disabled:checked {
-            background-color: #9a72b0 !important;
-            border-color: #9a72b0 !important;
-        }
-
-
     </style>
 }
 
@@ -368,9 +215,9 @@
 
         <!-- 批次操作（兩顆功能主按鈕） -->
         <div class="d-flex flex-wrap align-items-end justify-content-between mb-3 gap-2">
-            <div class="btn-group gap-2">
-                <button type="button" id="bulkUpdate" class="btn btn-warning btn-lg">批量更改狀態</button>
-                <button type="button" id="bulkPrint" class="btn btn-success btn-lg">列印出貨單</button>
+            <div class="d-flex gap-2">
+                <button id="btn-bulk" class="btn btn-outline-secondary btn-lg">批量更改狀態</button>
+                <button id="btn-print" class="btn btn-outline-success  btn-lg">列印出貨單</button>
             </div>
 
             <!-- 日期 + 快速篩選（擺在右側） -->
@@ -440,7 +287,7 @@
             </div>
             <div class="col-md-1 d-grid">
                 <label class="form-label">&nbsp;</label>
-                <button type="submit" class="btn btn-primary">套用</button> <!-- 可留作手動觸發；平常不必按 -->
+                <button id="btn-apply" class="btn btn-outline-primary">套用</button> <!-- 可留作手動觸發；平常不必按 -->
             </div>
         </form>
 
