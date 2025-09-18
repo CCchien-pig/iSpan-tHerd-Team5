@@ -4,38 +4,117 @@
 @section Styles{
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
     <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fixedtable.css" asp-append-version="true" />@* 回頂部樣式 *@          
     
 }
 <partial name="_AlertMessage" />
+<!-- 🔍 搜尋表單 -->
+<form asp-action="RecycleBin" method="get" class="mb-2 d-flex justify-content-center">
+    <div class="input-group input-group-sm" style="max-width:960px;">
+        <span class="input-group-text">每頁筆數</span>
+        <select name="pageSize" class="form-select form-select-sm"
+                style="max-width:90px;"
+                asp-items="ViewBag.PageSizeList"
+                onchange="this.form.submit()"></select>
 
+        <!-- 📂 分類 -->
+        <span class="input-group-text">分類</span>
+        <select name="pageTypeId" class="form-select form-select-sm"
+                style="max-width:140px;"
+                asp-items="ViewBag.PageTypeList"
+                onchange="this.form.submit()"></select>
+
+        <!-- 📌 狀態 -->
+        <span class="input-group-text">狀態</span>
+        <select name="status" class="form-select form-select-sm"
+                style="max-width:140px;"
+                asp-items="ViewBag.StatusList"
+                onchange="this.form.submit()"></select>
+
+        <!-- 🔍 關鍵字 -->
+        <input type="text" name="keyword"
+               value="@ViewBag.Keyword"
+               class="form-control form-control-sm"
+               style="max-width:300px;"
+               placeholder="輸入ID或標題..." />
+
+        <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
+        <a asp-action="RecycleBin" class="btn btn-outline-dark btn-sm">❌ 清除</a>
+    </div>
+</form>
+@if ((ViewBag.PageTypeId != null && (int)ViewBag.PageTypeId > 0)
+    || !string.IsNullOrEmpty(ViewBag.Status as string)
+    || !string.IsNullOrEmpty(ViewBag.Keyword as string))
+{
+    <div class="alert alert-info border rounded p-2 mb-2 d-flex align-items-center flex-wrap">
+        <span class="fw-bold me-2">🔎 篩選條件：</span>
+
+        @* 分類 Badge *@
+        @if (ViewBag.PageTypeId != null && (int)ViewBag.PageTypeId > 0)
+        {
+            var pageTypeSelect = (SelectList)ViewBag.PageTypeList;
+            var pageTypeText = pageTypeSelect
+            .FirstOrDefault(x => x.Value == ViewBag.PageTypeId.ToString())?.Text;
+
+            <span class="badge bg-success me-2">
+                分類：@pageTypeText
+                <a asp-action="RecycleBin"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-keyword="@ViewBag.Keyword"
+                   asp-route-status="@ViewBag.Status"
+                   class="btn-close btn-close-white ms-2"
+                   title="移除分類"></a>
+            </span>
+        }
+
+        @* 狀態 Badge *@
+        @if (!string.IsNullOrEmpty(ViewBag.Status as string))
+        {
+            var statusSelect = (SelectList)ViewBag.StatusList;
+            var statusText = statusSelect
+            .FirstOrDefault(x => x.Value == ViewBag.Status.ToString())?.Text ?? "已刪除";
+
+            <span class="badge bg-danger me-2">
+                狀態：@statusText
+                <a asp-action="RecycleBin"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-keyword="@ViewBag.Keyword"
+                   asp-route-pageTypeId="@ViewBag.PageTypeId"
+                   class="btn-close btn-close-white ms-2"
+                   title="移除狀態"></a>
+            </span>
+        }
+
+        @* 關鍵字 Badge *@
+        @if (!string.IsNullOrEmpty(ViewBag.Keyword as string))
+        {
+            <span class="badge bg-primary me-2">
+                關鍵字：「@ViewBag.Keyword」
+                <a asp-action="RecycleBin"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-pageTypeId="@ViewBag.PageTypeId"
+                   asp-route-status="@ViewBag.Status"
+                   class="btn-close btn-close-white ms-2"
+                   title="移除關鍵字"></a>
+            </span>
+        }
+
+        @* 清除全部 *@
+        <a asp-action="RecycleBin"
+           asp-route-pageSize="@Model.PageSize"
+           class="btn btn-outline-dark btn-sm ms-2">❌ 清除全部</a>
+    </div>
+}
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+    <div class="card-header bg-danger-subtle text-dark fw-bold d-flex justify-content-between align-items-center">
         🗑️ ［大型工業垃圾］桶
-        <!-- 🔍 搜尋表單 -->
-        <form asp-action="RecycleBin" method="get" class="mb-2 ">
-            <div class="input-group input-group-sm" style="max-width:640px;">
-                <span class="input-group-text">每頁筆數</span>
-                <select name="pageSize" class="form-select form-select-sm"
-                        style="width:80px;"
-                        asp-items="ViewBag.PageSizeList"
-                        onchange="this.form.submit()"></select>
-
-                <input type="text" name="keyword" value="@ViewBag.Keyword"
-                       class="form-control form-control-sm"
-                       style="width:240px;"
-                       placeholder="輸入ID或標題..." />
-
-                <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
-            </div>
-        </form>
+        
     </div>
     @{
         var currentPage = Model.PageNumber;
         var currentPageSize = Model.PageSize;
         var currentKeyword = ViewBag.Keyword as string ?? "";
     }
-
-
     <div class="card-body">
         <div class="mb-2 text-muted">
             目前找到 <strong>@Model.TotalItemCount</strong> 筆已刪除的文章
@@ -45,7 +124,9 @@
             <thead class="table-dark text-center">
                 <tr>
                     <th>#️⃣ ID</th>
-                    <th>📄 標題</th>
+                    <th>📄 文章標題</th>
+                    <th>📂 文章分類</th>
+                    <th>📌 文章狀態</th>
                     <th>⏰ 刪除時間</th>
                     <th>⚙️ 動作</th>
                 </tr>
@@ -55,10 +136,28 @@
                 {
                     <tr>
                         <td>@item.PageId</td>
-                        <td class="text-start">@item.Title</td>
-                        <td>@(item.RevisedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+
+                        <!-- 📄 標題 -->
+                        <td class="text-start">
+                            <strong>@item.Title</strong>
+                        </td>
+
+                        <!-- 📂 分類 -->
+                        <td>@item.PageTypeName</td>
+
+                        <!-- 📌 狀態 -->
                         <td>
-                            <!-- ♻️ 還原 (GET 可) -->
+                            <span class="badge bg-danger">
+                                @item.Status
+                            </span>
+                        </td>
+
+                        <!-- ⏰ 刪除時間 -->
+                        <td>@(item.RevisedDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+
+                        <!-- ⚙️ 動作 -->
+                        <td>
+                            <!-- ♻️ 還原 -->
                             <a asp-area="CNT"
                                asp-controller="Pages"
                                asp-action="Restore"
@@ -66,13 +165,12 @@
                                asp-route-page="@currentPage"
                                asp-route-pageSize="@currentPageSize"
                                asp-route-keyword="@currentKeyword"
-                               class="btn btn-sm btn-outline-success me-1 btn-lg"
+                               class="btn btn-sm btn-outline-success me-1"
                                onclick="return confirm('確定要還原這篇文章嗎？');">
                                 ♻️ 還原
                             </a>
 
-
-                            <!-- 💀 永久刪除 (必須 POST) -->
+                            <!-- 💀 永久刪除 -->
                             <form asp-area="CNT"
                                   asp-controller="Pages"
                                   asp-action="Destroy"
@@ -84,14 +182,12 @@
                                 <input type="hidden" name="pageSize" value="@currentPageSize" />
                                 <input type="hidden" name="keyword" value="@currentKeyword" />
                                 <button type="submit"
-                                        class="btn btn-sm btn-outline-danger btn-lg"
+                                        class="btn btn-sm btn-outline-danger"
                                         onclick="return confirm('⚠️ 確定要永久刪除這篇文章嗎？此動作無法還原！');">
                                     💀 永久刪除
                                 </button>
                             </form>
-
                         </td>
-
                     </tr>
                 }
             </tbody>
