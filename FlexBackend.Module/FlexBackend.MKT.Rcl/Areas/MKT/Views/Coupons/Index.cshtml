@@ -144,8 +144,8 @@
 <!-- Modal 區塊 -->
 <div class="modal fade" id="couponRuleModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div id="couponRuleModalContent"></div>
+        <div class="modal-content" id="couponRuleModalContent">
+            @Html.Partial("~/Areas/MKT/Views/Partial/_CouponRule.cshtml")
         </div>
     </div>
 </div>
@@ -329,14 +329,14 @@
             });
 
             $("#btnAddRule").on("click", function () {
-                $.get('@Url.Action("CreateRulePartial", "Coupons", new { area = "MKT" })', function(data){
+                $.get('@Url.Action("CreateRule", "Coupons", new { area = "MKT" })', function(data){
                     $("#couponRuleModalContent").html(data);
                     $("#couponRuleModal").modal("show");
                 });
             });
 
             $("#btnEditRule").on("click", function () {
-                $.get('@Url.Action("EditRulePartial", "Coupons", new { area = "MKT" })', function(data){
+                $.get('@Url.Action("EditRule", "Coupons", new { area = "MKT" })', function(data){
                     $("#couponRuleModalContent").html(data);
                     $("#couponRuleModal").modal("show");
                 });
@@ -499,15 +499,101 @@
                                     Swal.fire('錯誤','刪除失敗：' + cleanMsg,'error');
                                 }
                             },
-                            error: function(err){
-                                console.error(err);
+                                error: function (err) {
                                 let cleanMsg = translateErrorMessage(err.responseText);
-                                Swal.fire('錯誤','刪除失敗：' + cleanMsg,'error');
+                                Swal.fire("錯誤", "新增失敗：" + cleanMsg, "error");
                             }
+
                         });
                     }
                 });
             });
+
+                      // 用 on 監聽動態元素
+                // ========== 新增規則 ==========
+        $(document).off("click", "#saveRuleBtn").on("click", "#saveRuleBtn", function () {
+            var form = $("#createRuleForm");
+
+            var data = {
+                CouponType: form.find("[name='CouponType']").val()?.trim(),
+                DefaultCondition: form.find("[name='DefaultCondition']").val()?.trim(),
+                Description: form.find("[name='Description']").val()?.trim(),
+                IsActive: form.find("[name='IsActive']").val() === "1",  // hidden 固定 1
+                Creator: parseInt(form.find("[name='Creator']").val()) || 1
+            };
+
+            if (!data.CouponType) {
+                return Swal.fire("錯誤", "優惠券類型必填", "error");
+            }
+
+            $.ajax({
+                url: '/MKT/Coupons/CreateRule',   // ✅ 後端 Action: CreateRule
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("成功", "規則已新增！", "success").then(() => {
+                            $("#couponRuleModal").modal("hide");
+                            if (typeof loadRules === "function") {
+                                loadRules("#createRuleId");
+                                loadRules("#editRuleId");
+                            }
+                        });
+                    } else {
+                        Swal.fire("錯誤", res.message, "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("錯誤", "伺服器發生錯誤", "error");
+                }
+            });
+        });
+
+
+        // ========== 修改規則 ==========
+        $(document).off("click", "#saveEditRuleBtn").on("click", "#saveEditRuleBtn", function () {
+            var form = $("#editRuleForm");
+
+            var data = {
+                RuleId: parseInt(form.find("[name='RuleId']").val()),
+                CouponType: form.find("[name='CouponType']").val()?.trim(),
+                DefaultCondition: form.find("[name='DefaultCondition']").val()?.trim(),
+                Description: form.find("[name='Description']").val()?.trim(),
+                IsActive: form.find("[name='IsActive']").is(":checked"),
+                Creator: parseInt(form.find("[name='Creator']").val()) || 1
+            };
+
+            if (!data.RuleId) {
+                return Swal.fire("錯誤", "缺少 RuleId，無法更新", "error");
+            }
+            if (!data.CouponType) {
+                return Swal.fire("錯誤", "優惠券類型必填", "error");
+            }
+
+            $.ajax({
+                url: '/MKT/Coupons/EditRule',   // ✅ 後端 Action: EditRule
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("成功", "規則已更新！", "success").then(() => {
+                            $("#couponRuleModal").modal("hide");
+                            if (typeof loadRules === "function") {
+                                loadRules("#createRuleId", data.RuleId);
+                                loadRules("#editRuleId", data.RuleId);
+                            }
+                        });
+                    } else {
+                        Swal.fire("錯誤", res.message, "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("錯誤", "更新失敗", "error");
+                }
+            });
+        });
 
             window.addEventListener('coupon:changed', function(){
                 calendar.refetchEvents();
