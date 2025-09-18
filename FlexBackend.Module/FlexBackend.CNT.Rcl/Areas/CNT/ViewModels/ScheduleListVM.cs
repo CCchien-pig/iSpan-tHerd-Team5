@@ -38,9 +38,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		// 顯示文字 / 樣式
 		public string ActionTypeText => ActionType switch
 		{
+			ActionType.Featured => "精選文章",
 			ActionType.PublishPage => "發布文章",
 			ActionType.UnpublishPage => "下架文章",
+			ActionType.Unfeatured => "取消精選",
 			ActionType.PublishCoupon => "發布優惠券",
+			ActionType.ClearAllSchedules => "清空所有排程",
 			_ => "其他"
 		};
 
