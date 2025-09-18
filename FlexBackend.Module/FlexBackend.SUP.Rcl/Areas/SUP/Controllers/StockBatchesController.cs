@@ -48,7 +48,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		// POST: StockBatches/IndexJson
 		[HttpPost]
-		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+		public async Task<IActionResult> IndexJson(
+			[FromForm] string supplierId = null, 
+			[FromForm] string expireFilter = null,
+			[FromForm] string stockDateSort = "updated")
 		{
 			try
 			{
@@ -75,6 +78,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								SkuCode = sku.SkuCode,
 								sb.BatchNumber,
 								sb.ExpireDate,
+								sb.RevisedDate,
 								sb.Qty,
 								sku.SafetyStockQty,
 								sku.ReorderPoint,
@@ -115,36 +119,28 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					query = query.Where(x => x.SupplierId == sId);
 				}
 
-				// 到期日篩選
+				// 1️ 到期日篩選
 				var today = DateTime.Today;
-
 				if (!string.IsNullOrEmpty(expireFilter))
 				{
-					switch (expireFilter)
+					query = expireFilter switch
 					{
-						case "valid":
-							query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
-							break;
-						case "expired":
-							query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
-							break;
-					}
+						"valid" => query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today),
+						"expired" => query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today),
+						_ => query
+					};
 				}
 
-
-				// 搜尋功能
-				if (!string.IsNullOrEmpty(searchValue))
+				// 2️ 依 dated 排序
+				query = stockDateSort switch
 				{
-					query = query.Where(s =>
-						EF.Functions.Like(s.SkuCode, $"%{searchValue}%") ||
-						EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
-						EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
-						EF.Functions.Like(s.BrandName, $"%{searchValue}%") ||
-						EF.Functions.Like(s.BrandCode, $"%{searchValue}%")
-					);
-				}
+					"updated-asc" => query.OrderBy(s => s.RevisedDate),
+					"updated-desc" => query.OrderByDescending(s => s.RevisedDate),
+					"created-asc" => query.OrderBy(s => s.CreatedDate),
+					"created-desc" => query.OrderByDescending(s => s.CreatedDate),
+					_ => query.OrderByDescending(s => s.RevisedDate)
+				};
 
-				var totalRecords = await query.CountAsync();
 
 				// 欄位索引排序
 				// orderable: false，不會傳 0，不用算進來
@@ -162,6 +158,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					_ => sortDirection == "asc" ? query.OrderBy(s => s.StockBatchId) : query.OrderByDescending(s => s.StockBatchId),
 				};
 
+				// 搜尋功能
+				if (!string.IsNullOrEmpty(searchValue))
+				{
+					query = query.Where(s =>
+						EF.Functions.Like(s.SkuCode, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
+						EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BrandName, $"%{searchValue}%") ||
+						EF.Functions.Like(s.BrandCode, $"%{searchValue}%")
+					);
+				}
+
+				var totalRecords = await query.CountAsync();
+
+
 				// 分頁
 				var data = await query
 					.Skip(start)
@@ -176,6 +187,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					d.BatchNumber,
 					//d.ExpireDate,
 					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
+					RevisedDate = d.RevisedDate?.ToString("yyyy-MM-dd"),
 					d.Qty,
 					SafetyStockQty = d.SafetyStockQty,  // 保護 null
 					ReorderPoint = d.ReorderPoint,      // 保護 null
@@ -734,23 +746,40 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		[HttpPost]
 		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
 		{
-			var batch = await _context.SupStockBatches.FindAsync(id);
+			var batch = await _context.SupStockBatches
+				.Include(b => b.Sku) // 假設 SupStockBatch 有 Sku 導航屬性
+				.FirstOrDefaultAsync(b => b.StockBatchId == id);
+
 			if (batch == null)
 				return Json(new { success = false, message = "找不到批號" });
 
-			// 異動前數量
+			var sku = batch.Sku;
+			if (sku == null)
+				return Json(new { success = false, message = "找不到對應 SKU" });
+
 			int beforeQty = batch.Qty;
+			int changeQty = dto.ChangeQty;
 
-			// 計算異動數量（增加為 +，減少為 -）
-			int changeQty = dto.IsAdd ? dto.ChangeQty : -dto.ChangeQty;
+			if (dto.IsAdd)
+			{
+				int maxAdd = sku.MaxStockQty - sku.StockQty;
+				if (changeQty > maxAdd)
+					return Json(new { success = false, message = $"增加數量不可超過最大庫存，上限 {maxAdd}" });
 
-			// 更新批次庫存
-			batch.Qty += changeQty;
+				batch.Qty += changeQty;
+				sku.StockQty += changeQty;
+			}
+			else
+			{
+				if (changeQty > batch.Qty)
+					return Json(new { success = false, message = $"扣減數量不可超過批號庫存，上限 {batch.Qty}" });
 
-			// 異動後數量
-			int afterQty = batch.Qty;
+				batch.Qty -= changeQty;
+				sku.StockQty -= changeQty;
+				changeQty = -changeQty; // 記錄異動時為負數
+			}
 
-			var userId = _me.Id; // string
+			var userId = _me.Id;
 			var user = await _userMgr.Users
 				.AsNoTracking()
 				.FirstOrDefaultAsync(u => u.Id == userId);
@@ -764,19 +793,18 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_context.SupStockHistories.Add(new SupStockHistory
 			{
 				StockBatchId = id,
-				ChangeType = "Adjust",   // 固定:手動調整
+				ChangeType = "Adjust",
 				ChangeQty = changeQty,
 				BeforeQty = beforeQty,
-				AfterQty = afterQty,
+				AfterQty = batch.Qty,
 				Remark = dto.Remark,
-				//Reviser = 1,
 				Reviser = currentUserId,
 				RevisedDate = DateTime.Now
 			});
 
 			await _context.SaveChangesAsync();
 
-			return Json(new { success = true });
+			return Json(new { success = true, newQty = batch.Qty, totalStock = sku.StockQty });
 		}
 
 
@@ -878,49 +906,59 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-		public async Task InitializeStockBatchesAsync(int? brandId = null, int? productId = null)
+		public async Task InitializeStockBatchesAsync()
 		{
-			// 取得要處理的 SKU
-			var skus = _context.ProdProductSkus
+			var today = DateTime.Today;
+
+			// 取得所有有庫存的 SKU
+			var skus = await _context.ProdProductSkus
 				.Include(s => s.Product)
 					.ThenInclude(p => p.Brand)
-				.Where(s => s.IsActive);
+				.Where(s => s.IsActive && s.StockQty > 0)
+				.ToListAsync();
 
-			if (brandId.HasValue)
-				skus = skus.Where(s => s.Product.BrandId == brandId.Value);
-
-			if (productId.HasValue)
-				skus = skus.Where(s => s.ProductId == productId.Value);
-
-			var skuList = await skus.ToListAsync();
-
-			foreach (var sku in skuList)
+			foreach (var sku in skus)
 			{
-				// 檢查是否已有批號存在
-				bool hasBatch = await _context.SupStockBatches
-					.AnyAsync(b => b.SkuId == sku.SkuId && b.Qty > 0);
+				// 計算今日已有最大流水號
+				var todayBatchNumbers = _context.SupStockBatches
+					.Where(sb => sb.CreatedDate >= today && sb.CreatedDate < today.AddDays(1))
+					.Select(sb => sb.BatchNumber)
+					.ToList();
 
-				if (!hasBatch && sku.StockQty > 0)
+				int maxSeq = 0;
+				foreach (var bn in todayBatchNumbers)
 				{
-					// 建立初始批號
-					var batch = new SupStockBatch
-					{
-						SkuId = sku.SkuId,
-						Qty = sku.StockQty, // 與當前 SKU 庫存一致
-						BatchNumber = GenerateBatchNumber(sku.Product.Brand.BrandCode),
-						ManufactureDate = DateTime.Now,
-						Creator = 1004, // 可以改成當前登入者 Id
-						CreatedDate = DateTime.Now
-					};
-
-					_context.SupStockBatches.Add(batch);
-
-					Console.WriteLine($"初始化批號: SkuId={sku.SkuId}, Qty={sku.StockQty}, BatchNumber={batch.BatchNumber}");
+					var seqStr = bn.Split('-').Last();
+					if (int.TryParse(seqStr, out int seqNum))
+						maxSeq = Math.Max(maxSeq, seqNum);
 				}
+
+				int nextSeq = maxSeq + 1;
+
+				// 生成批號
+				string brandCode = sku.Product.Brand?.BrandCode ?? "XX";
+				string datePart = today.ToString("yyyyMMdd");
+				string batchNumber = $"{brandCode}{datePart}-{nextSeq:000}";
+
+				// 建立批號
+				var batch = new SupStockBatch
+				{
+					SkuId = sku.SkuId,
+					Qty = sku.StockQty,
+					BatchNumber = batchNumber,
+					ManufactureDate = today,
+					Creator = 1004, // 可以改成當前登入者
+					CreatedDate = DateTime.Now
+				};
+
+				_context.SupStockBatches.Add(batch);
+
+				Console.WriteLine($"初始化批號: SkuId={sku.SkuId}, Qty={sku.StockQty}, BatchNumber={batchNumber}");
 			}
 
 			await _context.SaveChangesAsync();
 		}
+
 		#endregion
 	}
 }
