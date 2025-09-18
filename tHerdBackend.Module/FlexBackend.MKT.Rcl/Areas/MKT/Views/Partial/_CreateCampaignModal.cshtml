@@ -56,13 +56,16 @@
                     </div>
 
 
-                    <div class="mb-3">
+                    @* <div class="mb-3">
                         <label>活動狀態</label>
                         <select id="createStatus" name="Status" class="form-select">
                             <option value="cInactive">下架</option>
                             <option value="cActive">上架</option>
                         </select>
-                    </div>
+                    </div> *@
+                    <!-- 隱藏狀態欄位，固定回傳 cActive -->
+                    <input type="hidden" id="createStatus" name="Status" value="cActive" />
+
 
                     <div class="mb-3">
                         <label>建檔人員</label>
