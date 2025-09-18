@@ -53,44 +53,58 @@
             display: none !important;
         }
 
-        /* ===== 表格樣式（第一欄同色版） ===== */
+        /* ===== 表格樣式 ===== */
         table.rcl-table {
             border-collapse: separate;
             border-spacing: 0;
         }
 
-            /* 第一欄設為導引條定位容器，但不強制白底 */
-            table.rcl-table > tbody > tr > td:first-child {
+            /* 第一欄 checkbox 永遠白底 */
+            table.rcl-table > tbody > tr > td:first-child,
+            table.rcl-table > tbody > tr:hover > td:first-child,
+            table.rcl-table > tbody > tr.is-selected > td:first-child,
+            table.rcl-table > tbody > tr:nth-of-type(odd) > td:first-child,
+            table.rcl-table > tbody > tr:nth-of-type(even) > td:first-child,
+            table.rcl-table > tbody > tr.child > td:first-child {
+                background: #ffffff !important;
                 position: relative;
             }
 
-            /* 奇數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(odd) > td {
+            /* DataTables 自動樣式覆蓋 */
+            table.rcl-table.dataTable.stripe tbody tr.odd > td:first-child,
+            table.rcl-table.dataTable.display tbody tr.odd > td:first-child,
+            table.rcl-table.dataTable.stripe tbody tr.even > td:first-child,
+            table.rcl-table.dataTable.display tbody tr.even > td:first-child,
+            table.rcl-table tbody tr td:first-child {
+                background-color: #ffffff !important;
+            }
+
+            /* 斑馬條紋：除第一欄外 */
+            table.rcl-table > tbody > tr:nth-of-type(odd) > *:not(:first-child) {
                 background: var(--row-odd) !important;
             }
 
-            /* 偶數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(even) > td {
+            table.rcl-table > tbody > tr:nth-of-type(even) > *:not(:first-child) {
                 background: var(--row-even) !important;
             }
 
-            /* hover：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:hover > td {
+            /* hover：除第一欄外 */
+            table.rcl-table > tbody > tr:hover > *:not(:first-child) {
                 background: var(--row-hover) !important;
             }
 
-            /* 勾選行：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr.is-selected > td {
+            /* 勾選行：除第一欄外 */
+            table.rcl-table > tbody > tr.is-selected > *:not(:first-child) {
                 background: var(--row-selected) !important;
             }
 
             /* child 明細列不吃 hover */
-            table.rcl-table > tbody > tr.child > td {
+            table.rcl-table > tbody > tr.child > * {
                 background: inherit !important;
             }
 
             /* 平滑過渡 */
-            table.rcl-table > tbody > tr > td {
+            table.rcl-table > tbody > tr > * {
                 transition: background-color .18s ease;
             }
 
@@ -206,8 +220,36 @@
         table.rcl-table.dataTable.display tbody tr.even {
             background-color: transparent !important;
         }
+
+        /* Bootstrap table 樣式覆蓋 */
+        .table-striped > tbody > tr:nth-of-type(odd) > td:first-child,
+        .table-striped > tbody > tr:nth-of-type(even) > td:first-child {
+            background-color: #ffffff !important;
+        }
+
+        /* ===== 最強制的 checkbox 欄位白底設定 ===== */
+        table.rcl-table tbody tr td:first-child {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+        }
+
+        /* 所有可能的狀態組合 */
+        table.rcl-table tbody tr:hover td:first-child,
+        table.rcl-table tbody tr.is-selected td:first-child,
+        table.rcl-table tbody tr:nth-child(odd) td:first-child,
+        table.rcl-table tbody tr:nth-child(even) td:first-child {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+        }
+
+        /* 通用覆蓋 - 最高權重 */
+        tbody tr td:first-child {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+        }
     </style>
 }
+
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
