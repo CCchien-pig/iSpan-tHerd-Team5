@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿using CsvHelper;
+using Dapper;
 using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.DTOs.USER;
@@ -9,6 +10,8 @@ using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Formats.Asn1;
+using System.Globalization;
 using static Dapper.SqlMapper;
 
 namespace FlexBackend.Infra.Repository.PROD
@@ -31,12 +34,13 @@ namespace FlexBackend.Infra.Repository.PROD
             _currentUser = currentUser;
 			_userMgr = userMgr;
 		}
-        /// <summary>
-        /// 取得所有有效分類
-        /// </summary>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+
+		/// <summary>
+		/// 取得所有有效分類
+		/// </summary>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
         {
             string sql = @"SELECT ProductTypeId, ParentId, ProductTypeCode, 
                             ProductTypeName
