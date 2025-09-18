@@ -781,6 +781,82 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 
 
+		// GET: /SUP/StockBatches/Remark/5
+		[HttpGet]
+		public async Task<JsonResult> Remark(int id)
+		{
+			var stockBatch = await (
+				from sb in _context.SupStockBatches
+				join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+				join prod in _context.ProdProducts on sku.ProductId equals prod.ProductId
+				join brand in _context.SupBrands on prod.BrandId equals brand.BrandId
+				where sb.StockBatchId == id
+				select new
+				{
+					sb.StockBatchId,
+					sb.BatchNumber,
+					BrandName = brand.BrandName,
+					ProductName = prod.ProductName,
+					SkuCode = sku.SkuCode,
+					ManufactureDate = sb.ManufactureDate,
+					CurrentQty = sb.Qty
+				}
+			).FirstOrDefaultAsync();
+
+			if (stockBatch == null)
+				return Json(new { success = false, message = "找不到批號資料" });
+
+			// 取得最後一次異動（包含 StockHistoryId）
+			var lastHistory = await _context.SupStockHistories
+				.Where(h => h.StockBatchId == id)
+				.OrderByDescending(h => h.RevisedDate)
+				.Select(h => new { h.StockHistoryId, h.Remark })
+				.FirstOrDefaultAsync();
+
+			return Json(new
+			{
+				success = true,
+				data = new
+				{
+					stockBatch.StockBatchId,
+					stockBatch.BatchNumber,
+					stockBatch.BrandName,
+					stockBatch.ProductName,
+					stockBatch.SkuCode,
+					stockBatch.ManufactureDate,
+					stockBatch.CurrentQty,
+					Remark = lastHistory?.Remark ?? "",
+					StockHistoryId = lastHistory?.StockHistoryId
+				}
+			});
+		}
+
+		[HttpPost]
+		public async Task<JsonResult> UpdateHistoryRemark(StockHistoryRemarkDto dto)
+		{
+			// 前端直接傳最後一次異動的ID
+			var history = await _context.SupStockHistories.FindAsync(dto.StockHistoryId);
+			if (history == null)
+				return Json(new { success = false, message = "找不到該異動紀錄" });
+
+			history.Remark = dto.Remark;
+			history.RevisedDate = DateTime.Now;
+
+			var userId = _me.Id;
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			history.Reviser = user.UserNumberId;
+
+			await _context.SaveChangesAsync();
+
+			return Json(new { success = true, stockHistoryId = history.StockHistoryId });
+		}
+
 
 		private bool SupStockBatchExists(int id)
 		{

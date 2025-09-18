@@ -359,3 +359,11 @@ button.dt-paging-button.current:not(:disabled):hover {
 }
 
 
+.stock-edit-adjustOptions .form-check-input {
+    vertical-align: middle; /* 垂直置中 */
+    margin-top: 0; /* 移除多餘上邊距 */
+}
+
+.stock-edit-adjustOptions label {
+    margin-bottom: 0; /* 移除底部空隙 */
+}
