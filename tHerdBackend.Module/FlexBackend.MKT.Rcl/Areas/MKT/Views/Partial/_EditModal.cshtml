@@ -2,7 +2,7 @@
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="editForm">
+            <form id="editForm" method="post" action="/MKT/Campaigns/EditCampaign">
                 <div class="modal-header text-center">
                     <h5 class="modal-title">編輯活動</h5>
                 </div>
@@ -19,24 +19,29 @@
 
                     <div class="mb-3">
                         <label>活動類型</label>
-                        <select id="editType" class="form-select">
-                            <option value="cmd">滿額折扣</option>
-                            <option value="csd">全館折扣</option>
-                        </select>
+                        <!-- readonly textbox 顯示 -->
+                        <input type="text" id="editTypeDisplay" class="form-control" value="滿額折扣" readonly />
+
+                        <!-- hidden input 回傳固定值 -->
+                        <input type="hidden" id="editType" name="CampaignType" value="cmd" />
                     </div>
+
+
 
                     <div class="mb-3">
                         <label>活動描述</label>
                         <input type="text" id="editDescription" class="form-control" />
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" style="display:none;">
                         <label>適用商品類型</label><br />
                         <input type="checkbox" class="editProductType" value="eyes" />眼睛保健
                         <input type="checkbox" class="editProductType" value="skin" />皮膚護理
                         <input type="checkbox" class="editProductType" value="hair" />頭髮護理
                         <input type="checkbox" class="editProductType" value="face" />臉部護理
                     </div>
+                    <input type="hidden" class="editProductType" value="" />
+
 
                     <div class="mb-3">
                         <label>活動開始日期</label>
@@ -60,8 +65,8 @@
                     <div class="mb-3">
                         <label>活動狀態</label>
                         <select id="editStatus" class="form-select">
-                            <option value="cActive">Active</option>
-                            <option value="cInactive">Inactive</option>
+                            <option value="cActive">上架</option>
+                            <option value="cInactive">下架</option>
                         </select>
                     </div>
 
@@ -70,10 +75,13 @@
                         <input type="text" id="editCreator" class="form-control" />
                     </div>
 
-                    <div class="mb-3">
-                        <label>活動圖片Id</label>
-                        <input type="text" id="editImgId" class="form-control" />
+                    <div class="mb-3" style="display:none;">
+                        <input type="text" id="editImgIdVisible" class="form-control" />
                     </div>
+                    <input type="hidden" id="editImgId" name="ImgId" value="" />
+
+
+
 
                 </div>
                 <div class="modal-footer">
@@ -86,3 +94,62 @@
         </div>
     </div>
 </div>
+<script>
+    const editStatusSelect = document.getElementById('editStatus');
+    const editIsActiveCheckbox = document.getElementById('editIsActive');
+
+    // 初始檢查
+    checkEditStatus();
+
+    // 當狀態改變時
+    editStatusSelect.addEventListener('change', checkEditStatus);
+
+    function checkEditStatus() {
+        if (editStatusSelect.value === 'cInactive') {
+            editIsActiveCheckbox.checked = false;       // 取消勾選
+            editIsActiveCheckbox.disabled = true;       // 禁用勾選
+        } else {
+            editIsActiveCheckbox.disabled = false;      // 可勾選
+        }
+    }
+
+    // 提交編輯活動
+    $("#saveBtn").on("click", function(e) {
+        e.preventDefault();
+
+        var data = {
+            CampaignId: parseInt($("#editId").val()),
+            CampaignName: $("#editTitle").val(),
+            CampaignType: $("#editType").val(), // 固定 cmd
+            CampaignDescription: $("#editDescription").val(),
+            ProductType: $(".editProductType:checked").map(function(){ return this.value; }).get().join(","),
+            StartDate: $("#editStart").val() || null,
+            EndDate: $("#editEnd").val() || null,
+            // 若下架，強制 IsActive = false
+            IsActive: editStatusSelect.value === 'cInactive' ? false : $("#editIsActive").prop("checked"),
+            Status: editStatusSelect.value,
+            Creator: parseInt($("#editCreator").val()) || null,
+            ImgId: parseInt($("#editImgId").val()) || null
+        };
+
+        $.ajax({
+            url: '/MKT/Campaigns/UpdateCampaign',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res){
+                if(res.success){
+                    Swal.fire("成功","活動已更新！","success").then(() => {
+                        $("#editModal").modal("hide");
+                        location.reload(); // 或 calendar.refetchEvents()
+                    });
+                } else {
+                    Swal.fire("錯誤","操作失敗：" + res.message,"error");
+                }
+            },
+            error: function(xhr){
+                Swal.fire("錯誤","操作失敗：" + xhr.responseText,"error");
+            }
+        });
+    });
+</script>
