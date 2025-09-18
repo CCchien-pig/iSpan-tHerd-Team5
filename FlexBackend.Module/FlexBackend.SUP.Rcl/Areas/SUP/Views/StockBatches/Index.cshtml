@@ -96,6 +96,25 @@
     </div>
 </div>
 
+<!-- 單筆庫存操作 Modal (#stockEditModal)（模態視窗） -->
+<div id="stockEditModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="stockEditModalTitle" class="modal-title">單筆庫存操作</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div id="stockEditModalContent" class="modal-body p-4">
+                <!-- AJAX 載入 _StockBatchEditPartial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- 異動後，浮現的批次異動明細 Modal (#batchMovementModal) -->
 <div id="batchMovementModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -651,7 +670,7 @@
                         className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
-                            console.log(row.brandName);
+                            console.log(row.brandname);
                             return `
                                 <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="該筆批次異動">
                                     <i class="fa-solid fa-right-from-bracket" style="color: #977ee2;"></i>
@@ -849,51 +868,98 @@
                 });
             });
 
-            // ===== 編輯庫存異動 =====
+
+            // ===== 編輯單筆庫存異動 =====
             $('#stockBatchTable').on('click', '.edit-stock-btn', function() {
                 var id = $(this).data('id');
 
                 // 取得該筆異動資料
-                $.get(`/SUP/StockBatches/Edit/${id}`, function(html){
+                $.get(`/SUP/StockBatches/Edit/${id}`, function(html) {
                     // 將表單內容放入 modal
-                    $('#stockBatchModalContent').html(html);
-                    $('#stockBatchModalTitle').text("庫存異動");
-                    $('#stockBatchModal').modal('show');
+                    $('#stockEditModalContent').html(html);
+                    $('#stockEditModalTitle').text("單筆庫存異動");
+                    $('#stockEditModal').modal('show');
 
-                // 固定異動類型 Adjust
-                $('#MovementTypeSelect').val('Adjust').prop('disabled', true);
-                $('#AdjustOptions').show(); // 顯示 + / -
+                    var $modal = $('#stockEditModal');
 
-                // 顯示批次現有庫存
-                updateChangeQtyLimitAndPredicted();
+                    // 固定異動類型 Adjust
+                    $modal.find('#MovementTypeSelect').val('Adjust').prop('disabled', true);
+                    $modal.find('.stock-edit-adjustOptions').show();
 
-                // radio 選擇事件
-                $('input[name="IsAdd"]').off('change').on('change', function() {
-                    updateChangeQtyLimitAndPredicted();
-                });
+                    // 取得當前庫存與最大庫存
+                    var currentStock = parseInt($modal.find('.stock-edit-currentQty').val()) || 0;
+                    var maxStock = parseInt($modal.find('.stock-edit-changeQty').data('max')) || 0;
+                    console.log('[EditStock] currentStock:', currentStock, 'maxStock:', maxStock);
 
-                // input 變動事件
-                $('#ChangeQtyInput').off('input').on('input', function() {
-                    updateChangeQtyLimitAndPredicted();
-                });
+                    // ===== 計算上限 & 更新預計庫存 =====
+                    function refreshQtyLimits() {
+                        var isAdd = $modal.find('.stock-edit-isAdd:checked').val() === 'true';
+                        var changeInput = $modal.find('.stock-edit-changeQty');
+                        var curVal = parseInt(changeInput.val()) || 0;
 
-                // 儲存按鈕事件
-                $('#saveStockChangeBtn').off('click').on('click', function() {
-                    var formData = $('#stockBatchEditForm').serialize();
-                    $.post(`/SUP/StockBatches/Update/${id}`, formData, function(res){
-                        if(res.success){
-                            $('#stockBatchModal').modal('hide');
-                            // 重新整理 DataTable
-                            stockBatchTable.ajax.reload(null, true); // false 保留目前頁數
-                        } else {
-                            alert(res.message);
-                        }
+                        // 計算最大可輸入數量
+                        var maxAllowed = isAdd ? maxStock : currentStock;
+                        if (maxAllowed < 0) maxAllowed = 0;
+                        changeInput.attr('max', maxAllowed);
+
+                        // 修正當前值
+                        if (curVal > maxAllowed) curVal = maxAllowed;
+                        if (curVal < 0) curVal = 0;
+                        changeInput.val(curVal);
+
+                        // 計算預計庫存
+                        var predicted = isAdd ? currentStock + curVal : currentStock - curVal;
+                        if (predicted < 0) predicted = 0;
+
+                        // 更新顯示
+                        $modal.find('.stock-edit-maxAllowed').text(maxAllowed);
+                        $modal.find('.stock-edit-predictedQty').text(predicted);
+
+
+                        console.log('[EditStock] isAdd:', isAdd, 'curVal:', curVal, 'maxAllowed:', maxAllowed, 'predictedStock:', predicted);
+                    }
+
+                    // 初始刷新一次
+                    refreshQtyLimits();
+
+                    // radio / input 事件
+                    $modal.find('.stock-edit-isAdd').off('change').on('change', function() {
+                        console.log('[EditStock] radio change -> selected isAdd:', $(this).val());
+                        refreshQtyLimits();
                     });
-                    // 預計庫存 & 異動數量上限
-                    updateChangeQtyLimitAndPredicted();
+
+                    $modal.find('.stock-edit-changeQty').off('input').on('input', function() {
+                        console.log('[EditStock] input change -> new value:', $(this).val());
+                        refreshQtyLimits();
+                    });
+
+                    // 儲存按鈕事件
+                    $modal.find('.stock-edit-saveBtn').off('click').on('click', function() {
+                        var changeInput = $modal.find('.stock-edit-changeQty');
+                        var curVal = parseInt(changeInput.val()) || 0;
+                        var isAdd = $modal.find('.stock-edit-isAdd:checked').val() === 'true';
+
+                        // 建立手動表單資料
+                        var formData = {
+                            ChangeQty: curVal,
+                            IsAdd: isAdd,
+                            Remark: $modal.find('textarea[name="Remark"]').val() || ''
+                        };
+
+                        $.post(`/SUP/StockBatches/Update/${id}`, formData, function(res) {
+                            if (res.success) {
+                                $modal.modal('hide');
+                                stockBatchTable.ajax.reload(null, true);
+                            } else {
+                                alert(res.message);
+                            }
+                        });
+                    });
+
+
                 });
             });
-        });
+
 
 
             // ===== 品牌異動紀錄按鈕 =====
@@ -1056,10 +1122,12 @@
         function updateChangeQtyLimitAndPredicted() {
             var currentStock = parseInt($('#CurrentQty').text()) || 0;
             var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-            var movementType = $('#MovementTypeSelect').val() || '';
+            console.log('[UpdateStock] CurrentQty:', currentStock, 'MaxStockQty:', maxStock);
 
-            // 預設 trsue
+            var movementType = $('#MovementTypeSelect').val() || '';
             var isAdd = true;
+            console.log('[UpdateStock] movementType:', movementType, 'isAdd:', isAdd);
+
 
             // 只有 "手動調整" 才用 radio 判斷
             if (movementType === 'Adjust') {
@@ -1071,7 +1139,7 @@
             console.log('movementType:', movementType, 'isAdd:', isAdd);
 
             var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
-            console.log('maxAllowed:', maxAllowed);
+            console.log('[UpdateStock] maxAllowed:', maxAllowed);
 
             var $input = $('#ChangeQtyInput');
             var curVal = parseInt($input.val()) || 0;
