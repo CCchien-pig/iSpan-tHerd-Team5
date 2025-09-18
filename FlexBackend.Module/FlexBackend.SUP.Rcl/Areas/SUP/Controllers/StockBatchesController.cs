@@ -588,6 +588,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 							sb.StockBatchId,
 							SkuCode = sku.SkuCode,
 							sb.BatchNumber,
+							b.BrandName,
 							ExpireDate = sb.ExpireDate,
 							h.ChangeType,
 							h.BeforeQty,
@@ -620,6 +621,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				query = query.Where(x =>
 					EF.Functions.Like(x.SkuCode, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BrandName, $"%{searchValue}%") ||
 					EF.Functions.Like(x.BatchNumber, $"%{searchValue}%") ||
 					EF.Functions.Like(x.ChangeType, $"%{searchValue}%") ||
 					EF.Functions.Like((x.Reviser.HasValue ? x.Reviser.Value.ToString() : ""), $"%{searchValue}%")
@@ -635,7 +637,11 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				1 => sortDirection == "asc" ? query.OrderBy(x => x.BatchNumber) : query.OrderByDescending(x => x.BatchNumber),
 				2 => sortDirection == "asc" ? query.OrderBy(x => x.ExpireDate) : query.OrderByDescending(x => x.ExpireDate),
 				3 => sortDirection == "asc" ? query.OrderBy(x => x.ChangeType) : query.OrderByDescending(x => x.ChangeType),
+				4 => sortDirection == "asc" ? query.OrderBy(x => x.BeforeQty) : query.OrderByDescending(x => x.BeforeQty),
+				5 => sortDirection == "asc" ? query.OrderBy(x => x.ChangeQty) : query.OrderByDescending(x => x.ChangeQty),
+				6 => sortDirection == "asc" ? query.OrderBy(x => x.AfterQty) : query.OrderByDescending(x => x.AfterQty),
 				7 => sortDirection == "asc" ? query.OrderBy(x => x.RevisedDate) : query.OrderByDescending(x => x.RevisedDate),
+				8 => sortDirection == "asc" ? query.OrderBy(x => x.Reviser) : query.OrderByDescending(x => x.Reviser),
 				_ => sortDirection == "asc" ? query.OrderBy(x => x.StockHistoryId) : query.OrderByDescending(x => x.StockHistoryId),
 			};
 
