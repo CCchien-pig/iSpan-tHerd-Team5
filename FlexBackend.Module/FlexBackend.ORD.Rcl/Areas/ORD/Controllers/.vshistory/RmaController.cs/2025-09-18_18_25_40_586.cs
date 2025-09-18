@@ -12,18 +12,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
         private readonly tHerdDBContext _db;
         public RmaController(tHerdDBContext db) => _db = db;
 
-        // 狀態中文轉換
-        private string GetStatusText(string? status) => (status ?? "").ToLowerInvariant() switch
-        {
-            "pending" => "待審核",
-            "review" => "審核中",
-            "refunding" => "退款中",
-            "reshipping" => "補寄中",
-            "done" => "處理完成",
-            "rejected" => "駁回",
-            _ => status ?? ""
-        };
-
         // 退貨列表
         [HttpGet]
         public IActionResult Index(string? group = "all", int page = 1, int pageSize = 10, string? keyword = "")
@@ -65,22 +53,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     TypeName = r.RequestType,
                     ScopeName = r.RefundScope,
                     StatusName = r.Status,
-                    CreatedDate = r.CreatedDate,
-                    Reason = r.ReasonText,
-
-                    // 為確保可編譯，先以 ID 顯示，有商品/規格名稱時可改為 oi.Product.XXX / oi.Sku.XXX
-                    ProductName = r.OrdReturnItems
-                                        .OrderBy(i => i.RmaItemId)
-                                        .Select(i => "PID:" + i.OrderItem.ProductId)
-                                        .FirstOrDefault() ?? "",
-                    Spec = r.OrdReturnItems
-                                        .OrderBy(i => i.RmaItemId)
-                                        .Select(i => "SKU:" + i.OrderItem.SkuId)
-                                        .FirstOrDefault() ?? "",
-                    Qty = r.OrdReturnItems
-                                        .OrderBy(i => i.RmaItemId)
-                                        .Select(i => (int?)i.Qty)
-                                        .FirstOrDefault() ?? 0
+                    CreatedDate = r.CreatedDate
+                    // 移除 Reason、ProductName、Spec、Qty 欄位
                 })
                 .ToList();
 
@@ -90,7 +64,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 { "pending",   _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "pending") },
                 { "review",    _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "review") },
                 { "refunding", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "refunding") },
-                { "reshipping", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "reshipping") },
+                { "reshipping", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "reshipping") }, // 新增 reshipping 狀態
                 { "done",      _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "done") },
                 { "rejected",  _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "rejected") }
             };
@@ -152,13 +126,24 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 
             var orderTotal = r.Order.Subtotal - r.Order.DiscountTotal + r.Order.ShippingFee;
 
+            // 將狀態轉為中文
+            string GetStatusText(string status) => status?.ToLowerInvariant() switch
+            {
+                "pending" => "待審核",
+                "review" => "審核中",
+                "refunding" => "退款中",
+                "reshipping" => "補寄中",
+                "done" => "處理完成",
+                "rejected" => "駁回",
+                _ => status ?? ""
+            };
+
             var dto = new
             {
                 orderNo = r.Order.OrderNo,
-                statusName = GetStatusText(r.Status), // 使用中文狀態
-                originalStatus = r.Status, // 保留原始英文狀態供除錯
+                statusName = GetStatusText(r.Status),
                 reasonText = r.ReasonText,
-                createdDate = r.CreatedDate.ToString("yyyy/MM/dd HH:mm"),
+                createdDate = r.CreatedDate,
                 orderSummary = new
                 {
                     coupon = r.Order.CouponId.HasValue ? r.Order.CouponId.ToString() : "-",
@@ -173,7 +158,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             return Json(new { ok = true, rma = dto });
         }
 
-        // 核准（退款/補寄）
+        // 核准（退款）
         [HttpPost]
         public IActionResult Approve(int id, string nextStatus)
         {
