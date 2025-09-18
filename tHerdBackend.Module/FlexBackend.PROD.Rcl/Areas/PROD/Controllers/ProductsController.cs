@@ -2,7 +2,6 @@
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {
@@ -41,8 +40,20 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             }).ToList();
         }
 
-        // 取得系統代號
-        public async Task GetSysCodes()
+        // 取得產品分類
+		public async Task GetAllProductTypesAsync()
+		{
+			var Types = await _repo.GetAllProductTypesAsync();
+			ViewBag.TypeDtos = Types.Select(b => new ProdProductTypeConfigDto
+            {
+                ProductTypeId = b.ProductTypeId,
+                ProductTypeCode = b.ProductTypeCode,
+                ProductTypeName = b.ProductTypeName
+			}).ToList();
+		}
+
+		// 取得系統代號
+		public async Task GetSysCodes()
         {
             var syss = await _repo.GetSysCodes("PROD", new List<string> { "01" });
             ViewBag.Units = syss.Select(b => new SelectListItem
@@ -59,6 +70,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             ViewData["Area"] = "PROD";
             await GetSysCodes();
             await LoadBrandOptionsAsync();
+            await GetAllProductTypesAsync();
         }
 
 		//      public IActionResult AddSkuCard(int index)
@@ -118,7 +130,14 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 				ModelState.Remove(nameof(dto.ProductCode)); // 關鍵！
 			}
 
-			var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
+            foreach (var i in dto.Types) {
+                if (i.ProductId == null)
+                {
+                    i.ProductId = 0;
+                }
+            }
+
+            var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
 			if (!isValid)
 			{
 				ViewBag.ErrorMessage = errorMsg;
