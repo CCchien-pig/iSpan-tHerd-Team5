@@ -287,6 +287,39 @@
         .carousel-thumbnails img:first-child {
             margin-left: 10px; /* 讓第一張不會緊貼左邊 */
         }
+
+        .carousel-indicators {
+            z-index: 20;              /* 提升層級，確保不會被圖片蓋住 */
+            position: relative;       /* 或 absolute，但要確認定位正確 */
+        }
+
+        .carousel-indicators [data-bs-target] {
+            width: 20px;              /* 放大點擊範圍 */
+            height: 20px;
+            border-radius: 50%;
+            background-color: #652D77;
+            margin: 0 6px;
+            cursor: pointer;
+            z-index: 21;              /* 確保每個點也浮上去 */
+        }
+
+        .carousel-indicators .active {
+            background-color: #9d4edd;
+            transform: scale(1.2);
+        }
+
+        .carousel-caption {
+            bottom: 0 !important;              /* 貼緊底部 */
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);    /* 整條黑底 */
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .carousel-caption p {
+            color: #fff;
+            margin: 0;
+        }
     </style>
 }
 
@@ -663,19 +696,6 @@
                 <div class="col-md-2">
                              @* 輪播圖 *@
                         <div id="productCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
-                        <!-- 小圓點 indicators -->
-                        <div class="carousel-indicators">
-                            @for (var i = 0; i < Model.Images.Count; i++)
-                            {
-                                <button type="button"
-                                        data-bs-target="#productCarousel"
-                                        data-bs-slide-to="@i"
-                                        class="@(i == 0 ? "active" : "")"
-                                        aria-current="@(i == 0 ? "true" : "false")"
-                                        aria-label="Slide @(i + 1)">
-                                </button>
-                            }
-                        </div>
 
                         <!-- 輪播圖片 -->
                         <div class="carousel-inner rounded shadow-sm">
@@ -707,6 +727,20 @@
                             <span class="carousel-control-next-icon"></span>
                             <span class="visually-hidden">下一張</span>
                         </button>
+
+                        <!-- 小圓點 indicators -->
+                        <div class="carousel-indicators">
+                            @for (var i = 0; i < Model.Images.Count; i++)
+                            {
+                                <button type="button"
+                                        data-bs-target="#productCarousel"
+                                        data-bs-slide-to="@i"
+                                        class="@(i == 0 ? "active" : "")"
+                                        aria-current="@(i == 0 ? "true" : "false")"
+                                        aria-label="Slide @(i + 1)">
+                                </button>
+                            }
+                        </div>
                     </div>
                  </div>
             </div>
