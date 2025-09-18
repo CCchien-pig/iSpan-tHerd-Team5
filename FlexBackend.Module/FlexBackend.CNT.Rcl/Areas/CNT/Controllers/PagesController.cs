@@ -265,29 +265,25 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			return View(vm);
 		}
 		// ================================
-		// 新增 (Create) - POST
+		// 新增 (Create) - POST (使用 Transaction)
 		// ================================
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Create(PageEditVM model, int? page, int pageSize = 10)
 		{
-			// ⭐ 首頁例外：允許不選標籤
 			if (model.IsHomePage)
 			{
 				ModelState.Remove(nameof(model.SelectedTagIds));
 			}
 
-			// 驗證：如果勾選了排程 → ActionType & ScheduledDate 必填
+			// 驗證排程
 			if (model.HasSchedule)
 			{
 				if (!model.ActionType.HasValue)
-				{
 					ModelState.AddModelError(nameof(model.ActionType), "請選擇排程動作");
-				}
+
 				if (!model.ScheduledDate.HasValue)
-				{
 					ModelState.AddModelError(nameof(model.ScheduledDate), "請輸入排程時間");
-				}
 			}
 
 			if (!ModelState.IsValid)
@@ -296,65 +292,75 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				return View(model);
 			}
 
-			var pageEntity = new CntPage
+			using var tx = _db.Database.BeginTransaction();
+			try
 			{
-				Title = model.Title,
-				Status = ((int)model.Status).ToString(),
-				PageTypeId = model.PageTypeId,
-				CreatedDate = DateTime.Now,
-				RevisedDate = null
-			};
-
-			_db.CntPages.Add(pageEntity);
-			_db.SaveChanges();
-
-			// 如果有排程 → 寫入資料庫
-			if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
-			{
-				var scheduleService = new ScheduleService(_db);
-				if (!scheduleService.TryUpsert(new PageEditVM
+				var pageEntity = new CntPage
 				{
-					PageId = pageEntity.PageId,
-					ActionType = model.ActionType,
-					ScheduledDate = model.ScheduledDate
-				}, out var error))
-				{
-					ModelState.AddModelError("", error);
-					PreparePageEditVM(model);
-					return View(model);
-				}
-			}
-			else if (!model.HasSchedule)
-			{
-				// 沒勾選 → 清掉舊排程
-				new ScheduleService(_db).ClearAll(pageEntity.PageId);
-			}
+					Title = model.Title,
+					Status = ((int)model.Status).ToString(),
+					PageTypeId = model.PageTypeId,
+					CreatedDate = DateTime.Now,
+					RevisedDate = null
+				};
 
-			// 建立 Tags
-			if (model.SelectedTagIds?.Any() == true)
-			{
-				foreach (var tagId in model.SelectedTagIds)
+				_db.CntPages.Add(pageEntity);
+				_db.SaveChanges();
+
+				// 處理排程
+				if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
 				{
-					_db.CntPageTags.Add(new CntPageTag
+					var scheduleService = new ScheduleService(_db);
+					if (!scheduleService.TryUpsert(new PageEditVM
 					{
 						PageId = pageEntity.PageId,
-						TagId = tagId,
-						CreatedDate = DateTime.Now
-					});
+						ActionType = model.ActionType,
+						ScheduledDate = model.ScheduledDate
+					}, out var error))
+					{
+						throw new InvalidOperationException(error);
+					}
 				}
+				else
+				{
+					new ScheduleService(_db).ClearAll(pageEntity.PageId);
+				}
+
+				// 處理 Tags
+				if (model.SelectedTagIds?.Any() == true)
+				{
+					foreach (var tagId in model.SelectedTagIds)
+					{
+						_db.CntPageTags.Add(new CntPageTag
+						{
+							PageId = pageEntity.PageId,
+							TagId = tagId,
+							CreatedDate = DateTime.Now
+						});
+					}
+				}
+
 				_db.SaveChanges();
+				tx.Commit();
+
+				TempData["Msg"] = "文章已建立";
+
+				var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
+				return RedirectToAction(nameof(Index), new
+				{
+					page = model.Page ?? qPage,
+					pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
+					keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
+					status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
+				});
 			}
-
-			TempData["Msg"] = "文章已建立";
-
-			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
-			return RedirectToAction(nameof(Index), new
+			catch (Exception ex)
 			{
-				page = model.Page ?? qPage,
-				pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
-				keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
-				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
-			});
+				tx.Rollback();
+				ModelState.AddModelError("", $"建立失敗：{ex.Message}");
+				PreparePageEditVM(model);
+				return View(model);
+			}
 		}
 
 		// ================================
@@ -417,27 +423,25 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// ================================
 		// 編輯 (Edit) - POST
 		// ================================
+		// ================================
+		// 編輯 (Edit) - POST (使用 Transaction)
+		// ================================
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Edit(PageEditVM model, int? page, int pageSize = 10)
 		{
-			// ⭐ 首頁例外：允許不選標籤
 			if (model.IsHomePage)
 			{
 				ModelState.Remove(nameof(model.SelectedTagIds));
 			}
 
-			// 驗證：如果勾選了排程 → ActionType & ScheduledDate 必填
 			if (model.HasSchedule)
 			{
 				if (!model.ActionType.HasValue)
-				{
 					ModelState.AddModelError(nameof(model.ActionType), "請選擇排程動作");
-				}
+
 				if (!model.ScheduledDate.HasValue)
-				{
 					ModelState.AddModelError(nameof(model.ScheduledDate), "請輸入排程時間");
-				}
 			}
 
 			if (!ModelState.IsValid)
@@ -446,59 +450,70 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				return View(model);
 			}
 
-			var pageEntity = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
-			if (pageEntity == null) return NotFound();
-
-			pageEntity.Title = model.Title;
-			pageEntity.Status = ((int)model.Status).ToString();
-			pageEntity.PageTypeId = model.PageTypeId == HomePageTypeId ? HomePageTypeId : model.PageTypeId;
-			pageEntity.RevisedDate = DateTime.Now;
-
-			// 如果有排程 → Upsert
-			if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
+			using var tx = _db.Database.BeginTransaction();
+			try
 			{
-				var scheduleService = new ScheduleService(_db);
-				if (!scheduleService.TryUpsert(model, out var error))
+				var pageEntity = _db.CntPages.FirstOrDefault(p => p.PageId == model.PageId);
+				if (pageEntity == null) return NotFound();
+
+				pageEntity.Title = model.Title;
+				pageEntity.Status = ((int)model.Status).ToString();
+				pageEntity.PageTypeId = model.PageTypeId == HomePageTypeId ? HomePageTypeId : model.PageTypeId;
+				pageEntity.RevisedDate = DateTime.Now;
+
+				// 更新排程
+				if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
 				{
-					ModelState.AddModelError("", error);
-					PreparePageEditVM(model);
-					return View(model);
-				}
-			}
-			else if (!model.HasSchedule)
-			{
-				// 沒勾選 → 清掉舊排程
-				new ScheduleService(_db).ClearAll(pageEntity.PageId);
-			}
-
-			// 更新 Tags
-			var oldTags = _db.CntPageTags.Where(pt => pt.PageId == pageEntity.PageId);
-			_db.CntPageTags.RemoveRange(oldTags);
-			if (model.SelectedTagIds != null && model.SelectedTagIds.Any())
-			{
-				foreach (var tagId in model.SelectedTagIds)
-				{
-					_db.CntPageTags.Add(new CntPageTag
+					var scheduleService = new ScheduleService(_db);
+					if (!scheduleService.TryUpsert(model, out var error))
 					{
-						PageId = pageEntity.PageId,
-						TagId = tagId,
-						CreatedDate = DateTime.Now
-					});
+						throw new InvalidOperationException(error);
+					}
 				}
+				else
+				{
+					new ScheduleService(_db).ClearAll(pageEntity.PageId);
+				}
+
+				// 更新 Tags
+				var oldTags = _db.CntPageTags.Where(pt => pt.PageId == pageEntity.PageId);
+				_db.CntPageTags.RemoveRange(oldTags);
+
+				if (model.SelectedTagIds?.Any() == true)
+				{
+					foreach (var tagId in model.SelectedTagIds)
+					{
+						_db.CntPageTags.Add(new CntPageTag
+						{
+							PageId = pageEntity.PageId,
+							TagId = tagId,
+							CreatedDate = DateTime.Now
+						});
+					}
+				}
+
+				_db.SaveChanges();
+				tx.Commit();
+
+				TempData["Msg"] = "文章修改成功";
+
+				var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
+				return RedirectToAction(nameof(Details), new
+				{
+					id = model.PageId,
+					page = model.Page ?? qPage,
+					pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
+					keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
+					status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
+				});
 			}
-			_db.SaveChanges();
-
-			TempData["Msg"] = "文章修改成功";
-
-			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
-			return RedirectToAction(nameof(Details), new
+			catch (Exception ex)
 			{
-				id = model.PageId,
-				page = model.Page ?? qPage,
-				pageSize = (model.PageSize > 0 ? model.PageSize : qSize),
-				keyword = string.IsNullOrWhiteSpace(model.Keyword) ? qKeyword : model.Keyword,
-				status = string.IsNullOrWhiteSpace(model.StatusFilter) ? qStatus : model.StatusFilter
-			});
+				tx.Rollback();
+				ModelState.AddModelError("", $"修改失敗：{ex.Message}");
+				PreparePageEditVM(model);
+				return View(model);
+			}
 		}
 
 		// ================================
