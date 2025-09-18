@@ -239,7 +239,18 @@ namespace FlexBackend.Infra.Repository.PROD
                         IsPrimary = t.IsPrimary
                     }).OrderByDescending(a=>a.IsPrimary).ToListAsync();
 
-                return item;
+				var img_sql = @"
+                        SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.IsMain, pi.OrderSeq,
+                               af.FileUrl, af.AltText
+                        FROM   PROD_ProductImage pi
+                        JOIN   SYS_AssetFile af ON pi.ImgId = af.FileId
+                        WHERE  pi.ProductId = @ProductId
+                        ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
+
+				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
+				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
+
+				return item;
 			}
             finally
             {
