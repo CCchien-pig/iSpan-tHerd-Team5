@@ -16,6 +16,7 @@
 		public int ChangeQty { get; set; } = 0;    // 異動數量
 		public string Remark { get; set; } = string.Empty;  // 備註
 
+		public int MaxStockQty { get; set; }       // 最大庫存
 
 		public int SkuId { get; set; }
 	}

@@ -4,28 +4,28 @@
 
 @model FlexBackend.SUP.Rcl.Areas.SUP.Controllers.StockBatchEditDto
 
-<form id="stockBatchEditForm">
-    <input type="hidden" name="SkuId" value="@Model.SkuId" />
-    <input type="hidden" name="StockBatchId" value="@Model.StockBatchId" />
+<form id="stockEditForm">
+    <input type="hidden" name="SkuId" class="stock-edit-skuId" value="" />
+    <input type="hidden" name="StockBatchId" class="stock-edit-stockBatchId" value="" />
 
     <div class="mb-2">
         <label>品牌</label>
-        <input type="text" class="form-control" value="@Model.BrandName" readonly />
+        <input type="text" class="form-control stock-edit-brandName" value="@Model.BrandName" readonly />
     </div>
 
     <div class="mb-2">
         <label>商品名稱</label>
-        <input type="text" class="form-control" value="@Model.ProductName" readonly />
+        <input type="text" class="form-control stock-edit-productName" value="@Model.ProductName" readonly />
     </div>
 
     <div class="mb-2">
         <label>SKU</label>
-        <input type="text" class="form-control" value="@Model.SkuCode" readonly />
+        <input type="text" class="form-control stock-edit-skuCode" value="@Model.SkuCode" readonly />
     </div>
 
     <div class="mb-2">
         <label>製造日期</label>
-        <input type="text" class="form-control"
+        <input type="text" class="form-control stock-edit-manufactureDate"
                value="@Model.ManufactureDate?.ToString("yyyy-MM-dd")"
                readonly
                style="pointer-events:none;" />
@@ -33,35 +33,39 @@
 
     <div class="mb-2">
         <label>批次現有庫存</label>
-        <input type="number" class="form-control" id="CurrentQty" value="@Model.CurrentQty" readonly />
+        <input type="number" class="form-control stock-edit-currentQty" value="@Model.CurrentQty" readonly />
     </div>
 
-    <div id="AdjustOptions" class="mb-2">
-        <label>異動方式</label>
+    <div class="mb-2 stock-edit-adjustOptions">
+        <label>異動方式：手動調整    </label>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="IsAdd" id="Increase" value="true" @(Model.IsAdd ? "checked" : "")>
-            <label class="form-check-label" for="Increase">增加</label>
+            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="IncreaseEdit" value="true" @(Model.IsAdd ? "checked" : "")>
+            <label class="form-check-label" for="IncreaseEdit">增加</label>
         </div>
         <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="IsAdd" id="Decrease" value="false" @(!Model.IsAdd ? "checked" : "")>
-            <label class="form-check-label" for="Decrease">減少</label>
+            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="DecreaseEdit" value="false" @(!Model.IsAdd ? "checked" : "")>
+            <label class="form-check-label" for="DecreaseEdit">減少</label>
         </div>
     </div>
 
     <div class="mb-2">
         <label>異動數量</label>
-        <input type="number" class="form-control" id="ChangeQtyInput" name="ChangeQty" value="@Model.ChangeQty" />
-        <small id="predictedStock" class="text-muted">預計庫存: @Model.CurrentQty</small>
+        <input type="number" class="form-control stock-edit-changeQty" name="ChangeQty" value="@Model.ChangeQty" data-max="@Model.MaxStockQty" min="0" />
+        <small class="text-muted stock-edit-predicted">
+            最大可庫存量: <span class="stock-edit-maxAllowed">@Model.MaxStockQty</span> /
+            預計庫存: <span class="stock-edit-predictedQty">@Model.CurrentQty</span>
+        </small>
     </div>
+
 
     <div class="mb-2">
         <label>備註</label>
-        <textarea class="form-control" name="Remark">@Model.Remark</textarea>
+        <textarea class="form-control stock-edit-remark" name="Remark">@Model.Remark</textarea>
     </div>
 
     <div class="text-end mt-3">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-        <button type="button" class="btn btn-primary" id="saveStockChangeBtn">儲存</button>
+        <button type="button" class="btn btn-primary stock-edit-saveBtn">儲存</button>
     </div>
 </form>
 
