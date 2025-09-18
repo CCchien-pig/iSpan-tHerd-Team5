@@ -183,9 +183,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                         .Where(l => l.LogisticsId == o.LogisticsId)
                         .Select(l => l.ShippingMethod)
                         .FirstOrDefault(),
-                    couponName = _db.MktCoupons
+                    couponCode = _db.MktCoupons
                         .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
+                        .Select(c => c.CouponCode)
                         .FirstOrDefault(),
                     discountTotal = o.DiscountTotal,
                     shippingFee = o.ShippingFee,
@@ -208,9 +208,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     skuSpec = s.SpecCode,
                     unitPrice = i.UnitPrice,
                     qty = i.Qty,
-                    stockQty = _db.SupStockBatches
-                        .Where(st => st.SkuId == s.SkuId)
-                        .Sum(st => st.Qty),
                     subtotal = i.UnitPrice * i.Qty
                 }).ToListAsync();
 
@@ -299,6 +296,44 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+
+
+        //      // 即點即改訂單狀態 (AJAX)
+        //      [HttpPost]
+        //public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
+        //{
+        //	var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+        //	if (order == null)
+        //	{
+        //		return Json(new { success = false, message = "找不到訂單" });
+        //	}
+
+        //	try
+        //	{
+        //		switch (field)
+        //		{
+        //			case "PaymentStatus":
+        //				order.PaymentStatus = value; // 存 CodeNo
+        //				break;
+        //			case "ShippingStatusId":
+        //				order.ShippingStatusId = value;
+        //				break;
+        //			case "OrderStatusId":
+        //				order.OrderStatusId = value;
+        //				break;
+        //		}
+
+        //		await _db.SaveChangesAsync();
+        //		return Json(new { success = true });
+        //	}
+        //	catch (Exception ex)
+        //	{
+        //		return Json(new { success = false, message = ex.Message });
+        //	}
+        //}
+
+
 
         // 批量更新訂單狀態
         [HttpPost]
@@ -415,11 +450,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
 						.FirstOrDefault(),
-                    CouponName = _db.MktCoupons
-                        .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
-                        .FirstOrDefault(),
-                    Items = _db.OrdOrderItems
+					Items = _db.OrdOrderItems
 						.Where(i => i.OrderId == o.OrderId)
 						.Join(_db.ProdProducts, i => i.ProductId, p => p.ProductId,
 							(i, p) => new { i, p.ProductName })
@@ -430,7 +461,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 								SpecCode = s.SpecCode,
 								UnitPrice = ip.i.UnitPrice,
 								Qty = ip.i.Qty,
-                                Subtotal = ip.i.UnitPrice * ip.i.Qty
+								Subtotal = ip.i.UnitPrice * ip.i.Qty
 							})
 						.ToList()
 				})

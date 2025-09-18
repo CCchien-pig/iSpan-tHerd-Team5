@@ -1,6 +1,5 @@
 ﻿using FlexBackend.Infra.Models;
 using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,9 +21,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			string? OrderStatusId,
 			string? PaymentStatus,
 			string? ShippingStatusId,
-			DateTime? StartDate = null,  
-			DateTime? EndDate = null,
-            string SortBy = "CreatedDate",
+			string SortBy = "CreatedDate",
 			string SortDirection = "DESC",
 			int PageNumber = 1,
 			int PageSize = 10)
@@ -50,21 +47,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			if (!string.IsNullOrEmpty(ShippingStatusId))
 				query = query.Where(o => o.ShippingStatusId == ShippingStatusId);
 
-
-            // 日期篩選（含當日）
-            if (StartDate.HasValue)
-                query = query.Where(o => o.CreatedDate >= StartDate.Value.Date);
-
-            if (EndDate.HasValue)
-            {
-                var to = EndDate.Value.Date.AddDays(1);
-                query = query.Where(o => o.CreatedDate < to);
-            }
-
-
-
-            // 排序
-            query = (SortBy?.ToLower(), SortDirection?.ToUpper()) switch
+			// 排序
+			query = (SortBy?.ToLower(), SortDirection?.ToUpper()) switch
 			{
 				("orderno", "ASC") => query.OrderBy(o => o.OrderNo),
 				("orderno", _) => query.OrderByDescending(o => o.OrderNo),
@@ -144,12 +128,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 				SortBy = SortBy,
 				SortDirection = SortDirection,
 				PageNumber = PageNumber,
-				PageSize = PageSize,
-
-
-                StartDate = StartDate?.Date,
-                EndDate = EndDate?.Date
-            };
+				PageSize = PageSize
+			};
 
 			var vm = new OrderListVM
 			{
@@ -164,72 +144,64 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 			return View(vm);
 		}
 
-        // 即點即查訂單明細 (AJAX)
-        [HttpGet]
-        public async Task<IActionResult> GetOrderDetails(int orderId)
-        {
-            // 撈訂單主檔
-            var order = await _db.OrdOrders
-                .Where(o => o.OrderId == orderId)
-                .Select(o => new
-                {
-                    orderId = o.OrderId,
-                    receiverName = o.ReceiverName,
-                    receiverPhone = o.ReceiverPhone,
-                    receiverAddress = o.ReceiverAddress,
-                    shippingStatusId = o.ShippingStatusId,  
-                    trackingNumber = o.TrackingNumber,      
-                    shippingMethod = _db.SupLogistics
-                        .Where(l => l.LogisticsId == o.LogisticsId)
-                        .Select(l => l.ShippingMethod)
-                        .FirstOrDefault(),
-                    couponName = _db.MktCoupons
-                        .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
-                        .FirstOrDefault(),
-                    discountTotal = o.DiscountTotal,
-                    shippingFee = o.ShippingFee,
-                    totalAmount = o.Subtotal - o.DiscountTotal + o.ShippingFee
-                })
-                .FirstOrDefaultAsync();
+		// 即點即查訂單明細 (AJAX)
+		[HttpGet]
+		public async Task<IActionResult> GetOrderDetails(int orderId)
+		{
+			// 撈訂單主檔
+			var order = await _db.OrdOrders
+				.Where(o => o.OrderId == orderId)
+				.Select(o => new
+				{
+					orderId = o.OrderId,
+					receiverName = o.ReceiverName,
+					receiverPhone = o.ReceiverPhone,
+					receiverAddress = o.ReceiverAddress,
+					shippingMethod = _db.SupLogistics
+						.Where(l => l.LogisticsId == o.LogisticsId)
+						.Select(l => l.ShippingMethod)
+						.FirstOrDefault(),
+                    trackingNumber = o.TrackingNumber,
+                    couponCode = _db.MktCoupons
+						.Where(c => c.CouponId == o.CouponId)
+						.Select(c => c.CouponCode)
+						.FirstOrDefault(),
+					discountTotal = o.DiscountTotal,
+					shippingFee = o.ShippingFee,
+					totalAmount = o.Subtotal - o.DiscountTotal + o.ShippingFee
 
-            if (order == null)
-                return Json(new { error = "找不到訂單" });
+				})
+				.FirstOrDefaultAsync();
 
-            // 撈訂單明細
-            var items = await (
-                from i in _db.OrdOrderItems
-                join p in _db.ProdProducts on i.ProductId equals p.ProductId
-                join s in _db.ProdProductSkus on i.SkuId equals s.SkuId
-                where i.OrderId == orderId
-                select new
-                {
-                    productName = p.ProductName,
-                    skuSpec = s.SpecCode,
-                    unitPrice = i.UnitPrice,
-                    qty = i.Qty,
-                    stockQty = _db.SupStockBatches
-                        .Where(st => st.SkuId == s.SkuId)
-                        .Sum(st => st.Qty),
-                    subtotal = i.UnitPrice * i.Qty
-                }).ToListAsync();
+			if (order == null)
+				return Json(new { error = "找不到訂單" });
 
-            return Json(new { order, items });
-        }
+			// 撈訂單明細 (Join Product 與 Sku)
+			var items = await (
+				from i in _db.OrdOrderItems
+				join p in _db.ProdProducts on i.ProductId equals p.ProductId
+				join s in _db.ProdProductSkus on i.SkuId equals s.SkuId
+				where i.OrderId == orderId
+				select new
+				{
+					productName = p.ProductName,   
+					skuSpec = s.SpecCode,          
+					unitPrice = i.UnitPrice,
+					qty = i.Qty,
+					subtotal = i.UnitPrice * i.Qty
+				}).ToListAsync();
+
+			return Json(new { order, items });
+		}
 
 
         private const string SHIPPING_SHIPPED_CODE = "shipped";
-        // 修復後的出貨單號產生方法
+        // 產出出貨單號
         private static string GenerateTrackingNo(int orderId)
         {
-            var taiwanTime = DateTime.UtcNow.AddHours(8);
-            var trackingNo = $"TRK{taiwanTime:yyMMdd}{orderId:D6}";
-
-            System.Diagnostics.Debug.WriteLine($"產生出貨單號: OrderId={orderId}, TrackingNo={trackingNo}");
-
-            return trackingNo;
+            // 例：TRK250917000123
+            return $"TRK{DateTime.UtcNow:yyMMdd}{orderId:D6}";
         }
-
 
 
         // 即點即改訂單狀態 (AJAX)
@@ -238,8 +210,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
         {
             var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
             if (order == null) return Json(new { success = false, message = "找不到訂單" });
-
-            var isShippedStatus = false;
 
             try
             {
@@ -252,28 +222,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     case "ShippingStatusId":
                         order.ShippingStatusId = value;
 
-                        // 檢查多種可能的「已出貨」狀態代碼
-                        var shippedCodes = new[] { "shipped" };
-
-                        if (shippedCodes.Any(code => string.Equals(value, code, StringComparison.OrdinalIgnoreCase)))
+                        // 若設為 shipped 且目前沒有單號 → 自動產生
+                        if (string.Equals(value, SHIPPING_SHIPPED_CODE, StringComparison.OrdinalIgnoreCase)
+                            && string.IsNullOrEmpty(order.TrackingNumber))
                         {
-                            if (string.IsNullOrEmpty(order.TrackingNumber))
-                            {
-                                order.TrackingNumber = GenerateTrackingNo(order.OrderId);
-                                isShippedStatus = true;
-
-                                // 記錄到 log 以便偵錯
-                                System.Diagnostics.Debug.WriteLine($"訂單 {orderId} 狀態改為 {value}，產生出貨單號: {order.TrackingNumber}");
-                            }
-                        }
-                        else
-                        {
-                            // 非已出貨狀態，清除出貨單號
-                            if (!string.IsNullOrEmpty(order.TrackingNumber))
-                            {
-                                System.Diagnostics.Debug.WriteLine($"訂單 {orderId} 狀態改為 {value}，清除出貨單號");
-                                order.TrackingNumber = null;
-                            }
+                            order.TrackingNumber = GenerateTrackingNo(order.OrderId);
                         }
                         break;
 
@@ -285,20 +238,51 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 order.RevisedDate = DateTime.Now;
                 await _db.SaveChangesAsync();
 
-                return Json(new
-                {
-                    success = true,
-                    trackingNo = isShippedStatus ? order.TrackingNumber : null,
-                    isShipped = isShippedStatus,
-                    newStatus = value
-                });
+                return Json(new { success = true, trackingNo = order.TrackingNumber });
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"更新訂單狀態失敗: {ex.Message}");
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+
+
+        //      // 即點即改訂單狀態 (AJAX)
+        //      [HttpPost]
+        //public async Task<IActionResult> UpdateOrderStatus(int orderId, string field, string value)
+        //{
+        //	var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+        //	if (order == null)
+        //	{
+        //		return Json(new { success = false, message = "找不到訂單" });
+        //	}
+
+        //	try
+        //	{
+        //		switch (field)
+        //		{
+        //			case "PaymentStatus":
+        //				order.PaymentStatus = value; // 存 CodeNo
+        //				break;
+        //			case "ShippingStatusId":
+        //				order.ShippingStatusId = value;
+        //				break;
+        //			case "OrderStatusId":
+        //				order.OrderStatusId = value;
+        //				break;
+        //		}
+
+        //		await _db.SaveChangesAsync();
+        //		return Json(new { success = true });
+        //	}
+        //	catch (Exception ex)
+        //	{
+        //		return Json(new { success = false, message = ex.Message });
+        //	}
+        //}
+
+
 
         // 批量更新訂單狀態
         [HttpPost]
@@ -415,11 +399,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 						.Where(l => l.LogisticsId == o.LogisticsId)
 						.Select(l => l.ShippingMethod)
 						.FirstOrDefault(),
-                    CouponName = _db.MktCoupons
-                        .Where(c => c.CouponId == o.CouponId)
-                        .Select(c => c.CouponName) 
-                        .FirstOrDefault(),
-                    Items = _db.OrdOrderItems
+					Items = _db.OrdOrderItems
 						.Where(i => i.OrderId == o.OrderId)
 						.Join(_db.ProdProducts, i => i.ProductId, p => p.ProductId,
 							(i, p) => new { i, p.ProductName })
@@ -430,7 +410,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 								SpecCode = s.SpecCode,
 								UnitPrice = ip.i.UnitPrice,
 								Qty = ip.i.Qty,
-                                Subtotal = ip.i.UnitPrice * ip.i.Qty
+								Subtotal = ip.i.UnitPrice * ip.i.Qty
 							})
 						.ToList()
 				})
