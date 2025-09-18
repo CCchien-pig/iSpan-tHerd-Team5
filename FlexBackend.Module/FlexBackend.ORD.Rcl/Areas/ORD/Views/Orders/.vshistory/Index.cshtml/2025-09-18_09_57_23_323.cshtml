@@ -6,23 +6,10 @@
 @section Styles {
     <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
     <style>
-        /* ===== 主題變數 ===== */
-        :root {
-            --brand-500: #652D77;
-            --brand-600: #7A3A8F;
-            --brand-700: #4E225D;
-            --bs-primary: var(--brand-500);
-            --bs-primary-rgb: 101,45,119;
-            --row-odd: #ffffff;
-            --row-even: #efeaf2;
-            --row-hover: #f2e8f7;
-            --row-selected: #eadff4;
-        }
-
-        /* ===== 基礎設定 ===== */
+        /* ===== 你的原先樣式（明細卡等） ===== */
         td.order-toggle {
             cursor: pointer;
-            color: #622872;
+            color: #0d6efd;
             text-decoration: underline;
         }
 
@@ -53,104 +40,46 @@
             display: none !important;
         }
 
-        /* ===== 表格樣式（第一欄同色版） ===== */
-        table.rcl-table {
-            border-collapse: separate;
-            border-spacing: 0;
+        /* ==== 整列Hover/選取高亮（作用在 td/th，而不是 tr） ==== */
+        :root {
+            --brand: #652D77;
+            --row-hover: #f3e8ff;
+            --row-even: #f8fafc;
         }
 
-            /* 第一欄設為導引條定位容器，但不強制白底 */
-            table.rcl-table > tbody > tr > td:first-child {
-                position: relative;
-            }
-
-            /* 奇數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(odd) > td {
-                background: var(--row-odd) !important;
-            }
-
-            /* 偶數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(even) > td {
-                background: var(--row-even) !important;
-            }
-
-            /* hover：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:hover > td {
-                background: var(--row-hover) !important;
-            }
-
-            /* 勾選行：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr.is-selected > td {
-                background: var(--row-selected) !important;
-            }
-
-            /* child 明細列不吃 hover */
-            table.rcl-table > tbody > tr.child > td {
-                background: inherit !important;
-            }
-
-            /* 平滑過渡 */
-            table.rcl-table > tbody > tr > td {
-                transition: background-color .18s ease;
-            }
-
-            /* ===== 左側導引條 ===== */
-            table.rcl-table > tbody > tr:hover > td:first-child::before,
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                content: "";
-                position: absolute;
-                left: -2px;
-                top: -2px;
-                bottom: -2px;
-                width: 6px;
-                background: var(--brand-500);
-                pointer-events: none;
-                z-index: 1;
-            }
-
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                background: var(--brand-600);
-            }
-
-        /* ===== 按鈕樣式 ===== */
-        #bulkUpdate.btn, #bulkPrint.btn {
-            background: transparent !important;
-            border: 1px solid #b8a3c6 !important;
-            color: var(--brand-500) !important;
+        /* 斑馬紋（可留可不留；要壓過 table-striped 必須作用在 cell） */
+        table.rcl-table > tbody > tr:nth-of-type(even) > * {
+            background: var(--row-even) !important;
         }
 
-            #bulkUpdate.btn:hover, #bulkPrint.btn:hover,
-            #bulkUpdate.btn:focus, #bulkPrint.btn:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
-
-        #searchForm .btn.btn-primary {
-            --bs-btn-bg: var(--brand-500);
-            --bs-btn-border-color: var(--brand-500);
-            --bs-btn-hover-bg: var(--brand-600);
-            --bs-btn-hover-border-color: var(--brand-600);
-            --bs-btn-active-bg: var(--brand-700);
-            --bs-btn-active-border-color: var(--brand-700);
+        /* 列 hover：所有 cell 一起變色 */
+        table.rcl-table > tbody > tr:hover > *,
+        table.rcl-table > tbody > tr.is-selected > * {
+            background: var(--row-hover) !important;
         }
 
-        /* ===== Switch 開關樣式 ===== */
-        .form-switch .form-check-input:checked {
-            background-color: var(--brand-500) !important;
-            border-color: var(--brand-500) !important;
+        /* 第一格做左側色條，不位移（預留透明邊框） */
+        table.rcl-table > tbody > tr > *:first-child {
+            border-left: 4px solid transparent;
         }
 
-        .form-check-input:focus {
-            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important;
+        table.rcl-table > tbody > tr:hover > *:first-child,
+        table.rcl-table > tbody > tr.is-selected > *:first-child {
+            border-left-color: var(--brand);
         }
 
-        .form-check-input:disabled:checked {
-            background-color: #9a72b0 !important;
-            border-color: #9a72b0 !important;
+        /* 平滑過渡 */
+        table.rcl-table > tbody > tr > * {
+            transition: background-color .18s ease, border-left-color .18s ease;
         }
 
-        /* ===== SweetAlert2 樣式 ===== */
+        /* DataTables child 明細列別吃 hover */
+        table.rcl-table > tbody > tr.child > * {
+            background: inherit !important;
+            border-left-color: transparent !important;
+        }
+
+        /* SweetAlert2：批次視窗尺寸與內距修正 */
         .rcl-bulk .swal2-html-container {
             padding: 0 1rem !important;
             max-height: 70vh;
@@ -162,7 +91,7 @@
             max-width: 100%;
             box-sizing: border-box;
         }
-
+        /* 避免100%+邊框造成橫向捲軸 */
         .rcl-bulk label {
             display: flex;
             align-items: center;
@@ -173,38 +102,106 @@
             gap: .5rem;
         }
 
+        /* ==== SweetAlert2：批次視窗尺寸 & 溢位修正 ==== */
         .rcl-bulk.swal2-popup {
-            width: min(92vw,520px) !important;
+            width: min(92vw, 520px) !important; /* 統一寬度，手機92vw */
             box-sizing: border-box;
-            overflow-x: hidden !important;
+            overflow-x: hidden !important; /* 禁止水平捲軸 */
         }
 
         .rcl-bulk-html {
-            padding: 0 1rem !important;
-            max-height: 70vh;
-            overflow-y: auto;
-            overflow-x: hidden !important;
+            padding: 0 1rem !important; /* 內距 */
+            max-height: 70vh; /* 高度上限 */
+            overflow-y: auto; /* 只允許直向捲動 */
+            overflow-x: hidden !important; /* 關閉橫向捲動 */
         }
 
-            .rcl-bulk-html select, .rcl-bulk-html .form-select {
+            .rcl-bulk-html select,
+            .rcl-bulk-html .form-select {
                 display: block;
                 width: 100% !important;
                 max-width: 100% !important;
-                min-width: 0 !important;
-                box-sizing: border-box;
+                min-width: 0 !important; /* 蓋掉 .swal2-select 的 min-width:50% */
+                box-sizing: border-box; /* 避免 100% + 邊框造成溢位 */
             }
 
-        /* ===== 覆蓋預設表格條紋 ===== */
-        table.rcl-table.table-striped > tbody > tr:nth-of-type(odd),
-        table.rcl-table.table-striped > tbody > tr:nth-of-type(even) {
-            background-color: transparent !important;
+        .rcl-bulk label {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
         }
 
-        table.rcl-table.dataTable.stripe tbody tr.odd,
-        table.rcl-table.dataTable.display tbody tr.odd,
-        table.rcl-table.dataTable.stripe tbody tr.even,
-        table.rcl-table.dataTable.display tbody tr.even {
-            background-color: transparent !important;
+        .rcl-bulk-actions {
+            gap: .5rem;
+        }
+
+
+
+        /* ===== 狀態徽章（保留，可依需要使用） ===== */
+        .badge-status {
+            display: inline-block;
+            padding: .35rem .6rem;
+            border-radius: .5rem;
+            color: #fff;
+            font-weight: 600;
+            white-space: nowrap
+        }
+
+        .payment-paid {
+            background: #22c55e
+        }
+
+        .payment-auth, .payment-pending {
+            background: #f59e0b
+        }
+
+        .payment-failed {
+            background: #ef4444
+        }
+
+        .payment-refunding, .payment-refunded {
+            background: #6b7280
+        }
+
+        .shipping-picking, .shipping-packed {
+            background: #a78bfa
+        }
+
+        .shipping-shipped, .shipping-intransit {
+            background: #10b981
+        }
+
+        .shipping-delivered {
+            background: #059669
+        }
+
+        .shipping-returned {
+            background: #6b7280
+        }
+
+        .order-pending {
+            background: #8b5cf6
+        }
+
+        .order-confirmed, .order-processing {
+            background: #3b82f6
+        }
+
+        .order-completed {
+            background: #6b7280
+        }
+
+        .order-cancelled {
+            background: #ef4444
+        }
+
+        .order-rmaing {
+            background: #7c3aed
+        }
+
+        .detail-row td {
+            background: #fff;
+            border-top: 0;
         }
     </style>
 }
@@ -218,9 +215,9 @@
 
         <!-- 批次操作（兩顆功能主按鈕） -->
         <div class="d-flex flex-wrap align-items-end justify-content-between mb-3 gap-2">
-            <div class="btn-group gap-2">
-                <button type="button" id="bulkUpdate" class="btn btn-warning btn-lg">批量更改狀態</button>
-                <button type="button" id="bulkPrint" class="btn btn-success btn-lg">列印出貨單</button>
+            <div class="d-flex gap-2">
+                <button id="btn-bulk" class="btn btn-outline-primary btn-lg">批量更改狀態</button>
+                <button id="btn-print" class="btn btn-outline-primary btn-lg">列印出貨單</button>
             </div>
 
             <!-- 日期 + 快速篩選（擺在右側） -->
@@ -290,7 +287,7 @@
             </div>
             <div class="col-md-1 d-grid">
                 <label class="form-label">&nbsp;</label>
-                <button type="submit" class="btn btn-primary">套用</button> <!-- 可留作手動觸發；平常不必按 -->
+                <button id="btn-apply" class="btn btn-primary">套用</button> <!-- 可留作手動觸發；平常不必按 -->
             </div>
         </form>
 
