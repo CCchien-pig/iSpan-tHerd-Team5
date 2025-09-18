@@ -22,7 +22,7 @@ namespace FlexBackend.PROD.Rcl.Areas.PROD.Controllers
 
 		public async Task<IActionResult> Index_ex_datatable(CancellationToken ct)
 		{
-			await SeedSkuDataAsync();
+			// await SeedSkuDataAsync();
 			var products = await _db.ProdProducts.ToListAsync(ct);
 
 			var dtos = products.Select(p => new ProdProductDto

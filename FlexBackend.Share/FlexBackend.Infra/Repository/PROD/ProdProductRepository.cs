@@ -252,7 +252,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
 
 				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
-				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
+				//item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
 
 				return item;
 			}
@@ -272,6 +272,8 @@ namespace FlexBackend.Infra.Repository.PROD
 
             try
             {
+                var now = DateTime.Now;
+
                 // === 1. 新增 Product 主檔 ===
                 var productId = await conn.ExecuteScalarAsync<int>(@"
                     INSERT INTO PROD_Product
@@ -298,7 +300,9 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
                         Creator = u.UserNumberId,
-                        Reviser = u.UserNumberId
+                        Reviser = u.UserNumberId,
+                        CreatedDate = now,
+                        RevisedDate = now
                     }, tran);
 
                 // 更新正式 ProductCode
