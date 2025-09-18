@@ -131,8 +131,8 @@
 
         // ===== 新增優惠券 Modal =====
         $("#CreateCoupon").off("click").on("click", function () {
-            $("#createCouponForm")[0].reset();       清空表單
-            loadRules("#createRuleId");               載入規則
+            $("#createCouponForm")[0].reset();       //清空表單
+            loadRules("#createRuleId");               //載入規則
             $("#createCouponModal").modal("show");
         });
 
