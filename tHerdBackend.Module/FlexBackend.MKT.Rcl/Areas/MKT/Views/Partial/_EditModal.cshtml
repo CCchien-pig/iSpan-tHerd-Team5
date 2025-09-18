@@ -7,10 +7,10 @@
                     <h5 class="modal-title">編輯活動</h5>
                 </div>
                 <div class="modal-body">
-                    <div class="text-center">
-                        <label>活動Id</label>
-                        <input type="text" id="editId" disabled />
-                    </div>
+                    
+                        <label class="form-label">活動Id</label>
+                        <input type="text" id="editId" class="form-control" disabled />
+                    
 
                     <div class="mb-3">
                         <label>標題</label>
@@ -19,12 +19,11 @@
 
                     <div class="mb-3">
                         <label>活動類型</label>
-                        <!-- readonly textbox 顯示 -->
-                        <input type="text" id="editTypeDisplay" class="form-control" value="滿額折扣" readonly />
-
-                        <!-- hidden input 回傳固定值 -->
-                        <input type="hidden" id="editType" name="CampaignType" value="cmd" />
+                        <select id="editType" name="CampaignType" class="form-select">
+                            <option value="cmd" selected>滿額折扣</option>
+                        </select>
                     </div>
+
 
 
 
@@ -45,12 +44,12 @@
 
                     <div class="mb-3">
                         <label>活動開始日期</label>
-                        <input type="date" id="editStart" class="form-control" />
+                        <input type="date" id="editStart" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <div class="mb-3">
                         <label>活動結束日期</label>
-                        <input type="date" id="editEnd" class="form-control" />
+                        <input type="date" id="editEnd" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <div class="mb-3">
@@ -62,13 +61,15 @@
                     </div>
 
 
-                    <div class="mb-3">
+                    @* <div class="mb-3">
                         <label>活動狀態</label>
                         <select id="editStatus" class="form-select">
                             <option value="cActive">上架</option>
                             <option value="cInactive">下架</option>
                         </select>
-                    </div>
+                    </div> *@
+                    <input type="hidden" id="editStatus" name="Status" value="cActive" />
+
 
                     <div class="mb-3">
                         <label>建檔人員</label>
