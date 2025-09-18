@@ -705,5 +705,67 @@ ORDER BY COUNT(o.OrderId) DESC;";
             });
         }
 
+[HttpGet]
+    public async Task<IActionResult> Anomalies([FromQuery] bool demo = true, [FromQuery] int days = 30)
+    {
+        // --- 方案B：預設 demo=true，方便上課/組內展示 ---
+        if (demo)
+        {
+            return Ok(new[]
+            {
+            "：AOV 為 0（請檢查訂單金額或退款資料）",
+            "：有 3 個 SKU 庫存為負數",
+            "：有 5 張發票金額與訂單金額不符",
+            "：7 天內有 12 批即期品仍上架"
+        });
+        }
+
+        var list = new List<string>();
+        await using var conn = new SqlConnection(_connStr);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+
+        // 1) AOV 檢查（近 N 天）
+        cmd.CommandText = @"
+        SELECT CAST(SUM(Subtotal - DiscountTotal + ShippingFee) AS DECIMAL(20,2)) / NULLIF(COUNT(*),0)
+        FROM ORD_Order
+        WHERE CreatedDate >= DATEADD(DAY, -@days, SYSUTCDATETIME())
+          AND PaymentStatus = 'paid'";
+        cmd.Parameters.Clear();
+        cmd.Parameters.AddWithValue("@days", days);
+        var aovObj = await cmd.ExecuteScalarAsync();
+        var aov = (aovObj == DBNull.Value || aovObj == null) ? 0m : (decimal)aovObj;
+        if (aov == 0m) list.Add("AOV 為 0（請檢查訂單金額或退款資料）");
+
+        // 2) 庫存為負
+        cmd.CommandText = @"SELECT COUNT(*) FROM PROD_ProductSku WHERE StockQty < 0";
+        var negCount = (int)(await cmd.ExecuteScalarAsync());
+        if (negCount > 0) list.Add($"有 {negCount} 個 SKU 庫存為負數");
+
+        // 3) 訂單 vs 發票金額不符（容許 1 元誤差）
+        cmd.CommandText = @"
+        SELECT COUNT(*)
+        FROM ORD_Order o
+        JOIN ORD_Invoice i ON i.OrderId = o.OrderId
+        WHERE ABS((o.Subtotal - o.DiscountTotal + o.ShippingFee) - i.Amount) > 1";
+        var misAmt = (int)(await cmd.ExecuteScalarAsync());
+        if (misAmt > 0) list.Add($"有 {misAmt} 張發票金額與訂單金額不符");
+
+        // 4) 即期品仍上架（7天內到期）
+        cmd.CommandText = @"
+        SELECT COUNT(*)
+        FROM SUP_StockBatch sb
+        JOIN PROD_ProductSku s ON s.SkuId = sb.SkuId
+        WHERE sb.ExpireDate IS NOT NULL
+          AND sb.ExpireDate < DATEADD(DAY, 7, SYSUTCDATETIME())
+          AND s.IsActive = 1";
+        var nearExp = (int)(await cmd.ExecuteScalarAsync());
+        if (nearExp > 0) list.Add($"7 天內有 {nearExp} 批即期品仍上架");
+
+        return Ok(list);
     }
+
+
+
+}
 }
