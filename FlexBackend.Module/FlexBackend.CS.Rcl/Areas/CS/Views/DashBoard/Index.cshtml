@@ -951,20 +951,31 @@
 
 
       /* ====== 匯出功能 ====== */
-      // KPI -> CSV（UTF-8 BOM）
-      document.getElementById('exportKpiCsv').addEventListener('click', (e) => {
-        e.preventDefault();
-        const k = state.cache.tpsrc?.kpi || {};
-        const rows = [
-          ['指標','數值'],
-          ['營收', k.totalRevenue ?? 0],
-          ['訂單數', k.totalOrders ?? 0],
-          ['售出數量', k.unitsSold ?? 0],
-          ['平均客單價', k.aov ?? 0]
-        ];
-        const csv = rows.map(r => r.join(',')).join('\n');
-        downloadFile(CSV_BOM + csv, `kpi_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-      });
+            // KPI -> CSV（用後端檔名）
+            document.getElementById('exportKpiCsv').addEventListener('click', async (e) => {
+              e.preventDefault();
+              const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+
+              const url = '@Url.Content("~/api/cs/export/kpi.csv")' + `?days=${days}&_=${Date.now()}`;
+              const res = await fetch(url, { credentials: 'include' });
+
+              if (!res.ok) { alert('下載 CSV 失敗'); return; }
+
+              // 從 Content-Disposition 取檔名（支援 filename*）
+              const cd = res.headers.get('Content-Disposition') || '';
+              let m = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
+              const filename = decodeURIComponent((m && (m[1] || m[2])) || `kpi_${Date.now()}.csv`);
+
+              const blob = await res.blob();
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(a.href);
+            });
+
 
       // KPI -> Excel（呼叫後端 ClosedXML API + cache-busting）
       const elExcel = document.getElementById('exportKpiExcel');
