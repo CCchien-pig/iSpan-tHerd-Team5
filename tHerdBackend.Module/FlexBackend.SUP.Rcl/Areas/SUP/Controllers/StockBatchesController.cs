@@ -699,7 +699,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						ProductName = prod.ProductName,
 						SkuCode = sku.SkuCode,
 						ManufactureDate = sb.ManufactureDate,
-						CurrentQty = sb.Qty
+						CurrentQty = sb.Qty,
+						MaxStockQty = sku.MaxStockQty,
+						IsAdd = true, // 預設為增加
 					}
 				).FirstOrDefaultAsync();
 
@@ -725,6 +727,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				return StatusCode(500, "發生內部錯誤");
 			}
 		}
+
+
 
 		// POST: /SUP/StockBatches/Update
 		[HttpPost]
@@ -774,6 +778,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			return Json(new { success = true });
 		}
+
+
+
 
 		private bool SupStockBatchExists(int id)
 		{
