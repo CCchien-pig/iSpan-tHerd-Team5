@@ -12,7 +12,7 @@
 }
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-success text-white fw-bold">
+    <div class="card-header bg-success-subtle text-dark fw-bold">
         ➕ 新增文章
     </div>
     <div class="card-body">
@@ -28,7 +28,7 @@
             </div>
             <!-- 分類 -->
             <div class="mb-3">
-                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <label asp-for="PageTypeId" class="form-label">文章分類</label>
                 <select asp-for="PageTypeId" asp-items="ViewBag.PageTypeList" class="form-select"></select>
                 <span asp-validation-for="PageTypeId" class="text-danger"></span>
             </div>
@@ -56,24 +56,30 @@
             <input type="hidden" asp-for="PageSize" />
             <input type="hidden" asp-for="Keyword" />
             <input type="hidden" asp-for="StatusFilter" />
-
-            <!-- 排程時間 -->
-            <div class="mb-3">
-                <label asp-for="ScheduledDate" class="form-label"></label>
-                <input asp-for="ScheduledDate" type="datetime-local" class="form-control"
-                       min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
-                <span asp-validation-for="ScheduledDate" class="text-danger"></span>
-            </div>
-            <!-- 排程動作 -->
-            <div class="mb-3">
-                <label asp-for="ActionType" class="form-label">排程動作</label>
-                <select asp-for="ActionType" asp-items="Html.GetEnumSelectList<ActionType>()" class="form-select">
-                    <option value="">-- 不使用排程 --</option>
-                </select>
-                <span asp-validation-for="ActionType" class="text-danger"></span>
+            <!-- 是否設定排程 -->
+            <div class="form-check mb-2">
+                <input asp-for="HasSchedule" class="form-check-input" type="checkbox" />
+                <label asp-for="HasSchedule" class="form-check-label">是否設定排程</label>
             </div>
 
-            
+            <!-- 排程區塊：由 VM 的 HasSchedule 控制初始狀態 -->
+            <div id="schedule-fields" style="@(Model.HasSchedule ? "" : "display:none;")">
+                <!-- 排程時間 -->
+                <div class="mb-3">
+                    <label asp-for="ScheduledDate" class="form-label"></label>
+                    <input asp-for="ScheduledDate" class="form-control datepicker" type="text" />
+                    <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+                </div>
+
+                <!-- 排程動作 -->
+                <div class="mb-3">
+                    <label asp-for="ActionType" class="form-label"></label>
+                    <select asp-for="ActionType" asp-items="ViewBag.ActionTypeList" class="form-select"></select>
+                    <span asp-validation-for="ActionType" class="text-danger"></span>
+                </div>
+            </div>
+
+
             <div class="d-flex gap-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
                 <button type="submit" class="btn btn-outline-success btn-lg">💾 儲存</button>
@@ -89,8 +95,10 @@
     </button>
 </div>
 
-@section Scripts {    
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @await Html.PartialAsync("_FlatpickrScriptsPartial")
+
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
@@ -117,10 +125,11 @@
                 btn.classList.remove("show");
             }
         });
-
+    </script>
+    <script>
+        document.querySelector('[name="HasSchedule"]').addEventListener('change', function () {
+            document.getElementById('schedule-fields').style.display = this.checked ? 'block' : 'none';
+        });
     </script>
 
-
 }
-
-

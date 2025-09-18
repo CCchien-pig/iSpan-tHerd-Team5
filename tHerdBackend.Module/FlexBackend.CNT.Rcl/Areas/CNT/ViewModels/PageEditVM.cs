@@ -1,4 +1,5 @@
-﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+﻿using FlexBackend.CNT.Rcl.Areas.CNT.Attributes;
+using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -38,15 +39,21 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		// PageEditVM.cs
 		public int PageTypeId { get; set; }
 		public bool IsHomePage => PageTypeId == 1000;
+		// 類型顯示用
+		public string PageTypeName { get; set; } = string.Empty;
 
 		// 🔑 用來保留回列表的查詢條件
 		public int? Page { get; set; }
-		public int PageSize { get; set; } = 8;
+		public int PageSize { get; set; } = 10;
 		public string? Keyword { get; set; }
 		public string? StatusFilter { get; set; }
 
+		// ✅ 新增：是否設定排程
+		public bool HasSchedule { get; set; } = false;
+
 		// 排程欄位
 		[Display(Name = "排程時間")]
+		[RequiredIf("HasSchedule", "排程時間必填")]
 		public DateTime? ScheduledDate { get; set; }
 
 		[Display(Name = "排程動作")]
@@ -62,5 +69,31 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 				PageStatus.Deleted => "刪除",
 				_ => "未知"
 			};
+
+		// 狀態對應的 Badge 樣式
+		public string StatusBadgeClass =>
+			Status switch
+			{
+				PageStatus.Draft => "bg-secondary",
+				PageStatus.Published => "bg-success",
+				PageStatus.Archived => "bg-warning",
+				PageStatus.Deleted => "bg-danger",
+				_ => "bg-dark"
+			};
+
+		// 文章分類：顏色
+		public string PageTypeBadgeClass =>
+		PageTypeName switch
+		{
+			"首頁" => "bg-primary text-white",
+			"極受歡迎" => "bg-danger text-white",
+			"健身" => "bg-info text-dark",
+			"營養" => "bg-warning text-dark",
+			"美容美妝" => "bg-pink text-white",
+			"文章" => "bg-success text-white",
+			"影片" => "bg-dark text-white",
+			"健康專家" => "bg-purple text-white",
+			_ => "bg-secondary text-white"
+		};
 	}
 }
