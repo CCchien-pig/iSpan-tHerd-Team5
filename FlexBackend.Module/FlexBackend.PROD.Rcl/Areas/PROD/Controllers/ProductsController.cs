@@ -2,7 +2,6 @@
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {

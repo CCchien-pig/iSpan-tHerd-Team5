@@ -1,12 +1,13 @@
 ﻿using Dapper;
 using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Infra.DBSetting;
 using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using System.Data;
 using static Dapper.SqlMapper;
 
@@ -18,12 +19,18 @@ namespace FlexBackend.Infra.Repository.PROD
         private readonly tHerdDBContext _db;                 // 寫入與交易來源
         private readonly ICurrentUser _currentUser;
 
-        public ProdProductRepository(ISqlConnectionFactory factory, tHerdDBContext db, ICurrentUser currentUser)
+		private readonly UserManager<ApplicationUser> _userMgr;
+
+		public ProdProductRepository(ISqlConnectionFactory factory,
+			UserManager<ApplicationUser> userMgr,
+			SignInManager<ApplicationUser> signInMgr,
+			tHerdDBContext db, ICurrentUser currentUser)
         {
             _factory = factory;
             _db = db;
             _currentUser = currentUser;
-        }
+			_userMgr = userMgr;
+		}
         /// <summary>
         /// 取得所有有效分類
         /// </summary>
@@ -115,7 +122,7 @@ namespace FlexBackend.Infra.Repository.PROD
                             FROM PROD_Product p
                             JOIN SUP_Brand b ON b.BrandId=p.BrandId
                             JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
-                                WHERE p.ProductId=@ProductId;";
+                            WHERE p.ProductId=@ProductId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
@@ -230,7 +237,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         ProductTypeId = t.ProductTypeId,
                         ProductId = t.ProductId,
                         IsPrimary = t.IsPrimary
-                    }).ToListAsync();
+                    }).OrderByDescending(a=>a.IsPrimary).ToListAsync();
 
                 return item;
 			}
@@ -243,7 +250,9 @@ namespace FlexBackend.Infra.Repository.PROD
         // 新增
         public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
+
+			var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
 
             try
@@ -273,8 +282,8 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Creator = _currentUser.UserNumberId,
-                        Reviser = _currentUser.UserNumberId
+                        Creator = u.UserNumberId,
+                        Reviser = u.UserNumberId
                     }, tran);
 
                 // 更新正式 ProductCode
@@ -316,7 +325,9 @@ namespace FlexBackend.Infra.Repository.PROD
         // 修改
         public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
+
+			var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
 
             try
@@ -349,7 +360,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Reviser = _currentUser.UserNumberId,
+                        Reviser = u.UserNumberId,
                         RevisedDate = DateTime.Now,
                         dto.ProductId
                     }, tran);
@@ -501,14 +512,13 @@ namespace FlexBackend.Infra.Repository.PROD
 
             // === Step 4: 商品分類處理 (ProdProductType) ===
             await conn.ExecuteAsync(
-                "DELETE FROM PROD_ProductType WHERE ProductId = @ProductId",
-                new { Ids = dto.ProductId }, tran);
+				"DELETE FROM PROD_ProductType WHERE ProductId = @ProductId",
+                new { dto.ProductId }, tran);
 
             foreach (var opt in dto.Types ?? new())
             {
                 var optionId = await conn.ExecuteScalarAsync<int>(
                     @"INSERT INTO PROD_ProductType (ProductTypeId, ProductId, IsPrimary)
-                          OUTPUT INSERTED.PROD_ProductType
                           VALUES (@ProductTypeId, @ProductId, @IsPrimary);",
                     new { opt.ProductTypeId, dto.ProductId, opt.IsPrimary }, tran);
             }
@@ -655,5 +665,29 @@ namespace FlexBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-    }
+
+		public async Task<bool> GetByProductNameAsync(string name, int id, CancellationToken ct = default)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return false;
+
+			return _db.ProdProducts
+	                .AsNoTracking()
+	                .Where(p => p.ProductName == name && p.ProductId != id).Count()>0;
+		}
+
+		//public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
+		//{
+		//	if (barcodes == null || !barcodes.Any())
+		//		return string.Empty;
+
+		//	var exists = await _db.ProdProductSkus
+		//		.AsNoTracking()
+		//		.Where(p => barcodes.Contains(p.Barcode))
+		//		.Select(p => p.Barcode)   // 只取出條碼字串
+		//		.ToListAsync(ct);
+
+		//	return string.Join("、", exists);
+		//}
+	}
 }
