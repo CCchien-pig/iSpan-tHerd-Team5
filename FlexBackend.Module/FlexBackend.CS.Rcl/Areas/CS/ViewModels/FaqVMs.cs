@@ -69,6 +69,12 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
 
         [Display(Name = "啟用")]
         public bool IsActive { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? RevisedDate { get; set; }
+
+
+        // 新增：多個關鍵字（以字串清單表示）
+        public List<string> Keywords { get; set; } = new();
     }
 
     // =======================
@@ -128,6 +134,12 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
         [Display(Name = "啟用")]
         public bool IsActive { get; set; }
     }
+    // 新增：一個關聯 FAQ 的小型 VM
+    public class FaqRefVM
+    {
+        public int FaqId { get; set; }
+        public string Title { get; set; } = "";
+    }
 
     // =======================
     // FAQ 關鍵字（清單）
@@ -143,11 +155,9 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
         [Display(Name = "建立時間")]
         public DateTime CreatedDate { get; set; }
 
-        [Display(Name = "FAQ")]
-        public int FaqId { get; set; }
-
-        [Display(Name = "FAQ標題")]
-        public string FaqTitle { get; set; } = default!;
+        // ⬇⬇ 取代原本的 FaqId / FaqTitle
+        [Display(Name = "所屬 FAQ")]
+        public List<FaqRefVM> Faqs { get; set; } = new();
     }
 
     // =======================
