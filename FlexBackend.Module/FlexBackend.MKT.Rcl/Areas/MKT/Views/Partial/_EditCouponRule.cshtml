@@ -1,0 +1,144 @@
+﻿@model FlexBackend.Infra.Models.MktCouponRule
+
+<div class="modal-header">
+    <h5 class="modal-title">修改優惠規則</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    <form id="editRuleForm">
+        @Html.AntiForgeryToken()
+
+        <!-- RuleId -->
+        <div class="mb-3">
+            <label class="form-label">規則編號 (RuleId)</label>
+            <input type="text" name="RuleId" id="editRuleId" class="form-control" readonly />
+        </div>
+
+        <!-- CouponType 隱藏回傳 pmd -->
+        <input type="hidden" name="CouponType" value="pmd" />
+
+        <!-- DefaultCondition -->
+        <div class="mb-3">
+            <label class="form-label">預設條件</label>
+            <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
+                <option value="">請選擇預設條件</option>
+            </select>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">說明</label>
+            <textarea name="Description" id="editDescription" class="form-control" readonly></textarea>
+        </div>
+
+        <!-- IsActive -->
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive" disabled />
+            <label class="form-check-label" for="editIsActive">啟用</label>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" id="updateRuleBtn" class="btn btn-primary">儲存變更</button>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // 載入所有規則
+        $.get('/MKT/Coupons/GetActiveRules', function (rules) {
+            var $select = $("#editDefaultCondition");
+            rules.forEach(function (r) {
+                $select.append('<option value="' + r.ruleId + '">' + r.defaultCondition + '</option>');
+            });
+        });
+
+        // 選擇 DefaultCondition 後自動帶入資料
+        $("#editDefaultCondition").on("change", function () {
+            var ruleId = $(this).val();
+            if (!ruleId) {
+                $("#editRuleId").val("");
+                $("#editDescription").prop("readonly", true).val("");
+                $("#editIsActive").prop("disabled", true).prop("checked", false);
+                return;
+            }
+
+            $("#editRuleId").val(ruleId);
+
+            $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (data) {
+                $("#editDescription").prop("readonly", false).val(data.description || "");
+                $("#editIsActive").prop("disabled", false).prop("checked", data.isActive);
+            }).fail(function () {
+                Swal.fire("錯誤", "取得規則資料失敗", "error");
+            });
+        });
+
+        // 儲存變更
+        $("#updateRuleBtn").click(function () {
+            var data = {
+                RuleId: $("#editRuleId").val(),
+                CouponType: $("input[name='CouponType']").val(),
+                DefaultCondition: $("#editDefaultCondition option:selected").text(),
+                Description: $("#editDescription").val().trim(),
+                IsActive: $("#editIsActive").is(":checked")
+            };
+
+            $.ajax({
+                url: '/MKT/Coupons/UpdateRule',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("成功", "優惠規則已更新！", "success").then(() => {
+                            $("#couponRuleModal").modal("hide");
+                            if (typeof loadRules === "function") loadRules("#editRuleId");
+                        });
+                    } else Swal.fire("錯誤", res.message, "error");
+                },
+                error: function () {
+                    Swal.fire("錯誤", "更新失敗", "error");
+                }
+            });
+        });
+
+        // 刪除規則
+        $("#deleteRuleBtn").click(function () {
+            var ruleId = $("#editRuleId").val();
+            if (!ruleId) return Swal.fire("錯誤", "請先選擇規則", "error");
+
+            Swal.fire({
+                title: '確定刪除此規則？',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '刪除',
+                cancelButtonText: '取消'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    var token = $('#editRuleForm input[name="__RequestVerificationToken"]').val();
+
+                    $.ajax({
+                        url: '/MKT/Coupons/DeleteRule/' + ruleId,
+                        type: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        success: function(res) {
+                            if(res.success){
+                                Swal.fire('已刪除', '規則已刪除', 'success');
+                                $("#editRuleForm")[0].reset();
+                                $("#editDefaultCondition option[value='" + ruleId + "']").remove();
+                                if (typeof loadRules === "function") loadRules("#editRuleId");
+                            } else Swal.fire('錯誤', res.message, 'error');
+                        },
+                        error: function(err){
+                            console.error(err);
+                            Swal.fire('錯誤', '刪除失敗', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+    });
+</script>

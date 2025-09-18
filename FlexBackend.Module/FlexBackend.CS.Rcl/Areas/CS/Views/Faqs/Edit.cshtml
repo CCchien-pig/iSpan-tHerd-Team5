@@ -1,6 +1,10 @@
 ﻿@model FlexBackend.Infra.Models.CsFaq
 @{
     ViewData["Title"] = "編輯 FAQ";
+
+    var back = ViewBag.ReturnUrl as string;
+    var fallback = Url.Action("Index", "Faqs", new { area = "CS" });
+    var goBackUrl = (!string.IsNullOrWhiteSpace(back) && Url.IsLocalUrl(back)) ? back : fallback;
 }
 
 @section Styles {
@@ -56,7 +60,8 @@
     <div class="d-flex align-items-center justify-content-between">
         <h1 class="h4 mb-0">@ViewData["Title"]</h1>
         <div class="btn-group">
-            <a asp-action="Index" class="btn btn-outline-secondary">
+            <!-- 這裡原本是 asp-action="Index"，改成用 goBackUrl -->
+            <a class="btn btn-outline-secondary" href="@goBackUrl">
                 <i class="fa-solid fa-arrow-left"></i> 返回列表
             </a>
             <button type="submit" form="faqForm" class="btn btn-primary">
@@ -68,6 +73,11 @@
 
 <form id="faqForm" asp-action="Edit" asp-route-id="@Model.FaqId" method="post">
     @Html.AntiForgeryToken()
+
+    <!-- 關鍵：把 goBackUrl 帶回 Controller 的 returnUrl -->
+    <input type="hidden" name="returnUrl" value="@goBackUrl" />
+
+    <!-- 帶回 Controller 的 returnUrl（方式 1：hidden 欄位） -->
     <input type="hidden" asp-for="FaqId" />
     @* 重要：Disabled 欄位不會回傳，為避免 CreatedDate 被清掉，用 hidden 一併回傳原值 *@
     <input type="hidden" asp-for="CreatedDate" />

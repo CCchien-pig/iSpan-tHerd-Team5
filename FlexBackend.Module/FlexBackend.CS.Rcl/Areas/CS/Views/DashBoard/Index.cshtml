@@ -1,328 +1,705 @@
-﻿<div class="container-fluid">
+﻿@{
+    ViewData["Title"] = "儀表板";
+}
 
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
-                                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+<div class="container-fluid">
+
+    <!-- 標題列 + 區間選擇 -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-2">
+        <h1 class="h3 mb-0 text-gray-800">儀表板</h1>
+        <div class="d-flex align-items-center">
+            <select id="rangeSelect" class="custom-select custom-select-sm mr-2" style="width: 120px">
+                <option value="7">最近 7 天</option>
+                <option value="30" selected>最近 30 天</option>
+                <option value="90">最近 90 天</option>
+            </select>
+            <a href="javascript:void(0)" id="btnRefresh"
+               class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-sync-alt fa-sm text-white-50"></i> 重新整理
+            </a>
+        </div>
+    </div>
+
+    <!-- ====== Global Toolbar（全域工具列） ====== -->
+    <div class="card mb-3 shadow-sm" id="globalToolbar">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+
+                <!-- 快速篩選 Chips：品類 -->
+                <div class="mr-3 d-flex align-items-center flex-wrap">
+                    <span class="text-muted small mr-2">品類</span>
+                    <div id="chipCategories" class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Category chips">
+                        <!-- 由 JS 注入；預設提供「全部」 -->
+                        <button type="button" class="btn btn-outline-secondary active" data-cat="">全部</button>
                     </div>
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Earnings (Monthly)</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">$40,000</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-success shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                                Earnings (Annual)</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">$215,000</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-info shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks
-                                            </div>
-                                            <div class="row no-gutters align-items-center">
-                                                <div class="col-auto">
-                                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">50%</div>
-                                                </div>
-                                                <div class="col">
-                                                    <div class="progress progress-sm mr-2">
-                                                        <div class="progress-bar bg-info" role="progressbar"
-                                                            style="width: 50%" aria-valuenow="50" aria-valuemin="0"
-                                                            aria-valuemax="100"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pending Requests Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-warning shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                Pending Requests</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">18</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-comments fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Content Row -->
-
-                    <div class="row">
-
-                        <!-- Area Chart -->
-                        <div class="col-xl-8 col-lg-7">
-                            <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Earnings Overview</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                                            aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Card Body -->
-                                <div class="card-body">
-                                    <div class="chart-area">
-                                        <canvas id="myAreaChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pie Chart -->
-                        <div class="col-xl-4 col-lg-5">
-                            <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Revenue Sources</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                                            aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Card Body -->
-                                <div class="card-body">
-                                    <div class="chart-pie pt-4 pb-2">
-                                        <canvas id="myPieChart"></canvas>
-                                    </div>
-                                    <div class="mt-4 text-center small">
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-primary"></i> Direct
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-success"></i> Social
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-info"></i> Referral
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <!-- Content Column -->
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Project Card Example -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Projects</h6>
-                                </div>
-                                <div class="card-body">
-                                    <h4 class="small font-weight-bold">Server Migration <span
-                                            class="float-right">20%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 20%"
-                                            aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Sales Tracking <span
-                                            class="float-right">40%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 40%"
-                                            aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Customer Database <span
-                                            class="float-right">60%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar" role="progressbar" style="width: 60%"
-                                            aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Payout Details <span
-                                            class="float-right">80%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-info" role="progressbar" style="width: 80%"
-                                            aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Account Setup <span
-                                            class="float-right">Complete!</span></h4>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%"
-                                            aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Color System -->
-                            <div class="row">
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-primary text-white shadow">
-                                        <div class="card-body">
-                                            Primary
-                                            <div class="text-white-50 small">#4e73df</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-success text-white shadow">
-                                        <div class="card-body">
-                                            Success
-                                            <div class="text-white-50 small">#1cc88a</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-info text-white shadow">
-                                        <div class="card-body">
-                                            Info
-                                            <div class="text-white-50 small">#36b9cc</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-warning text-white shadow">
-                                        <div class="card-body">
-                                            Warning
-                                            <div class="text-white-50 small">#f6c23e</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-danger text-white shadow">
-                                        <div class="card-body">
-                                            Danger
-                                            <div class="text-white-50 small">#e74a3b</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-secondary text-white shadow">
-                                        <div class="card-body">
-                                            Secondary
-                                            <div class="text-white-50 small">#858796</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-light text-black shadow">
-                                        <div class="card-body">
-                                            Light
-                                            <div class="text-black-50 small">#f8f9fc</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-dark text-white shadow">
-                                        <div class="card-body">
-                                            Dark
-                                            <div class="text-white-50 small">#5a5c69</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Illustrations -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Illustrations</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="text-center">
-                                        <img class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 25rem;"
-                                            src="img/undraw_posting_photo.svg" alt="...">
-                                    </div>
-                                    <p>Add some quality, svg illustrations to your project courtesy of <a
-                                            target="_blank" rel="nofollow" href="https://undraw.co/">unDraw</a>, a
-                                        constantly updated collection of beautiful svg images that you can use
-                                        completely free and without attribution!</p>
-                                    <a target="_blank" rel="nofollow" href="https://undraw.co/">Browse Illustrations on
-                                        unDraw &rarr;</a>
-                                </div>
-                            </div>
-
-                            <!-- Approach -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Development Approach</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p>SB Admin 2 makes extensive use of Bootstrap 4 utility classes in order to reduce
-                                        CSS bloat and poor page performance. Custom CSS classes are used to create
-                                        custom components and custom utility classes.</p>
-                                    <p class="mb-0">Before working with this theme, you should become familiar with the
-                                        Bootstrap framework, especially the utility classes.</p>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
                 </div>
+
+                <!-- 維度切換（日/週/月） -->
+                <div class="btn-group btn-group-sm mr-3" role="group" aria-label="Dimension">
+                    <button class="btn btn-outline-primary active" data-dim="day">日</button>
+                    <button class="btn btn-outline-primary" data-dim="week">週</button>
+                    <button class="btn btn-outline-primary" data-dim="month">月</button>
+                </div>
+
+                <!-- 同期比較（UI 先放） -->
+                <div class="form-inline mr-3">
+                    <div class="custom-control custom-switch mr-2">
+                        <input type="checkbox" class="custom-control-input" id="switchCompare">
+                        <label class="custom-control-label" for="switchCompare">同期比較</label>
+                    </div>
+                    <select id="compareType" class="custom-select custom-select-sm" style="width:160px" disabled>
+                        <option value="last">對上期</option>
+                        <option value="yoy">對去年同期</option>
+                    </select>
+                </div>
+
+                <!-- 匯出 -->
+                <div class="dropdown mr-3">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-toggle="dropdown">
+                        匯出
+                    </button>
+                    <div class="dropdown-menu">
+                        <!-- KPI 總表 -->
+                        <h6 class="dropdown-header">📊 KPI 總表</h6>
+                        <a class="dropdown-item" href="#" id="exportKpiCsv">CSV</a>
+                        <a class="dropdown-item" href="#" id="exportKpiExcel">Excel</a>
+                        <a class="dropdown-item" href="#" id="exportKpiPdf">PDF</a>
+                        <div class="dropdown-divider"></div>
+
+                        <!-- 明細資料 -->
+                        <h6 class="dropdown-header">📑 明細資料</h6>
+                        <a href="/api/cs/export/orders-csv" class="dropdown-item">訂單明細 (CSV)</a>
+                        <a href="/api/cs/export/order-items-csv" class="dropdown-item">商品明細 (CSV)</a>
+
+                        <div class="dropdown-divider"></div>
+
+                        <!-- 異常清單 -->
+                        <h6 class="dropdown-header">⚠️ 異常清單</h6>
+                        <a class="dropdown-item" href="#" id="exportAnomaliesCsv">CSV</a>
+                        <a class="dropdown-item" href="#" id="exportAnomaliesPdf">PDF</a>
+                    </div>
+                </div>
+
+                <!-- 異常提示（徽章鉤子） -->
+                <button class="btn btn-sm btn-outline-danger mr-3" id="btnAnomalies">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    異常 <span class="badge badge-danger ml-1" id="badgeAnom" style="display:none">0</span>
+                </button>
+
+                <!-- 快速建立 -->
+                <div class="dropdown mr-3">
+                    <button class="btn btn-sm btn-success dropdown-toggle" data-toggle="dropdown">
+                        快速建立
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="@Url.Content("~/PROD/Products/Create")">新增商品</a>
+                        <a class="dropdown-item" href="@Url.Content("~/PROD/Promotions/Create")">新增活動</a>
+                        <a class="dropdown-item" href="@Url.Content("~/ORD/Orders/Create")">新增訂單</a>
+                    </div>
+                </div>
+
+                <!-- 自動刷新 + 最後更新時間 -->
+                <div class="ml-auto d-flex align-items-center">
+                    <div class="custom-control custom-switch mr-2">
+                        <input type="checkbox" class="custom-control-input" id="switchAuto">
+                        <label class="custom-control-label" for="switchAuto">自動刷新</label>
+                    </div>
+                    <select id="autoInterval" class="custom-select custom-select-sm mr-2" style="width:110px" disabled>
+                        <option value="30">每 30 秒</option>
+                        <option value="60" selected>每 60 秒</option>
+                        <option value="300">每 5 分鐘</option>
+                    </select>
+                    <small class="text-muted">最後更新：<span id="lastUpdated">--</span></small>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 銷售 KPI（只留與銷售有關的四張卡片） -->
+    <div class="row">
+		<!-- 近區間營收 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">近區間營收</div>
+                        <div id="kpi-range-revenue" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
+                    </div>
+                    <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+
+		<!-- 訂單數 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">訂單數</div>
+                        <div id="kpi-orders" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
+                    </div>
+                    <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">售出數量</div>
+                        <div id="kpi-units" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
+                    </div>
+                    <i class="fas fa-cubes fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+
+		<!-- 平均客單價 -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">平均客單價</div>
+                        <div id="kpi-aov" class="h5 mb-0 font-weight-bold text-gray-800">--</div>
+                    </div>
+                    <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖表列：營收折線圖 -->
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        營收概況 <small class="text-muted ml-2" id="filterHint" style="display:none">(已套用品類篩選)</small>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area"><canvas id="myAreaChart" height="120"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 熱銷 Top + 品類排行 -->
+    <div class="row">
+		<!-- 熱銷商品表格 -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">熱銷商品 Top 10</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="tblTopProductsWrap">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width:70px">排名</th>
+                                    <th>商品</th>
+                                    <th class="text-right">銷量</th>
+                                    <th class="text-right">營收</th>
+                                    <th class="text-right">佔比</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblTopProducts">
+                                <!-- 由 JS 動態注入 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">品類銷售排行（營收）</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="catBarChart" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js（v4） -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<style>
+    /* 小樣式微調：chips 間距與列印視圖 */
+    #globalToolbar .btn-group .btn {
+        margin: 2px;
+    }
+
+   
+    @@media print {
+        #globalToolbar, #rangeSelect, #btnRefresh, .dropdown, .custom-select, .custom-control
+
+    {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+    }
+
+    }
+</style>
+
+<script>
+    /* ====== 本地化格式工具 ====== */
+    const fmtMoney = new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 });
+    const fmtInt   = new Intl.NumberFormat('zh-TW');
+    const fmtDate  = d => new Date(d).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
+
+    /* ====== 狀態 ====== */
+    const state = {
+      days: 30,
+      dimension: 'day',        // day | week | month
+      category: '',            // '' = 全部
+      compare: { enabled: false, type: 'last' }, // last | yoy
+      auto: { enabled: false, ms: 60000, timer: null },
+      cache: { overview: null, tpsrc: null }     // ⚠ 修正鍵名：tpsrc
+    };
+
+    /* ====== 圖表實例 ====== */
+    let areaChart = null, catBarChart = null;
+
+    /* ====== 共用：CSV 下載器與 BOM（避免 Excel 亂碼） ====== */
+    const CSV_BOM = '\uFEFF';
+    function downloadFile(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    /* ====== 維度彙總（週/月） ====== */
+    function aggregate(labelsISO, series, mode) {
+      if (mode === 'day') return { labels: labelsISO.map(fmtDate), data: series };
+      const map = new Map();
+      const keyOf = (d) => {
+        const dt = new Date(d);
+        if (mode === 'week') {
+          const day = (dt.getDay() + 6) % 7; // 0..6 (Mon..Sun)
+          const monday = new Date(dt); monday.setDate(dt.getDate() - day);
+          monday.setHours(0,0,0,0);
+          const key = monday.toISOString().slice(0,10);
+          const label = `W${getISOWeek(dt)} (${monday.getMonth()+1}/${('0'+monday.getDate()).slice(-2)})`;
+          return [key, label];
+        } else {
+          const key = `${dt.getFullYear()}-${('0'+(dt.getMonth()+1)).slice(-2)}`;
+          const label = key; return [key, label];
+        }
+      };
+      labelsISO.forEach((d, i) => {
+        const [key, label] = keyOf(d);
+        const prev = map.get(key) || { label, sum: 0 };
+        prev.sum += Number(series[i] || 0);
+        map.set(key, prev);
+      });
+      const labels = Array.from(map.values()).map(v => v.label);
+      const data   = Array.from(map.values()).map(v => v.sum);
+      return { labels, data };
+    }
+    function getISOWeek(d){
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+      return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    }
+
+    /* ====== 銷售 KPI ====== */
+    function updateSalesKpis(k) {
+      document.getElementById('kpi-range-revenue').textContent = fmtMoney.format(k.totalRevenue ?? 0);
+      document.getElementById('kpi-orders').textContent        = fmtInt.format(k.totalOrders ?? 0);
+      document.getElementById('kpi-units').textContent         = fmtInt.format(k.unitsSold ?? 0);
+      document.getElementById('kpi-aov').textContent           = fmtMoney.format(k.aov ?? 0);
+    }
+
+    /* ====== 折線圖 ====== */
+    function buildAreaChart(labelsISO, net, orders) {
+      const ctx = document.getElementById('myAreaChart'); if (!ctx) return;
+      if (areaChart) areaChart.destroy();
+      const aggNet    = aggregate(labelsISO, net, state.dimension);
+      const aggOrders = aggregate(labelsISO, orders, state.dimension);
+      areaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: aggNet.labels,
+          datasets: [
+            { label: '營收', data: aggNet.data, fill: true, borderWidth: 2, tension: 0.35 },
+            { label: '訂單數', data: aggOrders.data, yAxisID: 'y1', borderWidth: 2, borderDash: [6,4], tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ctx.dataset.label === '營收'
+                  ? `營收：${fmtMoney.format(ctx.parsed.y)}`
+                  : `訂單數：${fmtInt.format(ctx.parsed.y)}`
+              }
+            },
+            legend: { labels: { boxWidth: 12 } }
+          },
+          scales: {
+            y:  { beginAtZero: true, title: { display: true, text: '金額' },
+                  ticks: { callback: v => fmtMoney.format(v) } },
+            y1: { beginAtZero: true, position:'right', grid:{ drawOnChartArea:false },
+                  title:{ display:true, text:'筆數' } }
+          }
+        }
+      });
+    }
+
+    /* ====== 橫向長條（品類營收） ====== */
+    function buildCatBarChart(labels, revenue) {
+      const ctx = document.getElementById('catBarChart'); if (!ctx) return;
+      if (catBarChart) catBarChart.destroy();
+      catBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '營收', data: revenue }] },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { ticks: { callback: v => fmtMoney.format(v) } } },
+          plugins: {
+            tooltip: { callbacks: { label: c => `營收：${fmtMoney.format(c.parsed.x)}` } },
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    /* ====== 熱銷 Top 表格 ====== */
+    function renderTopTable(list) {
+      const tbody = document.getElementById('tblTopProducts');
+      tbody.innerHTML = '';
+      list.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-muted">#${p.rank}</td>
+          <td>
+            <div class="d-flex flex-column">
+              <span class="font-weight-bold">${p.name}</span>
+              <small class="text-muted">SKU：${p.sku}　|　分類：${p.category}</small>
+            </div>
+          </td>
+          <td class="text-right">${fmtInt.format(p.qty)}</td>
+          <td class="text-right">${fmtMoney.format(p.revenue)}</td>
+          <td class="text-right">${p.share}%</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* ====== 取數 API ====== */
+    async function fetchOverview(days) {
+      const url = '@Url.Content("~/api/cs/dashboard/overview")' + `?days=${encodeURIComponent(days)}`;
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`Overview HTTP ${resp.status}`);
+      return await resp.json();
+    }
+    async function fetchTops(days, top=10) {
+      const url = '@Url.Content("~/api/cs/dashboard/tops")' + `?days=${encodeURIComponent(days)}&top=${encodeURIComponent(top)}`;
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`Tops HTTP ${resp.status}`);
+      return await resp.json();
+    }
+
+    /* ====== 依品類篩選（前端） ====== */
+    function applyCategoryFilter(tp) {
+      if (!state.category) return { ...tp };
+      const topProducts = tp.topProducts.filter(x => (x.category || '') === state.category);
+      const categories = { labels: [state.category], revenue: [
+        topProducts.reduce((s, x) => s + Number(x.revenue || 0), 0)
+      ]};
+      return { ...tp, topProducts, categories };
+    }
+
+    /* ====== 建品類 chips ====== */
+    function buildCategoryChipsFrom(tp) {
+      const host = document.getElementById('chipCategories');
+      const existed = host.querySelectorAll('button[data-cat]').length > 1;
+      if (existed) return;
+      const labels = tp.categories?.labels || [];
+      labels.forEach(cat => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-outline-secondary';
+        b.dataset.cat = cat;
+        b.textContent = cat;
+        host.appendChild(b);
+      });
+    }
+
+    /* ====== 整體刷新 ====== */
+    async function refresh(days = state.days) {
+      try {
+        state.days = days;
+			// 1) 折線圖（原始資料入 cache）
+        const ov = await fetchOverview(days);
+        state.cache.overview = ov;
+
+			// 2) 銷售 KPI + 熱銷 + 品類（原始資料入 cache）
+        const tp = await fetchTops(days, 10);
+        state.cache.tpsrc = tp;
+
+			// 建 chips
+        buildCategoryChipsFrom(tp);
+
+			// 套用前端品類篩選
+        const tpView = applyCategoryFilter(tp);
+        document.getElementById('filterHint').style.display = state.category ? '' : 'none';
+
+			// KPI（保留全體區間，不因前端篩選變動）
+        updateSalesKpis(tp.kpi);
+
+			// 表格
+        const viewList = tpView.topProducts.map(x => ({
+          rank: x.rank, sku: x.sku, name: x.name, category: x.category,
+          qty: x.qty, revenue: x.revenue, share: x.share
+        }));
+        state.viewTopList = viewList;
+        renderTopTable(viewList);
+
+        buildCatBarChart(tpView.categories.labels, tpView.categories.revenue);
+
+        buildAreaChart(ov.labels, ov.net, ov.orders);
+
+        document.getElementById('lastUpdated').textContent =
+          new Date().toLocaleString('zh-TW', { hour12: false });
+
+        const anom = (tp.kpi?.aov ?? 0) <= 0 ? 1 : 0;
+        const badge = document.getElementById('badgeAnom');
+        badge.textContent = anom;
+        badge.style.display = anom > 0 ? '' : 'none';
+
+      } catch (err) {
+        console.error('Dashboard refresh error:', err);
+      }
+    }
+
+    /* ====== 初始化事件 ====== */
+    (function init() {
+      refresh(30);
+
+      // 區間選擇 & 手動重新整理
+      document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
+      document.getElementById('btnRefresh').addEventListener('click', () => {
+        const days = parseInt(document.getElementById('rangeSelect').value, 10) || 30;
+        refresh(days);
+      });
+
+      // 維度切換
+      document.querySelectorAll('[data-dim]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-dim]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.dimension = btn.dataset.dim;
+          const ov = state.cache.overview || { labels:[], net:[], orders:[] };
+          buildAreaChart(ov.labels, ov.net, ov.orders);
+        });
+      });
+
+      // 同期比較（UI 先放）
+      const switchCompare = document.getElementById('switchCompare');
+      const compareType = document.getElementById('compareType');
+      switchCompare.addEventListener('change', () => {
+        state.compare.enabled = switchCompare.checked;
+        compareType.disabled = !switchCompare.checked;
+        state.compare.type = compareType.value;
+        // TODO: 之後你有 API 時，在這裡呼叫並疊第二條線
+      });
+      compareType.addEventListener('change', () => state.compare.type = compareType.value);
+
+      // 品類 chips 點擊
+      document.getElementById('chipCategories').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-cat]'); if (!btn) return;
+        document.querySelectorAll('#chipCategories button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.category = btn.dataset.cat || '';
+        const tpsrc = state.cache.tpsrc;
+        if (!tpsrc) return;
+        const tpView = applyCategoryFilter(tpsrc);
+        document.getElementById('filterHint').style.display = state.category ? '' : 'none';
+        state.viewTopList = tpView.topProducts;
+        renderTopTable(state.viewTopList);
+        buildCatBarChart(tpView.categories.labels, tpView.categories.revenue);
+      });
+
+      /* ====== 匯出功能 ====== */
+
+      // KPI -> CSV（UTF-8 BOM）
+      document.getElementById('exportKpiCsv').addEventListener('click', (e) => {
+        e.preventDefault();
+        const k = state.cache.tpsrc?.kpi || {};
+        const rows = [
+          ['指標','數值'],
+          ['營收', k.totalRevenue ?? 0],
+          ['訂單數', k.totalOrders ?? 0],
+          ['售出數量', k.unitsSold ?? 0],
+          ['平均客單價', k.aov ?? 0]
+        ];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        downloadFile(CSV_BOM + csv, `kpi_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+      });
+
+      // KPI -> Excel（呼叫後端 ClosedXML API）
+      const elExcel = document.getElementById('exportKpiExcel');
+      if (elExcel) {
+        elExcel.addEventListener('click', (e) => {
+          e.preventDefault();
+          const url = '@Url.Content("~/api/cs/export/kpi")' + `?days=${encodeURIComponent(state.days || 30)}`;
+          window.open(url, '_blank', 'noopener');
+        });
+      }
+
+      // KPI -> PDF（瀏覽器列印）
+      document.getElementById('exportKpiPdf').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.print();
+      });
+
+      // 訂單明細 CSV
+      document.getElementById('exportOrdersCsv').addEventListener('click', (e) => {
+        e.preventDefault();
+        fetch('/api/cs/orders?days=' + (state.days || 30))
+          .then(r => r.json())
+          .then(list => {
+            const rows = [['訂單編號','日期','金額','狀態']];
+            list.forEach(o => rows.push([o.id, o.date, o.total, o.status]));
+            const csv = rows.map(r => r.join(',')).join('\n');
+            downloadFile(CSV_BOM + csv, `orders_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+          });
+      });
+
+      // 商品明細 CSV（使用目前畫面 top list）
+      document.getElementById('exportProductsCsv').addEventListener('click', (e) => {
+        e.preventDefault();
+        const list = state.viewTopList || [];
+        const rows = [['排名','商品','SKU','分類','數量','營收','佔比']];
+        list.forEach(p => rows.push([p.rank, p.name, p.sku, p.category, p.qty, p.revenue, p.share]));
+        const csv = rows.map(r => r.join(',')).join('\n');
+        downloadFile(CSV_BOM + csv, `products_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+      });
+
+      // 異常清單 CSV / PDF
+      document.getElementById('exportAnomaliesCsv').addEventListener('click', (e) => {
+        e.preventDefault();
+        const k = state.cache.tpsrc?.kpi || {};
+        const anomalies = [];
+        if ((k.aov ?? 0) <= 0) anomalies.push(['平均客單價', '為 0，可能有資料異常']);
+        if ((k.totalRevenue ?? 0) < 1000) anomalies.push(['營收過低', k.totalRevenue ?? 0]);
+        const rows = [['項目','說明'], ...anomalies];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        downloadFile(CSV_BOM + csv, `anomalies_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+      });
+        // 異常清單 -> PDF (原本缺少這段)
+    document.getElementById('exportAnomaliesPdf').addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // 重複使用 CSV 的邏輯來抓取異常資料
+        const k = state.cache.tpsrc?.kpi || {};
+        const anomalies = [];
+        if ((k.aov ?? 0) <= 0) anomalies.push(['平均客單價', '為 0，可能有資料異常']);
+        if ((k.totalRevenue ?? 0) < 1000) anomalies.push(['營收過低', k.totalRevenue ?? 0]);
+
+        // 產生一個簡單的 HTML 報表字串
+        let htmlContent = `
+            <style>
+                body { font-family: sans-serif; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+            </style>
+            <h2>異常清單報表</h2>
+            <p>報表產生時間：${new Date().toLocaleString('zh-TW')}</p>
+            <hr>
+            <table>
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        if (anomalies.length > 0) {
+            anomalies.forEach(item => {
+                htmlContent += `<tr><td>${item[0]}</td><td>${item[1]}</td></tr>`;
+            });
+        } else {
+            htmlContent += `<tr><td colspan="2">太棒了！目前沒有發現任何異常。</td></tr>`;
+        }
+
+        htmlContent += `
+                </tbody>
+            </table>
+        `;
+
+        // 開一個新視窗並觸發列印
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    });
+        // 取得目前「最近 X 天」下拉框的值
+    function getSelectedDays() {
+      return document.getElementById('rangeSelect')?.value ?? 30;
+    }
+
+    document.querySelector('.js-export-orders')?.addEventListener('click', e => {
+      e.preventDefault();
+      const days = getSelectedDays();
+      location.href = `/api/cs/export/orders-csv?days=${days}`;
+    });
+
+    document.querySelector('.js-export-items')?.addEventListener('click', e => {
+      e.preventDefault();
+      const days = getSelectedDays();
+      location.href = `/api/cs/export/order-items-csv?days=${days}`;
+    });
+
+
+      // 異常提示鉤子
+      document.getElementById('btnAnomalies').addEventListener('click', () => {
+        alert('異常清單（示範）：\n1) AOV 為 0（請檢查訂單金額或退款資料）');
+      });
+
+      // 自動刷新
+      const switchAuto = document.getElementById('switchAuto');
+      const autoInterval = document.getElementById('autoInterval');
+      switchAuto.addEventListener('change', () => {
+        state.auto.enabled = switchAuto.checked;
+        autoInterval.disabled = !switchAuto.checked;
+        if (state.auto.timer) { clearInterval(state.auto.timer); state.auto.timer = null; }
+        if (state.auto.enabled) {
+          const ms = parseInt(autoInterval.value, 10) * 1000;
+          state.auto.ms = ms;
+          state.auto.timer = setInterval(() => refresh(state.days), ms);
+          refresh(state.days); // 立即刷新一次
+        }
+      });
+      autoInterval.addEventListener('change', () => {
+        if (!state.auto.enabled) return;
+        if (state.auto.timer) clearInterval(state.auto.timer);
+        state.auto.ms = parseInt(autoInterval.value, 10) * 1000;
+        state.auto.timer = setInterval(() => refresh(state.days), state.auto.ms);
+      });
+    })();
+</script>
