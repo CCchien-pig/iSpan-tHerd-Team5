@@ -12,18 +12,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
         private readonly tHerdDBContext _db;
         public RmaController(tHerdDBContext db) => _db = db;
 
-        // 狀態中文轉換
-        private string GetStatusText(string? status) => (status ?? "").ToLowerInvariant() switch
-        {
-            "pending" => "待審核",
-            "review" => "審核中",
-            "refunding" => "退款中",
-            "reshipping" => "補寄中",
-            "done" => "處理完成",
-            "rejected" => "駁回",
-            _ => status ?? ""
-        };
-
         // 退貨列表
         [HttpGet]
         public IActionResult Index(string? group = "all", int page = 1, int pageSize = 10, string? keyword = "")
@@ -46,7 +34,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 case "pending": q = q.Where(r => r.Status == "pending"); break;
                 case "review": q = q.Where(r => r.Status == "review"); break;
                 case "refunding": q = q.Where(r => r.Status == "refunding"); break;
-                case "reshipping": q = q.Where(r => r.Status == "reshipping"); break;
                 case "done": q = q.Where(r => r.Status == "done"); break;
                 case "rejected": q = q.Where(r => r.Status == "rejected"); break;
                 default: break;
@@ -90,7 +77,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 { "pending",   _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "pending") },
                 { "review",    _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "review") },
                 { "refunding", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "refunding") },
-                { "reshipping", _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "reshipping") },
                 { "done",      _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "done") },
                 { "rejected",  _db.OrdReturnRequests.AsNoTracking().Count(x => x.Status == "rejected") }
             };
@@ -155,10 +141,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             var dto = new
             {
                 orderNo = r.Order.OrderNo,
-                statusName = GetStatusText(r.Status), // 使用中文狀態
-                originalStatus = r.Status, // 保留原始英文狀態供除錯
+                statusName = r.Status,
                 reasonText = r.ReasonText,
-                createdDate = r.CreatedDate.ToString("yyyy/MM/dd HH:mm"),
+                createdDate = r.CreatedDate,
                 orderSummary = new
                 {
                     coupon = r.Order.CouponId.HasValue ? r.Order.CouponId.ToString() : "-",
