@@ -1,0 +1,74 @@
+﻿@model FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.ScheduleListVM
+@{
+    ViewData["Title"] = "刪除排程";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />
+    <style>
+        .bg-pink {
+            background-color: #d63384 !important;
+        }
+
+        .bg-purple {
+            background-color: #6f42c1 !important;
+        }
+    </style>
+}
+
+<partial name="_AlertMessage" />
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-danger text-white fw-bold">
+        ⚠️ 刪除排程
+    </div>
+
+    <div class="card-body">
+        <h5 class="mb-3 text-danger">你確定要刪除此排程嗎？此操作無法復原。</h5>
+
+        <dl class="row">
+            <dt class="col-sm-3">排程編號</dt>
+            <dd class="col-sm-9">@Model.ScheduleId</dd>
+
+            <dt class="col-sm-3">文章標題</dt>
+            <dd class="col-sm-9">@Model.PageTitle</dd>
+
+            <dt class="col-sm-3">文章分類</dt>
+            <dd class="col-sm-9">@Model.PageTypeName</dd>
+
+            <dt class="col-sm-3">文章動作</dt>
+            <dd class="col-sm-9"><span class="badge @Model.ActionBadgeClass">@Model.ActionTypeText</span></dd>
+
+            <dt class="col-sm-3">預定時間</dt>
+            <dd class="col-sm-9">@Model.ScheduledDate.ToString("yyyy-MM-dd HH:mm")</dd>
+
+            <dt class="col-sm-3">文章狀態</dt>
+            <dd class="col-sm-9"><span class="badge @Model.StatusBadgeClass">@Model.StatusText</span></dd>
+        </dl>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="ScheduleId" />
+            <div class="d-flex gap-3 mt-3">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+                <button type="submit" class="btn btn-outline-danger btn-lg">🗑️ 確認刪除</button>
+            </div>
+        </form>
+    </div>
+
+    <button onclick="scrollToTop()" id="btnTop" class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) btn.classList.add("show");
+            else btn.classList.remove("show");
+        });
+    </script>
+}
