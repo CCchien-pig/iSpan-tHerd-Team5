@@ -259,12 +259,39 @@
             z-index: 2000;              /* 確保蓋在最上層 */
         }
 
+        .carousel-thumbnails {
+            display: flex;
+            overflow-x: auto;
+            justify-content: flex-start;
+            gap: 8px; /* 每張縮圖間隔 */
+            padding: 0 10px; /* 左右各留一點空間，避免被切掉 */
+        }
+
+        .carousel-thumbnails img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            flex-shrink: 0; /* 避免縮圖被壓縮 */
+        }
+
+        .carousel-thumbnails img.active {
+            border-color: #652D77; /* 主題紫 */
+            opacity: 1;
+        }
+
+        .carousel-thumbnails img:first-child {
+            margin-left: 10px; /* 讓第一張不會緊貼左邊 */
+        }
     </style>
 }
 
 <div class="container-fluid">
-                    <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
-
+  <form asp-area="PROD" asp-controller="Products" asp-action="Upsert" method="post" id="productCreateForm">
     <div class="row">
                 <!-- 左側分類 -->
             <div class="col-md-2">
@@ -632,6 +659,56 @@
                         
                     </div>
                 </div>
+
+                <div class="col-md-2">
+                             @* 輪播圖 *@
+                        <div id="productCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+                        <!-- 小圓點 indicators -->
+                        <div class="carousel-indicators">
+                            @for (var i = 0; i < Model.Images.Count; i++)
+                            {
+                                <button type="button"
+                                        data-bs-target="#productCarousel"
+                                        data-bs-slide-to="@i"
+                                        class="@(i == 0 ? "active" : "")"
+                                        aria-current="@(i == 0 ? "true" : "false")"
+                                        aria-label="Slide @(i + 1)">
+                                </button>
+                            }
+                        </div>
+
+                        <!-- 輪播圖片 -->
+                        <div class="carousel-inner rounded shadow-sm">
+                            @for (var i = 0; i < Model.Images.Count; i++)
+                            {
+                                var img = Model.Images[i];
+                                <div class="carousel-item @(i == 0 ? "active" : "")">
+                                    <img src="@Url.Action("GetImage", "Images", new { area = "PROD", fileName = System.IO.Path.GetFileName(img.FileUrl) })"
+                                         class="d-block w-100"
+                                         style="max-height:400px; object-fit:contain;"
+                                         alt="@img.AltText ?? Model.ProductName" />
+
+                                    @if (!string.IsNullOrEmpty(img.AltText))
+                                    {
+                                        <div class="carousel-caption d-none d-md-block">
+                                            <p>@img.AltText</p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <!-- 左右切換 -->
+                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon"></span>
+                            <span class="visually-hidden">上一張</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon"></span>
+                            <span class="visually-hidden">下一張</span>
+                        </button>
+                    </div>
+                 </div>
             </div>
         </form>
     </div>
