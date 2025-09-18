@@ -62,7 +62,8 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
 
         [Range(0, int.MaxValue, ErrorMessage = "排序需為 0 以上整數")]
         [Display(Name = "排序")]
-        public int OrderSeq { get; set; }
+        public int? OrderSeq { get; set; }   // ← 改成 int? 並加上 Required
+     
 
         [Display(Name = "最近發布時間")]
         public DateTime? LastPublishedTime { get; set; }
@@ -129,7 +130,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
 
         [Range(0, int.MaxValue, ErrorMessage = "排序需為 0 以上整數")]
         [Display(Name = "排序")]
-        public int OrderSeq { get; set; }
+        public int? OrderSeq { get; set; }   // ← 改成 int? 並加上 Required
 
         [Display(Name = "啟用")]
         public bool IsActive { get; set; }
