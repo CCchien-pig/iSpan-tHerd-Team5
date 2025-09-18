@@ -9,13 +9,13 @@
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fab.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fab.css" asp-append-version="true" />@* 右下角樣式 *@          
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
 
 }
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-warning text-dark fw-bold">
+    <div class="card-header bg-warning-subtle text-dark fw-bold">
         ✏️ 編輯文章
     </div>
     <div class="card-body">
@@ -32,15 +32,9 @@
                 <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
-
-            <div class="mb-3">
-                <label asp-for="Status" class="form-label">狀態</label>
-                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
             <!-- 分類 -->
             <div class="mb-3">
-                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <label asp-for="PageTypeId" class="form-label">文章分類</label>
 
                 @if (Model.IsHomePage)
                 {
@@ -61,6 +55,12 @@
                     )
                     <span asp-validation-for="PageTypeId" class="text-danger"></span>
                 }
+            </div>
+            <!-- 狀態 -->
+             <div class="mb-3">
+                <label asp-for="Status" class="form-label">文章狀態</label>
+                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
             </div>
             <!-- tags-->
             <div class="mb-3">
@@ -173,7 +173,7 @@
 </div>
 
 @section Scripts {
-     <partial name="_ValidationScriptsPartial" />   @* 必須先載入 jQuery Validate *@
+    <partial name="_ValidationScriptsPartial" />   @* 必須先載入 jQuery Validate *@
     <partial name="_Select2ValidationPartial" model="Model.IsHomePage" />  @* 再載入 Select2 驗證邏輯 *@
     <partial name="_BlockListScripts" />
     <script>
