@@ -141,6 +141,40 @@
     </div>
 </div>
 
+<!-- 編輯備註 Modal -->
+<div id="stockRemarkModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="stockRemarkModalTitle">修改備註</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-4">
+                <div class="mb-2">
+                    <strong>品牌:</strong> <span id="remarkBrandName"></span><br>
+                    <strong>商品:</strong> <span id="remarkProductName"></span><br>
+                    <strong>SKU:</strong> <span id="remarkSkuCode"></span><br>
+                    <strong>製造日期:</strong> <span id="remarkManufactureDate"></span><br>
+                    <strong>現有庫存:</strong> <span id="remarkCurrentQty"></span>
+                </div>
+                <div class="mb-2">
+                    <label for="remarkInput">備註</label>
+                    <textarea id="remarkInput" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveRemarkBtn">儲存備註</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
     <script>
@@ -670,7 +704,7 @@
                         className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
-                            console.log(row.brandname);
+                            console.log(row.brandName);
                             return `
                                 <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="該筆批次異動">
                                     <i class="fa-solid fa-right-from-bracket" style="color: #977ee2;"></i>
@@ -776,7 +810,9 @@
                         orderable: false,
                         render: function(data, type, row) {
                             return `
-                                <button class="btn btn-sm stock-edit-btn" data-brandname="${row.brandName}">
+                                <button class="btn btn-sm stock-text-btn"
+                                        data-batchid="${row.stockBatchId}"
+                                        data-brandname="${row.brandName}">
                                     <i class="fa-solid fa-pen-to-square" style="color: #9073e8;"></i>
                                 </button>
                             `;
@@ -793,9 +829,9 @@
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
                 },
-                order: [[7, 'desc']] // 預設依時間新到舊
+                order: [[7, 'desc']], // 預設依時間新到舊
             });
-
+            
 
             // 下拉選單事件
             $('#stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
@@ -961,8 +997,7 @@
             });
 
 
-
-            // ===== 品牌異動紀錄按鈕 =====
+            // ===== 點擊品牌異動紀錄按鈕 =====
             $('#stockBatchTable').on('click', '.stock-history-btn', function() {
     console.log('clicked button:', this); 
                 // 取得該列 brandName
@@ -994,8 +1029,68 @@
             });
 
 
+            // ===== 點擊修改備註按鈕 =====
+            $('#historyTable').on('click', '.stock-text-btn', function() {
+            console.log('[Remark] button clicked');
 
-            // ===== submit =====
+            var batchId = $(this).data('batchid');
+            console.log('[Remark] batchId:', batchId);
+
+            // 用 GET 取得 JSON
+            $.get(`/SUP/StockBatches/Remark/${batchId}`, function(res) {
+                if (!res.success) {
+                    alert(res.message);
+                    return;
+                }
+
+                var data = res.data;
+                console.log('[Remark] data:', data);
+
+                $('#remarkBrandName').text(data.brandName || '');
+                $('#remarkProductName').text(data.productName || '');
+                $('#remarkSkuCode').text(data.skuCode || '');
+                $('#remarkManufactureDate').text(data.manufactureDate ? new Date(data.manufactureDate).toLocaleDateString() : '');
+                $('#remarkCurrentQty').text(data.currentQty != null ? data.currentQty : 0);
+                $('#remarkInput').val(data.remark || '');
+
+                $('#stockRemarkModal').modal('show');
+                console.log('[Remark] modal shown');
+
+                // 儲存備註
+                $('#saveRemarkBtn').off('click').on('click', function() {
+                    console.log('[Remark] save button clicked');
+                    var newRemark = $('#remarkInput').val();
+
+                    $.post(`/SUP/StockBatches/UpdateHistoryRemark`, {
+                        StockHistoryId: data.stockHistoryId,  // 傳最後一次異動 ID
+                        // StockBatchId: batchId,
+                        Remark: newRemark
+                    }, function(res) {
+                        console.log('[Remark] POST result:', res);
+                        if (res.success) {
+                            $('#stockRemarkModal').modal('hide');
+                            stockBatchTable.ajax.reload(null, false); // 刷新表格
+
+                            // SweetAlert 提示
+                            Swal.fire({
+                                icon: 'success',
+                                html: `已更改異動紀錄ID: ${res.stockHistoryId}<br>批號: ${data.batchNumber} 的備註`,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+
+                        } else {
+                            alert(res.message);
+                        }
+                    });
+                });
+            });
+            });
+
+
+
+
+            // ===== 點擊 submit =====
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
             .on('submit', '#stockBatchForm', function (e) {
@@ -1174,6 +1269,7 @@
             if (predicted < 0) predicted = 0;
             $('#PredictedQty').text(predicted);
         }
+                    
 
     </script>
 }
