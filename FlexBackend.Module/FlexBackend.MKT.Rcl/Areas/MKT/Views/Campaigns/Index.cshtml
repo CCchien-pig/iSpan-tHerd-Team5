@@ -252,14 +252,14 @@
 
             var data = {
                 CampaignName: $("input[name='CampaignName']").val(),
-                CampaignType: $("input[name='CampaignType']").val(),
+                CampaignType: $("select[name='CampaignType']").val(),
                 CampaignDescription: $("input[name='CampaignDescription']").val(),
                 ProductType: $("input[name='ProductType']:checked").map(function () { return this.value; }).get().join(","),
                 StartDate: startDate,
                 EndDate: $("input[name='EndDate']").val() || null,
-                IsActive: isActive,
-                Status: status,
-                Creator: creator,
+                IsActive: status === 'cInactive' ? false : $("#createIsActive").prop("checked"),
+                Status: $("#createStatus").val(),
+                Creator: parseInt($("#createCampaignForm input[name='Creator']").val()) || null,
                 ImgId: imgId
             };
 
