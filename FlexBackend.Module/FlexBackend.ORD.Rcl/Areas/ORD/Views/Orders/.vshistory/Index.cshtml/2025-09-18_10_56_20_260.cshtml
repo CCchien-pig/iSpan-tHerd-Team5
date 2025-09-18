@@ -6,20 +6,7 @@
 @section Styles {
     <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
     <style>
-        /* ===== 主題變數 ===== */
-        :root {
-            --brand-500: #652D77;
-            --brand-600: #7A3A8F;
-            --brand-700: #4E225D;
-            --bs-primary: var(--brand-500);
-            --bs-primary-rgb: 101,45,119;
-            --row-odd: #ffffff;
-            --row-even: #efeaf2;
-            --row-hover: #f2e8f7;
-            --row-selected: #eadff4;
-        }
-
-        /* ===== 基礎設定 ===== */
+        /* ===== 基礎（保留） ===== */
         td.order-toggle {
             cursor: pointer;
             color: #622872;
@@ -53,104 +40,7 @@
             display: none !important;
         }
 
-        /* ===== 表格樣式（第一欄同色版） ===== */
-        table.rcl-table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-            /* 第一欄設為導引條定位容器，但不強制白底 */
-            table.rcl-table > tbody > tr > td:first-child {
-                position: relative;
-            }
-
-            /* 奇數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(odd) > td {
-                background: var(--row-odd) !important;
-            }
-
-            /* 偶數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(even) > td {
-                background: var(--row-even) !important;
-            }
-
-            /* hover：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:hover > td {
-                background: var(--row-hover) !important;
-            }
-
-            /* 勾選行：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr.is-selected > td {
-                background: var(--row-selected) !important;
-            }
-
-            /* child 明細列不吃 hover */
-            table.rcl-table > tbody > tr.child > td {
-                background: inherit !important;
-            }
-
-            /* 平滑過渡 */
-            table.rcl-table > tbody > tr > td {
-                transition: background-color .18s ease;
-            }
-
-            /* ===== 左側導引條 ===== */
-            table.rcl-table > tbody > tr:hover > td:first-child::before,
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                content: "";
-                position: absolute;
-                left: -2px;
-                top: -2px;
-                bottom: -2px;
-                width: 6px;
-                background: var(--brand-500);
-                pointer-events: none;
-                z-index: 1;
-            }
-
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                background: var(--brand-600);
-            }
-
-        /* ===== 按鈕樣式 ===== */
-        #bulkUpdate.btn, #bulkPrint.btn {
-            background: transparent !important;
-            border: 1px solid #b8a3c6 !important;
-            color: var(--brand-500) !important;
-        }
-
-            #bulkUpdate.btn:hover, #bulkPrint.btn:hover,
-            #bulkUpdate.btn:focus, #bulkPrint.btn:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
-
-        #searchForm .btn.btn-primary {
-            --bs-btn-bg: var(--brand-500);
-            --bs-btn-border-color: var(--brand-500);
-            --bs-btn-hover-bg: var(--brand-600);
-            --bs-btn-hover-border-color: var(--brand-600);
-            --bs-btn-active-bg: var(--brand-700);
-            --bs-btn-active-border-color: var(--brand-700);
-        }
-
-        /* ===== Switch 開關樣式 ===== */
-        .form-switch .form-check-input:checked {
-            background-color: var(--brand-500) !important;
-            border-color: var(--brand-500) !important;
-        }
-
-        .form-check-input:focus {
-            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important;
-        }
-
-        .form-check-input:disabled:checked {
-            background-color: #9a72b0 !important;
-            border-color: #9a72b0 !important;
-        }
-
-        /* ===== SweetAlert2 樣式 ===== */
+        /* ===== SweetAlert2（保留） ===== */
         .rcl-bulk .swal2-html-container {
             padding: 0 1rem !important;
             max-height: 70vh;
@@ -194,20 +84,120 @@
                 box-sizing: border-box;
             }
 
-        /* ===== 覆蓋預設表格條紋 ===== */
-        table.rcl-table.table-striped > tbody > tr:nth-of-type(odd),
-        table.rcl-table.table-striped > tbody > tr:nth-of-type(even) {
-            background-color: transparent !important;
+        /* ===== 主題變數（唯一 :root） ===== */
+        :root {
+            /* 品牌紫 */
+            --brand-500: #652D77;
+            --brand-600: #7A3A8F;
+            --brand-700: #4E225D;
+            --bs-primary: var(--brand-500);
+            --bs-primary-rgb: 101,45,119;
+            /* 表格配色 */
+            --row-odd: #ffffff; /* 奇數列 */
+            --row-even: #efeaf2; /* 偶數列（淡紫灰） */
+            --row-hover: #f2e8f7; /* 滑過 */
+            --row-selected: #eadff4; /* 勾選後 */
         }
 
-        table.rcl-table.dataTable.stripe tbody tr.odd,
-        table.rcl-table.dataTable.display tbody tr.odd,
-        table.rcl-table.dataTable.stripe tbody tr.even,
-        table.rcl-table.dataTable.display tbody tr.even {
-            background-color: transparent !important;
+        /* ===== 表格條紋 / hover / 選取（排除第一欄 checkbox） ===== */
+        table.rcl-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+            /* 斑馬：除第一欄外 */
+            table.rcl-table > tbody > tr:nth-of-type(odd) > *:not(:first-child) {
+                background: var(--row-odd) !important;
+            }
+
+            table.rcl-table > tbody > tr:nth-of-type(even) > *:not(:first-child) {
+                background: var(--row-even) !important;
+            }
+
+            /* hover：除第一欄外 */
+            table.rcl-table > tbody > tr:hover > *:not(:first-child) {
+                background: var(--row-hover) !important;
+            }
+
+            /* 勾選行：除第一欄外 */
+            table.rcl-table > tbody > tr.is-selected > *:not(:first-child) {
+                background: var(--row-selected) !important;
+            }
+
+            /* 第一欄 checkbox 一律白底，不吃斑馬/hover；並做為左導引條定位容器 */
+            table.rcl-table > tbody > tr > td:first-child {
+                background: #fff !important;
+                position: relative;
+            }
+
+            /* child 明細列不吃 hover */
+            table.rcl-table > tbody > tr.child > * {
+                background: inherit !important;
+            }
+
+            /* 平滑過渡 */
+            table.rcl-table > tbody > tr > * {
+                transition: background-color .18s ease;
+            }
+
+            /* ===== 左側導引條：不被咬、完全貼齊 ===== */
+            table.rcl-table > tbody > tr:hover > td:first-child::before,
+            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+                content: "";
+                position: absolute;
+                left: -2px; /* 若仍覺得沒貼齊可改 -1 或 0 */
+                top: -2px; /* 吃掉上邊線 */
+                bottom: -2px; /* 吃掉下邊線 */
+                width: 6px; /* 粗細可改 4~8 */
+                background: var(--brand-500);
+                pointer-events: none;
+                z-index: 1;
+            }
+            /* 勾選行的導引條略深，與 hover 區分 */
+            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+                background: var(--brand-600);
+            }
+
+        /* ===== 三顆按鈕：兩顆 ghost、套用實心紫（不改 class/JS） ===== */
+        #bulkUpdate.btn, #bulkPrint.btn {
+            background: transparent !important;
+            border: 1px solid #b8a3c6 !important; /* 想更淡可改 #e5e7eb */
+            color: var(--brand-500) !important;
+        }
+
+            #bulkUpdate.btn:hover, #bulkPrint.btn:hover,
+            #bulkUpdate.btn:focus, #bulkPrint.btn:focus {
+                color: #fff !important;
+                background: var(--brand-500) !important;
+                border-color: var(--brand-500) !important;
+            }
+
+        #searchForm .btn.btn-primary {
+            --bs-btn-bg: var(--brand-500);
+            --bs-btn-border-color: var(--brand-500);
+            --bs-btn-hover-bg: var(--brand-600);
+            --bs-btn-hover-border-color: var(--brand-600);
+            --bs-btn-active-bg: var(--brand-700);
+            --bs-btn-active-border-color: var(--brand-700);
+        }
+
+        /* ===== Switch（前台顯示）改品牌紫 ===== */
+        .form-switch .form-check-input:checked {
+            background-color: var(--brand-500) !important;
+            border-color: var(--brand-500) !important;
+        }
+
+        .form-check-input:focus {
+            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important;
+        }
+
+        .form-check-input:disabled:checked {
+            background-color: #9a72b0 !important;
+            border-color: #9a72b0 !important;
         }
     </style>
 }
+
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
