@@ -7,6 +7,7 @@
 }
 @section Styles {
     <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
+    <link rel="stylesheet" href="~/_content/FlexBackend.SUP.Rcl/css/supstylesheet.css" />
 }
 
 
@@ -23,11 +24,11 @@
         <table id="tblRoles" class="table table-striped w-100">
             <thead>
                 <tr>
-                    <th>角色名稱</th>
-                    <th>描述</th>
-                    <th>建立時間</th>
-                    <th>授權模組數</th>
-                    <th>操作</th>
+                    <th class="text-center">角色名稱</th>
+                    <th class="text-center">描述</th>
+                    <th class="text-center">建立時間</th>
+                    <th class="text-center">授權模組數</th>
+                    <th class="text-center">操作</th>
                 </tr>
             </thead>
         </table>
@@ -108,13 +109,13 @@
                    ajax: { url: '/USER/UserPermissions/Roles', type: 'GET', dataSrc: 'data' },
                    searchDelay: 400,
                    columns: [
-                     { data: 'name' },                 // 可排序
-                     { data: 'description' },          // 可排序
-                     { data: 'createdDate' },          // 可排序（後端按 CreatedDate 排）
+                { data: 'name' ,className: 'text-center'},                 // 可排序
+                { data: 'description',className: 'text-center' },          // 可排序
+                { data: 'createdDate' ,className: 'text-center'},          // 可排序（後端按 CreatedDate 排）
                      { data: 'moduleCount', className: 'text-center', orderable: false }, // 關排序
-                     { data: null, orderable:false, searchable:false,
+                { data: null, orderable:false, searchable:false,className: 'text-center',
                        render: (data, type, row) => `
-                         <div class="btn-group btn-group-sm">
+                    <div class="btn-group btn-group-sm">
                       <button class="btn btn-primary btn-mod" style="margin-right:10px" data-id="${row.id}">設定模組</button>
                            <button class="btn btn-outline-danger btn-del" data-id="${row.id}">刪除</button>
                          </div>`
