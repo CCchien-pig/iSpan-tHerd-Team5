@@ -25,13 +25,7 @@
         <div class="card-body py-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
 
-                <!-- 品類下拉（改為打後端真資料） -->
-                <div class="mr-3 d-flex align-items-center">
-                    <span class="text-muted small mr-2">品類</span>
-                    <select id="categorySelect" class="custom-select custom-select-sm" style="min-width: 180px;">
-                        <option value="">全部</option> <!-- 其餘選項由 JS 動態注入 -->
-                    </select>
-                </div>
+          
 
 
                 <!-- 同期比較（UI 先放） -->
@@ -206,16 +200,26 @@
                 </div>
             </div>
         </div>
-
-        <!-- 品類銷售排行（營收，可放大） -->
+        <!-- 品類銷售排行（營收） -->
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow mb-4 chart-card">
-                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap">
                     <h6 class="m-0 font-weight-bold text-primary">品類銷售排行（營收）</h6>
-                    <button class="btn btn-sm btn-outline-secondary js-zoom" data-zoom="#catBarChart">
-                        <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                    </button>
+
+                    <!-- 右側工具列：同一行，不被撐開 -->
+                    <div class="cat-tools d-inline-flex align-items-center">
+                        <small class="text-muted mr-2">品類</small>
+                        <select id="categorySelect" class="custom-select custom-select-sm" aria-label="品類篩選">
+                            <option value="">全部</option>
+                            <!-- 其它選項由 JS 的 loadCategories() 注入 -->
+                        </select>
+
+                        <button class="btn btn-sm btn-outline-secondary ml-2 js-zoom" data-zoom="#catBarChart">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                        </button>
+                    </div>
                 </div>
+
                 <div class="card-body">
                     <div class="chart-wrap">
                         <canvas id="catBarChart" class="chart-canvas"></canvas>
@@ -390,9 +394,33 @@
                     color: #fff;
                     border-color: var(--gray-700);
                 }
+            /* 固定在同一行，避免撐開 */
+            .card .cat-tools {
+                white-space: nowrap;
+                gap: .5rem;
+                flex-shrink: 0;
+            }
 
+                /* 下拉寬度收斂 */
+                .card .cat-tools .custom-select.custom-select-sm {
+                    width: 140px; /* 你可改 130~170 都可 */
+                    min-width: 120px;
+                }
 
-    </style>
+            /* 窄螢幕時允許換行並靠右 */
+            @@media (max-width: 1200px) {
+                .card-header.flex-wrap {
+                    flex-wrap: wrap !important;
+                }
+
+                .card .cat-tools {
+                    width: 100%;
+                    justify-content: flex-end;
+                    margin-top: .5rem;
+                }
+            }
+
+</style>
 
 
 
@@ -926,11 +954,11 @@
               });
             });
 
-      // 品類下拉：變更就刷新（後端會依 category 篩選）
-      document.getElementById('categorySelect').addEventListener('change', (e) => {
-        state.category = e.target.value || '';  // '' | '__NULL__' | 真實 Code
-        refresh(state.days);
-      });
+              document.getElementById('categorySelect').addEventListener('change', (e) => {
+              state.category = e.target.value || '';
+              refreshCategoryOnly();   // ← 只更新 Top10 & 品類長條圖
+            });
+
 
     
                  // 同期比較（真正接 API）
@@ -1048,6 +1076,30 @@
                 alert('匯出異常 PDF 失敗');
               }
             });
+                        // 只因應品類變更而更新 Top10 與 品類長條，不動 Overview 與 KPI
+            async function refreshCategoryOnly() {
+              try {
+                const tp = await fetchTops(state.days, 10);  // 會帶 state.category
+
+                // Top 10
+                const list = (tp.topProducts || []).map(x => ({
+                  rank: x.Rank ?? x.rank, sku: x.Sku ?? x.sku, name: x.Name ?? x.name,
+                  category: x.Category ?? x.category, qty: x.Qty ?? x.qty,
+                  revenue: x.Revenue ?? x.revenue, share: x.Share ?? x.share
+                }));
+                state.viewTopList = list;
+                renderTopTable(list);
+
+                // 品類長條
+                buildCatBarChart(tp.categories?.labels || [], tp.categories?.revenue || []);
+
+                // 如果你不想讓「已套用品類篩選」提示影響營收圖，也可以關掉：
+                // document.getElementById('filterHint').style.display = 'none';
+
+              } catch (err) {
+                console.error('refreshCategoryOnly error:', err);
+              }
+            }
 
   
 
