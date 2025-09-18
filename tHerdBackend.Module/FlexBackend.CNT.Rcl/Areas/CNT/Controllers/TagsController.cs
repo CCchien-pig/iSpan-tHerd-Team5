@@ -53,7 +53,15 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 			// 傳遞給 View
 			ViewBag.Keyword = keyword;
 			ViewBag.PageSize = pageSize;
-			ViewBag.Status = status; // ➡️ 保留目前篩選狀態
+			ViewBag.Status = status;
+
+			// ⭐ 顯示中文狀態名稱
+			ViewBag.StatusName = status switch
+			{
+				"active" => "啟用",
+				"inactive" => "停用",
+				_ => ""
+			};
 
 			return View(pagedList);
 		}

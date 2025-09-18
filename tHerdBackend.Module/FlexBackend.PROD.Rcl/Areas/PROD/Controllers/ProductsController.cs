@@ -2,7 +2,6 @@
 using FlexBackend.Core.Interfaces.PROD;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
 {
@@ -41,8 +40,20 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             }).ToList();
         }
 
-        // 取得系統代號
-        public async Task GetSysCodes()
+        // 取得產品分類
+		public async Task GetAllProductTypesAsync()
+		{
+			var Types = await _repo.GetAllProductTypesAsync();
+			ViewBag.TypeDtos = Types.Select(b => new ProdProductTypeConfigDto
+            {
+                ProductTypeId = b.ProductTypeId,
+                ProductTypeCode = b.ProductTypeCode,
+                ProductTypeName = b.ProductTypeName
+			}).ToList();
+		}
+
+		// 取得系統代號
+		public async Task GetSysCodes()
         {
             var syss = await _repo.GetSysCodes("PROD", new List<string> { "01" });
             ViewBag.Units = syss.Select(b => new SelectListItem
@@ -59,6 +70,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             ViewData["Area"] = "PROD";
             await GetSysCodes();
             await LoadBrandOptionsAsync();
+            await GetAllProductTypesAsync();
         }
 
 		//      public IActionResult AddSkuCard(int index)
@@ -109,65 +121,29 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
                      nameof(dto.ProductTypeDesc),
                      nameof(dto.BrandName),
 					 nameof(dto.Seo)
-				 })
-                ModelState.Remove(k);
+			})
+            ModelState.Remove(k);
 
-			var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
+			if (string.IsNullOrWhiteSpace(dto.ProductCode))
+			{
+				dto.ProductCode = $"P-{DateTime.UtcNow:yyyyMMddHHmmss}";
+				ModelState.Remove(nameof(dto.ProductCode)); // 關鍵！
+			}
+
+            foreach (var i in dto.Types) {
+                if (i.ProductId == null)
+                {
+                    i.ProductId = 0;
+                }
+            }
+
+            var (isValid, errorMsg) = await _repo.ValidateProductAsync(dto);
 			if (!isValid)
 			{
 				ViewBag.ErrorMessage = errorMsg;
 				await GetData();
 				return View("Upsert", dto);
 			}
-
-			// === 0. 條碼唯一性檢查 ===
-			//var barcodes = dto.Skus
-			//	.Where(s => !string.IsNullOrWhiteSpace(s.Barcode))
-			//	.Select(s => s.Barcode.Trim())
-			//	.ToList();
-
-			//// 先檢查 dto 本身有沒有重複
-			//var dupLocal = barcodes
-			//	.GroupBy(b => b)
-			//	.Where(g => g.Count() > 1)
-			//	.Select(g => g.Key)
-			//	.ToList();
-
-			//if (!await _repo.ValidateProductAsync(dto, out string errorMsg))
-			//{
-			//	ViewBag.ErrorMessage = errorMsg;
-			//	await GetData();
-			//	return View("Upsert", dto);
-			//}
-
-			// 手動驗證 SKU 庫存與價格邏輯
-			//foreach (var (sku, i) in dto.Skus.Select((x, i) => (x, i)))
-			//         {
-			//             var max = sku.MaxStockQty;
-			//             var reorder = sku.ReorderPoint;
-			//             var safety = sku.SafetyStockQty;
-
-			//             // === 1. 庫存檢查 ===
-			//             if (max <= reorder || reorder <= safety)
-			//             {
-			//                 ViewBag.ErrorMessage = "最大庫存必須大於再訂點，再訂點必須大於安全庫存！";
-			//                 await GetData();
-			//                 return View("Upsert", dto);
-			//             }
-
-			//             // === 2. 價格層級檢查 ===
-			//             var listPrice = sku.ListPrice ?? 0;      // 原價
-			//             var unitPrice = sku.UnitPrice ?? 0;      // 單價
-			//             var discount = sku.SalePrice;  // 優惠價
-			//             var cost = sku.CostPrice ?? 0;      // 成本價
-
-			//             if (!(listPrice > unitPrice && unitPrice > discount && discount > cost))
-			//             {
-			//                 ViewBag.ErrorMessage = $"第{i + 1}筆 SKU 的價格設定錯誤：必須符合 原價 > 單價 > 優惠價 > 成本價！";
-			//                 await GetData();
-			//                 return View("Upsert", dto);
-			//             }
-			//         }
 
 			if (!ModelState.IsValid)
             {

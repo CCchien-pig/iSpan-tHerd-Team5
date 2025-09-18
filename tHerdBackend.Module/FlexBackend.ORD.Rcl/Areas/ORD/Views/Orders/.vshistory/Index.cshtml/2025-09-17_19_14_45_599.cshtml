@@ -1,0 +1,932 @@
+﻿@model FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.OrderListVM
+@{
+    ViewData["Title"] = "訂單管理";
+}
+
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <style>
+        /* ===== 你的原先樣式（明細卡等） ===== */
+        td.order-toggle {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+
+        tr.shown td.order-toggle {
+            font-weight: bold;
+        }
+
+        .order-detail-card {
+            background: #f9f9f9;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: .5rem;
+            border: 1px solid #ddd;
+        }
+
+        .order-summary {
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        #jumpPageInput {
+            width: 80px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        th.no-sort::after {
+            display: none !important;
+        }
+
+        /* ==== 整列Hover/選取高亮（作用在 td/th，而不是 tr） ==== */
+        :root {
+            --brand: #652D77;
+            --row-hover: #f3e8ff;
+            --row-even: #f8fafc;
+        }
+
+        /* 斑馬紋（可留可不留；要壓過 table-striped 必須作用在 cell） */
+        table.rcl-table > tbody > tr:nth-of-type(even) > * {
+            background: var(--row-even) !important;
+        }
+
+        /* 列 hover：所有 cell 一起變色 */
+        table.rcl-table > tbody > tr:hover > *,
+        table.rcl-table > tbody > tr.is-selected > * {
+            background: var(--row-hover) !important;
+        }
+
+        /* 第一格做左側色條，不位移（預留透明邊框） */
+        table.rcl-table > tbody > tr > *:first-child {
+            border-left: 4px solid transparent;
+        }
+
+        table.rcl-table > tbody > tr:hover > *:first-child,
+        table.rcl-table > tbody > tr.is-selected > *:first-child {
+            border-left-color: var(--brand);
+        }
+
+        /* 平滑過渡 */
+        table.rcl-table > tbody > tr > * {
+            transition: background-color .18s ease, border-left-color .18s ease;
+        }
+
+        /* DataTables child 明細列別吃 hover */
+        table.rcl-table > tbody > tr.child > * {
+            background: inherit !important;
+            border-left-color: transparent !important;
+        }
+
+        /* SweetAlert2：批次視窗尺寸與內距修正 */
+        .rcl-bulk .swal2-html-container {
+            padding: 0 1rem !important;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        .rcl-bulk select {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        /* 避免100%+邊框造成橫向捲軸 */
+        .rcl-bulk label {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .rcl-bulk .swal2-actions {
+            gap: .5rem;
+        }
+
+        /* ==== SweetAlert2：批次視窗尺寸 & 溢位修正 ==== */
+        .rcl-bulk.swal2-popup {
+            width: min(92vw, 520px) !important; /* 統一寬度，手機92vw */
+            box-sizing: border-box;
+            overflow-x: hidden !important; /* 禁止水平捲軸 */
+        }
+
+        .rcl-bulk-html {
+            padding: 0 1rem !important; /* 內距 */
+            max-height: 70vh; /* 高度上限 */
+            overflow-y: auto; /* 只允許直向捲動 */
+            overflow-x: hidden !important; /* 關閉橫向捲動 */
+        }
+
+            .rcl-bulk-html select,
+            .rcl-bulk-html .form-select {
+                display: block;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important; /* 蓋掉 .swal2-select 的 min-width:50% */
+                box-sizing: border-box; /* 避免 100% + 邊框造成溢位 */
+            }
+
+        .rcl-bulk label {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .rcl-bulk-actions {
+            gap: .5rem;
+        }
+
+
+
+        /* ===== 狀態徽章（保留，可依需要使用） ===== */
+        .badge-status {
+            display: inline-block;
+            padding: .35rem .6rem;
+            border-radius: .5rem;
+            color: #fff;
+            font-weight: 600;
+            white-space: nowrap
+        }
+
+        .payment-paid {
+            background: #22c55e
+        }
+
+        .payment-auth, .payment-pending {
+            background: #f59e0b
+        }
+
+        .payment-failed {
+            background: #ef4444
+        }
+
+        .payment-refunding, .payment-refunded {
+            background: #6b7280
+        }
+
+        .shipping-picking, .shipping-packed {
+            background: #a78bfa
+        }
+
+        .shipping-shipped, .shipping-intransit {
+            background: #10b981
+        }
+
+        .shipping-delivered {
+            background: #059669
+        }
+
+        .shipping-returned {
+            background: #6b7280
+        }
+
+        .order-pending {
+            background: #8b5cf6
+        }
+
+        .order-confirmed, .order-processing {
+            background: #3b82f6
+        }
+
+        .order-completed {
+            background: #6b7280
+        }
+
+        .order-cancelled {
+            background: #ef4444
+        }
+
+        .order-rmaing {
+            background: #7c3aed
+        }
+
+        .detail-row td {
+            background: #fff;
+            border-top: 0;
+        }
+    </style>
+}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 text-purple2">訂單清單查詢</h6>
+    </div>
+
+    <div class="card-body">
+
+        <!-- 批次操作（保留你原本的兩顆主按鈕） -->
+@*         <div class="mb-3">
+            <button type="button" id="bulkUpdate" class="btn btn-warning">批量更改狀態</button>
+            <button type="button" id="bulkPrint" class="btn btn-success">列印出貨單</button>
+        </div> *@
+
+        <div class="d-flex flex-wrap align-items-end justify-content-between mb-3 gap-2">
+            <div class="btn-group gap-2">
+                <button type="button" id="bulkUpdate" class="btn btn-warning">批量更改狀態</button>
+                <button type="button" id="bulkPrint" class="btn btn-success">列印出貨單</button>
+            </div>
+
+            <!-- 日期 + 快速篩選（擺在右側） -->
+            <div class="d-flex align-items-end gap-2 flex-wrap">
+                <div class="text-muted small">建立日期</div>
+                <input type="date" id="dtFrom" class="form-control" style="width:160px;">
+                <span class="mx-1">–</span>
+                <input type="date" id="dtTo" class="form-control" style="width:160px;">
+                <select id="quickRange" class="form-select" style="width:160px;">
+                    <option value="">快速篩選</option>
+                    <option value="1">近 1 個月</option>
+                    <option value="3">近 3 個月</option>
+                    <option value="6">近 6 個月</option>
+                    <option value="9">近 9 個月</option>
+                    <option value="12">近 1 年</option>
+                </select>
+            </div>
+        </div>
+
+
+        <!-- 篩選（即時跳轉版） -->
+        <form id="searchForm" asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+            <input type="hidden" id="hfStartDate" name="StartDate" value="@(Model.SearchParams.StartDate?.ToString("yyyy-MM-dd"))" />
+            <input type="hidden" id="hfEndDate" name="EndDate" value="@(Model.SearchParams.EndDate?.ToString("yyyy-MM-dd"))" />
+            <div class="col-md-3">
+                <label class="form-label fw-bold">關鍵字</label>
+                <input type="text" class="form-control" name="Keyword" placeholder="輸入訂單編號/收件人/電話" value="@Model.SearchParams.Keyword" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">付款狀態</label>
+                <select class="form-select" name="PaymentStatus">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.PaymentStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.PaymentStatus)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">配送狀態</label>
+                <select class="form-select" name="ShippingStatusId">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.ShippingStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.ShippingStatusId)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">訂單狀態</label>
+                <select class="form-select" name="OrderStatusId">
+                    <option value="">全部</option>
+                    @foreach (var option in Model.OrderStatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SearchParams.OrderStatusId)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">每頁筆數</label>
+                <select class="form-select" name="PageSize">
+                    @foreach (var size in Model.Pagination.PageSizeOptions)
+                    {
+                        <option value="@size" selected="@(size == Model.SearchParams.PageSize)">@size</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1 d-grid">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary">套用</button> <!-- 可留作手動觸發；平常不必按 -->
+            </div>
+        </form>
+
+        <!-- 主表格（移除操作欄） -->
+        <div class="table-responsive">
+            <table id="ordersTable" class="table table-bordered table-striped rcl-table" width="100%">
+                <thead>
+                    <tr>
+                        <th class="no-sort"><input type="checkbox" id="selectAll" /></th>
+                        <th>訂單編號</th>
+                        <th>會員姓名</th>
+                        <th>付款狀態</th>
+                        <th>配送狀態</th>
+                        <th>訂單狀態</th>
+                        <th>總金額</th>
+                        <th>建立時間</th>
+                        <th>前台顯示</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr data-id="@order.OrderId">
+                            <td><input type="checkbox" class="row-check" value="@order.OrderId" /></td>
+                            <td class="order-toggle">@order.OrderNo</td>
+                            <td>@order.UserName</td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown" data-id="@order.OrderId" data-field="PaymentStatus">
+                                    @foreach (var option in Model.PaymentStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.PaymentStatus)">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown" data-id="@order.OrderId" data-field="ShippingStatusId">
+                                    @foreach (var option in Model.ShippingStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.ShippingStatusId)">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-dropdown" data-id="@order.OrderId" data-field="OrderStatusId">
+                                    @foreach (var option in Model.OrderStatusOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == order.OrderStatusId)">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>@order.TotalAmount.ToString("C0")</td>
+                            <td>@order.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-visible" type="checkbox" data-id="@order.OrderId" @(order.IsVisibleToMember ? "checked" : "")>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分頁 -->
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div>總筆數 <strong>@Model.Pagination.TotalCount</strong></div>
+            <div class="d-flex align-items-center">
+                <button type="button" id="prevPage" class="btn btn-outline-secondary btn-sm me-2">上一頁</button>
+                <span class="me-2">第</span>
+                <input type="number" id="jumpPageInput" class="form-control" min="1" max="@Model.Pagination.TotalPages" value="@Model.Pagination.CurrentPage" style="width:80px;" />
+                <span class="ms-2">/ 共 <strong>@Model.Pagination.TotalPages</strong> 頁</span>
+                <button type="button" id="nextPage" class="btn btn-outline-secondary btn-sm ms-2">下一頁</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- 準備狀態選項的 JavaScript 變數 -->
+    <script>
+        var shippingStatusOptions = [
+            @foreach (var option in Model.ShippingStatusOptions)
+            {
+                    <text>{ value: "@option.Value", text: "@Html.Raw(Html.Encode(option.Text))" },</text>
+            }
+        ];
+
+        var orderStatusOptions = [
+            @foreach (var option in Model.OrderStatusOptions)
+            {
+                    <text>{ value: "@option.Value", text: "@Html.Raw(Html.Encode(option.Text))" },</text>
+            }
+        ];
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            console.log('頁面載入完成，開始初始化...');
+
+            // ===== DataTables 初始化 =====
+            var table = $('#ordersTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                order: [[7, "desc"]],
+                columnDefs: [
+                    { orderable: false, targets: [0, 8] },
+                    {
+                        targets: [3, 4, 5],
+                        render: function (data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                var $el = $('<div>').html(data);
+                                return $el.find("option:selected").text();
+                            }
+                            return data;
+                        }
+                    },
+                    {
+                        targets: 6,
+                        render: function (data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                return parseFloat(String(data).replace(/[^\d.-]/g, '')) || 0;
+                            }
+                            return data;
+                        }
+                    }
+                ]
+            });
+
+            // ===== 記錄下拉選單原始值 =====
+            $('.status-dropdown').each(function() {
+                var $this = $(this);
+                $this.data('original-value', $this.val());
+            });
+
+            // ===== 下拉選單狀態更改事件處理 =====
+            $(document).on('change', '.status-dropdown', function() {
+                var $dropdown = $(this);
+                var orderId = $dropdown.data('id');
+                var field = $dropdown.data('field');
+                var newValue = $dropdown.val();
+                var originalValue = $dropdown.data('original-value');
+
+                if (newValue === originalValue) return;
+
+                $dropdown.prop('disabled', true);
+
+                $.post('/ORD/Orders/UpdateOrderStatus', {
+                    orderId: orderId,
+                    field: field,
+                    value: newValue
+                })
+                .done(function(response) {
+                    if (response.success) {
+                        $dropdown.data('original-value', newValue);
+
+                        // 統一顯示在畫面中間
+                        Swal.fire({
+                            icon: 'success',
+                            title: '狀態更新成功',
+                            text: getFieldDisplayName(field) + ' 已更新',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            position: 'center'
+                        });
+
+                        // 如果產生出貨單號，顯示提示並重新載入明細
+                        if (field === 'ShippingStatusId' && response.trackingNo) {
+                            setTimeout(function() {
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: '出貨單號已產生',
+                                    text: '單號：' + response.trackingNo,
+                                    timer: 4000,
+                                    showConfirmButton: true,
+                                    confirmButtonText: '確定',
+                                    position: 'center'
+                                });
+
+                                // 重新載入已展開的訂單明細以顯示新出貨單號
+                                var $tr = $dropdown.closest('tr');
+                                var row = table.row($tr);
+                                if (row.child.isShown()) {
+                                    row.child('<div class="text-muted">更新中...</div>').show();
+                                    loadDetail($tr, orderId, row);
+                                }
+                            }, 2200);
+                        }
+                    } else {
+                        $dropdown.val(originalValue);
+                        Swal.fire({
+                            icon: 'error',
+                            title: '更新失敗',
+                            text: response.message || '請稍後再試',
+                            confirmButtonText: '確定',
+                            position: 'center'
+                        });
+                    }
+                })
+                .fail(function(xhr, status, error) {
+                    $dropdown.val(originalValue);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '系統錯誤',
+                        text: '無法連接到服務器',
+                        confirmButtonText: '確定',
+                        position: 'center'
+                    });
+                })
+                .always(function() {
+                    $dropdown.prop('disabled', false);
+                });
+            });
+
+            // ===== 搜尋功能 =====
+            var $form = $('#searchForm');
+            var $hfFrom = $('#hfStartDate');
+            var $hfTo = $('#hfEndDate');
+            var $from = $('#dtFrom');
+            var $to = $('#dtTo');
+            var $q = $('#quickRange');
+
+            if ($hfFrom.length && $hfFrom.val()) $from.val($hfFrom.val());
+            if ($hfTo.length && $hfTo.val()) $to.val($hfTo.val());
+
+            function ensurePage1(){
+                var $p = $form.find('input[name="PageNumber"]');
+                if(!$p.length) {
+                    $p = $('<input type="hidden" name="PageNumber" value="1">').appendTo($form);
+                } else {
+                    $p.val('1');
+                }
+            }
+
+            // 日期處理函數
+            function iso(d){
+                if(!d) return '';
+                var z = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                return z.toISOString().slice(0,10);
+            }
+
+            function addMonthsSafe(d, m){
+                var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                x.setMonth(x.getMonth() + m);
+                return x;
+            }
+
+            function submitWithDates(from, to){
+                $hfFrom.val(from ? iso(from) : '');
+                $hfTo.val(to ? iso(to) : '');
+                ensurePage1();
+                $form[0].submit();
+            }
+
+            // 下拉選單改變立即提交
+            $form.find('select').on('change', function(){
+                ensurePage1();
+                $form[0].submit();
+            });
+
+            // 關鍵字輸入延遲提交
+            var $kw = $form.find('input[name="Keyword"]');
+            var keyTimer = null;
+            $kw.on('input', function(){
+                clearTimeout(keyTimer);
+                keyTimer = setTimeout(function(){
+                    ensurePage1();
+                    $form[0].submit();
+                }, 400);
+            }).on('keypress', function(e){
+                if(e.which === 13) e.preventDefault();
+            });
+
+            // 修復：日期改變自動提交
+            $from.on('change', function(){
+                var fromVal = $(this).val();
+                if (fromVal) {
+                    var fromDate = new Date(fromVal + 'T00:00:00');
+                    var toDate = $to.val() ? new Date($to.val() + 'T00:00:00') : fromDate;
+                    $q.val(''); // 清空快速篩選
+                    submitWithDates(fromDate, toDate);
+                } else {
+                    submitWithDates(null, null);
+                }
+            });
+
+            $to.on('change', function(){
+                var toVal = $(this).val();
+                if (toVal) {
+                    var toDate = new Date(toVal + 'T00:00:00');
+                    var fromDate = $from.val() ? new Date($from.val() + 'T00:00:00') : toDate;
+                    $q.val(''); // 清空快速篩選
+                    submitWithDates(fromDate, toDate);
+                } else {
+                    submitWithDates(null, null);
+                }
+            });
+
+            // 快速篩選
+            $q.on('change', function(){
+                var m = parseInt($(this).val(), 10);
+                if (isNaN(m) || m === 0) {
+                    $from.val('');
+                    $to.val('');
+                    submitWithDates(null, null);
+                    return;
+                }
+                var today = new Date();
+                var to = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                var from = addMonthsSafe(to, -m);
+                $from.val(iso(from));
+                $to.val(iso(to));
+                submitWithDates(from, to);
+            });
+
+            // ===== 前台顯示切換 =====
+            $(document).on("change", ".toggle-visible", function () {
+                var $checkbox = $(this);
+                var id = $checkbox.data("id");
+                var visible = $checkbox.is(":checked");
+
+                $.post("/ORD/Orders/ToggleVisible", {
+                    orderId: id,
+                    visible: visible
+                }).done(function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: visible ? '已設為顯示' : '已設為隱藏',
+                            showConfirmButton: false,
+                            timer: 1200,
+                            position: 'center'
+                        });
+                    } else {
+                        $checkbox.prop("checked", !visible);
+                        Swal.fire({
+                            icon: 'error',
+                            title: '更新失敗',
+                            text: res.message || '請稍後再試',
+                            position: 'center'
+                        });
+                    }
+                }).fail(function() {
+                    $checkbox.prop("checked", !visible);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '系統錯誤',
+                        text: '無法更新狀態',
+                        position: 'center'
+                    });
+                });
+            });
+
+            // ===== 批量更改狀態 =====
+            $("#bulkUpdate").on("click", function () {
+                var ids = getSelectedOrders();
+                if (ids.length === 0) {
+                    Swal.fire({
+                        title: "請先選擇訂單",
+                        icon: "warning",
+                        position: 'center'
+                    });
+                    return;
+                }
+
+                var shippingHtml = '<option value="" selected disabled>請選擇</option>';
+                for (var i = 0; i < shippingStatusOptions.length; i++) {
+                    shippingHtml += '<option value="' + shippingStatusOptions[i].value + '">' + shippingStatusOptions[i].text + '</option>';
+                }
+
+                var orderHtml = '<option value="" selected disabled>請選擇</option>';
+                for (var j = 0; j < orderStatusOptions.length; j++) {
+                    orderHtml += '<option value="' + orderStatusOptions[j].value + '">' + orderStatusOptions[j].text + '</option>';
+                }
+
+                Swal.fire({
+                    title: "批量更改狀態",
+                    position: 'center',
+                    html: '<div>' +
+                        '<label class="mb-2">' +
+                        '<input type="radio" name="bulkType" value="shipping" checked>' +
+                        '<span class="ms-2">配送狀態</span>' +
+                        '</label>' +
+                        '<select id="bulkShipping" class="form-select">' + shippingHtml + '</select>' +
+                        '<div class="my-3"></div>' +
+                        '<label class="mb-2">' +
+                        '<input type="radio" name="bulkType" value="order">' +
+                        '<span class="ms-2">訂單狀態</span>' +
+                        '</label>' +
+                        '<select id="bulkOrder" class="form-select" disabled>' + orderHtml + '</select>' +
+                        '</div>',
+                    didOpen: function() {
+                        $("input[name='bulkType']").on("change", function () {
+                            var isShip = $(this).val() === "shipping";
+                            $("#bulkShipping").prop("disabled", !isShip).val("");
+                            $("#bulkOrder").prop("disabled", isShip).val("");
+                        });
+                    },
+                    preConfirm: function() {
+                        var type = $("input[name='bulkType']:checked").val();
+                        var shipping = $("#bulkShipping").prop("disabled") ? "" : $("#bulkShipping").val();
+                        var order = $("#bulkOrder").prop("disabled") ? "" : $("#bulkOrder").val();
+
+                        if (type === "shipping" && !shipping) {
+                            Swal.showValidationMessage("請先選擇「配送狀態」");
+                            return false;
+                        }
+                        if (type === "order" && !order) {
+                            Swal.showValidationMessage("請先選擇「訂單狀態」");
+                            return false;
+                        }
+
+                        return {
+                            type: type,
+                            shippingStatus: shipping || null,
+                            orderStatus: order || null
+                        };
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: "更新",
+                    cancelButtonText: "取消"
+                }).then(function(result) {
+                    if (!result.isConfirmed) return;
+
+                    $.post('/ORD/Orders/BulkUpdateOrders', {
+                        orderIds: ids,
+                        shippingStatusId: result.value.type === "shipping" ? result.value.shippingStatus : null,
+                        orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
+                    }).done(function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                title: "更新成功",
+                                icon: "success",
+                                position: 'center'
+                            }).then(function() {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: "更新失敗",
+                                text: res.message || "",
+                                icon: "error",
+                                position: 'center'
+                            });
+                        }
+                    }).fail(function() {
+                        Swal.fire({
+                            title: "系統錯誤",
+                            text: "無法更新狀態",
+                            icon: "error",
+                            position: 'center'
+                        });
+                    });
+                });
+            });
+
+            // ===== 批量列印 =====
+            $("#bulkPrint").on("click", function () {
+                var ids = getSelectedOrders();
+                if (ids.length === 0) {
+                    Swal.fire({
+                        title: "請先選擇訂單",
+                        icon: "warning",
+                        position: 'center'
+                    });
+                    return;
+                }
+                window.open('/ORD/Orders/PrintOrders?ids=' + ids.join(","));
+            });
+
+            // ===== 勾選功能 =====
+            $('#ordersTable').on('change', '.row-check', function(){
+                $(this).closest('tr').toggleClass('is-selected', this.checked);
+            });
+
+            $('#selectAll').on('click', function(){
+                var checked = this.checked;
+                $('.row-check').each(function(){
+                    this.checked = checked;
+                }).trigger('change');
+            });
+
+            // ===== 點訂單編號展開明細 =====
+            $('#ordersTable tbody').on('click', 'td.order-toggle', function () {
+                var $tr = $(this).closest('tr');
+                var row = table.row($tr);
+                var orderId = $tr.data('id');
+
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    $tr.removeClass('shown');
+                } else {
+                    row.child('<div class="text-muted">載入中...</div>').show();
+                    $tr.addClass('shown');
+                    loadDetail($tr, orderId, row);
+                }
+            });
+
+            // 綁定分頁按鈕事件
+            $("#prevPage").on("click", function () {
+                var currentPage = @Model.Pagination.CurrentPage;
+                if (currentPage > 1) {
+                    goToPage(currentPage - 1);
+                }
+            });
+
+            $("#nextPage").on("click", function () {
+                var currentPage = @Model.Pagination.CurrentPage;
+                var totalPages = @Model.Pagination.TotalPages;
+                if (currentPage < totalPages) {
+                    goToPage(currentPage + 1);
+                }
+            });
+
+            // 輸入框 Enter 跳頁
+            $("#jumpPageInput").on("keypress", function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    var page = parseInt($(this).val());
+                    if (page >= 1 && page <= @Model.Pagination.TotalPages) {
+                        goToPage(page);
+                    }
+                }
+            });
+
+            // 輸入框失去焦點時跳頁
+            $("#jumpPageInput").on("blur", function () {
+                var page = parseInt($(this).val());
+                var currentPage = @Model.Pagination.CurrentPage;
+                if (page && page !== currentPage && page >= 1 && page <= @Model.Pagination.TotalPages) {
+                    goToPage(page);
+                }
+            });
+
+            // ===== 載入訂單明細 =====
+            function loadDetail($tr, orderId, row){
+            $.getJSON('/ORD/Orders/GetOrderDetails', { orderId: orderId })
+                .done(function (data) {
+                    if (!data || data.error) {
+                        row.child('<div class="text-danger">查無訂單資料</div>').show();
+                        return;
+                    }
+                    var o = data.order || {};
+                    var items = data.items || [];
+
+                    // 根據配送狀態和出貨單號決定顯示內容
+                    var trackingDisplay;
+                    if (o.trackingNumber && o.trackingNumber.trim() !== '') {
+                        // 有出貨單號就顯示
+                        trackingDisplay = o.trackingNumber;
+                    } else if (o.shippingStatusId === '已出貨' || o.shippingStatusId === 'shipped') {
+                        // 狀態是已出貨但沒有單號
+                        trackingDisplay = '（處理中，請稍候）';
+                    } else {
+                        // 未出貨狀態
+                        trackingDisplay = '（出貨後顯示配送單號）';
+                    }
+
+                    var html = '<div class="order-detail-card">' +
+                        '<h6>收件資訊</h6>' +
+                        '<p><strong>收件人：</strong>' + (o.receiverName || '-') + '</p>' +
+                        '<p><strong>電話：</strong>' + (o.receiverPhone || '-') + '</p>' +
+                        '<p><strong>地址：</strong>' + (o.receiverAddress || '-') + '</p>' +
+                        '<p><strong>配送方式：</strong>' + (o.shippingMethod || '-') + '</p>' +
+                        '<p><strong>出貨單號：</strong>' + trackingDisplay + '</p>' +
+                        '</div>' +
+                        '<h6>商品明細</h6>' +
+                        '<table class="table table-sm table-bordered">' +
+                        '<thead><tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>' +
+                        '<tbody>';
+
+                    for (var i = 0; i < items.length; i++) {
+                        var item = items[i];
+                        html += '<tr>' +
+                            '<td>' + item.productName + '</td>' +
+                            '<td>' + item.skuSpec + '</td>' +
+                            '<td>' + Number(item.unitPrice).toLocaleString() + '</td>' +
+                            '<td>' + item.qty + '</td>' +
+                            '<td>' + Number(item.subtotal).toLocaleString() + '</td>' +
+                            '</tr>';
+                    }
+
+                    html += '</tbody></table>' +
+                        '<div class="order-summary">' +
+                        '<p><strong>優惠券：</strong>' + (o.couponCode || '-') + '</p>' +
+                        '<p><strong>優惠折扣：</strong>' + Number(o.discountTotal || 0).toLocaleString() + '</p>' +
+                        '<p><strong>運費：</strong>' + Number(o.shippingFee || 0).toLocaleString() + '</p>' +
+                        '<p><strong>總金額：</strong>' + Number(o.totalAmount || 0).toLocaleString() + '</p>' +
+                        '</div>';
+
+                    row.child(html).show();
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('載入明細失敗:', error);
+                    row.child('<div class="text-danger">載入失敗：' + error + '</div>').show();
+                });
+        
+        
+
+            // ===== 取得勾選的訂單 =====
+            function getSelectedOrders() {
+                var selected = [];
+                $(".row-check:checked").each(function() {
+                    selected.push($(this).val());
+                });
+                return selected;
+            }
+
+            // ===== 輔助函數 =====
+            function getFieldDisplayName(field) {
+                switch(field) {
+                    case 'PaymentStatus': return '付款狀態';
+                    case 'ShippingStatusId': return '配送狀態';
+                    case 'OrderStatusId': return '訂單狀態';
+                    default: return '狀態';
+                }
+            }
+
+            // ===== 分頁功能 =====
+            function goToPage(page) {
+            if (isNaN(page) || page < 1) return;
+            var url = new URL(window.location);
+            url.searchParams.set('PageNumber', page);
+            window.location.href = url.toString();
+        }
+
+            console.log('所有功能初始化完成');
+
+
+        });
+    </script>
+}
