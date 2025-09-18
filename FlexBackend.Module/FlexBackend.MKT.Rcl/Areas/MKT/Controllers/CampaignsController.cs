@@ -30,7 +30,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateCampaign([FromBody] MktCampaign model)
+        public IActionResult CreateCampaign([FromBody]MktCampaign model)
         {
             if (!ModelState.IsValid)
                 return Json(new { success = false, message = "資料驗證失敗" });
@@ -40,9 +40,13 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             {
                 return Json(new { success = false, message = "開始時間不可晚於結束時間" });
             }
-
+            if (string.IsNullOrWhiteSpace(model.CampaignType))
+            {
+                model.CampaignType = "cmd"; // 預設值
+            }
             model.CreatedDate = DateTime.Now;
             _context.MktCampaigns.Add(model);
+            
 
             try
             {
@@ -56,6 +60,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 while (inner.InnerException != null) inner = inner.InnerException;
                 return Json(new { success = false, message = "新增失敗：" + inner.Message });
             }
+
         }
 
 
