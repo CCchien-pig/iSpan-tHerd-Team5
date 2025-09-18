@@ -7,10 +7,10 @@
                     <h5 class="modal-title">編輯活動</h5>
                 </div>
                 <div class="modal-body">
-                    <div class="text-center">
-                        <label>活動Id</label>
+                    
+                        <label class="form-label">活動Id</label>
                         <input type="text" id="editId" class="form-control" disabled />
-                    </div>
+                    
 
                     <div class="mb-3">
                         <label>標題</label>
@@ -45,12 +45,12 @@
 
                     <div class="mb-3">
                         <label>活動開始日期</label>
-                        <input type="date" id="editStart" class="form-control" />
+                        <input type="date" id="editStart" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <div class="mb-3">
                         <label>活動結束日期</label>
-                        <input type="date" id="editEnd" class="form-control" />
+                        <input type="date" id="editEnd" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <div class="mb-3">
