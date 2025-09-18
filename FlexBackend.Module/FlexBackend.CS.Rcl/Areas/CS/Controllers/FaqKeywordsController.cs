@@ -22,20 +22,32 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         {
             var list = await _context.CsFaqKeywords
                 .AsNoTracking()
-                .Include(k => k.Faq)
-                .OrderBy(k => k.Keyword)
-                .Select(k => new FaqKeywordListVM
+                .Select(k => new
                 {
-                    KeywordId = k.KeywordId,
-                    FaqId = k.FaqId,
-                    FaqTitle = k.Faq.Title,
-                    Keyword = k.Keyword,
-                    CreatedDate = k.CreatedDate
+                    k.KeywordId,
+                    k.Keyword,
+                    k.CreatedDate,
+                    k.FaqId,
+                    FaqTitle = k.Faq.Title
                 })
+                .GroupBy(x => x.Keyword)
+                .Select(g => new FaqKeywordListVM
+                {
+                    // 代表用，哪一個都行
+                    KeywordId = g.Max(x => x.KeywordId),
+                    Keyword = g.Key,
+                    CreatedDate = g.Min(x => x.CreatedDate),
+                    Faqs = g.OrderBy(x => x.FaqTitle)
+                            .Select(x => new FaqRefVM { FaqId = x.FaqId, Title = x.FaqTitle })
+                            .ToList()
+                })
+                .OrderBy(x => x.Keyword)
                 .ToListAsync();
 
             return View(list);
         }
+
+
 
         // =============== Details ===============
         // 視圖建議：@model FaqKeywordListVM
@@ -43,23 +55,39 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         {
             if (id == null) return NotFound();
 
+            var key = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .Where(k => k.KeywordId == id)
+                .Select(k => k.Keyword)
+                .FirstOrDefaultAsync();
+            if (key == null) return NotFound();
+
             var vm = await _context.CsFaqKeywords
                 .AsNoTracking()
-                .Include(k => k.Faq)
-                .Where(k => k.KeywordId == id)
-                .Select(k => new FaqKeywordListVM
+                .Where(k => k.Keyword == key)
+                .Select(k => new
                 {
-                    KeywordId = k.KeywordId,
-                    FaqId = k.FaqId,
-                    FaqTitle = k.Faq.Title,
-                    Keyword = k.Keyword,
-                    CreatedDate = k.CreatedDate
+                    k.KeywordId,
+                    k.Keyword,
+                    k.CreatedDate,
+                    k.FaqId,
+                    FaqTitle = k.Faq.Title
                 })
-                .FirstOrDefaultAsync();
+                .GroupBy(x => x.Keyword)
+                .Select(g => new FaqKeywordListVM
+                {
+                    KeywordId = g.Max(x => x.KeywordId),
+                    Keyword = g.Key,
+                    CreatedDate = g.Min(x => x.CreatedDate),
+                    Faqs = g.OrderBy(x => x.FaqTitle)
+                            .Select(x => new FaqRefVM { FaqId = x.FaqId, Title = x.FaqTitle })
+                            .ToList()
+                })
+                .FirstAsync();
 
-            if (vm == null) return NotFound();
             return View(vm);
         }
+
 
         // =============== Create ===============
         // 視圖建議：@model FaqKeywordEditVM
@@ -166,20 +194,36 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
         {
             if (id == null) return NotFound();
 
+            var key = await _context.CsFaqKeywords
+                .AsNoTracking()
+                .Where(k => k.KeywordId == id)
+                .Select(k => k.Keyword)
+                .FirstOrDefaultAsync();
+            if (key == null) return NotFound();
+
             var vm = await _context.CsFaqKeywords
                 .AsNoTracking()
-                .Include(k => k.Faq)
-                .Where(k => k.KeywordId == id)
-                .Select(k => new FaqKeywordListVM
+                .Where(k => k.Keyword == key)
+                .Select(k => new
                 {
-                    KeywordId = k.KeywordId,
-                    FaqId = k.FaqId,
-                    FaqTitle = k.Faq.Title,
-                    Keyword = k.Keyword
+                    k.KeywordId,
+                    k.Keyword,
+                    k.CreatedDate,
+                    k.FaqId,
+                    FaqTitle = k.Faq.Title
                 })
-                .FirstOrDefaultAsync();
+                .GroupBy(x => x.Keyword)
+                .Select(g => new FaqKeywordListVM
+                {
+                    KeywordId = g.Max(x => x.KeywordId),
+                    Keyword = g.Key,
+                    CreatedDate = g.Min(x => x.CreatedDate),
+                    Faqs = g.OrderBy(x => x.FaqTitle)
+                            .Select(x => new FaqRefVM { FaqId = x.FaqId, Title = x.FaqTitle })
+                            .ToList()
+                })
+                .FirstAsync();
 
-            if (vm == null) return NotFound();
             return View(vm);
         }
 
@@ -245,5 +289,6 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 
         private bool CsFaqKeywordExists(int id)
             => _context.CsFaqKeywords.Any(e => e.KeywordId == id);
+
     }
 }

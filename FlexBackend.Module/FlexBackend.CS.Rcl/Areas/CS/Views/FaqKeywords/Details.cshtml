@@ -15,8 +15,24 @@
             <dt class="col-sm-2">@Html.DisplayNameFor(m => m.Keyword)</dt>
             <dd class="col-sm-10">@Model.Keyword</dd>
 
-            <dt class="col-sm-2">@Html.DisplayNameFor(m => m.FaqTitle)</dt>
-            <dd class="col-sm-10">@Model.FaqTitle</dd>
+            @* 這裡改：FaqTitle -> 多個 FAQ *@
+            <dt class="col-sm-2">所屬 FAQ</dt>
+            <dd class="col-sm-10">
+                @if (Model.Faqs == null || Model.Faqs.Count == 0)
+                {
+                    <span class="text-muted">（未對應 FAQ）</span>
+                }
+                else
+                {
+                    foreach (var f in Model.Faqs)
+                    {
+                        <a class="badge bg-light text-dark border me-1 mb-1"
+                           asp-area="CS" asp-controller="Faqs" asp-action="Details"
+                           asp-route-id="@f.FaqId"
+                           title="@f.Title">@f.Title</a>
+                    }
+                }
+            </dd>
 
             <dt class="col-sm-2">@Html.DisplayNameFor(m => m.CreatedDate)</dt>
             <dd class="col-sm-10">@Model.CreatedDate.ToString("yyyy/MM/dd HH:mm")</dd>

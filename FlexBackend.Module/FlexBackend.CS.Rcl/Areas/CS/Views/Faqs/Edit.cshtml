@@ -1,4 +1,4 @@
-﻿@model FlexBackend.Infra.Models.CsFaq
+﻿@model FlexBackend.CS.Rcl.Areas.CS.ViewModels.FaqEditVM
 @{
     ViewData["Title"] = "編輯 FAQ";
 
@@ -6,6 +6,7 @@
     var fallback = Url.Action("Index", "Faqs", new { area = "CS" });
     var goBackUrl = (!string.IsNullOrWhiteSpace(back) && Url.IsLocalUrl(back)) ? back : fallback;
 }
+
 
 @section Styles {
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
@@ -79,10 +80,8 @@
 
     <!-- 帶回 Controller 的 returnUrl（方式 1：hidden 欄位） -->
     <input type="hidden" asp-for="FaqId" />
-    @* 重要：Disabled 欄位不會回傳，為避免 CreatedDate 被清掉，用 hidden 一併回傳原值 *@
-    <input type="hidden" asp-for="CreatedDate" />
-    <input type="hidden" asp-for="RevisedDate" />
 
+  
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm">
@@ -114,11 +113,19 @@
                         <label class="form-label">分類</label>
                         <select asp-for="CategoryId" asp-items="@(ViewBag.CategoryId as SelectList)" class="form-select"></select>
                         <span asp-validation-for="CategoryId" class="text-danger"></span>
-                        @if (Model?.Category?.CategoryName != null)
-                        {
-                            <div class="mt-2"><span class="badge-category">@Model.Category.CategoryName</span></div>
-                        }
+                        
                     </div>
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header">關鍵字</div>
+                        <div class="card-body">
+                            <label class="form-label">關鍵字（用逗號或空白分隔）</label>
+                            <input id="kwInput" class="form-control"
+                                   value="@(string.Join(", ", Model.Keywords ?? new List<string>()))" />
+                            <input type="hidden" name="Keywords" id="kwHidden" />
+                            <div class="form-text">例如：免運 運費 折扣碼；會自動去重，最多 50 個。</div>
+                        </div>
+                    </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">排序</label>
@@ -159,22 +166,25 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script>
+        // 標題字數
         const $title = document.querySelector('[name="Title"]');
         const $titleCount = document.getElementById('titleCount');
         function syncCount(){ $titleCount.textContent = ($title.value || '').length; }
         $title.addEventListener('input', syncCount); syncCount();
 
+        // 編輯器
         $('#answerEditor').summernote({
             placeholder: '輸入 FAQ 的解答內容…',
             height: 280,
             toolbar: [
                 ['style', ['bold','italic','underline','clear']],
-                ['para', ['ul','ol','paragraph']],
-                ['insert', ['link']],
-                ['view', ['codeview']]
+                ['para',  ['ul','ol','paragraph']],
+                ['insert',['link']],
+                ['view',  ['codeview']]
             ]
         });
 
+        // 發布時間「現在」
         document.getElementById('btnNow')?.addEventListener('click', function(){
             const now = new Date();
             const pad = n => String(n).padStart(2,'0');
@@ -182,9 +192,41 @@
             document.querySelector('[name="LastPublishedTime"]').value = v;
         });
 
-        document.getElementById('faqForm').addEventListener('submit', function(){
-            const html = $('#answerEditor').summernote('code');
-            document.getElementById('answerEditor').value = html;
-        });
+        // ===== 關鍵字處理：把輸入拆成陣列，送出時同步到隱藏欄位 =====
+        (function(){
+            function splitToArray(text){
+                if(!text) return [];
+                return text
+                    .split(/[,，\s]+/)
+                    .map(s=>s.trim())
+                    .filter(Boolean)
+                    .filter((v,i,a)=>a.indexOf(v)===i)
+                    .slice(0,50);
+            }
+
+            function syncKeywords(){
+                const form = document.getElementById('faqForm');
+                // 清舊的
+                form.querySelectorAll('input[name="Keywords"]').forEach(n=>n.remove());
+                // 新增多個 hidden
+                const arr = splitToArray(document.getElementById('kwInput')?.value);
+                arr.forEach(v=>{
+                    const h = document.createElement('input');
+                    h.type = 'hidden';
+                    h.name = 'Keywords';
+                    h.value = v;
+                    form.appendChild(h);
+                });
+            }
+
+            document.getElementById('faqForm').addEventListener('submit', function(){
+                // 1) 取回編輯器 HTML
+                const html = $('#answerEditor').summernote('code');
+                document.getElementById('answerEditor').value = html;
+                // 2) 同步關鍵字
+                syncKeywords();
+            });
+        })();
     </script>
 }
+
