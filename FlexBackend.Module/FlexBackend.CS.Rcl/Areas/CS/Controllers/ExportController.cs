@@ -65,71 +65,70 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             Response.Headers["Expires"] = "0";
 
             var fileName = $"kpi_{(days <= 0 ? "all" : $"{start:yyyyMMdd}-{end.AddDays(-1):yyyyMMdd}")}.xlsx";
-            return File(ms.ToArray(),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                fileName);
+            var encoded = Uri.EscapeDataString(fileName);
+
+            // 正確的 Content-Disposition（同時給 filename 與 filename*）
+            Response.Headers["Content-Disposition"] =
+                $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{encoded}";
+
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        }
+        // GET /api/cs/export/kpi.csv?days=30
+        [HttpGet("kpi.csv")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> ExportKpiCsv([FromQuery] int days = 30)
+        {
+            var end = DateTime.Now.Date.AddDays(1);                    // 明天 00:00（右開）
+            var start = (days <= 0) ? DateTime.MinValue : end.AddDays(-days);
+
+            string[] PAID = new[] { "paid", "Paid", "PAID" };
+
+            var paidOrdersQ = _context.OrdOrders.AsNoTracking()
+                .Where(o => (days <= 0) || (o.CreatedDate >= start && o.CreatedDate < end))
+                .Where(o => PAID.Contains(o.PaymentStatus));
+
+            var revenue = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                 join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                 select (decimal?)(i.UnitPrice * i.Qty)).SumAsync() ?? 0m;
+
+            var unitsSold = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                   join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                   select (int?)i.Qty).SumAsync() ?? 0;
+
+            var orderCount = await paidOrdersQ.CountAsync();
+            var aov = orderCount == 0 ? 0m : revenue / orderCount;
+
+            // 內容跟 Excel 的「KPI 總表」一致：兩欄（項目, 數值）
+            var rows = new[]
+            {
+    new { Metric = "營收",       Value = revenue },
+    new { Metric = "訂單數",     Value = (decimal)orderCount },
+    new { Metric = "售出數量",   Value = (decimal)unitsSold },
+    new { Metric = "平均客單價", Value = aov }
+};
+
+
+            var csv = ToCsv(rows, new[] { "Metric", "Value" });
+
+            var fileName = $"kpi_{(days <= 0 ? "all" : $"{start:yyyyMMdd}-{end.AddDays(-1):yyyyMMdd}")}.csv";
+            var encoded = Uri.EscapeDataString(fileName);
+
+            // 正確的 Content-Disposition（同時給 filename 與 filename*）
+            Response.Headers["Content-Disposition"] =
+                $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{encoded}";
+
+            // 加 UTF-8 BOM，避免 Excel 亂碼；mime 可加 charset（可選）
+            return File(Utf8BomBytes(csv), "text/csv; charset=utf-8");
         }
 
-        /// <summary>
-        /// 匯出訂單主表 (CSV)；days=0 代表不篩日期
-        /// </summary>
-        [HttpGet("orders-csv")]
-		public async Task<IActionResult> ExportOrdersCsv([FromQuery] int days = 30)
-		{
-			var start = DateTime.Now.AddDays(-days);
-
-			var q = _context.OrdOrders.AsNoTracking()
-					.Where(o => (days <= 0) || o.CreatedDate >= start)
-					.OrderByDescending(o => o.CreatedDate)
-					.Select(o => new
-					{
-						訂單編號 = o.OrderId,
-						訂單號碼 = o.OrderNo,
-						建立時間 = o.CreatedDate,
-						收件人 = o.ReceiverName,
-						總金額 = o.Subtotal + o.ShippingFee - o.DiscountTotal
-					});
-
-			var rows = await q.ToListAsync();
-
-			var csv = ToCsv(rows, new[] { "訂單編號", "訂單號碼", "建立時間", "收件人", "總金額" });
-			return File(Utf8BomBytes(csv), "text/csv", $"orders_{DateTime.Now:yyyyMMdd_HHmm}.csv");
-		}
-
-		/// <summary>
-		/// 匯出訂單商品明細 (CSV)；days=0 代表不篩日期
-		/// </summary>
-		[HttpGet("order-items-csv")]
-		public async Task<IActionResult> ExportOrderItemsCsv([FromQuery] int days = 30)
-		{
-			var start = DateTime.Now.AddDays(-days);
-
-			// 用 JOIN 明確關聯，避免導航屬性名稱/關聯設定造成篩不到
-			var q =
-				from i in _context.OrdOrderItems.AsNoTracking()
-				join o in _context.OrdOrders.AsNoTracking() on i.OrderId equals o.OrderId
-				where (days <= 0) || o.CreatedDate >= start
-				orderby i.OrderId, i.OrderItemId
-				select new
-				{
-					訂單編號 = i.OrderId,
-					明細編號 = i.OrderItemId,
-					商品代號 = i.ProductId,
-					數量 = i.Qty,
-					單價 = i.UnitPrice,
-					小計 = i.Qty * i.UnitPrice
-				};
-
-			var rows = await q.ToListAsync();
-
-			var csv = ToCsv(rows, new[] { "訂單編號", "明細編號", "商品代號", "數量", "單價", "小計" });
-			return File(Utf8BomBytes(csv), "text/csv", $"order_items_{DateTime.Now:yyyyMMdd_HHmm}.csv");
-		}
 
 
-		// ===== Helpers =====
 
-		private static byte[] Utf8BomBytes(string s)
+
+        // ===== Helpers =====
+
+        private static byte[] Utf8BomBytes(string s)
 		{
 			var bom = System.Text.Encoding.UTF8.GetPreamble();
 			var body = System.Text.Encoding.UTF8.GetBytes(s);
