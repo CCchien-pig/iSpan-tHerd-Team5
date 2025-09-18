@@ -3,7 +3,9 @@
 
 @{
     ViewData["Title"] = "FAQ 關鍵字設定";
+    var backUrl = Context.Request.Path + Context.Request.QueryString; // 回跳用
 }
+
 
 @section Styles {
     <!-- DataTables × Bootstrap 5 -->
@@ -108,13 +110,6 @@
             border-top-color: #6d28d9;
             animation: kw-spin .9s linear infinite;
         }
-        
-
-        {
-            transform: rotate(360deg);
-        }
-
-        }
 
         .kw-q {
             display: flex;
@@ -136,19 +131,7 @@
                 .kw-q span:nth-child(3) {
                     animation-delay: .24s;
                 }
-        
-
-        {
-            transform: translateY(0);
-            opacity: .45;
-        }
-
-        40% {
-            transform: translateY(-8px);
-            opacity: 1;
-        }
-
-        }
+       
 
         .kw-msg {
             font-size: .9rem;
@@ -199,7 +182,7 @@
             @foreach (var item in Model)
             {
                 var faqTitle = item.FaqTitle ?? "";
-                var faqLink = Url.Action("Details", "Faqs", new { area = "CS", id = item.FaqId });
+             
 
                 <tr>
                     <td class="text-center">
@@ -208,13 +191,18 @@
                     <td>@item.Keyword</td>
                     <td>@item.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
                     <td>
+                        <!-- 所屬 FAQ 欄位 -->
                         @if (string.IsNullOrWhiteSpace(faqTitle))
                         {
                             <span class="text-muted">（未對應 FAQ）</span>
                         }
                         else
                         {
-                            <a class="badge-faq line-clamp-1" href="@faqLink" title="@faqTitle">@faqTitle</a>
+                            <a class="badge-faq line-clamp-1"
+                               asp-area="CS" asp-controller="Faqs" asp-action="Details"
+                               asp-route-id="@item.FaqId"
+                               asp-route-returnUrl="@backUrl"
+                               title="@faqTitle">@faqTitle</a>
                         }
                     </td>
                     <td class="text-nowrap">

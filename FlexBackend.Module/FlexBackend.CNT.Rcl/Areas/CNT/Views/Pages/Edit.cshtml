@@ -4,18 +4,17 @@
     ViewData["Title"] = "編輯文章";
 }
 
-
 @section Styles {
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />@* 回頂部樣式 *@          
-    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fab.css" asp-append-version="true" />@* 回頂部樣式 *@          
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fab.css" asp-append-version="true" />@* 右下角樣式 *@          
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">@* Bootstrap Icons 的引入檔*@
 
 }
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-warning text-dark fw-bold">
+    <div class="card-header bg-warning-subtle text-dark fw-bold">
         ✏️ 編輯文章
     </div>
     <div class="card-body">
@@ -29,18 +28,15 @@
 
             <div class="mb-3">
                 <label asp-for="Title" class="form-label">標題</label>
-                <input asp-for="Title" class="form-control" placeholder="請輸入文章標題" />
+                <input asp-for="Title"
+                       class="form-control"
+                       placeholder="請輸入文章標題" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Status" class="form-label">狀態</label>
-                <select asp-for="Status" asp-items="Model.StatusList" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
             <!-- 分類 -->
             <div class="mb-3">
-                <label asp-for="PageTypeId" class="form-label">分類</label>
+                <label asp-for="PageTypeId" class="form-label">文章分類</label>
 
                 @if (Model.IsHomePage)
                 {
@@ -62,56 +58,70 @@
                     <span asp-validation-for="PageTypeId" class="text-danger"></span>
                 }
             </div>
-            <!-- tags-->
-            <div class="mb-3">
-                <label class="form-label">標籤</label>
+                <!-- 狀態 -->
+                <div class="mb-3">
+                    <label asp-for="Status" class="form-label">文章狀態</label>
+                    <select asp-for="Status"
+                            asp-items="Model.StatusList"
+                            class="form-select"></select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
 
-                @if (Model.IsHomePage)
-                {
-                    <!-- 首頁：不驗證 -->
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            data-val="false">
-                    </select>
-                    <small class="text-muted">首頁不需要標籤。</small>
-                    <!-- ❌ 不要渲染 asp-validation-for -->
-                }
-                else
-                {
-                    <!-- 非首頁：必填驗證 -->
-                    <select asp-for="SelectedTagIds"
-                            asp-items="Model.TagOptions"
-                            multiple="multiple"
-                            class="tag-selector w-100"
-                            required>
-                    </select>
-                    <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
-                }
-            </div>
-            <!-- 排程時間 -->
-            <div class="mb-3">
-                <label asp-for="ScheduledDate" class="form-label"></label>
-                <input asp-for="ScheduledDate" type="datetime-local" class="form-control"
-                       min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
-                <span asp-validation-for="ScheduledDate" class="text-danger"></span>
-            </div>
+            <!-- 標籤 -->
+                <div class="mb-3">
+                    <label class="form-label">標籤</label>
+                   @if (Model.IsHomePage)
+                    {
+                        <select asp-for="SelectedTagIds"
+                                asp-items="Model.TagOptions"
+                                multiple="multiple"
+                                class="tag-selector w-100"
+                                data-val="false">
+                        </select>
+                        <small class="form-text text-muted">提示：首頁可以不填標籤，但仍可選擇</small>
+                    }
+                    else
+                    {
+                        <select asp-for="SelectedTagIds"
+                                asp-items="Model.TagOptions"
+                                multiple="multiple"
+                                class="tag-selector w-100"
+                                required>
+                        </select>
+                        <span asp-validation-for="SelectedTagIds" class="text-danger"></span>
+                    }
+                </div>
 
-            <!-- 排程動作 -->
-            <div class="mb-3">
-                <label asp-for="ActionType" class="form-label">排程動作</label>
-                <select asp-for="ActionType" asp-items="Html.GetEnumSelectList<ActionType>()" class="form-select">
-                    <option value="">-- 不使用排程 --</option>
-                </select>
-                <span asp-validation-for="ActionType" class="text-danger"></span>
-            </div>
+                <!-- 是否設定排程 -->
+                <div class="form-check mb-2">
+                    <input asp-for="HasSchedule" class="form-check-input" type="checkbox" />
+                    <label asp-for="HasSchedule" class="form-check-label">是否設定排程</label>
+                </div>
 
+                <!-- 排程區塊：由 VM 的 HasSchedule 控制初始狀態 -->
+                <div id="schedule-fields" style="@(Model.HasSchedule ? "" : "display:none;")">
+                    <!-- 排程時間 -->
+                    <div class="mb-3">
+                        <label asp-for="ScheduledDate" class="form-label"></label>
+                        <input asp-for="ScheduledDate" class="form-control datepicker" type="text" />
+                        <span asp-validation-for="ScheduledDate" class="text-danger"></span>
+                    </div>
 
-            <div class="mb-3">
-                <label asp-for="RevisedDate" class="form-label">最後修改時間</label>
-                <input asp-for="RevisedDate" class="form-control" readonly />
-            </div>
+                    <!-- 排程動作 -->
+                    <div class="mb-3">
+                        <label asp-for="ActionType" class="form-label"></label>
+                        <select asp-for="ActionType" asp-items="ViewBag.ActionTypeList" class="form-select"></select>
+                        <span asp-validation-for="ActionType" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- 最後修改時間 -->
+                <div class="mb-3">
+                    <label asp-for="RevisedDate" class="form-label">最後修改時間</label>
+                    <input asp-for="RevisedDate"
+                           class="form-control"
+                           readonly />
+                </div>
 
             <!-- 🔑 保留查詢狀態 -->
             <input type="hidden" asp-for="Page" />
@@ -173,9 +183,21 @@
 </div>
 
 @section Scripts {
-     <partial name="_ValidationScriptsPartial" />   @* 必須先載入 jQuery Validate *@
+    <partial name="_ValidationScriptsPartial" />   @* 必須先載入 jQuery Validate *@
     <partial name="_Select2ValidationPartial" model="Model.IsHomePage" />  @* 再載入 Select2 驗證邏輯 *@
     <partial name="_BlockListScripts" />
+    @await Html.PartialAsync("_FlatpickrScriptsPartial")
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+        <script>
+            $(document).ready(function () {
+                $('.tag-selector').select2({
+                    placeholder: "請選擇標籤",
+                    allowClear: true,
+                    width: '100%'
+                });
+            });
+        </script>
     <script>
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -194,6 +216,6 @@
                 btn.classList.remove("show");
             }
         });
-    </script>
+    </script>  
 }
 

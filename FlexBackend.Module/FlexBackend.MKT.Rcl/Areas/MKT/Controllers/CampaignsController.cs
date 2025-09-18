@@ -29,18 +29,40 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             return View();
         }
 
-        // POST: 新增活動
         [HttpPost]
-        public IActionResult CreateCampaign([FromBody] MktCampaign model)
+        public IActionResult CreateCampaign([FromBody]MktCampaign model)
         {
             if (!ModelState.IsValid)
                 return Json(new { success = false, message = "資料驗證失敗" });
 
+            // 檢查開始與結束時間
+            if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
+            {
+                return Json(new { success = false, message = "開始時間不可晚於結束時間" });
+            }
+            if (string.IsNullOrWhiteSpace(model.CampaignType))
+            {
+                model.CampaignType = "cmd"; // 預設值
+            }
             model.CreatedDate = DateTime.Now;
             _context.MktCampaigns.Add(model);
-            _context.SaveChanges();
-            return Json(new { success = true });
+            
+
+            try
+            {
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                // 這裡可以針對資料庫例外再做處理
+                var inner = ex;
+                while (inner.InnerException != null) inner = inner.InnerException;
+                return Json(new { success = false, message = "新增失敗：" + inner.Message });
+            }
+
         }
+
 
         // GET: 取得活動事件
         [HttpGet]
@@ -79,7 +101,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                     status = c.Status,
                     startDate = c.StartDate,
                     endDate = c.EndDate,
-                    ingId = c.ImgId,
+                    imgId = c.ImgId,
                     isActive = c.IsActive,
                     creator = c.Creator,
                     createDate = c.CreatedDate,
@@ -113,6 +135,38 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         {
             var count = _context.MktCampaigns.Count();
             return Json(new { count });
+        }
+
+        [HttpPost]
+        public IActionResult UpdateCampaign([FromBody] MktCampaign model)
+        {
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
+
+            // 檢查開始與結束時間
+            if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
+            {
+                return Json(new { success = false, message = "開始時間不可晚於結束時間" });
+            }
+
+            // 強制固定活動類型
+            model.CampaignType = "cmd";
+
+            // 更新時間
+            model.RevisedDate = DateTime.Now;
+
+            try
+            {
+                _context.MktCampaigns.Update(model);
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                var inner = ex;
+                while (inner.InnerException != null) inner = inner.InnerException;
+                return Json(new { success = false, message = "更新失敗：" + inner.Message });
+            }
         }
     }
 }
