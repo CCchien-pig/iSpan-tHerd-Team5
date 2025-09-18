@@ -26,13 +26,21 @@
         <div class="legend">
             <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
             <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
-            <span><span class="dot normal"></span> 正常</span>
+            @* <span><span class="dot normal"></span> 正常</span> *@
         </div>    
-        <select id="stockExpireFilter" class="form-select form-select-sm mb-2">
-            <option value="">全部</option>
-            <option value="valid">未過期</option>
-            <option value="expired">已過期</option>
-        </select>
+        <div class="d-flex mb-2">
+            <select id="stockExpireFilter" class="form-select form-select-sm me-2">
+                <option value="">全部</option>
+                <option value="valid" selected>未過期</option>
+                <option value="expired">已過期</option>
+            </select>
+
+            <select id="stockDateSort" class="form-select form-select-sm">
+                <option value="updated-asc">最新異動時間(舊 → 新)</option>
+                <option value="updated-desc" selected>最新異動時間(新 → 舊)</option>
+            </select>
+
+        </div>
         <table id="stockBatchTable" class="display" style="width:100%">
             <thead>
                 <tr>
@@ -626,6 +634,7 @@
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
                         d.expireFilter = $('#stockExpireFilter').val(); // 傳到期日篩選值
+                        d.stockDateSort  = $('#stockDateSort').val();          // 日期排序欄位
                     },
                     dataSrc: function(json) {
                         console.log(json);      // 印出整個 JSON
@@ -671,20 +680,21 @@
                             let skuStatusClass = row.StockStatus || 'stock-normal';
 
                             let icon = '';
-                            if(stock <= safety){
+                            if(total <= safety){
                                 statusClass = 'stock-danger';
                                 icon = '<i class="fa-solid fa-triangle-exclamation" style="color: #e66774;"></i>';
-                            } else if(stock <= reorder){
+                            } else if(total <= reorder){
                                 statusClass = 'stock-low';
                                 icon = '<i class="fa-solid fa-circle-exclamation" style="color: #f9d66f;"></i>';
                             }
-                            // tooltip 顯示批次庫存與 SKU 總庫存
+                            // tooltip 顯示分行
                             return `<span class="${batchStatusClass}"
                                             data-bs-toggle="tooltip"
-                                            title="批次庫存: ${stock}, SKU 總庫存: ${total}">
+                                            data-bs-html="true"
+                                            title="批次庫存: ${stock}<br>SKU 總庫存: ${total}">
                                             ${icon}${stock}
-                                    </span>`;                        
-                                }
+                                    </span>`;
+                        }
                     },
                     { data: 'reorderPoint', title: '再訂購點' , className: 'text-center'},
                     { data: 'safetyStockQty', title: '安全庫存' , className: 'text-center'},
@@ -749,6 +759,11 @@
                 }
             });
 
+            // 監聽 select 變更，重新載入 DataTable
+            $('#stockDateSort').on('change', function() {
+                stockBatchTable.ajax.reload(null, false);
+            });
+
             // ======= 初始化 2. 全站異動紀錄 DataTable =======
             var historyTable = $('#historyTable').DataTable({
                 serverSide: true,   // 用後端搜排分業
@@ -761,7 +776,7 @@
                         d.expireFilter = $('#historyExpireFilter').val(); // 傳到期日篩選值
                     },
                     dataSrc: function(json) {
-                        console.log(json);      // 印出整個 JSON
+                        //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
                        return json.data;
                     }
@@ -871,8 +886,6 @@
                 }
             });
 
-
-
             // 每次 redraw 都重新初始化 tooltip
             stockBatchTable.on('draw', function() {
                 $('[data-bs-toggle="tooltip"]').each(function() {
@@ -924,24 +937,25 @@
 
                     // 取得當前庫存與最大庫存
                     var currentStock = parseInt($modal.find('.stock-edit-currentQty').val()) || 0;
-                    var maxStock = parseInt($modal.find('.stock-edit-changeQty').data('max')) || 0;
+                    var maxStock = parseInt($modal.find('.stock-edit-maxStock').val()) || 0; // 建議後端傳最大庫存，前端直接用 input hidden 或 data 屬性
                     console.log('[EditStock] currentStock:', currentStock, 'maxStock:', maxStock);
 
                     // ===== 計算上限 & 更新預計庫存 =====
                     function refreshQtyLimits() {
-                        var isAdd = $modal.find('.stock-edit-isAdd:checked').val() === 'true';
+                        var $checkedRadio = $modal.find('.stock-edit-isAdd:checked');
+                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === 'true' : true; // 無 radio 預設增加
                         var changeInput = $modal.find('.stock-edit-changeQty');
                         var curVal = parseInt(changeInput.val()) || 0;
 
                         // 計算最大可輸入數量
-                        var maxAllowed = isAdd ? maxStock : currentStock;
+                        var maxAllowed = isAdd ? (maxStock - currentStock) : currentStock;
                         if (maxAllowed < 0) maxAllowed = 0;
-                        changeInput.attr('max', maxAllowed);
 
                         // 修正當前值
                         if (curVal > maxAllowed) curVal = maxAllowed;
                         if (curVal < 0) curVal = 0;
                         changeInput.val(curVal);
+                        changeInput.attr('max', maxAllowed);
 
                         // 計算預計庫存
                         var predicted = isAdd ? currentStock + curVal : currentStock - curVal;
@@ -951,7 +965,6 @@
                         $modal.find('.stock-edit-maxAllowed').text(maxAllowed);
                         $modal.find('.stock-edit-predictedQty').text(predicted);
 
-
                         console.log('[EditStock] isAdd:', isAdd, 'curVal:', curVal, 'maxAllowed:', maxAllowed, 'predictedStock:', predicted);
                     }
 
@@ -959,28 +972,25 @@
                     refreshQtyLimits();
 
                     // radio / input 事件
-                    $modal.find('.stock-edit-isAdd').off('change').on('change', function() {
-                        console.log('[EditStock] radio change -> selected isAdd:', $(this).val());
-                        refreshQtyLimits();
-                    });
-
-                    $modal.find('.stock-edit-changeQty').off('input').on('input', function() {
-                        console.log('[EditStock] input change -> new value:', $(this).val());
-                        refreshQtyLimits();
-                    });
+                    $modal.find('.stock-edit-isAdd').off('change').on('change', refreshQtyLimits);
+                    $modal.find('.stock-edit-changeQty').off('input').on('input', refreshQtyLimits);
 
                     // 儲存按鈕事件
                     $modal.find('.stock-edit-saveBtn').off('click').on('click', function() {
                         var changeInput = $modal.find('.stock-edit-changeQty');
                         var curVal = parseInt(changeInput.val()) || 0;
-                        var isAdd = $modal.find('.stock-edit-isAdd:checked').val() === 'true';
 
-                        // 建立手動表單資料
+                        var $checkedRadio = $modal.find('.stock-edit-isAdd:checked');
+                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === 'true' : true; // 無 radio 預設增加
+
+                        // 建立表單資料
                         var formData = {
                             ChangeQty: curVal,
                             IsAdd: isAdd,
                             Remark: $modal.find('textarea[name="Remark"]').val() || ''
                         };
+
+                        console.log('[EditStock] Save formData:', formData);
 
                         $.post(`/SUP/StockBatches/Update/${id}`, formData, function(res) {
                             if (res.success) {
@@ -991,18 +1001,18 @@
                             }
                         });
                     });
-
-
                 });
             });
 
 
+
             // ===== 點擊品牌異動紀錄按鈕 =====
-            $('#stockBatchTable').on('click', '.stock-history-btn', function() {
-    console.log('clicked button:', this); 
+            $('#stockBatchTable').on('click', '.stock-history-btn', function() 
+            {
+                console.log('clicked button:', this); 
                 // 取得該列 brandName
                 var brandname = $(this).data('brandname');
-    console.log('brandName from button data:', brandname);
+                console.log('brandName from button data:', brandname);
 
                 if (!brandname) return console.warn('brandname is undefined!');
 
@@ -1010,7 +1020,7 @@
                 $('#stockTableWrapper').hide();
                 $('#historyTableWrapper').show();
 
-        console.log('historyTable before search:', historyTable);
+                console.log('historyTable before search:', historyTable);
 
                 // DataTable 搜尋並刷新
                 historyTable.search(brandname).draw();
@@ -1030,64 +1040,63 @@
 
 
             // ===== 點擊修改備註按鈕 =====
-            $('#historyTable').on('click', '.stock-text-btn', function() {
-            console.log('[Remark] button clicked');
+            $('#historyTable').on('click', '.stock-text-btn', function() 
+            {
+                console.log('[Remark] button clicked');
 
-            var batchId = $(this).data('batchid');
-            console.log('[Remark] batchId:', batchId);
+                var batchId = $(this).data('batchid');
+                console.log('[Remark] batchId:', batchId);
 
-            // 用 GET 取得 JSON
-            $.get(`/SUP/StockBatches/Remark/${batchId}`, function(res) {
-                if (!res.success) {
-                    alert(res.message);
-                    return;
-                }
+                // 用 GET 取得 JSON
+                $.get(`/SUP/StockBatches/Remark/${batchId}`, function(res) {
+                    if (!res.success) {
+                        alert(res.message);
+                        return;
+                    }
 
-                var data = res.data;
-                console.log('[Remark] data:', data);
+                    var data = res.data;
+                    console.log('[Remark] data:', data);
 
-                $('#remarkBrandName').text(data.brandName || '');
-                $('#remarkProductName').text(data.productName || '');
-                $('#remarkSkuCode').text(data.skuCode || '');
-                $('#remarkManufactureDate').text(data.manufactureDate ? new Date(data.manufactureDate).toLocaleDateString() : '');
-                $('#remarkCurrentQty').text(data.currentQty != null ? data.currentQty : 0);
-                $('#remarkInput').val(data.remark || '');
+                    $('#remarkBrandName').text(data.brandName || '');
+                    $('#remarkProductName').text(data.productName || '');
+                    $('#remarkSkuCode').text(data.skuCode || '');
+                    $('#remarkManufactureDate').text(data.manufactureDate ? new Date(data.manufactureDate).toLocaleDateString() : '');
+                    $('#remarkCurrentQty').text(data.currentQty != null ? data.currentQty : 0);
+                    $('#remarkInput').val(data.remark || '');
 
-                $('#stockRemarkModal').modal('show');
-                console.log('[Remark] modal shown');
+                    $('#stockRemarkModal').modal('show');
+                    console.log('[Remark] modal shown');
 
-                // 儲存備註
-                $('#saveRemarkBtn').off('click').on('click', function() {
-                    console.log('[Remark] save button clicked');
-                    var newRemark = $('#remarkInput').val();
+                    // 儲存備註
+                    $('#saveRemarkBtn').off('click').on('click', function() {
+                        console.log('[Remark] save button clicked');
+                        var newRemark = $('#remarkInput').val();
 
-                    $.post(`/SUP/StockBatches/UpdateHistoryRemark`, {
-                        StockHistoryId: data.stockHistoryId,  // 傳最後一次異動 ID
-                        // StockBatchId: batchId,
-                        Remark: newRemark
-                    }, function(res) {
-                        console.log('[Remark] POST result:', res);
-                        if (res.success) {
-                            $('#stockRemarkModal').modal('hide');
-                            stockBatchTable.ajax.reload(null, false); // 刷新表格
+                        $.post(`/SUP/StockBatches/UpdateHistoryRemark`, {
+                            StockHistoryId: data.stockHistoryId,  // 傳最後一次異動 ID
+                            // StockBatchId: batchId,
+                            Remark: newRemark
+                        }, function(res) {
+                            console.log('[Remark] POST result:', res);
+                            if (res.success) {
+                                $('#stockRemarkModal').modal('hide');
+                                stockBatchTable.ajax.reload(null, false); // 刷新表格
 
-                            // SweetAlert 提示
-                            Swal.fire({
-                                icon: 'success',
-                                html: `已更改異動紀錄ID: ${res.stockHistoryId}<br>批號: ${data.batchNumber} 的備註`,
-                                timer: 1500,
-                                showConfirmButton: false
-                            });
+                                // SweetAlert 提示
+                                Swal.fire({
+                                    icon: 'success',
+                                    html: `已更改異動紀錄ID: ${res.stockHistoryId}<br>批號: ${data.batchNumber} 的備註`,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
 
-                        } else {
-                            alert(res.message);
-                        }
+                            } else {
+                                alert(res.message);
+                            }
+                        });
                     });
                 });
             });
-            });
-
-
 
 
             // ===== 點擊 submit =====
@@ -1100,15 +1109,28 @@
 
                 // 無論異動類型，都送 MovementType
                 var movementType = $('#MovementTypeSelect').val();
-                if (movementType) {
-                    formData.set('MovementType', movementType);
-                    console.log("異動類型:", movementType);
+                var isAdd;
+
+                if (movementType === 'Purchase') {
+                    // 採購固定為增加
+                    isAdd = true;
+                } else if (movementType === 'Return') {
+                    // 退貨固定為減少
+                    isAdd = false;
+                } else {
+                    // 其他才根據 radio 選擇
+                    var $checkedRadio = form.find('input[name="IsAdd"]:checked');
+                    if ($checkedRadio.length > 0) {
+                        isAdd = $checkedRadio.val() === 'true';
+                    } else {
+                        isAdd = true; // 預設增加
+                    }
                 }
 
-                // 無論異動類型，都送 IsAdd（增加/減少選擇）
-                var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                formData.set('MovementType', movementType || 'Adjust');
                 formData.set('IsAdd', isAdd);
-                console.log("加減選擇:", isAdd ? "增加" : "減少");
+                console.log("異動類型:", movementType, "加減選擇:", isAdd ? "增加" : "減少");
+
 
                 $.ajax({
                     url: form.attr('action'),
@@ -1167,14 +1189,22 @@
                 // 正確計算增減符號
                 let changeDisplay = m.isAdd ? `+${m.changeQty}` : `-${m.changeQty}`;
 
-                // 異動後庫存
+                // 判斷異動前數量
+                let beforeQtyDisplay;
+                if (m.isAdd && m.currentQty === 0) {
+                    beforeQtyDisplay = "新建批號";
+                } else {
+                    beforeQtyDisplay = m.currentQty;
+                }
+
+                // 計算異動後庫存
                 const afterQtyDisplay = m.isAdd ? m.currentQty + m.changeQty : m.currentQty - m.changeQty;
 
                 const row = `<tr>
                     <td>${m.skuCode}</td>
                     <td>${m.batchNumber || '-'}</td>
                     <td>${getMovementTypeText(m.movementType)}</td>
-                    <td>${m.currentQty}</td>
+                    <td>${beforeQtyDisplay}</td>
                     <td>${changeDisplay}</td>
                     <td>${afterQtyDisplay}</td>
                 </tr>`;
@@ -1183,6 +1213,7 @@
 
             $('#batchMovementModal').modal('show');
         }
+
 
         function getMovementTypeText(type) {
             switch(type) {
