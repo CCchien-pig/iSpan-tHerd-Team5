@@ -18,9 +18,9 @@ namespace FlexBackend.Admin.Infrastructure.Auth
 		public string? Id => Get(ClaimTypes.NameIdentifier);
 		public string? Email => Get(ClaimTypes.Email);
 
-        // 一定要有值：若 claim 缺失（理論上不會），就丟例外提示登入態需刷新
-        int ICurrentUser.UserNumberId
-        {
+		// 一定要有值：若 claim 缺失（理論上不會），就丟例外提示登入態需刷新
+		public int UserNumberId
+		{
 			get
 			{
 				var raw = Get(AppClaimTypes.UserNumberId);
@@ -46,5 +46,7 @@ namespace FlexBackend.Admin.Infrastructure.Auth
 				return string.IsNullOrWhiteSpace(combo) ? (Email ?? User?.Identity?.Name) : combo;
 			}
 		}
-    }
+
+		int ICurrentUser.UserNumberId => throw new NotImplementedException();
+	}
 }
