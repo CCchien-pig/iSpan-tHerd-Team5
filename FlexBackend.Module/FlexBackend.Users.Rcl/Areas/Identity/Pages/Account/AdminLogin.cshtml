@@ -17,8 +17,433 @@
     var chienPwd = (Config["ChienPassword"] ?? "").Trim();
 }
 
-<h1>@ViewData["Title"]</h1>
-<div class="row">
+@section Styles {
+    <style>
+        body {
+            background: radial-gradient(circle at top,
+                rgba(100, 0, 150, 0.25) 0%,  /* 紫色淡淡光暈 */
+                #111 50%,
+                #000 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* === 背景大字 (tHerd) === */
+        .background-title {
+            position: absolute;
+            bottom: 2%;   /* 靠下，距離底部 5% */
+            right: 10%;     /* 靠左，距離左邊 5% */
+            /* transform: translate(-50%, -50%); */
+            font-size: 12rem;
+            font-weight: 900;
+            font-family: 'Segoe UI', sans-serif;
+            text-transform: none; /* 保留大小寫 → tHerd */
+            color: transparent;
+
+            /* 紫色主調的霓虹漸層 */
+            background: linear-gradient(270deg, #9d4edd, #7b2cbf, #c77dff, #9d4edd);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+
+            /* 強烈紫色光暈 */
+            text-shadow: 
+                0 0 15px rgba(157, 78, 221, 0.9),
+                0 0 30px rgba(124, 44, 191, 0.8),
+                0 0 45px rgba(199, 125, 255, 0.9),
+                0 0 60px rgba(157, 78, 221, 1);
+
+            opacity: 0.25; /* 比之前更亮 */
+            animation: gradientMove 6s ease infinite, flicker 2s infinite, glowPulse 3s infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 漸層流動 */
+        @@keyframes gradientMove {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 霓虹閃爍 */
+        @@keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 0.25;
+                text-shadow: 
+                    0 0 15px rgba(157, 78, 221, 1),
+                    0 0 35px rgba(124, 44, 191, 1),
+                    0 0 55px rgba(199, 125, 255, 1);
+            }
+            20%, 24%, 55% {
+                opacity: 0.35; /* 閃一下爆亮 */
+                text-shadow: 
+                    0 0 25px rgba(210, 150, 255, 1),
+                    0 0 45px rgba(190, 80, 255, 1),
+                    0 0 70px rgba(255, 200, 255, 1);
+            }
+        }
+
+        /* 光暈脈動 */
+        @@keyframes glowPulse {
+            0%, 100% {
+                text-shadow: 
+                    0 0 20px rgba(170, 100, 255, 1),
+                    0 0 40px rgba(140, 60, 255, 0.9),
+                    0 0 80px rgba(200, 140, 255, 0.9);
+            }
+            50% {
+                text-shadow: 
+                    0 0 40px rgba(210, 150, 255, 1),
+                    0 0 70px rgba(180, 80, 255, 1),
+                    0 0 120px rgba(255, 200, 255, 1);
+            }
+        }
+
+        /* 漸層流動動畫 */
+        @@keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* === 背景炫彩光圈 === */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);  /* ✅ 保持只有光圈模糊 */
+            opacity: 0.55;
+            animation: float 18s infinite ease-in-out alternate;
+        }
+
+        /* 主光圈 */
+        .bg-circle:nth-child(1) {
+            width: 420px; height: 420px;
+            top: 8%; left: 15%;
+            background: #ff0080;
+            animation-delay: 0s;
+        }
+        .bg-circle:nth-child(2) {
+            width: 520px; height: 520px;
+            bottom: 12%; right: 12%;
+            background: #7928ca;
+            animation-delay: 3s;
+        }
+        .bg-circle:nth-child(3) {
+            width: 300px; height: 300px;
+            top: 25%; right: 25%;
+            background: #2afadf;
+            animation-delay: 6s;
+        }
+
+        /* 新增一些小光圈點綴 */
+        .bg-circle:nth-child(4) {
+            width: 180px; height: 180px;
+            bottom: 20%; left: 30%;
+            background: #ffcc00;
+            opacity: 0.4;
+            animation-delay: 9s;
+        }
+        .bg-circle:nth-child(5) {
+            width: 150px; height: 150px;
+            top: 15%; right: 10%;
+            background: #00eaff;
+            opacity: 0.35;
+            animation-delay: 12s;
+        }
+
+        /* 浮動動畫更豐富 */
+        @@keyframes float {
+            0%   { transform: translateY(0px) translateX(0px) scale(1); }
+            25%  { transform: translateY(-40px) translateX(20px) scale(1.05); }
+            50%  { transform: translateY(-20px) translateX(-20px) scale(0.95); }
+            75%  { transform: translateY(-60px) translateX(15px) scale(1.1); }
+            100% { transform: translateY(-30px) translateX(-15px) scale(1); }
+        }
+
+
+        /* === 登入卡片 (置頂) === */
+        .login-card {
+            position: absolute;   
+            top: 20%;
+            left: 20%;
+            transform: translate(-50%, -50%); /* 全銀幕正中間 */
+    
+            width: 400px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+            color: #222;
+            backdrop-filter: blur(15px) saturate(120%);
+            -webkit-backdrop-filter: blur(15px) saturate(120%);
+            z-index: 1000;
+
+            /* 動畫 */
+            animation: cardFadeIn 0.8s ease-out forwards;
+        }
+
+
+         /* 動畫關鍵影格 */
+        @@keyframes cardFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9); /* 只縮放，不動位置 */
+            }
+            60% {
+                opacity: 1;
+                transform: scale(1.03); /* 微微彈一下 */
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+
+
+        .login-btn-animated {
+            background: linear-gradient(135deg, #FFD93D, #FFB300); /* 黃色漸層 */
+            border: none;
+            color: #003566;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+            transition: all 0.3s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 滑鼠 hover 漸層移動動畫 */
+        .login-btn-animated:hover {
+            background: linear-gradient(135deg, #FFB300, #FFD93D);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, .3);
+        }
+
+        /* 光暈流動效果 */
+        .login-btn-animated::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, rgba(255,255,255,.4), rgba(255,255,255,0));
+            transform: skewX(-20deg);
+        }
+
+        .login-btn-animated:hover::after {
+            animation: shine 1s forwards;
+        }
+
+        @@keyframes shine {
+            from { left: -100%; }
+            to { left: 200%; }
+        }
+
+       .quick-dock {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 50;
+
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* 波浪 SVG */
+        .quick-dock svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;   /* 做成 2 倍寬，方便流動 */
+            height: 100px;
+            z-index: -1;
+            animation: waveMove 8s linear infinite;
+        }
+
+        /* 波浪動畫 */
+        @@keyframes waveMove {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+
+        /* 按鈕樣式 */
+        .dock-buttons button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+
+        /* 按鈕 */
+
+#btnQuickSuper,
+#btnQuickMod,
+#btnQuickChien {
+    border: none !important;       /* 移除邊框 */
+    box-shadow: none !important;   /* 移除外框陰影 */
+    background: transparent;       /* 背景透明 */
+    color: #fff;                   /* 白色字 */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;     /* 平滑過渡 */
+}
+
+/* 滑鼠移上去：發光效果 */
+#btnQuickSuper:hover,
+#btnQuickMod:hover,
+#btnQuickChien:hover {
+    color: #fff;
+    text-shadow: 
+        0 0 5px rgba(255,255,255,0.8),
+        0 0 10px rgba(255,255,255,0.6),
+        0 0 20px rgba(255,255,255,0.4);
+    transform: scale(1.1);
+}
+
+/* 點擊（active）：縮小一點 + 高亮 */
+#btnQuickSuper:active,
+#btnQuickMod:active,
+#btnQuickChien:active {
+    transform: scale(0.95);
+    text-shadow: 
+        0 0 8px rgba(255,255,255,1),
+        0 0 15px rgba(255,255,255,0.9),
+        0 0 30px rgba(255,255,255,0.8);
+}
+
+        /* === 光球 === */
+.floating-ball {
+    position: absolute;
+    bottom: -30px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(255,255,255,0));
+    animation: floatUp 8s linear infinite;
+    opacity: 0.8;
+}
+
+/* 隨機不同的起始位置 & 延遲 */
+.floating-ball.delay1 { left: 15%; animation-delay: 1s; animation-duration: 7s; transform: scale(0.8);}
+.floating-ball.delay2 { left: 35%; animation-delay: 3s; animation-duration: 9s; transform: scale(1.2);}
+.floating-ball.delay3 { left: 55%; animation-delay: 5s; animation-duration: 10s; transform: scale(1);}
+.floating-ball.delay4 { left: 75%; animation-delay: 2s; animation-duration: 8s; transform: scale(0.9);}
+.floating-ball.delay5 { left: 90%; animation-delay: 4s; animation-duration: 11s; transform: scale(1.3);}
+
+/* 上浮動畫（更自然，有左右漂移） */
+@@keyframes floatUp {
+    0%   { transform: translateY(0) translateX(0) scale(0.8); opacity: 0.6; }
+    25%  { transform: translateY(-40px) translateX(-10px) scale(1); opacity: 0.9; }
+    50%  { transform: translateY(-80px) translateX(15px) scale(1.2); opacity: 1; }
+    75%  { transform: translateY(-120px) translateX(-5px) scale(1.1); opacity: 0.7; }
+    100% { transform: translateY(-160px) translateX(10px) scale(0.6); opacity: 0; }
+}
+
+/* === 按鈕樣式 === */
+.dock-buttons button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: bold;
+    margin-right: 12px;
+    cursor: pointer;
+    z-index: 10;
+}
+.login-card-header {
+    background: transparent; /* 不要漸層，純透明 */
+    border: none;            /* 移除原本的邊線 */
+    padding: 15px;
+}
+
+.login-title {
+    font-size: 1.8rem;
+    font-weight: 800; /* 粗體 */
+    color: #fff;      /* 白色 */
+    text-underline-offset: 6px; /* 與文字有間距 */
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.6),   /* 黑色陰影 */
+        0 0 10px rgba(255, 255, 255, 0.4); /* 白色柔光 */
+    margin: 0;
+}
+    </style>
+}
+
+<!-- 背景特效 -->
+<div class="background-title">tHerd</div>
+<div class="bg-circle"></div>
+<div class="bg-circle"></div>
+<div class="bg-circle"></div>
+
+    <!-- 多顆光球 -->
+    <div class="floating-ball"></div>
+    <div class="floating-ball delay1"></div>
+    <div class="floating-ball delay2"></div>
+    <div class="floating-ball delay3"></div>
+    <div class="floating-ball delay4"></div>
+    <div class="floating-ball delay5"></div>
+
+<div class="card login-card">
+    <div class="card-body">
+    <div class="card-header login-card-header text-center">
+        <h3 class="login-title">tHerd 員工登入</h3>
+    </div>
+        <form id="account" method="post">
+                <div class="form-floating mb-3">
+                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <label asp-for="Input.Email" class="form-label">@Html.DisplayNameFor(m => m.Input.Email)</label>
+                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                </div>
+                <div class="form-floating mb-3">
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+                    <label asp-for="Input.Password" class="form-label">@Html.DisplayNameFor(m => m.Input.Password)</label>
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                </div>
+                <div class="checkbox mb-3">
+                    <label asp-for="Input.RememberMe" class="form-label">
+                        <input class="form-check-input" asp-for="Input.RememberMe" />
+                        @Html.DisplayNameFor(m => m.Input.RememberMe)
+                    </label>
+                </div>
+                 <div>
+                    <button id="login-submit" type="submit"
+                            class="w-100 btn btn-lg login-btn-animated">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> 員工登入
+                    </button>
+                </div>
+        </form>
+    </div>
+    <div class="card-footer bg-light" style="display:none;">
+        <div class="d-flex justify-content-center gap-3">
+            <a id="forgot-password" asp-page="./ForgotPassword" class="link-secondary text-decoration-none">
+                <i class="bi bi-key-fill me-1"></i> 忘記密碼
+            </a>
+            <span class="text-muted">|</span>
+            <a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="link-secondary text-decoration-none">
+                <i class="bi bi-envelope-fill me-1"></i> 重寄驗證信
+            </a>
+        </div>
+    </div>
+</div>
+
+@* <h1  style="display:none;">@ViewData["Title"]</h1>
+<div class="row"  style="display:none;">
     <div class="col-md-4">
         <section>
             <form id="account" method="post">
@@ -50,7 +475,7 @@
                     </p>
                     @* <p>
                         <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p> *@
+                    </p> 
                     <p>
                         <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">重寄驗證信</a>
                     </p>
@@ -58,10 +483,11 @@
             </form>
         </section>
     </div>
-</div>
+</div> *@
+
 @if (Env.IsDevelopment())  // ← 只在開發環境顯示（想永遠顯示就移除這行條件）
 {
-    <div id="quickLoginDock" class="position-fixed" style="right:10px; z-index:1040;">
+ @*    <div id="quickLoginDock" class="position-fixed quick-dock">
         <div id="quickLoginData"
              data-super-email="@superEmail" data-super-pwd="@superPwd"
              data-mod-email="@modEmail" data-mod-pwd="@modPwd"
@@ -71,6 +497,23 @@
         <button type="button" id="btnQuickSuper" class="btn btn-sm btn-outline-secondary me-2">超級管理員</button>
         <button type="button" id="btnQuickMod" class="btn btn-sm btn-outline-primary  me-2">權限管理</button>
         <button type="button" id="btnQuickChien" class="btn btn-sm btn-outline-dark">簡郡逸</button>
+    </div> *@
+    <div id="quickLoginDock" class="quick-dock">
+        <div id="quickLoginData"
+             data-super-email="@superEmail" data-super-pwd="@superPwd"
+             data-mod-email="@modEmail" data-mod-pwd="@modPwd"
+             data-chien-email="@chienEmail" data-chien-pwd="@chienPwd">
+        </div>
+        <svg viewBox="0 0 1000 100" preserveAspectRatio="none">
+            <path d="M0,40 C150,80 350,0 500,40 C650,80 850,0 1000,40 L1000,0 L0,0 Z"
+                  fill="rgba(255,255,255,0.15)"/>
+        </svg>
+
+        <div class="dock-buttons">
+            <button type="button" id="btnQuickSuper">超級管理員</button>
+            <button type="button" id="btnQuickMod">權限管理</button>
+            <button type="button" id="btnQuickChien">簡郡逸</button>
+        </div>
     </div>
 }
 
@@ -103,9 +546,7 @@
           document.getElementById('btnQuickChien')?.addEventListener('click', () =>
             fillAndSubmit(data.chienEmail, data.chienPwd));
         })();
-    </script>
 
-    <script>
         (function(){
           function placeDock() {
             const dock = document.getElementById('quickLoginDock');
