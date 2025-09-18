@@ -49,6 +49,7 @@
 
         <form asp-action="Delete" method="post">
             <input type="hidden" asp-for="ScheduleId" />
+            <input type="hidden" asp-for="PageId" /> <!-- ✅ 新增 -->
             <div class="d-flex gap-3 mt-3">
                 <a asp-action="Index" class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
                 <button type="submit" class="btn btn-outline-danger btn-lg">🗑️ 確認刪除</button>
