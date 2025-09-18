@@ -1,4 +1,5 @@
-﻿using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
+﻿using FlexBackend.CNT.Rcl.Areas.CNT.Attributes;
+using FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
 using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -47,8 +48,12 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.ViewModels
 		public string? Keyword { get; set; }
 		public string? StatusFilter { get; set; }
 
+		// ✅ 新增：是否設定排程
+		public bool HasSchedule { get; set; } = false;
+
 		// 排程欄位
 		[Display(Name = "排程時間")]
+		[RequiredIf("HasSchedule", "排程時間必填")]
 		public DateTime? ScheduledDate { get; set; }
 
 		[Display(Name = "排程動作")]

@@ -34,29 +34,35 @@
 
             <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-            <!-- 文章資訊 -->
+            <!-- 文章標題 -->
             <div class="mb-3">
-                <label class="form-label">文章</label>
-                <input class="form-control" value="@Model.PageTitle (@Model.PageTypeName)" readonly />
+                <label class="form-label">文章標題</label>
+                <input class="form-control" value="@Model.PageTitle" readonly />
+            </div>
+
+            <!-- 文章分類 -->
+            <div class="mb-3">
+                <label class="form-label">文章分類</label>
+                <input class="form-control" value="@Model.PageTypeName" readonly />
             </div>
 
             <!-- 動作 -->
             <div class="mb-3">
-                <label asp-for="ActionType" class="form-label">文章動作</label>
+                <label asp-for="ActionType" class="form-label">預約動作</label>
                 <select asp-for="ActionType" class="form-select" asp-items="ViewBag.ActionTypeList"></select>
             </div>
 
             <!-- 預定時間 -->
             <div class="mb-3">
                 <label asp-for="ScheduledDate" class="form-label">預定時間</label>
-                <input asp-for="ScheduledDate" type="datetime-local"
-                       class="form-control"
-                       value="@Model.ScheduledDate.ToString("yyyy-MM-ddTHH:mm")" />
+                <input asp-for="ScheduledDate"
+                       class="form-control datepicker"
+                       value="@Model.ScheduledDate.ToString("yyyy-MM-dd HH:mm")" />
             </div>
 
             <!-- 狀態（唯讀：鎖死顯示） -->
             <div class="mb-3">
-                <label class="form-label">文章狀態</label>
+                <label class="form-label">排程執行狀態</label>
                 <input class="form-control" value="@Model.StatusText" readonly />
             </div>
 
@@ -83,6 +89,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    @await Html.PartialAsync("_FlatpickrScriptsPartial")
     <script>
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         window.addEventListener("scroll", function () {

@@ -1,0 +1,38 @@
+﻿@* Flatpickr 共用 Partial *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    $(function () {
+        // ========== Flatpickr 初始化 ==========
+        const selectors = [
+            "input.datepicker",           // 建議都加上 class
+            "input[id^='ScheduledDate']"  // 保險：萬一忘了加 class
+        ];
+        flatpickr(selectors.join(", "), {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            minDate: "today"
+        });
+
+        // ========== 排程必填邏輯 ==========
+        const chk = $('[name="HasSchedule"]');
+        const dateInput = $(selectors.join(", "));
+        const actionSelect = $('[name="ActionType"]');
+
+        function toggleScheduleRequired() {
+            const checked = chk.is(':checked');
+            dateInput.prop('required', checked);
+            actionSelect.prop('required', checked);
+
+            // 若有套 jQuery Validate → 重新觸發驗證
+            if (typeof dateInput.valid === "function") dateInput.valid();
+            if (typeof actionSelect.valid === "function") actionSelect.valid();
+
+            $('#schedule-fields').toggle(checked);
+        }
+
+        toggleScheduleRequired();
+        chk.on('change', toggleScheduleRequired);
+    });
+</script>
