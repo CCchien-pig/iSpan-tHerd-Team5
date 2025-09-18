@@ -124,7 +124,7 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
             {
                 FaqId = vm.FaqId,
                 Keyword = keyword,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
 
             _context.CsFaqKeywords.Add(entity);
