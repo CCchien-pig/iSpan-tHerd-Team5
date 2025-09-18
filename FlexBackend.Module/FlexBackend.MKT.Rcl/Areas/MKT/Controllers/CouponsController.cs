@@ -78,33 +78,88 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 
         // 取得有效規則
         [HttpGet]
-        public async Task<IActionResult> GetActiveRules()
+        public IActionResult GetActiveRules()
         {
-            var rules = await _context.MktCouponRules
+            var rules = _context.MktCouponRules
                 .Where(r => r.IsActive)
-                .Select(r => new
-                {
-                    ruleId = r.RuleId,
-                    defaultCondition = r.DefaultCondition
+                .Select(r => new {
+                    r.RuleId,
+                    r.DefaultCondition,
+                    r.CouponType
                 })
-                .ToListAsync();
+                .ToList();
 
             return Json(rules);
         }
 
+
         // GET: 新增規則 Partial
         [HttpGet]
-        public IActionResult CreateRulePartial()
+        public IActionResult CreateRule()
         {
-            return PartialView("~/Areas/MKT/Views/Partial/_CreateCouponRuleModal.cshtml");
+            return PartialView("~/Areas/MKT/Views/Partial/_CouponRule.cshtml");
         }
+
+        [HttpPost]
+        public IActionResult CreateRule([FromBody] MktCouponRule model)
+        {
+            try
+            {
+                Console.WriteLine($"[DEBUG] 接收到的 model: {System.Text.Json.JsonSerializer.Serialize(model)}");
+
+                if (!ModelState.IsValid)
+                    return Json(new { success = false, message = "資料驗證失敗" });
+
+                model.CreatedDate = DateTime.Now;
+
+                _context.MktCouponRules.Add(model);
+                _context.SaveChanges();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR] " + ex.ToString());
+                return Json(new { success = false, message = ex.InnerException?.Message ?? ex.Message });
+            }
+        }
+
+
+
 
         // GET: 修改規則 Partial
         [HttpGet]
-        public IActionResult EditRulePartial()
+        public IActionResult EditRule()
         {
-            return PartialView("~/Areas/MKT/Views/Partial/_EditCouponRuleModal.cshtml");
+            return PartialView("~/Areas/MKT/Views/Partial/_EditCouponRule.cshtml");
         }
+
+        [HttpPost]
+        public IActionResult EditRule([FromBody] MktCouponRule model)
+        {
+            if (!ModelState.IsValid)
+                return Json(new { success = false, message = "資料驗證失敗" });
+
+            var rule = _context.MktCouponRules.Find(model.RuleId);
+            if (rule == null)
+                return Json(new { success = false, message = "找不到規則" });
+
+            // 更新欄位
+            rule.CouponType = model.CouponType ?? rule.CouponType;  // ⚠️ 不能為 null
+            rule.DefaultCondition = model.DefaultCondition;
+            rule.Description = model.Description;
+            rule.IsActive = model.IsActive;
+            rule.Creator = model.Creator;
+            rule.CreatedDate = DateTime.Now;
+
+            _context.MktCouponRules.Update(rule);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+
+
+
 
         [HttpPost]
         public IActionResult CreateCoupon([FromBody] MktCoupon model)
@@ -196,5 +251,29 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
 
             return Json(new { success = true });
         }
+
+        [HttpGet]
+        public IActionResult GetRuleById(int id)
+        {
+            var rule = _context.MktCouponRules
+                .Where(r => r.RuleId == id)
+                .Select(r => new {
+                    r.RuleId,
+                    r.CouponType,
+                    r.DefaultCondition,
+                    r.Description,
+                    r.IsActive,
+                    r.Creator,
+                    r.CreatedDate
+                })
+                .FirstOrDefault();
+
+            if (rule == null)
+                return Json(new { success = false, message = "找不到規則" });
+
+            return Json(rule);
+        }
+
+
     }
 }
