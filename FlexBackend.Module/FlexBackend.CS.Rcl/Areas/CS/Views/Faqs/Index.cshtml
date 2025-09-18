@@ -114,6 +114,17 @@
         #faqTable td:nth-child(7) {
             width: 60px;
         }
+        /* FAQ 列：奇數列淺灰 */
+        #faqTable.table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-accent-bg: #f6f7f9; /* 淺灰 */
+            color: inherit;
+        }
+
+        /* 滑過列時再深一點（可選） */
+        #faqTable.table-hover > tbody > tr:hover > * {
+            --bs-table-accent-bg: #eef1f5;
+        }
+
         
 
 
@@ -146,7 +157,8 @@
      0 勾選、1 標題、2 答案、3 分類、4 排序、5 最近發布時間、
      6 啟用、7 建立時間、8 修改時間、9 操作
 -->
-<table id="faqTable" class="table table-sm table-hover table-clean align-middle">
+
+<table id="faqTable" class="table table-sm table-hover table-striped table-clean align-middle">
     <thead>
         <tr>
             <th style="width:36px;" class="text-center"><input type="checkbox" id="chkAll" /></th>
