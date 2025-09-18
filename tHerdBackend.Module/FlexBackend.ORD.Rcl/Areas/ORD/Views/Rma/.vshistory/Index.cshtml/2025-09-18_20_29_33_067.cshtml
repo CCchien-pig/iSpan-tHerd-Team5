@@ -203,11 +203,6 @@
             border-radius: 12px;
             font-size: 0.875rem;
             font-weight: 500;
-            display: inline-block;
-            text-align: center;
-            white-space: nowrap;
-            min-width: 60px;
-            vertical-align: middle;
         }
 
         .status-pending {
@@ -538,10 +533,10 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-success" id="btnApproveRefund">批准退款</button>
-                <button type="button" class="btn btn-primary" id="btnApproveReship">批准補寄</button>
-                <button type="button" class="btn btn-danger" id="btnReject">駁回</button>
-                <button type="button" class="btn btn-secondary" id="btnComplete">結單</button>
+                <button type="button" class="btn btn-success" id="btnApproveRefund" style="display: none;">批准退款</button>
+                <button type="button" class="btn btn-primary" id="btnApproveReship" style="display: none;">批准補寄</button>
+                <button type="button" class="btn btn-danger" id="btnReject" style="display: none;">駁回</button>
+                <button type="button" class="btn btn-secondary" id="btnComplete" style="display: none;">結單</button>
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">關閉</button>
             </div>
         </div>
@@ -554,9 +549,6 @@
     <script type="text/javascript" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <script>
-        // RMA Modal 相關變數
-        let currentRmaId = 0;
-
         // DataTable 初始化
         $(document).ready(function() {
             $('#rmaTable').DataTable({
@@ -600,6 +592,9 @@
                 location.href = '@Url.Action("Index", new { group = Model.Group, pageSize = Model.PageSize, keyword = Model.Keyword })&page=' + pageNum;
             }
         }
+
+        // RMA Modal 相關變數
+        let currentRmaId = 0;
 
         // 開啟 RMA 明細 Modal
         function openRmaDetail(id) {
@@ -711,6 +706,22 @@
                 confirmButtonColor: '#652D77'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    $.post('/ORD/Rma/Complete', { id: id }, function(response) {
+                        if (response.ok) {
+                            Swal.fire('成功', response.message, 'success').then(() => {
+                                $('#rmaDetailModal').modal('hide');
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('錯誤', response.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
+Confirmed) {
                     $.post('/ORD/Rma/Approve', { id: id, nextStatus: 'refunding' }, function(response) {
                         if (response.ok) {
                             Swal.fire('成功', response.message, 'success').then(() => {
@@ -781,7 +792,7 @@
             });
         }
 
-        // 結單操作
+// 結單操作
         function completeRma(id) {
             Swal.fire({
                 title: '確認結單？',
@@ -806,5 +817,5 @@
                 }
             });
         }
-    </script>
+</script>
 }
