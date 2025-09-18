@@ -1,4 +1,4 @@
-﻿@model FlexBackend.Infra.Models.CsFaq
+﻿@model FlexBackend.CS.Rcl.Areas.CS.ViewModels.FaqEditVM
 @{
     ViewData["Title"] = "編輯 FAQ";
 
@@ -6,6 +6,7 @@
     var fallback = Url.Action("Index", "Faqs", new { area = "CS" });
     var goBackUrl = (!string.IsNullOrWhiteSpace(back) && Url.IsLocalUrl(back)) ? back : fallback;
 }
+
 
 @section Styles {
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
@@ -71,7 +72,7 @@
     </div>
 </div>
 
-<form id="faqForm" asp-action="Edit" asp-route-id="@Model.FaqId" method="post">
+<form id="faqForm" asp-action="EditAjax" asp-route-id="@Model.FaqId" method="post">
     @Html.AntiForgeryToken()
 
     <!-- 關鍵：把 goBackUrl 帶回 Controller 的 returnUrl -->
@@ -79,10 +80,8 @@
 
     <!-- 帶回 Controller 的 returnUrl（方式 1：hidden 欄位） -->
     <input type="hidden" asp-for="FaqId" />
-    @* 重要：Disabled 欄位不會回傳，為避免 CreatedDate 被清掉，用 hidden 一併回傳原值 *@
-    <input type="hidden" asp-for="CreatedDate" />
-    <input type="hidden" asp-for="RevisedDate" />
 
+  
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card shadow-sm">
@@ -114,11 +113,19 @@
                         <label class="form-label">分類</label>
                         <select asp-for="CategoryId" asp-items="@(ViewBag.CategoryId as SelectList)" class="form-select"></select>
                         <span asp-validation-for="CategoryId" class="text-danger"></span>
-                        @if (Model?.Category?.CategoryName != null)
-                        {
-                            <div class="mt-2"><span class="badge-category">@Model.Category.CategoryName</span></div>
-                        }
+                        
                     </div>
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header">關鍵字</div>
+                        <div class="card-body">
+                            <label class="form-label">關鍵字（用逗號或空白分隔）</label>
+                            <input id="kwInput" class="form-control"
+                                   value="@(string.Join(", ", Model.Keywords ?? new List<string>()))" />
+                            <input type="hidden" name="Keywords" id="kwHidden" />
+                            <div class="form-text">例如：免運 運費 折扣碼；會自動去重，最多 50 個。</div>
+                        </div>
+                    </div>
+
 
                     <div class="mb-3">
                         <label class="form-label">排序</label>
@@ -159,22 +166,25 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script>
+        // ===== 標題字數 =====
         const $title = document.querySelector('[name="Title"]');
         const $titleCount = document.getElementById('titleCount');
         function syncCount(){ $titleCount.textContent = ($title.value || '').length; }
         $title.addEventListener('input', syncCount); syncCount();
 
+        // ===== Summernote =====
         $('#answerEditor').summernote({
             placeholder: '輸入 FAQ 的解答內容…',
             height: 280,
             toolbar: [
                 ['style', ['bold','italic','underline','clear']],
-                ['para', ['ul','ol','paragraph']],
-                ['insert', ['link']],
-                ['view', ['codeview']]
+                ['para',  ['ul','ol','paragraph']],
+                ['insert',['link']],
+                ['view',  ['codeview']]
             ]
         });
 
+        // 「現在」按鈕
         document.getElementById('btnNow')?.addEventListener('click', function(){
             const now = new Date();
             const pad = n => String(n).padStart(2,'0');
@@ -182,9 +192,64 @@
             document.querySelector('[name="LastPublishedTime"]').value = v;
         });
 
-        document.getElementById('faqForm').addEventListener('submit', function(){
+        // ===== 解析關鍵字成陣列（逗號/空白分隔、去重、最多50）=====
+        function parseKeywords() {
+            const raw = (document.getElementById('kwInput')?.value || '')
+                .split(/[,\s]+/)                // 逗號或空白
+                .map(s => s.trim())
+                .filter(Boolean);
+            const seen = new Set();
+            const out = [];
+            for (const k of raw) {
+                const key = k.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    out.push(k);
+                    if (out.length >= 50) break;
+                }
+            }
+            return out;
+        }
+
+        // ===== 送出（Ajax）=====
+        const form = document.getElementById('faqForm');
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault(); // 攔截
+
+            // 1) 取回 Summernote HTML → 回填到 textarea
             const html = $('#answerEditor').summernote('code');
             document.getElementById('answerEditor').value = html;
+
+            // 2) 準備 FormData
+            const fd = new FormData(form);
+
+            // 3) 同步關鍵字：用多個同名欄位 Keywords
+            fd.delete('Keywords');                 // 先清掉可能的 hidden
+            for (const kw of parseKeywords()) {
+                fd.append('Keywords', kw);         // 關鍵：多筆同名 → 可綁到 List<string>
+            }
+
+            try {
+                const resp = await fetch(form.action, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' } // 給後端識別 Ajax
+                });
+
+                const data = await resp.json().catch(() => ({}));
+
+                if (resp.ok && data.ok) {
+                    if (data.redirectUrl) location.href = data.redirectUrl;
+                    else alert('已儲存');
+                } else {
+                    alert(data.message || `發生錯誤（${resp.status}）`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('網路或伺服器發生錯誤。');
+            }
         });
     </script>
 }
+
+

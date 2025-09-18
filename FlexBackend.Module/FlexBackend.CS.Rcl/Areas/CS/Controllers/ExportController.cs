@@ -18,111 +18,117 @@ namespace FlexBackend.CS.Rcl.Areas.CS.Controllers
 			_context = context;
 		}
 
-		[HttpGet("kpi")]
-		public IActionResult ExportKpi([FromQuery] int days = 30)
-		{
-			// TODO: 這裡可以從 _context 算出真實 KPI
-			var kpi = new
-			{
-				TotalRevenue = 1234567,
-				TotalOrders = 321,
-				UnitsSold = 888,
-				Aov = 1234
-			};
+        [HttpGet("kpi")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> ExportKpi([FromQuery] int days = 30)
+        {
+            var end = DateTime.Now.Date.AddDays(1);                    // 明天 00:00
+            var start = (days <= 0) ? DateTime.MinValue : end.AddDays(-days);
 
-			using var wb = new XLWorkbook();
-			var ws = wb.Worksheets.Add("KPI 總表");
+            // 僅已付款；大小寫都接受
+            string[] PAID = new[] { "paid", "Paid", "PAID" };
 
-			// 標題
-			ws.Cell(1, 1).Value = "指標";
-			ws.Cell(1, 2).Value = "數值";
+            // 期間內且已付款的訂單
+            var paidOrdersQ = _context.OrdOrders.AsNoTracking()
+                .Where(o => (days <= 0) || (o.CreatedDate >= start && o.CreatedDate < end))
+                .Where(o => PAID.Contains(o.PaymentStatus));
 
-			// 資料
-			ws.Cell(2, 1).Value = "營收";
-			ws.Cell(2, 2).Value = kpi.TotalRevenue;
+            // 以明細口徑計算（和儀表板一致）
+            var revenue = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                 join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                 select (decimal?)(i.UnitPrice * i.Qty)).SumAsync() ?? 0m;
 
-			ws.Cell(3, 1).Value = "訂單數";
-			ws.Cell(3, 2).Value = kpi.TotalOrders;
+            var unitsSold = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                   join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                   select (int?)i.Qty).SumAsync() ?? 0;
 
-			ws.Cell(4, 1).Value = "售出數量";
-			ws.Cell(4, 2).Value = kpi.UnitsSold;
+            var orderCount = await paidOrdersQ.CountAsync();
 
-			ws.Cell(5, 1).Value = "平均客單價";
-			ws.Cell(5, 2).Value = kpi.Aov;
+            var aov = orderCount == 0 ? 0m : revenue / orderCount;
 
-			ws.Range("A1:B1").Style.Font.Bold = true;
-			ws.Columns().AdjustToContents();
+            using var wb = new ClosedXML.Excel.XLWorkbook();
+            var ws = wb.Worksheets.Add("KPI 總表");
+            ws.Cell(1, 1).Value = "指標"; ws.Cell(1, 2).Value = "數值";
+            ws.Cell(2, 1).Value = "營收"; ws.Cell(2, 2).Value = revenue;
+            ws.Cell(3, 1).Value = "訂單數"; ws.Cell(3, 2).Value = orderCount;
+            ws.Cell(4, 1).Value = "售出數量"; ws.Cell(4, 2).Value = unitsSold;
+            ws.Cell(5, 1).Value = "平均客單價"; ws.Cell(5, 2).Value = aov;
+            ws.Range("A1:B1").Style.Font.Bold = true;
+            ws.Columns().AdjustToContents();
 
-			using var stream = new MemoryStream();
-			wb.SaveAs(stream);
-			stream.Seek(0, SeekOrigin.Begin);
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            ms.Position = 0;
 
-			return File(
-				stream.ToArray(),
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				$"kpi_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
-			);
-		}
-		/// <summary>
-		/// 匯出訂單主表 (CSV)；days=0 代表不篩日期
-		/// </summary>
-		[HttpGet("orders-csv")]
-		public async Task<IActionResult> ExportOrdersCsv([FromQuery] int days = 30)
-		{
-			var start = DateTime.Now.AddDays(-days);
+            Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
 
-			var q = _context.OrdOrders.AsNoTracking()
-					.Where(o => (days <= 0) || o.CreatedDate >= start)
-					.OrderByDescending(o => o.CreatedDate)
-					.Select(o => new
-					{
-						訂單編號 = o.OrderId,
-						訂單號碼 = o.OrderNo,
-						建立時間 = o.CreatedDate,
-						收件人 = o.ReceiverName,
-						總金額 = o.Subtotal + o.ShippingFee - o.DiscountTotal
-					});
+            var fileName = $"kpi_{(days <= 0 ? "all" : $"{start:yyyyMMdd}-{end.AddDays(-1):yyyyMMdd}")}.xlsx";
+            var encoded = Uri.EscapeDataString(fileName);
 
-			var rows = await q.ToListAsync();
+            // 正確的 Content-Disposition（同時給 filename 與 filename*）
+            Response.Headers["Content-Disposition"] =
+                $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{encoded}";
 
-			var csv = ToCsv(rows, new[] { "訂單編號", "訂單號碼", "建立時間", "收件人", "總金額" });
-			return File(Utf8BomBytes(csv), "text/csv", $"orders_{DateTime.Now:yyyyMMdd_HHmm}.csv");
-		}
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
-		/// <summary>
-		/// 匯出訂單商品明細 (CSV)；days=0 代表不篩日期
-		/// </summary>
-		[HttpGet("order-items-csv")]
-		public async Task<IActionResult> ExportOrderItemsCsv([FromQuery] int days = 30)
-		{
-			var start = DateTime.Now.AddDays(-days);
+        }
+        // GET /api/cs/export/kpi.csv?days=30
+        [HttpGet("kpi.csv")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> ExportKpiCsv([FromQuery] int days = 30)
+        {
+            var end = DateTime.Now.Date.AddDays(1);                    // 明天 00:00（右開）
+            var start = (days <= 0) ? DateTime.MinValue : end.AddDays(-days);
 
-			// 用 JOIN 明確關聯，避免導航屬性名稱/關聯設定造成篩不到
-			var q =
-				from i in _context.OrdOrderItems.AsNoTracking()
-				join o in _context.OrdOrders.AsNoTracking() on i.OrderId equals o.OrderId
-				where (days <= 0) || o.CreatedDate >= start
-				orderby i.OrderId, i.OrderItemId
-				select new
-				{
-					訂單編號 = i.OrderId,
-					明細編號 = i.OrderItemId,
-					商品代號 = i.ProductId,
-					數量 = i.Qty,
-					單價 = i.UnitPrice,
-					小計 = i.Qty * i.UnitPrice
-				};
+            string[] PAID = new[] { "paid", "Paid", "PAID" };
 
-			var rows = await q.ToListAsync();
+            var paidOrdersQ = _context.OrdOrders.AsNoTracking()
+                .Where(o => (days <= 0) || (o.CreatedDate >= start && o.CreatedDate < end))
+                .Where(o => PAID.Contains(o.PaymentStatus));
 
-			var csv = ToCsv(rows, new[] { "訂單編號", "明細編號", "商品代號", "數量", "單價", "小計" });
-			return File(Utf8BomBytes(csv), "text/csv", $"order_items_{DateTime.Now:yyyyMMdd_HHmm}.csv");
-		}
+            var revenue = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                 join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                 select (decimal?)(i.UnitPrice * i.Qty)).SumAsync() ?? 0m;
+
+            var unitsSold = await (from i in _context.OrdOrderItems.AsNoTracking()
+                                   join o in paidOrdersQ on i.OrderId equals o.OrderId
+                                   select (int?)i.Qty).SumAsync() ?? 0;
+
+            var orderCount = await paidOrdersQ.CountAsync();
+            var aov = orderCount == 0 ? 0m : revenue / orderCount;
+
+            // 內容跟 Excel 的「KPI 總表」一致：兩欄（項目, 數值）
+            var rows = new[]
+            {
+    new { Metric = "營收",       Value = revenue },
+    new { Metric = "訂單數",     Value = (decimal)orderCount },
+    new { Metric = "售出數量",   Value = (decimal)unitsSold },
+    new { Metric = "平均客單價", Value = aov }
+};
 
 
-		// ===== Helpers =====
+            var csv = ToCsv(rows, new[] { "Metric", "Value" });
 
-		private static byte[] Utf8BomBytes(string s)
+            var fileName = $"kpi_{(days <= 0 ? "all" : $"{start:yyyyMMdd}-{end.AddDays(-1):yyyyMMdd}")}.csv";
+            var encoded = Uri.EscapeDataString(fileName);
+
+            // 正確的 Content-Disposition（同時給 filename 與 filename*）
+            Response.Headers["Content-Disposition"] =
+                $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{encoded}";
+
+            // 加 UTF-8 BOM，避免 Excel 亂碼；mime 可加 charset（可選）
+            return File(Utf8BomBytes(csv), "text/csv; charset=utf-8");
+        }
+
+
+
+
+
+        // ===== Helpers =====
+
+        private static byte[] Utf8BomBytes(string s)
 		{
 			var bom = System.Text.Encoding.UTF8.GetPreamble();
 			var body = System.Text.Encoding.UTF8.GetBytes(s);
