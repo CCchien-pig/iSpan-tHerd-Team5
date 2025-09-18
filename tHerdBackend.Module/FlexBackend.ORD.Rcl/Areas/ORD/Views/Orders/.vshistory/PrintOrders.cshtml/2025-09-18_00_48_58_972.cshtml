@@ -76,6 +76,7 @@
                     <th>規格</th>
                     <th>單價</th>
                     <th>訂購數量</th>
+                    <th>庫存數量</th>
                     <th>小計</th>
                 </tr>
             </thead>
@@ -87,6 +88,9 @@
                         <td>@item.SpecCode</td>
                         <td>@item.UnitPrice.ToString("C0")</td>
                         <td>@item.Qty</td>
+                        <td class="@(item.Qty > item.StockQty ? "text-danger fw-bold" : "text-success")">
+                            @item.StockQty
+                        </td>
                         <td>@item.Subtotal.ToString("C0")</td>
                     </tr>
                 }

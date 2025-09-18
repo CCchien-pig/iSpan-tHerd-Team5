@@ -75,7 +75,7 @@
                     <th>商品名稱</th>
                     <th>規格</th>
                     <th>單價</th>
-                    <th>訂購數量</th>
+                    <th>數量</th>
                     <th>小計</th>
                 </tr>
             </thead>
@@ -94,7 +94,7 @@
         </table>
 
         <div class="summary">
-            <p>優惠券： @(string.IsNullOrWhiteSpace(vm.CouponName) ? "-" : vm.CouponName)</p>
+            <p>優惠券：-</p>
             <p>優惠折扣：@discount.ToString("C0")</p>
             <p>運費：@shipping.ToString("C0")</p>
             <p><strong>總金額：@total.ToString("C0")</strong></p>

@@ -208,9 +208,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     skuSpec = s.SpecCode,
                     unitPrice = i.UnitPrice,
                     qty = i.Qty,
-                    stockQty = _db.SupStockBatches
-                        .Where(st => st.SkuId == s.SkuId)
-                        .Sum(st => st.Qty),
                     subtotal = i.UnitPrice * i.Qty
                 }).ToListAsync();
 
@@ -299,6 +296,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+
 
         // 批量更新訂單狀態
         [HttpPost]
@@ -430,7 +429,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 								SpecCode = s.SpecCode,
 								UnitPrice = ip.i.UnitPrice,
 								Qty = ip.i.Qty,
-                                Subtotal = ip.i.UnitPrice * ip.i.Qty
+								Subtotal = ip.i.UnitPrice * ip.i.Qty
 							})
 						.ToList()
 				})

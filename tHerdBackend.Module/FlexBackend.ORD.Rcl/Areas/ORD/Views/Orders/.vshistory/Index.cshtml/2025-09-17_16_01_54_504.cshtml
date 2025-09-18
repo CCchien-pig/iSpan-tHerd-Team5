@@ -213,7 +213,7 @@
 
     <div class="card-body">
 
-        <!-- 批次操作（兩顆功能主按鈕） -->
+        <!-- 批次操作（保留你原本的兩顆主按鈕） -->
 @*         <div class="mb-3">
             <button type="button" id="bulkUpdate" class="btn btn-warning">批量更改狀態</button>
             <button type="button" id="bulkPrint" class="btn btn-success">列印出貨單</button>
@@ -375,8 +375,9 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- 準備狀態選項的 JavaScript 變數 -->
+    <!-- 先準備狀態選項的 JavaScript 變數 -->
     <script>
+        // 準備狀態選項變數
         var shippingStatusOptions = [
             @foreach (var option in Model.ShippingStatusOptions)
             {
@@ -394,8 +395,6 @@
 
     <script>
         $(document).ready(function() {
-            console.log('頁面載入完成，開始初始化...');
-
             // ===== DataTables 初始化 =====
             var table = $('#ordersTable').DataTable({
                 paging: false,
@@ -427,191 +426,112 @@
                 ]
             });
 
-            // ===== 記錄下拉選單原始值 =====
-            $('.status-dropdown').each(function() {
-                var $this = $(this);
-                $this.data('original-value', $this.val());
-            });
+            // ===== 搜尋列即時跳轉功能 =====
+            (function () {
+                var $form = $('#searchForm');
+                var $hfFrom = $('#hfStartDate');
+                var $hfTo = $('#hfEndDate');
+                var $from = $('#dtFrom');
+                var $to = $('#dtTo');
+                var $q = $('#quickRange');
 
-            // ===== 下拉選單狀態更改事件處理 =====
-            $(document).on('change', '.status-dropdown', function() {
-                var $dropdown = $(this);
-                var orderId = $dropdown.data('id');
-                var field = $dropdown.data('field');
-                var newValue = $dropdown.val();
-                var originalValue = $dropdown.data('original-value');
+                if ($hfFrom.length && $hfFrom.val()) $from.val($hfFrom.val());
+                if ($hfTo.length && $hfTo.val()) $to.val($hfTo.val());
 
-                if (newValue === originalValue) return;
-
-                $dropdown.prop('disabled', true);
-
-                $.post('/ORD/Orders/UpdateOrderStatus', {
-                    orderId: orderId,
-                    field: field,
-                    value: newValue
-                })
-                .done(function(response) {
-                    if (response.success) {
-                        $dropdown.data('original-value', newValue);
-
-                        // 統一顯示在畫面中間
-                        Swal.fire({
-                            icon: 'success',
-                            title: '狀態更新成功',
-                            text: getFieldDisplayName(field) + ' 已更新',
-                            timer: 2000,
-                            showConfirmButton: false,
-                            position: 'center'
-                        });
-
-                        // 如果產生出貨單號，顯示提示並重新載入明細
-                        if (field === 'ShippingStatusId' && response.trackingNo) {
-                            setTimeout(function() {
-                                Swal.fire({
-                                    icon: 'info',
-                                    title: '出貨單號已產生',
-                                    text: '單號：' + response.trackingNo,
-                                    timer: 4000,
-                                    showConfirmButton: true,
-                                    confirmButtonText: '確定',
-                                    position: 'center'
-                                });
-
-                                // 重新載入已展開的訂單明細以顯示新出貨單號
-                                var $tr = $dropdown.closest('tr');
-                                var row = table.row($tr);
-                                if (row.child.isShown()) {
-                                    row.child('<div class="text-muted">更新中...</div>').show();
-                                    loadDetail($tr, orderId, row);
-                                }
-                            }, 2200);
-                        }
+                function ensurePage1(){
+                    var $p = $form.find('input[name="PageNumber"]');
+                    if(!$p.length) {
+                        $p = $('<input type="hidden" name="PageNumber" value="1">').appendTo($form);
                     } else {
-                        $dropdown.val(originalValue);
-                        Swal.fire({
-                            icon: 'error',
-                            title: '更新失敗',
-                            text: response.message || '請稍後再試',
-                            confirmButtonText: '確定',
-                            position: 'center'
-                        });
+                        $p.val('1');
                     }
-                })
-                .fail(function(xhr, status, error) {
-                    $dropdown.val(originalValue);
-                    Swal.fire({
-                        icon: 'error',
-                        title: '系統錯誤',
-                        text: '無法連接到服務器',
-                        confirmButtonText: '確定',
-                        position: 'center'
-                    });
-                })
-                .always(function() {
-                    $dropdown.prop('disabled', false);
-                });
-            });
-
-            // ===== 搜尋功能 =====
-            var $form = $('#searchForm');
-            var $hfFrom = $('#hfStartDate');
-            var $hfTo = $('#hfEndDate');
-            var $from = $('#dtFrom');
-            var $to = $('#dtTo');
-            var $q = $('#quickRange');
-
-            if ($hfFrom.length && $hfFrom.val()) $from.val($hfFrom.val());
-            if ($hfTo.length && $hfTo.val()) $to.val($hfTo.val());
-
-            function ensurePage1(){
-                var $p = $form.find('input[name="PageNumber"]');
-                if(!$p.length) {
-                    $p = $('<input type="hidden" name="PageNumber" value="1">').appendTo($form);
-                } else {
-                    $p.val('1');
                 }
-            }
 
-            // 日期處理函數
-            function iso(d){
-                if(!d) return '';
-                var z = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                return z.toISOString().slice(0,10);
-            }
+                function iso(d){
+                    if(!d) return '';
+                    var z = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    return z.toISOString().slice(0,10);
+                }
 
-            function addMonthsSafe(d, m){
-                var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                x.setMonth(x.getMonth() + m);
-                return x;
-            }
+                function addDays(d, n){
+                    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                    x.setDate(x.getDate() + n);
+                    return x;
+                }
 
-            function submitWithDates(from, to){
-                $hfFrom.val(from ? iso(from) : '');
-                $hfTo.val(to ? iso(to) : '');
-                ensurePage1();
-                $form[0].submit();
-            }
+                function addMonthsSafe(d, m){
+                    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                    x.setMonth(x.getMonth() + m);
+                    return x;
+                }
 
-            // 下拉選單改變立即提交
-            $form.find('select').on('change', function(){
-                ensurePage1();
-                $form[0].submit();
-            });
-
-            // 關鍵字輸入延遲提交
-            var $kw = $form.find('input[name="Keyword"]');
-            var keyTimer = null;
-            $kw.on('input', function(){
-                clearTimeout(keyTimer);
-                keyTimer = setTimeout(function(){
+                function submitWithDates(from, to){
+                    $hfFrom.val(from ? iso(from) : '');
+                    $hfTo.val(to ? iso(to) : '');
                     ensurePage1();
                     $form[0].submit();
-                }, 400);
-            }).on('keypress', function(e){
-                if(e.which === 13) e.preventDefault();
-            });
-
-            // 修復：日期改變自動提交
-            $from.on('change', function(){
-                var fromVal = $(this).val();
-                if (fromVal) {
-                    var fromDate = new Date(fromVal + 'T00:00:00');
-                    var toDate = $to.val() ? new Date($to.val() + 'T00:00:00') : fromDate;
-                    $q.val(''); // 清空快速篩選
-                    submitWithDates(fromDate, toDate);
-                } else {
-                    submitWithDates(null, null);
                 }
-            });
 
-            $to.on('change', function(){
-                var toVal = $(this).val();
-                if (toVal) {
-                    var toDate = new Date(toVal + 'T00:00:00');
-                    var fromDate = $from.val() ? new Date($from.val() + 'T00:00:00') : toDate;
-                    $q.val(''); // 清空快速篩選
-                    submitWithDates(fromDate, toDate);
-                } else {
-                    submitWithDates(null, null);
+                function clamp3m(from, to){
+                    if(!from && !to) return {from:null, to:null};
+                    if(from && !to) to = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+                    if(to && !from) from = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+                    if(from > to){ var t=from; from=to; to=t; }
+                    var maxTo = addMonthsSafe(from, 3);
+                    if(to >= maxTo) to = addDays(maxTo, -1);
+                    return {from:from, to:to};
                 }
-            });
 
-            // 快速篩選
-            $q.on('change', function(){
-                var m = parseInt($(this).val(), 10);
-                if (isNaN(m) || m === 0) {
-                    $from.val('');
-                    $to.val('');
-                    submitWithDates(null, null);
-                    return;
-                }
-                var today = new Date();
-                var to = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                var from = addMonthsSafe(to, -m);
-                $from.val(iso(from));
-                $to.val(iso(to));
-                submitWithDates(from, to);
-            });
+                $form.find('select').on('change', function(){
+                    ensurePage1();
+                    $form[0].submit();
+                });
+
+                var $kw = $form.find('input[name="Keyword"]');
+                var keyTimer = null;
+                $kw.on('input', function(){
+                    clearTimeout(keyTimer);
+                    keyTimer = setTimeout(function(){
+                        ensurePage1();
+                        $form[0].submit();
+                    }, 400);
+                }).on('keypress', function(e){
+                    if(e.which === 13){
+                        e.preventDefault();
+                    }
+                });
+
+                $from.on('change', function(){
+                    var fromDate = $from.val() ? new Date($from.val()) : null;
+                    var toDate = $to.val() ? new Date($to.val()) : null;
+                    var r = clamp3m(fromDate, toDate);
+                    $from.val(r.from ? iso(r.from) : '');
+                    $to.val(r.to ? iso(r.to) : '');
+                    $q.val('');
+                    submitWithDates(r.from, r.to);
+                });
+
+                $to.on('change', function(){
+                    var fromDate = $from.val() ? new Date($from.val()) : null;
+                    var toDate = $to.val() ? new Date($to.val()) : null;
+                    var r = clamp3m(fromDate, toDate);
+                    $from.val(r.from ? iso(r.from) : '');
+                    $to.val(r.to ? iso(r.to) : '');
+                    $q.val('');
+                    submitWithDates(r.from, r.to);
+                });
+
+                $q.on('change', function(){
+                    var m = parseInt($(this).val(), 10);
+                    if (isNaN(m)) return;
+                    var today = new Date();
+                    var to = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    var from = addMonthsSafe(to, -m);
+                    $from.val(iso(from));
+                    $to.val(iso(to));
+                    submitWithDates(from, to);
+                });
+            })();
 
             // ===== 前台顯示切換 =====
             $(document).on("change", ".toggle-visible", function () {
@@ -628,26 +548,23 @@
                             icon: 'success',
                             title: visible ? '已設為顯示' : '已設為隱藏',
                             showConfirmButton: false,
-                            timer: 1200,
-                            position: 'center'
+                            timer: 1200
                         });
                     } else {
-                        $checkbox.prop("checked", !visible);
                         Swal.fire({
                             icon: 'error',
                             title: '更新失敗',
-                            text: res.message || '請稍後再試',
-                            position: 'center'
+                            text: res.message || '請稍後再試'
                         });
+                        $checkbox.prop("checked", !visible);
                     }
                 }).fail(function() {
-                    $checkbox.prop("checked", !visible);
                     Swal.fire({
                         icon: 'error',
                         title: '系統錯誤',
-                        text: '無法更新狀態',
-                        position: 'center'
+                        text: '無法更新狀態'
                     });
+                    $checkbox.prop("checked", !visible);
                 });
             });
 
@@ -655,19 +572,17 @@
             $("#bulkUpdate").on("click", function () {
                 var ids = getSelectedOrders();
                 if (ids.length === 0) {
-                    Swal.fire({
-                        title: "請先選擇訂單",
-                        icon: "warning",
-                        position: 'center'
-                    });
+                    Swal.fire("請先選擇訂單", "", "warning");
                     return;
                 }
 
+                // 產生配送狀態選項
                 var shippingHtml = '<option value="" selected disabled>請選擇</option>';
                 for (var i = 0; i < shippingStatusOptions.length; i++) {
                     shippingHtml += '<option value="' + shippingStatusOptions[i].value + '">' + shippingStatusOptions[i].text + '</option>';
                 }
 
+                // 產生訂單狀態選項
                 var orderHtml = '<option value="" selected disabled>請選擇</option>';
                 for (var j = 0; j < orderStatusOptions.length; j++) {
                     orderHtml += '<option value="' + orderStatusOptions[j].value + '">' + orderStatusOptions[j].text + '</option>';
@@ -675,7 +590,13 @@
 
                 Swal.fire({
                     title: "批量更改狀態",
-                    position: 'center',
+                    heightAuto: false,
+                    scrollbarPadding: false,
+                    customClass: {
+                        popup: 'rcl-bulk',
+                        htmlContainer: 'rcl-bulk-html',
+                        actions: 'rcl-bulk-actions'
+                    },
                     html: '<div>' +
                         '<label class="mb-2">' +
                         '<input type="radio" name="bulkType" value="shipping" checked>' +
@@ -728,28 +649,21 @@
                         orderStatusId: result.value.type === "order" ? result.value.orderStatus : null
                     }).done(function (res) {
                         if (res.success) {
-                            Swal.fire({
-                                title: "更新成功",
-                                icon: "success",
-                                position: 'center'
-                            }).then(function() {
-                                location.reload();
+                            ids.forEach(function (id) {
+                                var $row = $("tr[data-id='" + id + "']");
+                                if (result.value.type === "shipping") {
+                                    $row.find("select[data-field='ShippingStatusId']").val(result.value.shippingStatus);
+                                } else {
+                                    $row.find("select[data-field='OrderStatusId']").val(result.value.orderStatus);
+                                }
                             });
+                            Swal.fire("更新成功", "", "success");
+                            $(".row-check, #selectAll").prop("checked", false);
                         } else {
-                            Swal.fire({
-                                title: "更新失敗",
-                                text: res.message || "",
-                                icon: "error",
-                                position: 'center'
-                            });
+                            Swal.fire("更新失敗", res.message || "", "error");
                         }
                     }).fail(function() {
-                        Swal.fire({
-                            title: "系統錯誤",
-                            text: "無法更新狀態",
-                            icon: "error",
-                            position: 'center'
-                        });
+                        Swal.fire("系統錯誤", "無法更新狀態", "error");
                     });
                 });
             });
@@ -758,11 +672,7 @@
             $("#bulkPrint").on("click", function () {
                 var ids = getSelectedOrders();
                 if (ids.length === 0) {
-                    Swal.fire({
-                        title: "請先選擇訂單",
-                        icon: "warning",
-                        position: 'center'
-                    });
+                    Swal.fire("請先選擇訂單", "", "warning");
                     return;
                 }
                 window.open('/ORD/Orders/PrintOrders?ids=' + ids.join(","));
@@ -796,108 +706,88 @@
                 }
             });
 
-            // 綁定分頁按鈕事件
-            $("#prevPage").on("click", function () {
-                var currentPage = @Model.Pagination.CurrentPage;
-                if (currentPage > 1) {
-                    goToPage(currentPage - 1);
-                }
-            });
+            // ===== 載入訂單明細 =====
+            function loadDetail($tr, orderId, row){
+                $.getJSON('/ORD/Orders/GetOrderDetails', { orderId: orderId })
+                    .done(function (data) {
+                        if (!data || data.error) {
+                            row.child('<div class="text-danger">查無訂單資料</div>').show();
+                            return;
+                        }
+                        var o = data.order || {};
+                        var items = data.items || [];
+                        var html = '<div class="order-detail-card">' +
+                            '<h6>收件資訊</h6>' +
+                            '<p><strong>收件人：</strong>' + (o.receiverName || '-') + '</p>' +
+                            '<p><strong>電話：</strong>' + (o.receiverPhone || '-') + '</p>' +
+                            '<p><strong>地址：</strong>' + (o.receiverAddress || '-') + '</p>' +
+                            '<p><strong>配送方式：</strong>' + (o.shippingMethod || '-') + '</p>' +
+                            '<p><strong>出貨單號：</strong>' + (o.trackingNumber || '（設為已出貨後自動產生）') + '</p>' +
+                            '</div>' +
+                            '<h6>商品明細</h6>' +
+                            '<table class="table table-sm table-bordered">' +
+                            '<thead><tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>' +
+                            '<tbody>';
 
-            $("#nextPage").on("click", function () {
-                var currentPage = @Model.Pagination.CurrentPage;
-                var totalPages = @Model.Pagination.TotalPages;
-                if (currentPage < totalPages) {
-                    goToPage(currentPage + 1);
-                }
-            });
+                        for (var i = 0; i < items.length; i++) {
+                            var item = items[i];
+                            html += '<tr>' +
+                                '<td>' + item.productName + '</td>' +
+                                '<td>' + item.skuSpec + '</td>' +
+                                '<td>' + Number(item.unitPrice).toLocaleString() + '</td>' +
+                                '<td>' + item.qty + '</td>' +
+                                '<td>' + Number(item.subtotal).toLocaleString() + '</td>' +
+                                '</tr>';
+                        }
 
-            // 輸入框 Enter 跳頁
+                        html += '</tbody></table>' +
+                            '<div class="order-summary">' +
+                            '<p><strong>優惠券：</strong>' + (o.couponCode || '-') + '</p>' +
+                            '<p><strong>優惠折扣：</strong>' + Number(o.discountTotal || 0).toLocaleString() + '</p>' +
+                            '<p><strong>運費：</strong>' + Number(o.shippingFee || 0).toLocaleString() + '</p>' +
+                            '<p><strong>總金額：</strong>' + Number(o.totalAmount || 0).toLocaleString() + '</p>' +
+                            '</div>';
+
+                        row.child(html).show();
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('AJAX 請求失敗:', error);
+                        row.child('<div class="text-danger">載入失敗：' + error + '</div>').show();
+                    });
+            }
+
+            // ===== 分頁功能 =====
+            function goToPage(page) {
+                if (isNaN(page)) return;
+                if (page < 1) page = 1;
+
+                var url = '/ORD/Orders' +
+                    '?Keyword=' + encodeURIComponent($('input[name="Keyword"]').val() || '') +
+                    '&PaymentStatus=' + encodeURIComponent($('select[name="PaymentStatus"]').val() || '') +
+                    '&ShippingStatusId=' + encodeURIComponent($('select[name="ShippingStatusId"]').val() || '') +
+                    '&OrderStatusId=' + encodeURIComponent($('select[name="OrderStatusId"]').val() || '') +
+                    '&PageSize=' + encodeURIComponent($('select[name="PageSize"]').val() || '10') +
+                    '&StartDate=' + encodeURIComponent($('#hfStartDate').val() || '') +
+                    '&EndDate=' + encodeURIComponent($('#hfEndDate').val() || '') +
+                    '&PageNumber=' + page;
+
+                window.location.href = url;
+            }
+
             $("#jumpPageInput").on("keypress", function (e) {
                 if (e.which === 13) {
                     e.preventDefault();
-                    var page = parseInt($(this).val());
-                    if (page >= 1 && page <= @Model.Pagination.TotalPages) {
-                        goToPage(page);
-                    }
+                    goToPage(parseInt($(this).val()));
                 }
             });
 
-            // 輸入框失去焦點時跳頁
-            $("#jumpPageInput").on("blur", function () {
-                var page = parseInt($(this).val());
-                var currentPage = @Model.Pagination.CurrentPage;
-                if (page && page !== currentPage && page >= 1 && page <= @Model.Pagination.TotalPages) {
-                    goToPage(page);
-                }
+            $("#prevPage").on("click", function () {
+                goToPage(parseInt($("#jumpPageInput").val()) - 1);
             });
 
-            // ===== 載入訂單明細 =====
-            function loadDetail($tr, orderId, row){
-            $.getJSON('/ORD/Orders/GetOrderDetails', { orderId: orderId })
-                .done(function (data) {
-                    if (!data || data.error) {
-                        row.child('<div class="text-danger">查無訂單資料</div>').show();
-                        return;
-                    }
-                    var o = data.order || {};
-                    var items = data.items || [];
-
-                    // 根據配送狀態和出貨單號決定顯示內容
-                    var trackingDisplay;
-                    if (o.trackingNumber && o.trackingNumber.trim() !== '') {
-                        // 有出貨單號就顯示
-                        trackingDisplay = o.trackingNumber;
-                    } else if (o.shippingStatusId === '已出貨' || o.shippingStatusId === 'shipped') {
-                        // 狀態是已出貨但沒有單號
-                        trackingDisplay = '處理中，請稍候';
-                    } else {
-                        // 未出貨狀態
-                        trackingDisplay = '（出貨後顯示配送單號）';
-                    }
-
-                    var html = '<div class="order-detail-card">' +
-                        '<h6>收件資訊</h6>' +
-                        '<p><strong>收件人：</strong>' + (o.receiverName || '-') + '</p>' +
-                        '<p><strong>電話：</strong>' + (o.receiverPhone || '-') + '</p>' +
-                        '<p><strong>地址：</strong>' + (o.receiverAddress || '-') + '</p>' +
-                        '<p><strong>配送方式：</strong>' + (o.shippingMethod || '-') + '</p>' +
-                        '<p><strong>出貨單號：</strong>' + trackingDisplay + '</p>' +
-                        '</div>' +
-                        '<h6>商品明細</h6>' +
-                        '<table class="table table-sm table-bordered">' +
-                        '<thead><tr><th>商品</th><th>規格</th><th>單價</th><th>數量</th><th>庫存</th><th>小計</th></tr></thead>' +
-                        '<tbody>';
-
-                    for (var i = 0; i < items.length; i++) {
-                        var item = items[i];
-                        var stockClass = (item.qty > item.stockQty) ? "text-danger fw-bold" : "text-success";
-                        html += '<tr>' +
-                            '<td>' + item.productName + '</td>' +
-                            '<td>' + item.skuSpec + '</td>' +
-                            '<td>' + 'NT$' + Number(item.unitPrice).toLocaleString() + '</td>' +
-                            '<td>' + item.qty + '</td>' +
-                            '<td class="' + stockClass + '">' + item.stockQty + '</td>' +
-                            '<td>' + 'NT$' + Number(item.subtotal).toLocaleString() + '</td>' +
-                            '</tr>';
-                    }
-
-                    html += '</tbody></table>' +
-                        '<div class="order-summary">' +
-                        '<p><strong>優惠券：</strong>' + (o.couponName || '-') + '</p>'+
-                        '<p><strong>優惠折扣：</strong>' + 'NT$' + Number(o.discountTotal || 0).toLocaleString() + '</p>' +
-                        '<p><strong>運費：</strong>' + 'NT$' + Number(o.shippingFee || 0).toLocaleString() + '</p>' +
-                        '<p><strong>總金額：</strong>' + 'NT$' + Number(o.totalAmount || 0).toLocaleString() + '</p>' +
-                        '</div>';
-
-                    row.child(html).show();
-                })
-                .fail(function(xhr, status, error) {
-                    console.error('載入明細失敗:', error);
-                    row.child('<div class="text-danger">載入失敗：' + error + '</div>').show();
-                });
-        }
-        
+            $("#nextPage").on("click", function () {
+                goToPage(parseInt($("#jumpPageInput").val()) + 1);
+            });
 
             // ===== 取得勾選的訂單 =====
             function getSelectedOrders() {
@@ -907,28 +797,6 @@
                 });
                 return selected;
             }
-
-            // ===== 輔助函數 =====
-            function getFieldDisplayName(field) {
-                switch(field) {
-                    case 'PaymentStatus': return '付款狀態';
-                    case 'ShippingStatusId': return '配送狀態';
-                    case 'OrderStatusId': return '訂單狀態';
-                    default: return '狀態';
-                }
-            }
-
-            // ===== 分頁功能 =====
-            function goToPage(page) {
-            if (isNaN(page) || page < 1) return;
-            var url = new URL(window.location);
-            url.searchParams.set('PageNumber', page);
-            window.location.href = url.toString();
-        }
-
-            console.log('所有功能初始化完成');
-
-
         });
     </script>
 }
