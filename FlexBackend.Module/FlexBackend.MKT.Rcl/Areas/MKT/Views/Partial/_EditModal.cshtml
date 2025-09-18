@@ -1,5 +1,4 @@
-﻿@* 編輯活動 Modal *@
-<div class="modal fade" id="editModal" tabindex="-1">
+﻿<div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="editForm" method="post" action="/MKT/Campaigns/EditCampaign">
@@ -44,12 +43,12 @@
 
                     <div class="mb-3">
                         <label>活動開始日期</label>
-                        <input type="date" id="editStart" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <input type="date" id="editStart" class="form-control" />
                     </div>
 
                     <div class="mb-3">
                         <label>活動結束日期</label>
-                        <input type="date" id="editEnd" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <input type="date" id="editEnd" class="form-control"  />
                     </div>
 
                     <div class="mb-3">
