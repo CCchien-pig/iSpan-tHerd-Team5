@@ -28,6 +28,7 @@
         <form asp-area="CNT" asp-controller="Schedules" asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="ScheduleId" />
+            <input type="hidden" asp-for="PageId" /> 
             <input type="hidden" asp-for="PageTitle" />
             <input type="hidden" asp-for="PageTypeName" />
 
