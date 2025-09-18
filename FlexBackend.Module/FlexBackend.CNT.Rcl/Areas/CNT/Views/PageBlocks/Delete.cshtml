@@ -16,18 +16,36 @@
             <dd class="col-sm-10">
                 @if (Model.BlockType == "richtext")
                 {
-                    @Html.Raw((Model.Content ?? "").Length > 120 ? Model.Content!.Substring(0, 120) + "..." : Model.Content)
+                    @Html.Raw(Model.Content ?? "")
                 }
                 else if (Model.BlockType == "image")
                 {
                     if (!string.IsNullOrWhiteSpace(Model.Content))
                     {
-                        <img src="@Model.Content" style="max-height:120px" />
+                        <img src="@Model.Content" style="max-height:120px" class="img-fluid rounded" />
                     }
                     else
                     {
-
-                        <span class="text-muted">（無）</span>
+                        <span class="text-muted">（無圖片）</span>
+                    }
+                }
+                else if (Model.BlockType == "video")
+                {
+                    if (!string.IsNullOrWhiteSpace(Model.Content))
+                    {
+                        if (Model.Content.Contains("youtube.com") || Model.Content.Contains("youtu.be"))
+                        {
+                            <iframe src="@Model.Content" width="320" height="200"
+                                    frameborder="0" allowfullscreen></iframe>
+                        }
+                        else
+                        {
+                            <video src="@Model.Content" controls style="max-width:100%; max-height:200px;"></video>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted">（無影片）</span>
                     }
                 }
             </dd>

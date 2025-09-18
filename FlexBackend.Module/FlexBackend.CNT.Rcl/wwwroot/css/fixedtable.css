@@ -1,0 +1,10 @@
+﻿
+.card-body {
+    height: auto;
+    max-height: calc(100vh - 300px); /* 往上再減多一點，避免佔滿螢幕 */
+    min-height: 200px; /* 最小高度，避免太小不好看 */
+    overflow-y: auto; /* 垂直滾動 */
+    overflow-x: hidden; /* 避免水平滾動條 */
+}
+
+

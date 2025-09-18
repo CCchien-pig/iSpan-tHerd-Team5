@@ -1,0 +1,186 @@
+﻿@model X.PagedList.IPagedList<FlexBackend.CNT.Rcl.Areas.CNT.ViewModels.ScheduleListVM>
+@section Styles{       
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />    
+    <link rel="stylesheet" href="~/_content/FlexBackend.CNT.Rcl/css/fixedtable.css" asp-append-version="true" />  
+    <style>
+        .badge {
+            font-size: 0.76rem;
+            padding: 0.35em 0.6em;
+        }
+        .bg-pink {
+            background-color: #d63384 !important;
+        }
+        .bg-purple {
+            background-color: #6f42c1 !important;
+        }
+    </style>
+}
+<partial name="_AlertMessage" />
+
+<!-- 🔍 查詢表單 -->
+<form asp-area="CNT" asp-controller="Schedules" asp-action="Index" method="get" class="mb-2 d-flex align-items-center">
+    <div class="d-flex align-items-center me-auto">
+        <a asp-action="Index" asp-area="CNT" asp-controller="Schedules"
+           class="btn btn-outline-secondary btn-lg text-dark fw-bold">
+            📑 排程管理
+        </a>
+    </div>
+
+    <div class="mx-auto">
+        <div class="input-group input-group-sm" style="max-width:1100px;">
+            <span class="input-group-text">每頁筆數</span>
+            <select name="pageSize" class="form-select form-select-sm"
+                    style="max-width:90px;"
+                    asp-items="ViewBag.PageSizeList"
+                    onchange="this.form.submit()"></select>
+
+            <span class="input-group-text">篩選條件</span>
+            <select name="pageTypeId" class="form-select form-select-sm"
+                    style="max-width:120px;"
+                    asp-items="ViewBag.PageTypeList"
+                    onchange="this.form.submit()"></select>
+
+            <span class="input-group-text">|</span>
+            <select name="status" class="form-select form-select-sm"
+                    style="max-width:120px;"
+                    asp-items="ViewBag.StatusList"
+                    onchange="this.form.submit()"></select>
+
+            <span class="input-group-text">|</span>
+            <select name="actionType" class="form-select form-select-sm"
+                    style="max-width:150px;"
+                    asp-items="ViewBag.ActionTypeList"
+                    onchange="this.form.submit()"></select>
+
+            <input type="text" name="keyword"
+                   value="@System.Net.WebUtility.HtmlEncode(ViewBag.Keyword)"
+                   class="form-control form-control-sm"
+                   style="max-width:300px;"
+                   placeholder="輸入文章標題..." />
+
+            <button type="submit" class="btn btn-secondary btn-sm">🔍 查詢</button>
+            <a asp-area="CNT" asp-controller="Schedules" asp-action="Index" class="btn btn-outline-dark btn-sm">❌ 清除</a>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-secondary-subtle text-dark fw-bold d-flex align-items-center">
+        ⏰ 排程管理
+    </div>
+    <div class="card-body">       
+        <table class="table table-striped table-bordered table-hover align-middle shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>📄 文章標題</th>
+                    <th>📂 文章分類</th>
+                    <th>⚡ 文章動作</th>
+                    <th>⏰ 預定時間</th>
+                    <th>📌 文章動作狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ScheduleId</td>
+                        <td>@item.PageTitle</td>
+                        <td>@item.PageTypeName</td>
+                        <td><span class="badge @item.ActionBadgeClass">@item.ActionTypeText</span></td>
+                        <td>@item.ScheduledDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><span class="badge @item.StatusBadgeClass">@item.StatusText</span></td>
+                        <td>
+                            <a asp-area="CNT" asp-controller="Schedules" asp-action="Edit"
+                                asp-route-id="@item.ScheduleId"
+                                asp-route-page="@Model.PageNumber"
+                                asp-route-pageSize="@Model.PageSize"
+                                asp-route-keyword="@ViewBag.Keyword"
+                                asp-route-status="@ViewBag.Status"
+                                asp-route-pageTypeId="@ViewBag.PageTypeId"
+                                asp-route-actionType="@Context.Request.Query["actionType"]"
+                                class="btn btn-sm btn-outline-warning text-dark mb-1">✏️ 編輯</a>
+                            <a asp-area="CNT" asp-controller="Schedules" asp-action="Details"
+                                asp-route-id="@item.ScheduleId"
+                                asp-route-page="@Model.PageNumber"
+                                asp-route-pageSize="@Model.PageSize"
+                                asp-route-keyword="@ViewBag.Keyword"
+                                asp-route-status="@ViewBag.Status"
+                                asp-route-pageTypeId="@ViewBag.PageTypeId"
+                                asp-route-actionType="@Context.Request.Query["actionType"]"
+                                class="btn btn-sm btn-outline-info text-dark mb-1">ℹ️ 詳情</a>
+                            <a asp-area="CNT" asp-controller="Schedules" asp-action="Delete"
+                               asp-route-id="@item.ScheduleId"
+                               class="btn btn-sm btn-outline-danger mb-1"
+                               onclick="return confirm('確定要刪除這筆排程嗎？此操作無法復原');">
+                                🗑️ 刪除
+                            </a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-center mb-2 text-muted">
+        顯示第 <strong>@Model.FirstItemOnPage</strong> - <strong>@Model.LastItemOnPage</strong> 筆，
+        共 <strong>@Model.TotalItemCount</strong> 筆資料
+        （每頁 <strong>@Model.PageSize</strong> 筆，共 <strong>@Model.PageCount</strong> 頁）
+    </div>
+
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-center flex-grow-1">
+                @Html.PagedListPager(
+                    Model,
+                    page => Url.Action("Index", new { 
+                        area = "CNT",
+                        controller = "Schedules",
+                        action = "Index",
+                        page,
+                        keyword = ViewBag.Keyword,
+                        status = ViewBag.Status,
+                        actionType = Context.Request.Query["actionType"],
+                        pageSize = Model.PageSize,
+                        pageTypeId = Context.Request.Query["pageTypeId"]
+                    }),
+                    new PagedListRenderOptions
+                    {
+                        DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+                        DisplayLinkToLastPage = PagedListDisplayMode.Always,
+                        DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+                        DisplayLinkToNextPage = PagedListDisplayMode.Always,
+                        UlElementClasses = new[] { "pagination" },
+                        LiElementClasses = new[] { "page-item" },
+                        PageClasses = new[] { "page-link" }
+                    }
+                )
+            </div>
+        </div>
+    </div>
+
+    <!-- ⬆️ 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop"
+            class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) {
+                btn.classList.add("show");
+            } else {
+                btn.classList.remove("show");
+            }
+        });
+    </script>
+}
