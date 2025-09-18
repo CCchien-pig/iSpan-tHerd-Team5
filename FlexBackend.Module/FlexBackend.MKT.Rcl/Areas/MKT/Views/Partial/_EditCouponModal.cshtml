@@ -9,13 +9,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-
-                    <div class="mb-3">
-                        <label class="form-label">優惠券 ID</label>
-                        <input type="text" id="editCouponId" name="CouponId" class="form-control" readonly />
-                    </div>
-
-
+                    
+                        <div class="mb-3">
+                            <label class="form-label">優惠券 ID</label>
+                            <input type="text" id="editCouponId" name="CouponId" class="form-control" readonly />
+                        </div>
+                    
+                    
 
                     <!-- 活動ID 下拉選單 -->
                     <div class="mb-3">
@@ -57,12 +57,12 @@
 
                     <div class="mb-3">
                         <label class="form-label">開始日期</label>
-                        <input type="datetime-local" id="editStartDate" name="StartDate" class="form-control" />
+                        <input type="datetime-local" id="editStartDate" name="StartDate" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">結束日期</label>
-                        <input type="datetime-local" id="editEndDate" name="EndDate" class="form-control" />
+                        <input type="datetime-local" id="editEndDate" name="EndDate" class="form-control" min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
                     </div>
 
                     <div class="mb-3">
