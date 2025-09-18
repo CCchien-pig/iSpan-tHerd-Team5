@@ -1,4 +1,5 @@
-﻿<!-- Modal Partial: 編輯優惠券 -->
+﻿@model FlexBackend.Infra.Models.MktCoupon
+
 <div class="modal fade" id="editCouponModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -8,153 +9,139 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="text-center">
-                        <label>優惠券ID</label>
-                        <input type="text" id="editCouponId" disabled />
-                    </div>
+
+                    <!-- 活動ID 下拉選單 -->
                     <div class="mb-3">
-                        <label>活動ID</label>
-                        <input type="number" id="editCampaignId" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>規則ID</label>
-                        <input type="number" id="editRuleId" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>優惠券名稱</label>
-                        <input type="text" id="editCouponName" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>優惠碼</label>
-                        <input type="text" id="editCouponCode" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>優惠券類型</label>
-                        <select id="editStatus" class="form-select">
-                            <option value="pInactive">未啟用</option>
-                            <option value="pActive">啟用</option>
+
+                        <div class="text-center">
+                            <label class="form-label">優惠券ID</label>
+                            <input type="text" id="editCouponId" name="CouponId" class="form-control"
+                                   value="" readonly />
+                        </div>
+
+                        <label class="form-label">活動</label>
+                        <select id="editCampaignId" name="CampaignId" class="form-select" required>
+                            <option value="">-- 請選擇活動 --</option>
+                            @if (ViewBag.Campaigns != null)
+                            {
+                                foreach (var campaign in ViewBag.Campaigns)
+                                {
+                                    <option value="@campaign.CampaignId"
+                                            @(Model?.CampaignId == campaign.CampaignId ? "selected" : "")>
+                                        @campaign.CampaignName
+                                    </option>
+                                }
+                            }
                         </select>
                     </div>
+
                     <div class="mb-3">
-                        <label>開始時間</label>
-                        <input type="datetime-local" id="editStartDate" class="form-control" />
+                        <label class="form-label">規則條件</label>
+                        <select id="editRuleId" name="RuleId" class="form-select" required>
+                            <option value="">請選擇規則</option>
+                        </select>
                     </div>
+
                     <div class="mb-3">
-                        <label>結束時間</label>
-                        <input type="datetime-local" id="editEndDate" class="form-control" />
+                        <label class="form-label">優惠券名稱</label>
+                        <input type="text" id="editCouponName" name="CouponName" class="form-control" required
+                               value="@Model?.CouponName" />
                     </div>
+
                     <div class="mb-3">
-                        <label>折扣金額</label>
-                        <input type="number" id="editDiscountAmount" class="form-control" />
+                        <label class="form-label">優惠碼</label>
+                        <input type="text" id="editCouponCode" name="CouponCode" class="form-control" required
+                               value="@Model?.CouponCode" />
                     </div>
-                    <div class="mb-3">
-                        <label>折扣百分比</label>
-                        <input type="number" id="editDiscountPercent" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>總數量</label>
-                        <input type="number" id="editTotQty" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>每人限領</label>
-                        <input type="number" id="editUserLimit" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <label>有效時數</label>
-                        <input type="number" id="editValidHours" class="form-control" />
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="editIsActive" id="editIsActive"
-                                   @(Model?.IsActive == true ? "checked" : "") />
-                            <label class="form-check-label" for="editIsActive">啟用</label>
-                        </div>
+
+                    @* <div class="mb-3">
+                        <label class="form-label">優惠券狀態</label>
+                        <select id="editStatus" name="Status" class="form-select" required>
+                            <option value="pInactive" @(Model?.Status == "pInactive" ? "selected" : "")>未啟用</option>
+                            <option value="pActive" @(Model?.Status == "pActive" ? "selected" : "")>啟用</option>
+                        </select>
+                    </div> *@
+                    <!-- 隱藏優惠券狀態欄位，固定回傳 pActive -->
+                    <div class="mb-3" style="display:none;">
+                        <label class="form-label">優惠券狀態</label>
+                        <input type="hidden" id="editStatus" name="Status" value="pActive" />
                     </div>
 
 
                     <div class="mb-3">
-                        <label>建立者</label>
-                        <input type="text" id="editCreater" class="form-control" />
+                        <label class="form-label">開始時間</label>
+                        <input type="datetime-local" id="editStartDate" name="StartDate" class="form-control" required
+                               value="@(Model != null ? Model.StartDate.ToString("yyyy-MM-ddTHH:mm") : "")" />
                     </div>
+
                     <div class="mb-3">
-                        <label>建立時間</label>
-                        <input type="datetime-local" id="editCreatedDate" class="form-control" disabled />
+                        <label class="form-label">結束時間</label>
+                        <input type="datetime-local" id="editEndDate" name="EndDate" class="form-control"
+                               value="@(Model != null && Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">折扣金額</label>
+                        <input type="number" id="editDiscountAmount" name="DiscountAmount" class="form-control" step="0.01"
+                               value="@Model?.DiscountAmount" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">折扣百分比</label>
+                        <input type="number" id="editDiscountPercent" name="DiscountPercent" class="form-control" step="0.01"
+                               value="@Model?.DiscountPercent" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">總數量</label>
+                        <input type="number" id="editTotQty" name="TotQty" class="form-control" required
+                               value="@Model?.TotQty" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">每人限領</label>
+                        <input type="number" id="editUserLimit" name="UserLimit" class="form-control" required
+                               value="@Model?.UserLimit" />
+                    </div>
+
+                    <!-- 隱藏輸入欄位，固定回傳 24 -->
+                    <div class="mb-3" style="display:none;">
+                        <label class="form-label">有效時數</label>
+                        <input type="hidden" id="editValidHours" name="ValidHours" value="24" />
+                    </div>
+
+
+                    <!-- IsActive 開關 -->
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" id="editIsActive" name="IsActive" class="form-check-input"
+                               @(Model?.IsActive ?? true ? "checked" : "") />
+                        <label class="form-check-label" for="editIsActive">啟用</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">建立者</label>
+                        <input type="number" id="editCreator" name="Creator" class="form-control" required
+                               value="@Model?.Creator" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">建立日期</label>
+                        <input type="text" id="editCreatedDate" name="CreatedDate" class="form-control" readonly
+                               value='@Html.Raw(Model != null && Model.CreatedDate != default(DateTime)
+                                                       ? Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")
+                                                       : "")' />
+
+                    </div>
+
+
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" id="saveCouponBtn" class="btn btn-primary">儲存</button>
                     <button type="button" id="deleteCouponBtn" class="btn btn-danger">刪除</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-    $("#saveCouponBtn").on("click", function(e){
-        e.preventDefault();
-        var form = $("#editCouponForm");
-
-        var startDate = form.find("#editStartDate").val();
-        var endDate = form.find("#editEndDate").val();
-
-        if (!startDate || !endDate) {
-            Swal.fire("錯誤","請填寫開始時間與結束時間","error");
-            return;
-        }
-
-        var start = new Date(startDate);
-        var end = new Date(endDate);
-        var today = new Date();
-        today.setHours(0,0,0,0);
-
-        if (start < today) {
-            Swal.fire("錯誤","開始時間必須在今天之後","error");
-            return;
-        }
-        if (end <= start) {
-            Swal.fire("錯誤","結束時間必須在開始時間之後","error");
-            return;
-        }
-
-        var data = {
-            couponId: parseInt(form.find("#editCouponId").val()),
-            campaignId: parseInt(form.find("#editCampaignId").val()),
-            ruleId: parseInt(form.find("#editRuleId").val()),
-            couponName: form.find("#editCouponName").val(),
-            couponCode: form.find("#editCouponCode").val(),
-            status: form.find("#editStatus").val(),
-            startDate: start.toISOString(),
-            endDate: end.toISOString(),
-            discountAmount: parseFloat(form.find("#editDiscountAmount").val()) || 0,
-            discountPercent: parseFloat(form.find("#editDiscountPercent").val()) || 0,
-            totQty: parseInt(form.find("#editTotQty").val()) || 0,
-            userLimit: parseInt(form.find("#editUserLimit").val()) || 0,
-            validHours: parseInt(form.find("#editValidHours").val()) || 0,
-            isActive: form.find("input[name='editIsActive']:checked").val() === "true",
-            creater: form.find("#editCreater").val()
-        };
-
-        $.ajax({
-            url: '@Url.Action("UpdateCoupon", "Coupons", new { area = "MKT" })',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            success: function(res){
-                if(res.success){
-                    Swal.fire("成功","優惠券已更新！","success").then(()=>{
-                        $("#editCouponModal").modal("hide");
-                        if(typeof calendar !== "undefined") calendar.refetchEvents();
-                    });
-                } else {
-                    Swal.fire("錯誤","更新失敗：" + res.message,"error");
-                }
-            },
-            error: function(err){
-                console.error("UpdateCoupon failed:", err);
-                Swal.fire("錯誤","更新失敗，請檢查控制台","error");
-            }
-        });
-    });
-</script>

@@ -19,7 +19,7 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
 
         var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -35,20 +35,29 @@
                     .then(data => {
                         $("#editId").val(data.id);
                         $("#editTitle").val(data.title);
+                        // readonly textbox 顯示
+                        $("#editTypeDisplay").val(data.type === "cmd" ? "滿額折扣" : "全館折扣");
+                        // hidden input 回傳
                         $("#editType").val(data.type);
+
                         $("#editDescription").val(data.description);
                         $("#editStart").val(data.startDate?.split('T')[0] || '');
                         $("#editEnd").val(data.endDate?.split('T')[0] || '');
                         $("#editStatus").val(data.status);
                         $("#editCreator").val(data.creator);
-                        $("#editImgId").val(data.ingId || '');
+                        $("#editImgId").val(data.imgId || '');
+
+                        // ProductType checkbox
                         $(".editProductType").prop("checked", false);
                         if(data.productType){
                             data.productType.split(',').forEach(pt => {
                                 $(".editProductType[value='" + pt + "']").prop("checked", true);
                             });
                         }
-                        $("input[name='editIsActive'][value='" + data.isActive + "']").prop("checked", true);
+
+                        // IsActive 布林值
+                        $("#editIsActive").prop("checked", data.isActive);
+
                         $("#editModal").modal("show");
                     })
                     .catch(err => console.error(err));
@@ -57,78 +66,71 @@
 
         calendar.render();
 
-        // 更新活動總數
         function updateCampaignCount(){
-            $.ajax({
-                url: '/MKT/Campaigns/GetTotalCount',
-                type: 'GET',
-                success: function(res){
-                    $("#campaignCount").fadeOut(150, function(){
-                        $(this).text(res.count || 0).fadeIn(150);
-                    });
-                },
-                error: function(){ $("#campaignCount").text(0); }
-            });
+            $.get('/MKT/Campaigns/GetTotalCount', function(res){
+                $("#campaignCount").fadeOut(150, function(){
+                    $(this).text(res.count || 0).fadeIn(150);
+                });
+            }).fail(function(){ $("#campaignCount").text(0); });
         }
 
-        updateCampaignCount(); // 頁面載入時
+        updateCampaignCount();
 
-        // 開啟新增活動 Modal
         $("#openCreateCampaign").on("click", function(){
             $("#createCampaignModal").modal("show");
         });
 
-        // 提交新增活動
-        $("#createSubmitBtn").on("click", function (e) {
-            e.preventDefault();
+            $("#createSubmitBtn").on("click", function(e) {
+        e.preventDefault();
 
-            var startDate = $("#createCampaignForm input[name='StartDate']").val();
-            var endDate = $("#createCampaignForm input[name='EndDate']").val();
-            var today = new Date(); today.setHours(0,0,0,0);
+        var startDate = $("input[name='StartDate']").val();
+        var creator = parseInt($("input[name='Creator']").val());
+        var imgId = $("input[name='ImgId']").val();
+        imgId = imgId ? parseInt(imgId) : null;
 
-            if (!startDate || new Date(startDate) <= today){
-                Swal.fire("錯誤", "開始日期必須在今天之後", "error");
-                return;
+        if (!startDate || !creator) {
+            Swal.fire("錯誤", "必填欄位未填寫", "error");
+            return;
+        }
+
+        var status = $("select[name='Status']").val();
+        var isActive = status === 'cInactive' ? false : $("#createIsActive").prop("checked");
+
+        var data = {
+            CampaignName: $("input[name='CampaignName']").val(),
+            CampaignType: $("input[name='CampaignType']").val(), // cmd
+            CampaignDescription: $("input[name='CampaignDescription']").val(),
+            ProductType: $("input[name='ProductType']:checked").map(function(){ return this.value; }).get().join(","),
+            StartDate: startDate,
+            EndDate: $("input[name='EndDate']").val() || null,
+            IsActive: isActive,
+            Status: status,
+            Creator: creator,
+            ImgId: imgId
+        };
+
+        $.ajax({
+            url: '/MKT/Campaigns/CreateCampaign',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res){
+                if(res.success){
+                    Swal.fire("成功","活動已新增！","success").then(()=>{
+                        $("#createCampaignModal").modal("hide");
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire("錯誤","操作失敗：" + res.message,"error");
+                }
+            },
+            error: function(xhr){
+                Swal.fire("錯誤","操作失敗：" + xhr.responseText,"error");
             }
-            if (endDate && new Date(endDate) < new Date(startDate)){
-                Swal.fire("錯誤", "結束日期必須在開始日期之後", "error");
-                return;
-            }
-
-            var data = {
-                CampaignName: $("#createCampaignForm input[name='CampaignName']").val(),
-                CampaignType: $("#createCampaignForm select[name='CampaignType']").val(),
-                CampaignDescription: $("#createCampaignForm input[name='CampaignDescription']").val(),
-                ProductType: $("#createCampaignForm input[name='ProductType']:checked").map(function(){ return this.value; }).get().join(","),
-                StartDate: startDate || null,
-                EndDate: endDate || null,
-                IsActive: $("#createCampaignForm input[name='IsActive']:checked").val() === "true",
-                Status: $("#createCampaignForm select[name='Status']").val(),
-                Creator: parseInt($("#createCampaignForm input[name='Creator']").val()),
-                ImgId: parseInt($("#createCampaignForm input[name='ImgId']").val()) || null
-            };
-
-            $.ajax({
-                url: '/MKT/Campaigns/CreateCampaign',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function(res){
-                    if(res.success){
-                        Swal.fire("成功","活動已新增！","success").then(() => {
-                            calendar.refetchEvents();
-                            $("#createCampaignModal").modal("hide");
-                            updateCampaignCount(); // 新增後更新總數
-                        });
-                    } else {
-                        Swal.fire("錯誤","操作失敗：" + res.message,"error");
-                    }
-                },
-                error: function(xhr){ Swal.fire("錯誤","操作失敗：" + xhr.responseText,"error"); }
-            });
         });
+    });
 
-        // 提交編輯活動
+
         $("#saveBtn").on("click", function(e){
             e.preventDefault();
             var data = {
@@ -136,12 +138,14 @@
                 CampaignName: $("#editTitle").val(),
                 CampaignType: $("#editType").val(),
                 CampaignDescription: $("#editDescription").val(),
-                ProductType: $(".editProductType:checked").map(function(){ return this.value; }).get().join(","),
+                ProductType: $(".editProductType:checked").length > 0
+                             ? $(".editProductType:checked").map(function(){ return this.value; }).get().join(",")
+                             : null,
                 StartDate: $("#editStart").val() || null,
                 EndDate: $("#editEnd").val() || null,
-                IsActive: $("input[name='editIsActive']:checked").val() === "true",
+                IsActive: $("#editIsActive").is(":checked"),
                 Status: $("#editStatus").val(),
-                Creator: parseInt($("#editCreator").val()),
+                Creator: parseInt($("#editCreator").val()) || null,
                 ImgId: parseInt($("#editImgId").val()) || null
             };
 
@@ -164,7 +168,6 @@
             });
         });
 
-        // 刪除活動
         $("#deleteBtn").on("click", function(){
             var campaignId = $("#editId").val();
             if(!campaignId) return;
@@ -185,7 +188,7 @@
                                 Swal.fire('已刪除','活動已刪除','success').then(()=>{
                                     $("#editModal").modal("hide");
                                     calendar.refetchEvents();
-                                    updateCampaignCount(); // 刪除後更新總數
+                                    updateCampaignCount();
                                 });
                             } else {
                                 Swal.fire('錯誤','刪除失敗：' + res.message,'error');
@@ -197,5 +200,9 @@
             });
         });
 
+        $("#backBtn").on("click", function(){
+            $("#editModal").modal("hide");
+        });
     });
+
 </script>
