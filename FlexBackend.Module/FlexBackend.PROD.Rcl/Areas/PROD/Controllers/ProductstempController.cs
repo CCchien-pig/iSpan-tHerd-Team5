@@ -98,16 +98,16 @@ namespace FlexBackend.PROD.Rcl.Areas.PROD.Controllers
 							.Take(2) // 每個選項綁 2 個 SKU
 							.ToListAsync(ct);
 
-						foreach (var sku in skus)
-						{
-							var mapping = new ProdSkuSpecificationValue
-							{
-								SkuId = sku.SkuId,
-								SpecificationOptionId = option.SpecificationOptionId
-							};
-							_db.ProdSkuSpecificationValues.Add(mapping);
-							inserted++;
-						}
+						//foreach (var sku in skus)
+						//{
+						//	var mapping = new ProdSkuSpecificationValue
+						//	{
+						//		SkuId = sku.SkuId,
+						//		SpecificationOptionId = option.SpecificationOptionId
+						//	};
+						//	_db.ProdSkuSpecificationValues.Add(mapping);
+						//	inserted++;
+						//}
 					}
 				}
 			}
