@@ -67,22 +67,12 @@
                 </div>
 
                 <!-- 異常提示（徽章鉤子） -->
-                <button class="btn btn-sm btn-outline-danger mr-3" id="btnAnomalies">
+                <a href="javascript:void(0)" id="btnAnomalies"
+                   class="d-none d-sm-inline-block btn btn-sm btn-outline-danger ms-2">
                     <i class="fas fa-exclamation-triangle"></i>
-                    異常 <span class="badge badge-danger ml-1" id="badgeAnom" style="display:none">0</span>
-                </button>
+                    異常<span id="anomalyBadge"></span>
+                </a>
 
-                <!-- 快速建立 -->
-                <div class="dropdown mr-3">
-                    <button class="btn btn-sm btn-success dropdown-toggle" data-toggle="dropdown">
-                        快速建立
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" href="@Url.Content("~/PROD/Products/Create")">新增商品</a>
-                        <a class="dropdown-item" href="@Url.Content("~/PROD/Promotions/Create")">新增活動</a>
-                        <a class="dropdown-item" href="@Url.Content("~/ORD/Orders/Create")">新增訂單</a>
-                    </div>
-                </div>
 
                 <!-- 自動刷新 + 最後更新時間 -->
                 <div class="ml-auto d-flex align-items-center">
@@ -281,6 +271,21 @@
             </div>
         </div>
     </div>
+        <!-- 異常報告 Modal -->
+        <div class="modal fade" id="anomalyModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">異常清單</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="anomalyList" class="mb-0"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
 
 <!-- Chart.js（v4） -->
@@ -665,6 +670,41 @@
               if (!resp.ok) throw new Error(`Kpi HTTP ${resp.status}`);
               return await resp.json();
             }
+                        // === [新增] 異常徽章工具 ===
+            function setAnomalyBadge(n) {
+              const badge = document.getElementById('anomalyBadge');
+              if (!badge) return;
+              // 有異常 → 顯示 (N)；沒異常 → 清空
+              badge.textContent = (n && n > 0) ? `(${n})` : '';
+              // 讓字跟「異常」保持一點距離
+              if (n > 0) badge.classList.add('ms-1'); else badge.classList.remove('ms-1');
+            }
+
+            // === [新增] 載入異常數量（預設 demo=true，展示時保證有資料） ===
+            async function loadAnomalyBadge(demo = true) {
+              try {
+                const resp = await fetch(`/api/cs/dashboard/anomalies?demo=${demo}`);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const list = await resp.json();
+                setAnomalyBadge(Array.isArray(list) ? list.length : 0);
+                return list;
+              } catch (err) {
+                console.error('載入異常失敗', err);
+                // 失敗就清空
+                setAnomalyBadge(0);
+                return [];
+              }
+            }
+                        // === 共用：抓異常清單（demo=true 方便展示；要跑真資料改成 false）
+            async function fetchAnomalies(demo = true) {
+              const resp = await fetch(`/api/cs/dashboard/anomalies?demo=${demo}`, {
+                headers: { 'Accept': 'application/json' }
+              });
+              if (!resp.ok) throw new Error('Anomalies HTTP ' + resp.status);
+              return await resp.json();  // 例如 ["AOV 為 0", "有 3 個 SKU 庫存為負數", ...]
+            }
+
+
 
 
     // 新增：會員/物流 API
@@ -801,10 +841,9 @@
                 document.getElementById('lastUpdated').textContent =
                   new Date().toLocaleString('zh-TW', { hour12: false });
 
-                const anom = (mergedKpi.aov ?? 0) <= 0 ? 1 : 0;
-                const badge = document.getElementById('badgeAnom');
-                badge.textContent = anom;
-                badge.style.display = anom > 0 ? '' : 'none';
+                           // ★ 用 API 更新徽章（demo 想切真資料就改 false）
+            await loadAnomalyBadge(true);
+
 
               } catch (err) {
                 console.error('Dashboard refresh error:', err);
@@ -862,7 +901,8 @@
     (function init() {
       // 先載入品類選項，再刷新
       loadCategories().then(() => refresh(30));
-
+                  // ★ 加這行：頁面載入就先打一次 anomalies
+            loadAnomalyBadge(true);
       // 區間選擇 & 手動重新整理
       document.getElementById('rangeSelect').addEventListener('change', e => refresh(parseInt(e.target.value, 10)));
       document.getElementById('btnRefresh').addEventListener('click', () => {
@@ -943,56 +983,64 @@
         e.preventDefault();
         window.print();
       });
+                  // 匯出 → 異常清單 → CSV
+            document.getElementById('exportAnomaliesCsv')?.addEventListener('click', async (e) => {
+              e.preventDefault();
+              try {
+                const list = await fetchAnomalies(true);  // ← demo 想切真資料就改 false
+                const rows = [['#', '異常說明']];
+                list.forEach((msg, i) => rows.push([String(i + 1), msg]));
 
-      // 異常清單 CSV
-      document.getElementById('exportAnomaliesCsv').addEventListener('click', (e) => {
-        e.preventDefault();
-        const k = state.cache.tpsrc?.kpi || {};
-        const anomalies = [];
-        if ((k.aov ?? 0) <= 0) anomalies.push(['平均客單價', '為 0，可能有資料異常']);
-        if ((k.totalRevenue ?? 0) < 1000) anomalies.push(['營收過低', k.totalRevenue ?? 0]);
-        const rows = [['項目','說明'], ...anomalies];
-        const csv = rows.map(r => r.join(',')).join('\n');
-        downloadFile(CSV_BOM + csv, `anomalies_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-      });
+                const csv = rows.map(r => r.join(',')).join('\n');
+                downloadFile('\uFEFF' + csv, `anomalies_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+              } catch (err) {
+                console.error('匯出異常 CSV 失敗', err);
+                alert('匯出異常 CSV 失敗');
+              }
+            });
+                        // 匯出 → 異常清單 → PDF（開新視窗列印）
+            document.getElementById('exportAnomaliesPdf')?.addEventListener('click', async (e) => {
+              e.preventDefault();
+              try {
+                const list = await fetchAnomalies(true);  // ← demo 想切真資料就改 false
 
-      // 異常清單 -> PDF（新視窗列印）
-      document.getElementById('exportAnomaliesPdf').addEventListener('click', (e) => {
-        e.preventDefault();
-        const k = state.cache.tpsrc?.kpi || {};
-        const anomalies = [];
-        if ((k.aov ?? 0) <= 0) anomalies.push(['平均客單價', '為 0，可能有資料異常']);
-        if ((k.totalRevenue ?? 0) < 1000) anomalies.push(['營收過低', k.totalRevenue ?? 0]);
+                let html = `
+                  <style>
+                    body { font-family: system-ui, -apple-system, "Segoe UI", Arial; margin:24px; }
+                    h2 { margin: 0 0 8px; }
+                    table { width: 100%; border-collapse: collapse; margin-top:12px; }
+                    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                    th { background: #f8f9fa; }
+                  </style>
+                  <h2>異常清單報表</h2>
+                  <div>產生時間：${new Date().toLocaleString('zh-TW', { hour12:false })}</div>
+                  <hr/>
+                  <table>
+                    <thead><tr><th style="width:64px">#</th><th>異常說明</th></tr></thead>
+                    <tbody>
+                      ${
+                        (list && list.length)
+                        ? list.map((msg, i) => `<tr><td>${i+1}</td><td>${msg}</td></tr>`).join('')
+                        : `<tr><td colspan="2">太棒了！目前沒有發現任何異常。</td></tr>`
+                      }
+                    </tbody>
+                  </table>
+                `;
 
-        let htmlContent = `
-          <style>
-            body { font-family: sans-serif; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-          </style>
-          <h2>異常清單報表</h2>
-          <p>報表產生時間：${new Date().toLocaleString('zh-TW')}</p>
-          <hr>
-          <table>
-            <thead><tr><th>項目</th><th>說明</th></tr></thead>
-            <tbody>
-        `;
+                const w = window.open('', '_blank');
+                w.document.write(html);
+                w.document.close();
+                w.focus();
+                w.print();
+              } catch (err) {
+                console.error('匯出異常 PDF 失敗', err);
+                alert('匯出異常 PDF 失敗');
+              }
+            });
 
-        if (anomalies.length > 0) {
-          anomalies.forEach(item => { htmlContent += `<tr><td>${item[0]}</td><td>${item[1]}</td></tr>`; });
-        } else {
-          htmlContent += `<tr><td colspan="2">太棒了！目前沒有發現任何異常。</td></tr>`;
-        }
+  
 
-        htmlContent += `</tbody></table>`;
-
-        const w = window.open('', '_blank');
-        w.document.write(htmlContent);
-        w.document.close();
-        w.focus();
-        w.print();
-      });
+    
 
       // 下載（示範：訂單/明細 CSV）
       document.getElementById('globalToolbar').addEventListener('click', (e) => {
@@ -1007,9 +1055,26 @@
       });
 
       // 異常提示示範
-      document.getElementById('btnAnomalies').addEventListener('click', () => {
-        alert('異常清單（示範）：\n1) AOV 為 0（請檢查訂單金額或退款資料）');
-      });
+              // 異常：點按後叫 API -> 填 Modal -> 顯示
+            document.getElementById('btnAnomalies')?.addEventListener('click', async () => {
+              try {
+                // Demo 模式先 true，正式要跑真查詢就改成 false
+                const resp = await fetch('/api/cs/dashboard/anomalies?demo=true');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const list = await resp.json();
+
+                const ul = document.getElementById('anomalyList');
+                ul.innerHTML = (list && list.length)
+                  ? list.map((x, i) => `<li class="mb-2">${i + 1}) ${x}</li>`).join('')
+                  : '<li>目前沒有異常 ✅</li>';
+
+                const modal = new bootstrap.Modal(document.getElementById('anomalyModal'));
+                modal.show();
+              } catch (e) {
+                console.error(e);
+                alert('取得異常資料失敗，請稍後再試');
+              }
+            });
 
       // 自動刷新
       const switchAuto = document.getElementById('switchAuto');
