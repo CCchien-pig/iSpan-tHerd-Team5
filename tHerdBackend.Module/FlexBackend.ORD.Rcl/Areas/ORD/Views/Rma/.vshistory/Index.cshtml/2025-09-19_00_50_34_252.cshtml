@@ -31,10 +31,6 @@
             font-weight: bold;
         }
 
-        .text-purple2 {
-            color: #7A3A8F;
-        }
-
         .order-detail-card {
             background: #f9f9f9;
             padding: 1rem;
@@ -441,9 +437,7 @@
 }
 
 <div class="card my-3">
-    <div class="card-header py-3">
-         <h6 class="m-0 text-purple2">售後申請審核</h6>
-    </div>
+    <div class="card-header">售後申請審核</div>
     <div class="card-body">
 
         <!-- 搜尋 / 每頁 -->
@@ -455,21 +449,42 @@
                 <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
             </div>
 
-                <div class="col-auto">
-                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
-                        @foreach (var size in new[] { 10, 25, 50, 100 })
-                        {
-                            if (Model.PageSize == size)
-                            {
-                                <option value="@size" selected>@size 筆/頁</option>
-                            }
-                            else
-                            {
-                                <option value="@size">@size 筆/頁</option>
-                            }
-                        }
-                    </select>
-                </div>
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @if (Model.PageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (Model.PageSize == 25)
+                    {
+                        <option value="25" selected>25</option>
+                    }
+                    else
+                    {
+                        <option value="25">25</option>
+                    }
+                    @if (Model.PageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (Model.PageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </div>
 
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">搜尋</button>
@@ -495,6 +510,8 @@
                     @label (@tab.Value)
                 </a>
             }
+        </div>
+
         </div>
 
 
