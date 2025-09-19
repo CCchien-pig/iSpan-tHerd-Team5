@@ -31,10 +31,6 @@
             font-weight: bold;
         }
 
-        .text-purple2 {
-            color: #7A3A8F;
-        }
-
         .order-detail-card {
             background: #f9f9f9;
             padding: 1rem;
@@ -318,6 +314,14 @@
             vertical-align: middle;
         }
 
+        /* ——— 需要保留靠左的欄位（可選） ——— */
+        /* 列表：RMA號、訂單號靠左 */
+        #rmaTable td:nth-child(2),
+        #rmaTable td:nth-child(3) {
+            text-align: left;
+            letter-spacing: .3px;
+        }
+
         /* 明細：商品、規格欄靠左 */
         #rmaDetailModal table tbody td:nth-child(1),
         #rmaDetailModal table tbody td:nth-child(2) {
@@ -328,77 +332,6 @@
         #rmaTable td.dataTables_empty {
             text-align: center !important;
         }
-
-        /* === Outline Segmented Buttons（預設邊框＋文字，hover/active 變實心） === */
-        .seg-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-        }
-
-        .seg-btn {
-            --clr: #652D77; /* 預設主色，會被各狀態覆蓋 */
-            display: inline-block;
-            padding: .5rem 1rem;
-            border: 1px solid var(--clr);
-            color: var(--clr);
-            background: transparent;
-            border-radius: .5rem;
-            text-decoration: none;
-            font-weight: 600;
-            line-height: 1.2;
-            transition: all .18s ease;
-        }
-
-            .seg-btn:hover,
-            .seg-btn:focus,
-            .seg-btn.active {
-                background: var(--clr);
-                color: #fff;
-                text-decoration: none;
-                box-shadow: 0 2px 4px rgba(0,0,0,.08);
-            }
-
-        /* 各狀態色（只設定 --clr，其它互動統一套上面規則） */
-        .seg-all {
-            --clr: #6c757d;
-        }
-
-        .seg-pending {
-            --clr: #ffc107;
-            color: #b08a00;
-        }
-        /* 初始字色較深，hover/active 仍會變實心 */
-        .seg-review {
-            --clr: #17a2b8;
-        }
-
-        .seg-refunding {
-            --clr: #007bff;
-        }
-
-        .seg-reshipping {
-            --clr: #6f42c1;
-        }
-
-        .seg-done {
-            --clr: #28a745;
-        }
-
-        .seg-rejected {
-            --clr: #dc3545;
-        }
-
-        /* 表格 # 連結維持同風格 */
-        a.id-link {
-            color: #652D77;
-            text-decoration: underline;
-        }
-
-            a.id-link:hover {
-                color: #4E225D;
-            }
-
 
     </style>
 }
@@ -441,9 +374,7 @@
 }
 
 <div class="card my-3">
-    <div class="card-header py-3">
-         <h6 class="m-0 text-purple2">售後申請審核</h6>
-    </div>
+    <div class="card-header">售後申請審核</div>
     <div class="card-body">
 
         <!-- 搜尋 / 每頁 -->
@@ -455,48 +386,72 @@
                 <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
             </div>
 
-                <div class="col-auto">
-                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
-                        @foreach (var size in new[] { 10, 25, 50, 100 })
-                        {
-                            if (Model.PageSize == size)
-                            {
-                                <option value="@size" selected>@size 筆/頁</option>
-                            }
-                            else
-                            {
-                                <option value="@size">@size 筆/頁</option>
-                            }
-                        }
-                    </select>
-                </div>
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @if (Model.PageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (Model.PageSize == 25)
+                    {
+                        <option value="25" selected>25</option>
+                    }
+                    else
+                    {
+                        <option value="25">25</option>
+                    }
+                    @if (Model.PageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (Model.PageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </div>
 
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">搜尋</button>
             </div>
         </form>
 
-        <!-- 狀態群組（Outline Segmented Buttons） -->
-        <div class="seg-group mb-3">
+        <!-- 狀態群組 Tabs -->
+        <div class="mb-3">
             @{
-                var statusMapping = new Dictionary<string, string> {
-                        { "all", "全部" }, { "pending", "待審核" }, { "review", "審核中" },
-                        { "refunding", "退款中" }, { "reshipping", "補寄中" },
-                        { "done", "處理完成" }, { "rejected", "駁回" }
+                var statusMapping = new Dictionary<string, string>
+                        {
+                        { "all", "全部" },
+                        { "pending", "待審核" },
+                        { "review", "審核中" },
+                        { "refunding", "退款中" },
+                        { "reshipping", "補寄中" },
+                        { "done", "處理完成" },
+                        { "rejected", "駁回" }
                         };
             }
+
             @foreach (var tab in Model.Tabs)
             {
-                var key = tab.Key;                           
-                var label = statusMapping.ContainsKey(key) ? statusMapping[key] : key;
-                var active = Model.Group == key ? "active" : "";
-                <a class="seg-btn seg-@key @active"
-                   href="@Url.Action("Index", new { group = key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
-                    @label (@tab.Value)
+                var statusText = statusMapping.ContainsKey(tab.Key) ? statusMapping[tab.Key] : tab.Key;
+                <a class="@GetStatusButtonClass(tab.Key, Model.Group)"
+                   href="@Url.Action("Index", new { group = tab.Key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
+                    @statusText (@tab.Value)
                 </a>
             }
         </div>
-
 
         <!-- 列表 -->
         <table id="rmaTable" class="table table-bordered align-middle rcl-table">
@@ -516,11 +471,7 @@
                 @foreach (var r in Model.RmaList)
                 {
                     <tr>
-                        <td>
-                            <a class="id-link" href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">
-                                #@r.ReturnRequestId
-                            </a>
-                        </td>
+                        <td><a href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">#@r.ReturnRequestId</a></td>
                         <!--<td>@r.RmaNo</td>-->
                         <td>@r.OrderNo</td>
                         <td>@GetTypeText(r.TypeName)</td>
@@ -642,21 +593,21 @@
 
         // DataTable 初始化
         $(document).ready(function() {
-        $('#rmaTable').DataTable({
-            "language": {
-                "url": "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json"
-            },
-            "order": [[ 5, "desc" ]], 
-            "pageLength": @Model.PageSize,
-            "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
-            "searching": false,
-            "paging": false,
-            "info": false,
-            "columnDefs": [
-                { "orderable": false, "targets": [0, 6] },
-                { "type": "date", "targets": 5 } 
-            ]
-        });
+            $('#rmaTable').DataTable({
+                "language": {
+                    "url": "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json"
+                },
+                "order": [[ 6, "desc" ]],
+                "pageLength": @Model.PageSize,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "searching": false,
+                "paging": false,
+                "info": false,
+                "columnDefs": [
+                    { "orderable": false, "targets": [0, 7] },
+                    { "type": "date", "targets": 6 }
+                ]
+            });
 
             // 綁定 Modal 按鈕事件
             $('#btnApproveRefund').click(function() {
