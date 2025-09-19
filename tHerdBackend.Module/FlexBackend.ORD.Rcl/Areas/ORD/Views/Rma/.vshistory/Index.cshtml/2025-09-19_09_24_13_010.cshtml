@@ -864,25 +864,16 @@
             });
         }
 
-        // 駁回（原因可留空）— 在 Bootstrap Modal 內開啟 Swal
+        // 駁回（原因可留空）
         function rejectRma(id) {
           Swal.fire({
             title: '駁回原因（可留空）',
             input: 'textarea',
             inputPlaceholder: '請輸入駁回原因',
-            target: '#rmaDetailModal',              // ← 讓 Swal 在同一個 Modal 裡，避免焦點衝突
             showCancelButton: true,
             confirmButtonText: '確定駁回',
             cancelButtonText: '取消',
-            confirmButtonColor: '#dc3545',
-            didOpen: () => {                         // 保證聚焦可輸入
-              const ta = Swal.getInput();
-              if (ta) {
-                ta.removeAttribute('readonly');      // 萬一被瀏覽器/外部樣式加了 readonly
-                setTimeout(() => ta.focus(), 0);
-              }
-            }
-            // 不要加 inputValidator，保持可留空
+            confirmButtonColor: '#dc3545'
           }).then((result) => {
             if (result.isConfirmed) {
               const reason = (result.value || '').trim();
