@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Infra.Models;
+using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,7 +49,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 title = c.CouponName,
                 start = c.StartDate,
                 end = c.EndDate,
-                color = c.IsActive ? "#6a1b9a" : "#9e9e9e"
+                color = c.IsActive ? ColorHelper.RandomColor() : "#9e9e9e"
             });
 
             return Json(events);

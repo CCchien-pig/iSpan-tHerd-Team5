@@ -78,7 +78,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 title = c.CampaignName,
                 start = c.StartDate,
                 end = c.EndDate.HasValue ? c.EndDate : null,
-                color = ColorHelper.RandomColor()
+                color = c.IsActive ? ColorHelper.RandomColor() : "#9e9e9e"
             }).ToList();
 
             return Ok(events);
