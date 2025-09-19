@@ -75,7 +75,8 @@
 {
     <div class="alert alert-info border rounded p-2 mb-2 d-flex align-items-center flex-wrap">
         <span class="fw-bold me-2">🔎 篩選條件：</span>
-         @* 分類 *@
+
+        @* 分類 *@
         @if (!string.IsNullOrEmpty(ViewBag.PageTypeName))
         {
             <span class="badge bg-warning text-dark d-flex align-items-center me-2">
@@ -88,6 +89,7 @@
                    title="移除分類"></a>
             </span>
         }
+
         @* 狀態 *@
         @if (!string.IsNullOrEmpty(ViewBag.StatusName))
         {
@@ -95,27 +97,31 @@
                 狀態：@ViewBag.StatusName
                 <a asp-action="Index"
                    asp-route-keyword="@ViewBag.Keyword"
-                   asp-route-pageTypeId="@Context.Request.Query["pageTypeId"]"
+                   asp-route-pageTypeId="@ViewBag.PageTypeId"
                    asp-route-pageSize="@Model.PageSize"
                    class="btn-close btn-close-white ms-2"
                    title="移除狀態"></a>
             </span>
         }
-         @* 關鍵字 *@
+
+        @* 關鍵字 *@
         @if (!string.IsNullOrEmpty(ViewBag.Keyword))
         {
             <span class="badge bg-primary d-flex align-items-center me-2">
                 關鍵字：「@ViewBag.Keyword」
                 <a asp-action="Index"
                    asp-route-status="@ViewBag.Status"
-                   asp-route-pageTypeId="@Context.Request.Query["pageTypeId"]"
+                   asp-route-pageTypeId="@ViewBag.PageTypeId"
                    asp-route-pageSize="@Model.PageSize"
                    class="btn-close btn-close-white ms-2"
                    title="移除關鍵字"></a>
             </span>
-        }               
+        }
+
         @* 清除全部，跟在最後面 *@
-        <a asp-action="Index"   asp-route-pageSize="@Model.PageSize"   class="btn btn-outline-dark btn-sm">❌ 清除全部</a>
+        <a asp-action="Index"
+           asp-route-pageSize="@Model.PageSize"
+           class="btn btn-outline-dark btn-sm">❌ 清除全部</a>
     </div>
 }
 
