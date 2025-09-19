@@ -939,62 +939,49 @@
                     $modal.find('#MovementTypeSelect').val('Adjust').prop('disabled', true);
                     $modal.find('.stock-edit-adjustOptions').show();
 
-                    // 取得當前庫存與最大庫存
                     var currentStock = parseInt($modal.find('.stock-edit-currentQty').val()) || 0;
                     var maxStock = parseInt($modal.find('.stock-edit-changeQty').data('max')) || 0;
-                    console.log('[EditStock] currentStock:', currentStock, 'maxStock:', maxStock);
 
                     // ===== 計算上限 & 更新預計庫存 =====
                     function refreshQtyLimits() {
                         var $checkedRadio = $modal.find('.stock-edit-isAdd:checked');
-                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === 'true' : true; // 無 radio 預設增加
+                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === '1' : true;
+
                         var changeInput = $modal.find('.stock-edit-changeQty');
                         var curVal = parseInt(changeInput.val()) || 0;
 
-                        // 計算最大可輸入數量
                         var maxAllowed = isAdd ? (maxStock - currentStock) : currentStock;
                         if (maxAllowed < 0) maxAllowed = 0;
 
-                        // 修正當前值
                         if (curVal > maxAllowed) curVal = maxAllowed;
                         if (curVal < 0) curVal = 0;
                         changeInput.val(curVal);
                         changeInput.attr('max', maxAllowed);
 
-                        // 計算預計庫存
                         var predicted = isAdd ? currentStock + curVal : currentStock - curVal;
                         if (predicted < 0) predicted = 0;
 
-                        // 更新顯示
                         $modal.find('.stock-edit-maxAllowed').text(maxAllowed);
                         $modal.find('.stock-edit-predictedQty').text(predicted);
-
-                        console.log('[EditStock] isAdd:', isAdd, 'curVal:', curVal, 'maxAllowed:', maxAllowed, 'predictedStock:', predicted);
                     }
 
-                    // 初始刷新一次
                     refreshQtyLimits();
 
-                    // radio / input 事件
                     $modal.find('.stock-edit-isAdd').off('change').on('change', refreshQtyLimits);
                     $modal.find('.stock-edit-changeQty').off('input').on('input', refreshQtyLimits);
 
-                    // 儲存按鈕事件
                     $modal.find('.stock-edit-saveBtn').off('click').on('click', function() {
                         var changeInput = $modal.find('.stock-edit-changeQty');
                         var curVal = parseInt(changeInput.val()) || 0;
 
                         var $checkedRadio = $modal.find('.stock-edit-isAdd:checked');
-                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === 'true' : true; // 無 radio 預設增加
+                        var isAdd = $checkedRadio.length > 0 ? $checkedRadio.val() === '1' : true; // 一致用 '1' 表增加
 
-                        // 建立表單資料
                         var formData = {
                             ChangeQty: curVal,
-                            IsAdd: isAdd,
+                            IsAdd: isAdd, // 確保布林
                             Remark: $modal.find('textarea[name="Remark"]').val() || ''
                         };
-
-                        console.log('[EditStock] Save formData:', formData);
 
                         $.post(`/SUP/StockBatches/Update/${id}`, formData, function(res) {
                             if (res.success) {
