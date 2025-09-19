@@ -1,0 +1,805 @@
+﻿@using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
+@model ReturnListPageVM
+@{
+    ViewData["Title"] = "售後申請審核";
+}
+
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <style>
+        /* ===== 主題變數 ===== */
+        :root {
+            --brand-500: #652D77;
+            --brand-600: #7A3A8F;
+            --brand-700: #4E225D;
+            --bs-primary: var(--brand-500);
+            --bs-primary-rgb: 101,45,119;
+            --row-odd: #ffffff;
+            --row-even: #efeaf2;
+            --row-hover: #f2e8f7;
+            --row-selected: #eadff4;
+        }
+
+        /* ===== 基礎設定 ===== */
+        td.order-toggle {
+            cursor: pointer;
+            color: #622872;
+            text-decoration: underline;
+        }
+
+        tr.shown td.order-toggle {
+            font-weight: bold;
+        }
+
+        .order-detail-card {
+            background: #f9f9f9;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: .5rem;
+            border: 1px solid #ddd;
+        }
+
+        .order-summary {
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        #jumpPageInput {
+            width: 80px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        th.no-sort::after {
+            display: none !important;
+        }
+
+        /* ===== 表格樣式（第一欄同色版） ===== */
+        table.rcl-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        /* 第一欄設為導引條定位容器，但不強制白底 */
+        table.rcl-table > tbody > tr > td:first-child {
+            position: relative;
+        }
+
+        /* 奇數列：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:nth-of-type(odd) > td {
+            background: var(--row-odd) !important;
+        }
+
+        /* 偶數列：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:nth-of-type(even) > td {
+            background: var(--row-even) !important;
+        }
+
+        /* hover：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:hover > td {
+            background: var(--row-hover) !important;
+        }
+
+        /* 勾選行：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr.is-selected > td {
+            background: var(--row-selected) !important;
+        }
+
+        /* child 明細列不吃 hover */
+        table.rcl-table > tbody > tr.child > td {
+            background: inherit !important;
+        }
+
+        /* 平滑過渡 */
+        table.rcl-table > tbody > tr > td {
+            transition: background-color .18s ease;
+        }
+
+        /* ===== 左側導引條 ===== */
+        table.rcl-table > tbody > tr:hover > td:first-child::before,
+        table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+            content: "";
+            position: absolute;
+            left: -2px;
+            top: -2px;
+            bottom: -2px;
+            width: 6px;
+            background: var(--brand-500);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+            background: var(--brand-600);
+        }
+
+        /* ===== 統一按鈕樣式 ===== */
+        .btn-unified-outline {
+            background: transparent !important;
+            border: 1px solid #b8a3c6 !important;
+            color: var(--brand-500) !important;
+            border-radius: .375rem;
+            padding: .375rem .75rem;
+        }
+
+        .btn-unified-outline:hover,
+        .btn-unified-outline:focus {
+            color: #fff !important;
+            background: var(--brand-500) !important;
+            border-color: var(--brand-500) !important;
+        }
+
+        .btn-primary {
+            --bs-btn-bg: var(--brand-500);
+            --bs-btn-border-color: var(--brand-500);
+            --bs-btn-hover-bg: var(--brand-600);
+            --bs-btn-hover-border-color: var(--brand-600);
+            --bs-btn-active-bg: var(--brand-700);
+            --bs-btn-active-border-color: var(--brand-700);
+        }
+
+        /* ===== 狀態按鈕樣式 ===== */
+        .status-btn {
+            border-radius: 20px;
+            font-weight: 500;
+            padding: 8px 16px;
+            margin: 2px;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .status-btn.active {
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .status-btn:not(.active) {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .status-btn:not(.active):hover {
+            background-color: #e9ecef;
+            color: #495057;
+            text-decoration: none;
+        }
+
+        /* 各狀態顏色 */
+        .status-all.active {
+            background-color: #6c757d;
+        }
+
+        .status-pending.active {
+            background-color: #ffc107;
+            color: #212529 !important;
+        }
+
+        .status-review.active {
+            background-color: #17a2b8;
+        }
+
+        .status-refunding.active {
+            background-color: #007bff;
+        }
+
+        .status-reshipping.active {
+            background-color: #6f42c1;
+        }
+
+        .status-done.active {
+            background-color: #28a745;
+        }
+
+        .status-rejected.active {
+            background-color: #dc3545;
+        }
+
+        /* 狀態徽章樣式 */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-review {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-refunding {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .status-reshipping {
+            background-color: #e7e3ff;
+            color: #4c1d95;
+        }
+
+        .status-done {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* ===== Switch 開關樣式 ===== */
+        .form-switch .form-check-input:checked {
+            background-color: var(--brand-500) !important;
+            border-color: var(--brand-500) !important;
+        }
+
+        .form-check-input:focus {
+            box-shadow: 0 0 0 .25rem rgba(101,45,119,.25) !important;
+        }
+
+        .form-check-input:disabled:checked {
+            background-color: #9a72b0 !important;
+            border-color: #9a72b0 !important;
+        }
+
+        /* ===== DataTable 自定義樣式 ===== */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_processing,
+        .dataTables_wrapper .dataTables_paginate {
+            display: none;
+        }
+
+        /* ===== 覆蓋預設表格條紋 ===== */
+        table.rcl-table.table-striped > tbody > tr:nth-of-type(odd),
+        table.rcl-table.table-striped > tbody > tr:nth-of-type(even) {
+            background-color: transparent !important;
+        }
+
+        table.rcl-table.dataTable.stripe tbody tr.odd,
+        table.rcl-table.dataTable.display tbody tr.odd,
+        table.rcl-table.dataTable.stripe tbody tr.even,
+        table.rcl-table.dataTable.display tbody tr.even {
+            background-color: transparent !important;
+        }
+
+        /* ===== 分頁樣式 ===== */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .pagination-info {
+            color: #6c757d;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-input {
+            width: 60px;
+            text-align: center;
+        }
+    </style>
+}
+
+@functions {
+    // 狀態中文對應
+    string GetStatusText(string? status) => (status ?? "").ToLowerInvariant() switch
+    {
+        "pending" => "待審核",
+        "review" => "審核中",
+        "refunding" => "退款中",
+        "reshipping" => "補寄中",
+        "done" => "處理完成",
+        "rejected" => "駁回",
+        _ => status ?? ""
+    };
+
+    // 類型中文對應
+    string GetTypeText(string? type) => (type ?? "").ToLowerInvariant() switch
+    {
+        "refund" => "退款",
+        "reship" => "補寄",
+        _ => type ?? ""
+    };
+
+    // 範圍中文對應
+    string GetScopeText(string? scope) => (scope ?? "").ToLowerInvariant() switch
+    {
+        "order" => "整筆",
+        "items" => "品項",
+        _ => scope ?? ""
+    };
+
+    // 狀態按鈕樣式
+    string GetStatusButtonClass(string? status, string currentGroup) =>
+        currentGroup == status ? $"status-btn active status-{status}" : $"status-btn status-{status}";
+
+    // 狀態徽章樣式
+    string GetStatusBadgeClass(string? status) => $"status-badge status-{(status ?? "").ToLowerInvariant()}";
+}
+
+<div class="card my-3">
+    <div class="card-header">售後申請審核</div>
+    <div class="card-body">
+
+        <!-- 搜尋 / 每頁 -->
+        <form method="get" class="row g-2 mb-3">
+            <input type="hidden" name="group" value="@Model.Group" />
+            <input type="hidden" name="page" value="1" />
+
+            <div class="col-auto">
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
+            </div>
+
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @if (Model.PageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (Model.PageSize == 25)
+                    {
+                        <option value="25" selected>25</option>
+                    }
+                    else
+                    {
+                        <option value="25">25</option>
+                    }
+                    @if (Model.PageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (Model.PageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">搜尋</button>
+            </div>
+        </form>
+
+        <!-- 狀態群組 Tabs -->
+        <div class="mb-3">
+            @{
+                var statusMapping = new Dictionary<string, string>
+                        {
+                        { "all", "全部" },
+                        { "pending", "待審核" },
+                        { "review", "審核中" },
+                        { "refunding", "退款中" },
+                        { "reshipping", "補寄中" },
+                        { "done", "處理完成" },
+                        { "rejected", "駁回" }
+                        };
+            }
+
+            @foreach (var tab in Model.Tabs)
+            {
+                var statusText = statusMapping.ContainsKey(tab.Key) ? statusMapping[tab.Key] : tab.Key;
+                <a class="@GetStatusButtonClass(tab.Key, Model.Group)"
+                   href="@Url.Action("Index", new { group = tab.Key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
+                    @statusText (@tab.Value)
+                </a>
+            }
+        </div>
+
+        <!-- 列表 -->
+        <table id="rmaTable" class="table table-bordered align-middle rcl-table">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:80px">#</th>
+                    <th>RMA</th>
+                    <th>訂單號</th>
+                    <th>類型</th>
+                    <th>範圍</th>
+                    <th>狀態</th>
+                    <th>建立時間</th>
+                    <th style="width:120px">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.RmaList)
+                {
+                    <tr>
+                        <td><a href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">#@r.ReturnRequestId</a></td>
+                        <td>@r.RmaNo</td>
+                        <td>@r.OrderNo</td>
+                        <td>@GetTypeText(r.TypeName)</td>
+                        <td>@GetScopeText(r.ScopeName)</td>
+                        <td><span class="@GetStatusBadgeClass(r.StatusName)">@GetStatusText(r.StatusName)</span></td>
+                        <td>@r.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>
+                            <button class="btn btn-sm btn-unified-outline" onclick="openRmaDetail(@r.ReturnRequestId)">查看明細</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- 統一的分頁控制 -->
+        <div class="pagination-container">
+            <div class="pagination-info">
+                總筆數 @Model.Total
+            </div>
+            <div class="pagination-controls">
+                <button class="btn btn-unified-outline btn-sm"
+                        @(Model.Page <= 1 ? "disabled" : "")
+                        onclick="@(Model.Page > 1 ? $"location.href='{Url.Action("Index", new { group = Model.Group, page = Model.Page - 1, pageSize = Model.PageSize, keyword = Model.Keyword })}'" : "")">
+                    上一頁
+                </button>
+
+                <div class="d-flex align-items-center gap-2">
+                    第
+                    <input type="number" class="form-control page-input"
+                           value="@Model.Page" min="1" max="@Model.Pages"
+                           onchange="jumpToPage(this.value)" />
+                    / 共 @Model.Pages 頁
+                </div>
+
+                <button class="btn btn-unified-outline btn-sm"
+                        @(Model.Page >= Model.Pages ? "disabled" : "")
+                        onclick="@(Model.Page < Model.Pages ? $"location.href='{Url.Action("Index", new { group = Model.Group, page = Model.Page + 1, pageSize = Model.PageSize, keyword = Model.Keyword })}'" : "")">
+                    下一頁
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 明細 Modal -->
+<div class="modal fade" id="rmaDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">退貨申請明細</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <h6 class="fw-bold">商品明細</h6>
+                <table class="table table-bordered align-middle mb-2">
+                    <thead class="table-light">
+                        <tr>
+                            <th>商品</th>
+                            <th>規格</th>
+                            <th>單價</th>
+                            <th>數量</th>
+                            <th>小計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderItemsBody"></tbody>
+                </table>
+
+                <div class="text-end mb-3">
+                    優惠券：<span id="coupon">-</span><br />
+                    優惠折扣：<span id="discount">0</span><br />
+                    運費：<span id="shippingFee">0</span><br />
+                    <strong>總金額：<span id="orderTotal">0</span></strong>
+                </div>
+
+                <h6 class="fw-bold">退貨申請</h6>
+                <div class="mb-2">
+                    <span class="badge bg-info" id="statusName">-</span>
+                    建立：<span id="createdDate">-</span><br />
+                    原因：<span id="reasonText">-</span>
+                </div>
+
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>商品</th>
+                            <th>規格</th>
+                            <th>原始數量</th>
+                            <th>申請</th>
+                            <th>核可</th>
+                            <th>退款</th>
+                            <th>補寄</th>
+                            <th>退貨單價</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rmaItemsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="btnApproveRefund">批准退款</button>
+                <button type="button" class="btn btn-primary" id="btnApproveReship">批准補寄</button>
+                <button type="button" class="btn btn-danger" id="btnReject">駁回</button>
+                <button type="button" class="btn btn-secondary" id="btnComplete">結單</button>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        // RMA Modal 相關變數
+        let currentRmaId = 0;
+
+        // DataTable 初始化
+        $(document).ready(function() {
+            $('#rmaTable').DataTable({
+                "language": {
+                    "url": "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json"
+                },
+                "order": [[ 6, "desc" ]],
+                "pageLength": @Model.PageSize,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "searching": false,
+                "paging": false,
+                "info": false,
+                "columnDefs": [
+                    { "orderable": false, "targets": [0, 7] },
+                    { "type": "date", "targets": 6 }
+                ]
+            });
+
+            // 綁定 Modal 按鈕事件
+            $('#btnApproveRefund').click(function() {
+                approveRefund(currentRmaId);
+            });
+
+            $('#btnApproveReship').click(function() {
+                approveReship(currentRmaId);
+            });
+
+            $('#btnReject').click(function() {
+                rejectRma(currentRmaId);
+            });
+
+            $('#btnComplete').click(function() {
+                completeRma(currentRmaId);
+            });
+        });
+
+        // 跳轉頁面函式
+        function jumpToPage(page) {
+            const pageNum = parseInt(page);
+            if (pageNum >= 1 && pageNum <= @Model.Pages) {
+                location.href = '@Url.Action("Index", new { group = Model.Group, pageSize = Model.PageSize, keyword = Model.Keyword })&page=' + pageNum;
+            }
+        }
+
+        // 開啟 RMA 明細 Modal
+        function openRmaDetail(id) {
+            currentRmaId = id;
+
+            $.ajax({
+                url: '/ORD/Rma/GetReturnDetail',
+                type: 'GET',
+                data: { id: id },
+                success: function(response) {
+                    if (response.ok) {
+                        const rma = response.rma;
+
+                        // 填入基本資訊
+                        $('#statusName').text(rma.statusName).attr('class', 'badge bg-info');
+                        $('#createdDate').text(rma.createdDate);
+                        $('#reasonText').text(rma.reasonText);
+
+                        console.log('RMA 資料:', rma);
+                        console.log('狀態名稱:', rma.statusName);
+                        console.log('原始狀態:', rma.originalStatus);
+
+                        // 填入訂單摘要
+                        $('#coupon').text(rma.orderSummary.coupon);
+                        $('#discount').text('$' + rma.orderSummary.discount);
+                        $('#shippingFee').text('$' + rma.orderSummary.shippingFee);
+                        $('#orderTotal').text('$' + rma.orderSummary.total);
+
+                        // 填入訂單品項
+                        let orderItemsHtml = '';
+                        rma.orderItems.forEach(function(item) {
+                            orderItemsHtml += `
+                                <tr>
+                                    <td>${item.productName}</td>
+                                    <td>${item.skuSpec}</td>
+                                    <td>$${item.unitPrice}</td>
+                                    <td>${item.qty}</td>
+                                    <td>$${item.subTotal}</td>
+                                </tr>
+                            `;
+                        });
+                        $('#orderItemsBody').html(orderItemsHtml);
+
+                        // 填入 RMA 品項
+                        let rmaItemsHtml = '';
+                        rma.rmaItems.forEach(function(item) {
+                            rmaItemsHtml += `
+                                <tr>
+                                    <td>${item.productName}</td>
+                                    <td>${item.skuSpec}</td>
+                                    <td>${item.originalQty}</td>
+                                    <td>${item.qty}</td>
+                                    <td>${item.approvedQty}</td>
+                                    <td>${item.refundQty}</td>
+                                    <td>${item.reshipQty}</td>
+                                    <td>$${item.refundUnitAmount}</td>
+                                </tr>
+                            `;
+                        });
+                        $('#rmaItemsBody').html(rmaItemsHtml);
+
+                        // 根據狀態顯示對應按鈕
+                        updateModalButtons(rma.statusName);
+
+                        // 顯示 Modal
+                        $('#rmaDetailModal').modal('show');
+                    } else {
+                        Swal.fire('錯誤', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('錯誤', '載入明細失敗', 'error');
+                }
+            });
+        }
+
+        // 更新 Modal 按鈕顯示
+        function updateModalButtons(statusName) {
+            console.log('Modal 狀態:', statusName);
+
+            // 先隱藏所有按鈕
+            $('#btnApproveRefund').hide();
+            $('#btnApproveReship').hide();
+            $('#btnReject').hide();
+            $('#btnComplete').hide();
+
+            // 根據狀態顯示對應按鈕
+            if (statusName === '待審核' || statusName === '審核中' || statusName === 'pending' || statusName === 'review') {
+                $('#btnApproveRefund').show();
+                $('#btnApproveReship').show();
+                $('#btnReject').show();
+                console.log('顯示審核按鈕');
+            } else if (statusName === '退款中' || statusName === '補寄中' || statusName === 'refunding' || statusName === 'reshipping') {
+                $('#btnComplete').show();
+                console.log('顯示結單按鈕');
+            } else if (statusName === '處理完成' || statusName === '駁回' || statusName === 'done' || statusName === 'rejected') {
+                console.log('無操作按鈕');
+            }
+        }
+
+        // 批准退款操作
+        function approveRefund(id) {
+            Swal.fire({
+                title: '確認批准退款？',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '確定',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#652D77'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/ORD/Rma/Approve', { id: id, nextStatus: 'refunding' }, function(response) {
+                        if (response.ok) {
+                            Swal.fire('成功', response.message, 'success').then(() => {
+                                $('#rmaDetailModal').modal('hide');
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('錯誤', response.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        // 批准補寄操作
+        function approveReship(id) {
+            Swal.fire({
+                title: '確認批准補寄？',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '確定',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#652D77'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/ORD/Rma/Approve', { id: id, nextStatus: 'reshipping' }, function(response) {
+                        if (response.ok) {
+                            Swal.fire('成功', response.message, 'success').then(() => {
+                                $('#rmaDetailModal').modal('hide');
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('錯誤', response.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        // 駁回操作
+        function rejectRma(id) {
+            Swal.fire({
+                title: '駁回原因',
+                input: 'textarea',
+                inputPlaceholder: '請輸入駁回原因...',
+                showCancelButton: true,
+                confirmButtonText: '確定駁回',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#dc3545',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '請輸入駁回原因';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/ORD/Rma/Reject', { id: id, reason: result.value }, function(response) {
+                        if (response.ok) {
+                            Swal.fire('成功', response.message, 'success').then(() => {
+                                $('#rmaDetailModal').modal('hide');
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('錯誤', response.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        // 結單操作
+        function completeRma(id) {
+            Swal.fire({
+                title: '確認結單？',
+                text: '結單後將無法再修改',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '確定結單',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#652D77'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/ORD/Rma/Complete', { id: id }, function(response) {
+                        if (response.ok) {
+                            Swal.fire('成功', response.message, 'success').then(() => {
+                                $('#rmaDetailModal').modal('hide');
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('錯誤', response.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
