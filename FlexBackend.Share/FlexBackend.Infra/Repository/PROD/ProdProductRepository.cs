@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿//using CsvHelper;
+using Dapper;
 using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.PROD;
 using FlexBackend.Core.DTOs.USER;
@@ -9,6 +10,8 @@ using FlexBackend.Infra.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Formats.Asn1;
+using System.Globalization;
 using static Dapper.SqlMapper;
 
 namespace FlexBackend.Infra.Repository.PROD
@@ -31,12 +34,13 @@ namespace FlexBackend.Infra.Repository.PROD
             _currentUser = currentUser;
 			_userMgr = userMgr;
 		}
-        /// <summary>
-        /// 取得所有有效分類
-        /// </summary>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+
+		/// <summary>
+		/// 取得所有有效分類
+		/// </summary>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
         {
             string sql = @"SELECT ProductTypeId, ParentId, ProductTypeCode, 
                             ProductTypeName
@@ -239,7 +243,18 @@ namespace FlexBackend.Infra.Repository.PROD
                         IsPrimary = t.IsPrimary
                     }).OrderByDescending(a=>a.IsPrimary).ToListAsync();
 
-                return item;
+				var img_sql = @"
+                        SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.IsMain, pi.OrderSeq,
+                               af.FileUrl, af.AltText
+                        FROM   PROD_ProductImage pi
+                        JOIN   SYS_AssetFile af ON pi.ImgId = af.FileId
+                        WHERE  pi.ProductId = @ProductId
+                        ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
+
+				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
+				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
+
+				return item;
 			}
             finally
             {
@@ -257,6 +272,8 @@ namespace FlexBackend.Infra.Repository.PROD
 
             try
             {
+                var now = DateTime.Now;
+
                 // === 1. 新增 Product 主檔 ===
                 var productId = await conn.ExecuteScalarAsync<int>(@"
                     INSERT INTO PROD_Product
@@ -283,7 +300,9 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
                         Creator = u.UserNumberId,
-                        Reviser = u.UserNumberId
+                        Reviser = u.UserNumberId,
+                        CreatedDate = now,
+                        RevisedDate = now
                     }, tran);
 
                 // 更新正式 ProductCode
@@ -390,10 +409,7 @@ namespace FlexBackend.Infra.Repository.PROD
 						"SELECT ISNULL(MAX(SkuId),0) FROM PROD_ProductSku;", transaction: tran)) ?? 0;
 
 					sku.SkuCode = GenerateSkuCode(dto.BrandCode, dto.ProductTypeCode, dto.ProductCode, maxSeq + 1, sku.SpecCode);
-				}
 
-				if (sku.SkuId == 0)
-				{
 					sku.SkuId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_ProductSku
                   (ProductId, SpecCode, SkuCode, Barcode,
@@ -491,13 +507,23 @@ namespace FlexBackend.Infra.Repository.PROD
                       VALUES (@ProductId, @GroupName, @OrderSeq);",
 					new { dto.ProductId, cfg.GroupName, cfg.OrderSeq }, tran);
 
-				foreach (var opt in cfg.SpecOptions ?? new())
+				for (int i = 0; i < (cfg.SpecOptions?.Count ?? 0); i++)
 				{
+					var opt = cfg.SpecOptions[i];
+
+                    if (opt == null) continue;
+
 					var optionId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
                           OUTPUT INSERTED.SpecificationOptionId
                           VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);",
 						new { SpecificationConfigId = cfgId, opt.OptionName, opt.OrderSeq }, tran);
+
+					// === 用 index 來對應 dto.Skus ===
+					if (opt.SkuId == 0 && i < dto.Skus.Count)
+					{
+						opt.SkuId = dto.Skus[i].SkuId;
+					}
 
 					// 關聯到 SKU
 					if (opt.SkuId > 0)
