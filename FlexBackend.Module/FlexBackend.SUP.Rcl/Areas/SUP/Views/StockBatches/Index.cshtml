@@ -15,8 +15,8 @@
 </div>
 
 <!-- 初始化批號 -->
-@* <button id="btnInitBatches" class="btn btn-primary">初始化批號</button>
-<span id="initResult" style="margin-left:10px;"></span> *@
+<button id="btnInitBatches" class="btn btn-primary">初始化批號</button>
+<span id="initResult" style="margin-left:10px;"></span> 
 
 <!-- 主庫存表格*2區塊 (.stockbatch-card) -->
 <div class="stockbatch-card">
@@ -26,7 +26,7 @@
         <div class="legend">
             <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
             <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
-            @* <span><span class="dot normal"></span> 正常</span> *@
+            @* <span><span class="dot normal"></span> 正常</span>*@
         </div>
         <div class="d-flex mb-2">
             <select id="stockExpireFilter" class="form-select form-select-sm me-2">
@@ -1163,8 +1163,8 @@
                                 timer: 1200
                             });
 
-                            // 更新 DataTable（保持當前頁）
-                            stockBatchTable.ajax.reload(null, false);
+                            // 更新 DataTable
+                            stockBatchTable.ajax.reload(null, true);
 
                             if (batchMovements.length > 0) {
                                 showbatchMovements(batchMovements);
