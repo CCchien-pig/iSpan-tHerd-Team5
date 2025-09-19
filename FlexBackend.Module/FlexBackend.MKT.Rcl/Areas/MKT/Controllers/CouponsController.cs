@@ -1,4 +1,5 @@
 ﻿using FlexBackend.Infra.Models;
+using FlexBackend.MKT.Rcl.Areas.MKT.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,7 +49,7 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
                 title = c.CouponName,
                 start = c.StartDate,
                 end = c.EndDate,
-                color = c.IsActive ? "#6a1b9a" : "#9e9e9e"
+                color = c.IsActive ? ColorHelper.RandomColor() : "#9e9e9e"
             });
 
             return Json(events);
@@ -164,42 +165,65 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         [HttpPost]
         public IActionResult CreateCoupon([FromBody] MktCoupon model)
         {
-            Console.WriteLine($"[DEBUG] CouponCode={model.CouponCode}, Raw Request={HttpContext.Request.Body}");
-            if (!ModelState.IsValid)
-                return Json(new { success = false, message = "資料驗證失敗" });
+            try
+            {
+                Console.WriteLine($"[DEBUG] CouponCode={model.CouponCode}, Raw Request={HttpContext.Request.Body}");
+                if (!ModelState.IsValid)
+                    return Json(new { success = false, message = "資料驗證失敗" });
 
-            // 強制 Trim
-            model.CouponCode = model.CouponCode?.Trim();
+                // 強制 Trim
+                model.CouponCode = model.CouponCode?.Trim();
 
-            if (string.IsNullOrWhiteSpace(model.CouponCode))
-                return Json(new { success = false, message = "優惠券代碼 不可以為空" });
+                if (string.IsNullOrWhiteSpace(model.CouponCode))
+                    return Json(new { success = false, message = "優惠券代碼 不可以為空" });
 
-            var campaign = _context.MktCampaigns.Find(model.CampaignId);
-            if (campaign == null)
-                return Json(new { success = false, message = "找不到對應的活動" });
+                var campaign = _context.MktCampaigns.Find(model.CampaignId);
+                if (campaign == null)
+                    return Json(new { success = false, message = "找不到對應的活動" });
 
-            // ===== 時間驗證 =====
-            if (model.StartDate < campaign.StartDate)
-                return Json(new { success = false, message = "優惠券開始日期 不可以早於 活動開始日期" });
+                // ===== 時間驗證 =====
+                if (model.StartDate < campaign.StartDate)
+                    return Json(new { success = false, message = "優惠券開始日期 不可以早於 活動開始日期" });
 
-            if (campaign.EndDate.HasValue && model.StartDate > campaign.EndDate.Value)
-                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 活動結束日期" });
+                if (campaign.EndDate.HasValue && model.StartDate > campaign.EndDate.Value)
+                    return Json(new { success = false, message = "優惠券開始日期 不可以晚於 活動結束日期" });
 
-            if (model.EndDate.HasValue && campaign.EndDate.HasValue && model.EndDate > campaign.EndDate.Value)
-                return Json(new { success = false, message = "優惠券結束日期 不可以晚於 活動結束日期" });
+                if (model.EndDate.HasValue && campaign.EndDate.HasValue && model.EndDate > campaign.EndDate.Value)
+                    return Json(new { success = false, message = "優惠券結束日期 不可以晚於 活動結束日期" });
 
-            if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
-                return Json(new { success = false, message = "優惠券開始日期 不可以晚於 優惠券結束日期" });
+                if (model.EndDate.HasValue && model.StartDate > model.EndDate.Value)
+                    return Json(new { success = false, message = "優惠券開始日期 不可以晚於 優惠券結束日期" });
 
-            model.CreatedDate = DateTime.Now;
-            model.LeftQty = model.TotQty;
+                model.CreatedDate = DateTime.Now;
+                model.LeftQty = model.TotQty;
 
-            _context.MktCoupons.Add(model);
-            _context.SaveChanges();
+                _context.MktCoupons.Add(model);
+                _context.SaveChanges();
 
-            return Json(new { success = true });
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR] " + ex);
+
+                string errorMsg = ex.InnerException?.Message ?? ex.Message;
+
+                // SQL 唯一鍵錯誤
+                if (errorMsg.Contains("UQ_MKT_Coupon_CouponName"))
+                {
+                    return Json(new { success = false, message = "優惠券名稱已存在，請使用其他名稱" });
+                }
+                if (errorMsg.Contains("UQ_MKT_Coupon_CouponCode"))
+                {
+                    return Json(new { success = false, message = "優惠券代碼已存在，請使用其他代碼" });
+                }
+
+                // 其他錯誤一律回傳中文
+                return Json(new { success = false, message = "發生錯誤：" + errorMsg });
+            }
+
+
         }
-
 
         // POST: 修改優惠券
         [HttpPost]
