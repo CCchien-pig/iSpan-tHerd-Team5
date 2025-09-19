@@ -1110,11 +1110,19 @@
           refreshSpecOptions();
         }
 
+        // function refreshIndexes() {
+        //     document.querySelectorAll("#specConfigTags .draggable-tag").forEach((tag, i) => {
+        //         const hidden = tag.querySelector("input[type=hidden]");
+        //         hidden.name = `SpecConfigs[${i}].GroupName`;
+        //     });
+        // }
+
         function refreshIndexes() {
-            document.querySelectorAll("#specConfigTags .draggable-tag").forEach((tag, i) => {
-                const hidden = tag.querySelector("input[type=hidden]");
-                hidden.name = `SpecConfigs[${i}].GroupName`;
-            });
+          document.querySelectorAll("#specConfigTags .draggable-tag").forEach((tag, i) => {
+            tag.querySelector("input[name*='GroupName']").name = `SpecConfigs[${i}].GroupName`;
+            tag.querySelector("input[name*='OrderSeq']").name = `SpecConfigs[${i}].OrderSeq`;
+            tag.querySelector("input[name*='SpecificationConfigId']").name = `SpecConfigs[${i}].SpecificationConfigId`;
+          });
         }
 
         // 讓標籤可以拖曳排序
@@ -1225,8 +1233,9 @@
                         // 插入新卡片
                 container.insertAdjacentHTML("beforeend", html);
 
-                // 這裡再刷新分類輸入框，確保新卡片也有
-                refreshSpecOptions();
+                // 插入新卡片後
+                renderTagsFromModel();   // 重新把 specConfigs → DOM
+                refreshSpecOptions();    // 重新繪製所有 SKU 卡的規格欄位
             });
         }
 
@@ -1285,7 +1294,9 @@
                         }
                     }
                 }
-                 refreshSpecOptions(); // 重繪每張 SKU 卡的規格值區塊
+                // 插入新卡片後
+                renderTagsFromModel();   // 重新把 specConfigs → DOM
+                refreshSpecOptions();    // 重新繪製所有 SKU 卡的規格欄位
             });
         }
 
