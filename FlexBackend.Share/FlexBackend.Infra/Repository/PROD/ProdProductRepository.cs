@@ -409,10 +409,7 @@ namespace FlexBackend.Infra.Repository.PROD
 						"SELECT ISNULL(MAX(SkuId),0) FROM PROD_ProductSku;", transaction: tran)) ?? 0;
 
 					sku.SkuCode = GenerateSkuCode(dto.BrandCode, dto.ProductTypeCode, dto.ProductCode, maxSeq + 1, sku.SpecCode);
-				}
 
-				if (sku.SkuId == 0)
-				{
 					sku.SkuId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_ProductSku
                   (ProductId, SpecCode, SkuCode, Barcode,
@@ -510,13 +507,23 @@ namespace FlexBackend.Infra.Repository.PROD
                       VALUES (@ProductId, @GroupName, @OrderSeq);",
 					new { dto.ProductId, cfg.GroupName, cfg.OrderSeq }, tran);
 
-				foreach (var opt in cfg.SpecOptions ?? new())
+				for (int i = 0; i < (cfg.SpecOptions?.Count ?? 0); i++)
 				{
+					var opt = cfg.SpecOptions[i];
+
+                    if (opt == null) continue;
+
 					var optionId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
                           OUTPUT INSERTED.SpecificationOptionId
                           VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);",
 						new { SpecificationConfigId = cfgId, opt.OptionName, opt.OrderSeq }, tran);
+
+					// === 用 index 來對應 dto.Skus ===
+					if (opt.SkuId == 0 && i < dto.Skus.Count)
+					{
+						opt.SkuId = dto.Skus[i].SkuId;
+					}
 
 					// 關聯到 SKU
 					if (opt.SkuId > 0)
