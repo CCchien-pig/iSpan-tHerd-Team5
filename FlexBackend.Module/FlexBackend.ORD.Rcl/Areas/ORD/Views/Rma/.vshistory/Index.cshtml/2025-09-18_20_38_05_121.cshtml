@@ -31,10 +31,6 @@
             font-weight: bold;
         }
 
-        .text-purple2 {
-            color: #7A3A8F;
-        }
-
         .order-detail-card {
             background: #f9f9f9;
             padding: 1rem;
@@ -64,58 +60,58 @@
             border-spacing: 0;
         }
 
-            /* 第一欄設為導引條定位容器，但不強制白底 */
-            table.rcl-table > tbody > tr > td:first-child {
-                position: relative;
-            }
+        /* 第一欄設為導引條定位容器，但不強制白底 */
+        table.rcl-table > tbody > tr > td:first-child {
+            position: relative;
+        }
 
-            /* 奇數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(odd) > td {
-                background: var(--row-odd) !important;
-            }
+        /* 奇數列：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:nth-of-type(odd) > td {
+            background: var(--row-odd) !important;
+        }
 
-            /* 偶數列：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:nth-of-type(even) > td {
-                background: var(--row-even) !important;
-            }
+        /* 偶數列：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:nth-of-type(even) > td {
+            background: var(--row-even) !important;
+        }
 
-            /* hover：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr:hover > td {
-                background: var(--row-hover) !important;
-            }
+        /* hover：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr:hover > td {
+            background: var(--row-hover) !important;
+        }
 
-            /* 勾選行：所有欄位包含第一欄 */
-            table.rcl-table > tbody > tr.is-selected > td {
-                background: var(--row-selected) !important;
-            }
+        /* 勾選行：所有欄位包含第一欄 */
+        table.rcl-table > tbody > tr.is-selected > td {
+            background: var(--row-selected) !important;
+        }
 
-            /* child 明細列不吃 hover */
-            table.rcl-table > tbody > tr.child > td {
-                background: inherit !important;
-            }
+        /* child 明細列不吃 hover */
+        table.rcl-table > tbody > tr.child > td {
+            background: inherit !important;
+        }
 
-            /* 平滑過渡 */
-            table.rcl-table > tbody > tr > td {
-                transition: background-color .18s ease;
-            }
+        /* 平滑過渡 */
+        table.rcl-table > tbody > tr > td {
+            transition: background-color .18s ease;
+        }
 
-            /* ===== 左側導引條 ===== */
-            table.rcl-table > tbody > tr:hover > td:first-child::before,
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                content: "";
-                position: absolute;
-                left: -2px;
-                top: -2px;
-                bottom: -2px;
-                width: 6px;
-                background: var(--brand-500);
-                pointer-events: none;
-                z-index: 1;
-            }
+        /* ===== 左側導引條 ===== */
+        table.rcl-table > tbody > tr:hover > td:first-child::before,
+        table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+            content: "";
+            position: absolute;
+            left: -2px;
+            top: -2px;
+            bottom: -2px;
+            width: 6px;
+            background: var(--brand-500);
+            pointer-events: none;
+            z-index: 1;
+        }
 
-            table.rcl-table > tbody > tr.is-selected > td:first-child::before {
-                background: var(--brand-600);
-            }
+        table.rcl-table > tbody > tr.is-selected > td:first-child::before {
+            background: var(--brand-600);
+        }
 
         /* ===== 統一按鈕樣式 ===== */
         .btn-unified-outline {
@@ -126,12 +122,12 @@
             padding: .375rem .75rem;
         }
 
-            .btn-unified-outline:hover,
-            .btn-unified-outline:focus {
-                color: #fff !important;
-                background: var(--brand-500) !important;
-                border-color: var(--brand-500) !important;
-            }
+        .btn-unified-outline:hover,
+        .btn-unified-outline:focus {
+            color: #fff !important;
+            background: var(--brand-500) !important;
+            border-color: var(--brand-500) !important;
+        }
 
         .btn-primary {
             --bs-btn-bg: var(--brand-500);
@@ -154,22 +150,22 @@
             transition: all 0.3s ease;
         }
 
-            .status-btn.active {
-                color: white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            }
+        .status-btn.active {
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
 
-            .status-btn:not(.active) {
-                background-color: #f8f9fa;
-                color: #6c757d;
-                border: 1px solid #dee2e6;
-            }
+        .status-btn:not(.active) {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
 
-                .status-btn:not(.active):hover {
-                    background-color: #e9ecef;
-                    color: #495057;
-                    text-decoration: none;
-                }
+        .status-btn:not(.active):hover {
+            background-color: #e9ecef;
+            color: #495057;
+            text-decoration: none;
+        }
 
         /* 各狀態顏色 */
         .status-all.active {
@@ -207,11 +203,6 @@
             border-radius: 12px;
             font-size: 0.875rem;
             font-weight: 500;
-            display: inline-block;
-            text-align: center;
-            white-space: nowrap;
-            min-width: 60px;
-            vertical-align: middle;
         }
 
         .status-pending {
@@ -303,103 +294,6 @@
             width: 60px;
             text-align: center;
         }
-
-        /* 列表表格—全部置中 */
-        #rmaTable th,
-        #rmaTable td {
-            text-align: center;
-            vertical-align: middle; /* 單行/多行都置中 */
-        }
-
-        /* Modal 內兩張明細表—全部置中 */
-        #rmaDetailModal table th,
-        #rmaDetailModal table td {
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        /* 明細：商品、規格欄靠左 */
-        #rmaDetailModal table tbody td:nth-child(1),
-        #rmaDetailModal table tbody td:nth-child(2) {
-            text-align: left;
-        }
-
-        /* DataTables 空資料列也置中 */
-        #rmaTable td.dataTables_empty {
-            text-align: center !important;
-        }
-
-        /* === Outline Segmented Buttons（預設邊框＋文字，hover/active 變實心） === */
-        .seg-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-        }
-
-        .seg-btn {
-            --clr: #652D77; /* 預設主色，會被各狀態覆蓋 */
-            display: inline-block;
-            padding: .5rem 1rem;
-            border: 1px solid var(--clr);
-            color: var(--clr);
-            background: transparent;
-            border-radius: .5rem;
-            text-decoration: none;
-            font-weight: 600;
-            line-height: 1.2;
-            transition: all .18s ease;
-        }
-
-            .seg-btn:hover,
-            .seg-btn:focus,
-            .seg-btn.active {
-                background: var(--clr);
-                color: #fff;
-                text-decoration: none;
-                box-shadow: 0 2px 4px rgba(0,0,0,.08);
-            }
-
-        /* 各狀態色（只設定 --clr，其它互動統一套上面規則） */
-        .seg-all {
-            --clr: #6c757d;
-        }
-
-        .seg-pending {
-            --clr: #ffc107;
-            color: #b08a00;
-        }
-        /* 初始字色較深，hover/active 仍會變實心 */
-        .seg-review {
-            --clr: #17a2b8;
-        }
-
-        .seg-refunding {
-            --clr: #007bff;
-        }
-
-        .seg-reshipping {
-            --clr: #6f42c1;
-        }
-
-        .seg-done {
-            --clr: #28a745;
-        }
-
-        .seg-rejected {
-            --clr: #dc3545;
-        }
-
-        /* 表格 # 連結維持同風格 */
-        a.id-link {
-            color: #652D77;
-            text-decoration: underline;
-        }
-
-            a.id-link:hover {
-                color: #4E225D;
-            }
-
-
     </style>
 }
 
@@ -441,9 +335,7 @@
 }
 
 <div class="card my-3">
-    <div class="card-header py-3">
-         <h6 class="m-0 text-purple2">售後申請審核</h6>
-    </div>
+    <div class="card-header">售後申請審核</div>
     <div class="card-body">
 
         <!-- 搜尋 / 每頁 -->
@@ -455,55 +347,79 @@
                 <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
             </div>
 
-                <div class="col-auto">
-                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
-                        @foreach (var size in new[] { 10, 25, 50, 100 })
-                        {
-                            if (Model.PageSize == size)
-                            {
-                                <option value="@size" selected>@size 筆/頁</option>
-                            }
-                            else
-                            {
-                                <option value="@size">@size 筆/頁</option>
-                            }
-                        }
-                    </select>
-                </div>
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @if (Model.PageSize == 10)
+                    {
+                        <option value="10" selected>10</option>
+                    }
+                    else
+                    {
+                        <option value="10">10</option>
+                    }
+                    @if (Model.PageSize == 25)
+                    {
+                        <option value="25" selected>25</option>
+                    }
+                    else
+                    {
+                        <option value="25">25</option>
+                    }
+                    @if (Model.PageSize == 50)
+                    {
+                        <option value="50" selected>50</option>
+                    }
+                    else
+                    {
+                        <option value="50">50</option>
+                    }
+                    @if (Model.PageSize == 100)
+                    {
+                        <option value="100" selected>100</option>
+                    }
+                    else
+                    {
+                        <option value="100">100</option>
+                    }
+                </select>
+            </div>
 
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">搜尋</button>
             </div>
         </form>
 
-        <!-- 狀態群組（Outline Segmented Buttons） -->
-        <div class="seg-group mb-3">
+        <!-- 狀態群組 Tabs -->
+        <div class="mb-3">
             @{
-                var statusMapping = new Dictionary<string, string> {
-                        { "all", "全部" }, { "pending", "待審核" }, { "review", "審核中" },
-                        { "refunding", "退款中" }, { "reshipping", "補寄中" },
-                        { "done", "處理完成" }, { "rejected", "駁回" }
+                var statusMapping = new Dictionary<string, string>
+                        {
+                        { "all", "全部" },
+                        { "pending", "待審核" },
+                        { "review", "審核中" },
+                        { "refunding", "退款中" },
+                        { "reshipping", "補寄中" },
+                        { "done", "處理完成" },
+                        { "rejected", "駁回" }
                         };
             }
+
             @foreach (var tab in Model.Tabs)
             {
-                var key = tab.Key;                           
-                var label = statusMapping.ContainsKey(key) ? statusMapping[key] : key;
-                var active = Model.Group == key ? "active" : "";
-                <a class="seg-btn seg-@key @active"
-                   href="@Url.Action("Index", new { group = key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
-                    @label (@tab.Value)
+                var statusText = statusMapping.ContainsKey(tab.Key) ? statusMapping[tab.Key] : tab.Key;
+                <a class="@GetStatusButtonClass(tab.Key, Model.Group)"
+                   href="@Url.Action("Index", new { group = tab.Key, page = 1, pageSize = Model.PageSize, keyword = Model.Keyword })">
+                    @statusText (@tab.Value)
                 </a>
             }
         </div>
-
 
         <!-- 列表 -->
         <table id="rmaTable" class="table table-bordered align-middle rcl-table">
             <thead class="table-light">
                 <tr>
                     <th style="width:80px">#</th>
-                    <!--<th>RMA</th>-->
+                    <th>RMA</th>
                     <th>訂單號</th>
                     <th>類型</th>
                     <th>範圍</th>
@@ -516,12 +432,8 @@
                 @foreach (var r in Model.RmaList)
                 {
                     <tr>
-                        <td>
-                            <a class="id-link" href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">
-                                #@r.ReturnRequestId
-                            </a>
-                        </td>
-                        <!--<td>@r.RmaNo</td>-->
+                        <td><a href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">#@r.ReturnRequestId</a></td>
+                        <td>@r.RmaNo</td>
                         <td>@r.OrderNo</td>
                         <td>@GetTypeText(r.TypeName)</td>
                         <td>@GetScopeText(r.ScopeName)</td>
@@ -642,21 +554,21 @@
 
         // DataTable 初始化
         $(document).ready(function() {
-        $('#rmaTable').DataTable({
-            "language": {
-                "url": "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json"
-            },
-            "order": [[ 5, "desc" ]], 
-            "pageLength": @Model.PageSize,
-            "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
-            "searching": false,
-            "paging": false,
-            "info": false,
-            "columnDefs": [
-                { "orderable": false, "targets": [0, 6] },
-                { "type": "date", "targets": 5 } 
-            ]
-        });
+            $('#rmaTable').DataTable({
+                "language": {
+                    "url": "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json"
+                },
+                "order": [[ 6, "desc" ]],
+                "pageLength": @Model.PageSize,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "searching": false,
+                "paging": false,
+                "info": false,
+                "columnDefs": [
+                    { "orderable": false, "targets": [0, 7] },
+                    { "type": "date", "targets": 6 }
+                ]
+            });
 
             // 綁定 Modal 按鈕事件
             $('#btnApproveRefund').click(function() {
