@@ -740,50 +740,57 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 
 
-		// POST: /SUP/StockBatches/Update
+		public class StockBatchUpdateDto
+		{
+			public int ChangeQty { get; set; }
+			public bool IsAdd { get; set; }
+			public string Remark { get; set; }
+		}
+
 		[HttpPost]
 		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
 		{
+			// 取得批號
 			var batch = await _context.SupStockBatches.FindAsync(id);
 			if (batch == null)
 				return Json(new { success = false, message = "找不到批號" });
 
-			// 異動前數量
 			int beforeQty = batch.Qty;
 
-			// 計算異動數量（增加為 +，減少為 -）
+			// 增加/減少批號庫存
 			int changeQty = dto.IsAdd ? dto.ChangeQty : -dto.ChangeQty;
-
-			// 更新批次庫存
 			batch.Qty += changeQty;
-
-			// 異動後數量
 			int afterQty = batch.Qty;
 
-			var userId = _me.Id; // string
-			var user = await _userMgr.Users
-				.AsNoTracking()
-				.FirstOrDefaultAsync(u => u.Id == userId);
-
+			// 使用者資訊
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 			if (user == null)
 				return Json(new { success = false, message = "找不到使用者資料" });
-
 			int currentUserId = user.UserNumberId;
 
-			// 建立異動紀錄
+			// 異動紀錄
 			_context.SupStockHistories.Add(new SupStockHistory
 			{
 				StockBatchId = id,
-				ChangeType = "Adjust",   // 固定:手動調整
+				ChangeType = "Adjust",
 				ChangeQty = changeQty,
 				BeforeQty = beforeQty,
 				AfterQty = afterQty,
 				Remark = dto.Remark,
-				//Reviser = 1,
 				Reviser = currentUserId,
 				RevisedDate = DateTime.Now
 			});
 
+			// 更新 SKU 總庫存：依異動量增減，而不是重新 sum
+			var sku = await _context.ProdProductSkus.FirstOrDefaultAsync(s => s.SkuId == batch.SkuId);
+			if (sku != null)
+			{
+				sku.StockQty += changeQty; // 直接累加變動量
+				_context.Update(sku);
+			}
+
+			// 一次提交：批號 + 異動紀錄 + SKU 總庫存
 			await _context.SaveChangesAsync();
 
 			return Json(new { success = true });
