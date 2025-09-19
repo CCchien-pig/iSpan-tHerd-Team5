@@ -39,14 +39,15 @@
     <div class="mb-2 stock-edit-adjustOptions d-flex align-items-center">
         <label class="me-3 mb-0">異動方式：手動調整</label>
         <div class="form-check form-check-inline mb-0">
-            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="IncreaseEdit" value="true" @(Model.IsAdd ? "checked" : "")>
+            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="IncreaseEdit" value="1" @(Model.IsAdd ? "checked" : "")>
             <label class="form-check-label" for="IncreaseEdit">增加</label>
         </div>
         <div class="form-check form-check-inline mb-0">
-            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="DecreaseEdit" value="false" @(!Model.IsAdd ? "checked" : "")>
+            <input class="form-check-input stock-edit-isAdd" type="radio" name="stockEditIsAdd" id="DecreaseEdit" value="0" @(!Model.IsAdd ? "checked" : "")>
             <label class="form-check-label" for="DecreaseEdit">減少</label>
         </div>
     </div>
+
 
 
     <div class="mb-2">
