@@ -38,7 +38,8 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEvents()
         {
-            var coupons = await _context.MktCoupons
+			var tz = TimeZoneInfo.FindSystemTimeZoneById("Taipei Standard Time");
+			var coupons = await _context.MktCoupons
                 .AsNoTracking()
                 .Include(c => c.Campaign)
                 .ToListAsync();
@@ -47,9 +48,11 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Controllers
             {
                 id = c.CouponId,
                 title = c.CouponName,
-                start = c.StartDate,
-                end = c.EndDate,
-                color = c.IsActive ? ColorHelper.RandomColor() : "#9e9e9e"
+				//start = c.StartDate,
+				//end = c.EndDate,
+				start = new DateTimeOffset(c.StartDate, tz.GetUtcOffset(c.StartDate)),
+				end = c.EndDate.HasValue ? new DateTimeOffset(c.EndDate.Value, tz.GetUtcOffset(c.EndDate.Value)) : (DateTimeOffset?)null,
+				color = c.IsActive ? ColorHelper.RandomColor() : "#9e9e9e"
             });
 
             return Json(events);
