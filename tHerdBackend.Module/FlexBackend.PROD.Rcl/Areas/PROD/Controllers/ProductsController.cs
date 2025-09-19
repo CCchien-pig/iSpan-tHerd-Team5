@@ -58,7 +58,7 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             var syss = await _repo.GetSysCodes("PROD", new List<string> { "01" });
             ViewBag.Units = syss.Select(b => new SelectListItem
             {
-                Value = b.CodeId,
+                Value = b.CodeNo,
                 Text = b.CodeDesc
             }).ToList();
         }
