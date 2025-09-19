@@ -4,6 +4,8 @@ using FlexBackend.Core.Exceptions;
 using FlexBackend.Core.Interfaces.PROD;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Core.Interfaces.SYS;
+using System.Formats.Asn1;
+using System.Globalization;
 
 namespace FlexBackend.Services.PROD
 {
@@ -65,6 +67,18 @@ namespace FlexBackend.Services.PROD
 					return (false, $"第 {i + 1} 筆 SKU 缺少最大庫存量！");
 				if (sku.StartDate == DateTime.MinValue)
 					return (false, $"第 {i + 1} 筆 SKU 缺少上架日期！");
+
+				// 檢查Sku碼的規格
+				foreach (var (specConfig, k) in dto.SpecConfigs.Select((a, k) => (a, k)))
+				{
+					var spec_value = specConfig.SpecOptions
+						.FirstOrDefault(o => o.SkuId == sku.SkuId)?.OptionName;
+
+					if (string.IsNullOrWhiteSpace(spec_value))
+					{
+						return (false, $"第 {i + 1} 筆 SKU 缺少規格值（規格 {k + 1}）！");
+					}
+				}
 			}
 
 			// === 1. 檢查 SKU 庫存層級 ===

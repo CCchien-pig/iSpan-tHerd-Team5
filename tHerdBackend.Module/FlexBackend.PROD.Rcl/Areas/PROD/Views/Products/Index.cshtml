@@ -93,9 +93,9 @@
                     <tr>
                         <th rowspan="2"></th>
                         <th rowspan="2">選項</th>
-                        <th rowspan="2">供應商</th>
                         <th rowspan="2">品牌</th>
                         <th colspan="4" class="no-sort-group text-center" data-orderable="false">商品</th>
+                        <th rowspan="2">供應商</th>
                         <th rowspan="2">是否上架</th>
                         <th rowspan="2">建檔人員</th>
                         <th rowspan="2">建檔日期</th>
@@ -227,7 +227,6 @@
                       `;
                     }
                 },
-              { data: 'SupplierName' },
               { data: 'BrandName' },
               { data: 'ProductId' },
               {
@@ -241,6 +240,8 @@
               },
               { data: 'ProductCode' },
               { data: 'ProductName' },
+    
+              { data: 'SupplierName' },
               {
               data: 'IsPublished',
               orderable: false,
@@ -253,6 +254,7 @@
                       class="form-check-input publish-toggle"
                       data-id="${row.ProductId}"
                       ${checked}
+                        disabled
                     >
                   </div>
                 `;
