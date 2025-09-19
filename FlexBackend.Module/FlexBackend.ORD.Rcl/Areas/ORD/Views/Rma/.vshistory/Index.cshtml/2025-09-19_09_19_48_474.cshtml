@@ -452,7 +452,7 @@
             <input type="hidden" name="page" value="1" />
 
             <div class="col-auto">
-                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入訂單號">
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 RMA / 訂單號">
             </div>
 
                 <div class="col-auto">
@@ -683,37 +683,6 @@
                 location.href = '@Url.Action("Index", new { group = Model.Group, pageSize = Model.PageSize, keyword = Model.Keyword })&page=' + pageNum;
             }
         }
-
-        // 關鍵字輸入框自動回列表（清空時）
-        $(function () {
-          const $kw = $('input[name="keyword"]');
-          const $form = $kw.closest('form');
-
-          let hadValue = ($kw.val() || '').trim().length > 0;
-
-          $kw.on('input', function () {
-            const v = ($(this).val() || '').trim();
-
-            // 從「有值」變成「空」→ 自動回到全部列表
-            if (v === '' && hadValue) {
-              // 方式 A：送出表單（會帶 keyword= 空字串、page=1）
-              $form.trigger('submit');
-
-              // 若想完全不帶 keyword 參數，可改用方式 B（擇一）：
-              // location.href = '@Url.Action("Index", new { group = Model.Group, page = 1, pageSize = Model.PageSize })';
-            }
-
-            hadValue = v.length > 0;
-          });
-
-          // 也支援按 ESC 直接清空並回列表（小強化）
-          $kw.on('keydown', function (e) {
-            if (e.key === 'Escape') {
-              $(this).val('');
-              $form.trigger('submit');
-            }
-          });
-        });
 
         // 開啟 RMA 明細 Modal
         function openRmaDetail(id) {
