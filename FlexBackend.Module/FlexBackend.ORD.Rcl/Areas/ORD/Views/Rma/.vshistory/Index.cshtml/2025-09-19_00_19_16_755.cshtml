@@ -1,0 +1,275 @@
+﻿@using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
+@model ReturnListPageVM
+@{
+    ViewData["Title"] = "售後申請審核";
+}
+
+@section Styles {
+<link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+<style>
+    :root {
+        --brand-500:#652D77; --brand-600:#7A3A8F; --brand-700:#4E225D;
+        --bs-primary:var(--brand-500); --bs-primary-rgb:101,45,119;
+        --row-odd:#fff; --row-even:#efeaf2; --row-hover:#f2e8f7; --row-selected:#eadff4;
+    }
+
+    /* ===== 通用 ===== */
+    #rmaTable th, #rmaTable td,
+    #rmaDetailModal table th, #rmaDetailModal table td { text-align:center; vertical-align:middle; }
+
+    table.rcl-table { border-collapse:separate; border-spacing:0; }
+    table.rcl-table > tbody > tr > td { transition: background-color .18s ease; }
+    table.rcl-table > tbody > tr:nth-of-type(odd) > td { background:var(--row-odd) !important; }
+    table.rcl-table > tbody > tr:nth-of-type(even) > td { background:var(--row-even) !important; }
+    table.rcl-table > tbody > tr:hover > td { background:var(--row-hover) !important; }
+    table.rcl-table > tbody > tr.is-selected > td { background:var(--row-selected) !important; }
+    table.rcl-table > tbody > tr.child > td { background:inherit !important; }
+
+    /* DataTables 介面統一隱藏（用你自己的分頁條） */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_processing,
+    .dataTables_wrapper .dataTables_paginate { display:none; }
+
+    /* 統一外觀的按鈕 */
+    .btn-unified-outline{
+        background:transparent!important;border:1px solid #b8a3c6!important;color:var(--brand-500)!important;
+        border-radius:.375rem;padding:.375rem .75rem;
+    }
+    .btn-unified-outline:hover,.btn-unified-outline:focus{
+        color:#fff!important;background:var(--brand-500)!important;border-color:var(--brand-500)!important;
+    }
+    .btn-primary{
+        --bs-btn-bg:var(--brand-500);--bs-btn-border-color:var(--brand-500);
+        --bs-btn-hover-bg:var(--brand-600);--bs-btn-hover-border-color:var(--brand-600);
+        --bs-btn-active-bg:var(--brand-700);--bs-btn-active-border-color:var(--brand-700);
+    }
+
+    /* 狀態徽章 */
+    .status-badge{padding:4px 12px;border-radius:12px;font-size:.875rem;font-weight:500;display:inline-block;min-width:60px}
+    .status-pending{background:#fff3cd;color:#856404}
+    .status-review{background:#d1ecf1;color:#0c5460}
+    .status-refunding{background:#cce5ff;color:#004085}
+    .status-reshipping{background:#e7e3ff;color:#4c1d95}
+    .status-done{background:#d4edda;color:#155724}
+    .status-rejected{background:#f8d7da;color:#721c24}
+
+    /* 分頁列 */
+    .pagination-container{display:flex;justify-content:space-between;align-items:center;margin-top:1rem}
+    .pagination-controls{display:flex;align-items:center;gap:1rem}
+    .page-input{width:60px;text-align:center}
+</style>
+}
+
+@functions{
+    string GetStatusText(string? s)=>(s??"").ToLowerInvariant() switch{
+        "pending"=>"待審核","review"=>"審核中","refunding"=>"退款中","reshipping"=>"補寄中","done"=>"處理完成","rejected"=>"駁回",_=>s??""
+    };
+    string GetTypeText(string? t)=>(t??"").ToLowerInvariant() switch{ "refund"=>"退款","reship"=>"補寄",_=>t??"" };
+    string GetScopeText(string? sc)=>(sc??"").ToLowerInvariant() switch{ "order"=>"整筆","items"=>"品項",_=>sc??"" };
+    string GetStatusBadgeClass(string? s)=>$"status-badge status-{(s??"").ToLowerInvariant()}";
+}
+
+<div class="card my-3">
+  <div class="card-header">售後申請審核</div>
+  <div class="card-body">
+
+    <!-- 搜尋 / 每頁 -->
+    <form method="get" class="row g-2 mb-3">
+      <input type="hidden" name="group" value="@Model.Group" />
+      <input type="hidden" name="page" value="1" />
+      <div class="col-auto"><input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="輸入 訂單號 / 關鍵字"></div>
+            <div class="col-auto">
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    @foreach (var size in new[] { 10, 25, 50, 100 })
+                    {
+                        if (Model.PageSize == size)
+                        {
+                            <option value="@size" selected>@size</option>
+                        }
+                        else
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    }
+                </select>
+            </div>
+
+      <div class="col-auto"><button type="submit" class="btn btn-primary">搜尋</button></div>
+    </form>
+
+    <!-- 狀態群組 -->
+    <div class="mb-3">
+      @{
+          var map = new Dictionary<string,string>{
+              {"all","全部"},{"pending","待審核"},{"review","審核中"},
+              {"refunding","退款中"},{"reshipping","補寄中"},{"done","處理完成"},{"rejected","駁回"}
+          };
+      }
+      @foreach (var tab in Model.Tabs){
+          var label = map.TryGetValue(tab.Key, out var t) ? t : tab.Key;
+          <a class="btn btn-unified-outline @(Model.Group==tab.Key? "active" : "")"
+             href="@Url.Action("Index", new { group=tab.Key, page=1, pageSize=Model.PageSize, keyword=Model.Keyword })">
+              @label (@tab.Value)
+          </a>
+      }
+    </div>
+
+    <!-- 列表（已拔掉 RMA 欄，全部置中） -->
+    <table id="rmaTable" class="table table-bordered align-middle rcl-table">
+      <thead class="table-light">
+        <tr>
+          <th style="width:80px">#</th>
+          <th>訂單號</th>
+          <th>類型</th>
+          <th>範圍</th>
+          <th>狀態</th>
+          <th>建立時間</th>
+          <th style="width:120px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var r in Model.RmaList){
+        <tr>
+          <td><a href="javascript:void(0)" onclick="openRmaDetail(@r.ReturnRequestId)">#@r.ReturnRequestId</a></td>
+          <td>@r.OrderNo</td>
+          <td>@GetTypeText(r.TypeName)</td>
+          <td>@GetScopeText(r.ScopeName)</td>
+          <td><span class="@GetStatusBadgeClass(r.StatusName)">@GetStatusText(r.StatusName)</span></td>
+          <td>@r.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+          <td><button class="btn btn-sm btn-unified-outline" onclick="openRmaDetail(@r.ReturnRequestId)">查看明細</button></td>
+        </tr>
+      }
+      </tbody>
+    </table>
+
+    <!-- 分頁 -->
+    <div class="pagination-container">
+      <div>總筆數 @Model.Total</div>
+      <div class="pagination-controls">
+        <button class="btn btn-unified-outline btn-sm"
+                @(Model.Page<=1?"disabled":null)
+                onclick="@(Model.Page>1?$"location.href='{Url.Action("Index", new{group=Model.Group,page=Model.Page-1,pageSize=Model.PageSize,keyword=Model.Keyword})}'":null)">
+          上一頁
+        </button>
+        <div class="d-flex align-items-center gap-2">
+          第 <input type="number" class="form-control page-input" value="@Model.Page" min="1" max="@Model.Pages" onchange="jumpToPage(this.value)" /> / 共 @Model.Pages 頁
+        </div>
+        <button class="btn btn-unified-outline btn-sm"
+                @(Model.Page>=Model.Pages?"disabled":null)
+                onclick="@(Model.Page<Model.Pages?$"location.href='{Url.Action("Index", new{group=Model.Group,page=Model.Page+1,pageSize=Model.PageSize,keyword=Model.Keyword})}'":null)">
+          下一頁
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 明細 Modal（保留你的原樣式/欄位，這裡略） -->
+<!-- ... 你原本的 Modal 區塊可直接沿用 ... -->
+
+@section Scripts{
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+  let currentRmaId = 0;
+
+  $(function () {
+    $('#rmaTable').DataTable({
+      language: { url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/zh-HANT.json" },
+      order: [[5, "desc"]],             // 建立時間 = 第 5 欄
+      pageLength: @Model.PageSize,
+      lengthMenu: [[10,25,50,100],[10,25,50,100]],
+      searching: false, paging: false, info: false,
+      columnDefs: [
+        { orderable: false, targets: [0, 6] }, // # 與 操作
+        { type: "date", targets: 5 }           // 建立時間
+      ]
+    });
+
+    $('#btnApproveRefund').on('click', () => approveRefund(currentRmaId));
+    $('#btnApproveReship').on('click', () => approveReship(currentRmaId));
+    $('#btnReject').on('click', () => rejectRma(currentRmaId));
+    $('#btnComplete').on('click', () => completeRma(currentRmaId));
+  });
+
+  function jumpToPage(p){
+    const n = parseInt(p);
+    if(n >= 1 && n <= @Model.Pages){
+      location.href = '@Url.Action("Index", new { group = Model.Group, pageSize = Model.PageSize, keyword = Model.Keyword })&page=' + n;
+    }
+  }
+
+  function openRmaDetail(id){
+    currentRmaId = id;
+    $.get('/ORD/Rma/GetReturnDetail', { id }, function(resp){
+      if(!resp.ok){ Swal.fire('錯誤', resp.message, 'error'); return; }
+      const rma = resp.rma;
+      $('#statusName').text(rma.statusName).attr('class','badge bg-info');
+      $('#createdDate').text(rma.createdDate);
+      $('#reasonText').text(rma.reasonText);
+
+      $('#coupon').text(rma.orderSummary.coupon);
+      $('#discount').text('$' + rma.orderSummary.discount);
+      $('#shippingFee').text('$' + rma.orderSummary.shippingFee);
+      $('#orderTotal').text('$' + rma.orderSummary.total);
+
+      let orderHtml = '';
+      rma.orderItems.forEach(x => orderHtml += `
+        <tr><td>${x.productName}</td><td>${x.skuSpec}</td><td>$${x.unitPrice}</td><td>${x.qty}</td><td>$${x.subTotal}</td></tr>`);
+      $('#orderItemsBody').html(orderHtml);
+
+      let rmaHtml = '';
+      rma.rmaItems.forEach(x => rmaHtml += `
+        <tr><td>${x.productName}</td><td>${x.skuSpec}</td><td>${x.originalQty}</td>
+            <td>${x.qty}</td><td>${x.approvedQty}</td><td>${x.refundQty}</td>
+            <td>${x.reshipQty}</td><td>$${x.refundUnitAmount}</td></tr>`);
+      $('#rmaItemsBody').html(rmaHtml);
+
+      updateModalButtons(rma.statusName);
+      $('#rmaDetailModal').modal('show');
+    }).fail(() => Swal.fire('錯誤','載入明細失敗','error'));
+  }
+
+  function updateModalButtons(s){
+    $('#btnApproveRefund,#btnApproveReship,#btnReject,#btnComplete').hide();
+    if (['待審核','審核中','pending','review'].includes(s)) {
+      $('#btnApproveRefund,#btnApproveReship,#btnReject').show();
+    } else if (['退款中','補寄中','refunding','reshipping'].includes(s)) {
+      $('#btnComplete').show();
+    }
+  }
+
+  function approveRefund(id){
+    Swal.fire({title:'確認批准退款？',icon:'question',showCancelButton:true,confirmButtonText:'確定',cancelButtonText:'取消',confirmButtonColor:'#652D77'})
+      .then(r=>{ if(!r.isConfirmed) return;
+        $.post('/ORD/Rma/Approve',{id, nextStatus:'refunding'}, okReload);
+      });
+  }
+  function approveReship(id){
+    Swal.fire({title:'確認批准補寄？',icon:'question',showCancelButton:true,confirmButtonText:'確定',cancelButtonText:'取消',confirmButtonColor:'#652D77'})
+      .then(r=>{ if(!r.isConfirmed) return;
+        $.post('/ORD/Rma/Approve',{id, nextStatus:'reshipping'}, okReload);
+      });
+  }
+  function rejectRma(id){
+    Swal.fire({title:'駁回原因',input:'textarea',showCancelButton:true,confirmButtonText:'確定駁回',cancelButtonText:'取消',confirmButtonColor:'#dc3545',
+      inputValidator: v => !v && '請輸入駁回原因'}).then(r=>{
+        if(!r.isConfirmed) return;
+        $.post('/ORD/Rma/Reject',{id, reason:r.value}, okReload);
+      });
+  }
+  function completeRma(id){
+    Swal.fire({title:'確認結單？',text:'結單後將無法再修改',icon:'warning',showCancelButton:true,confirmButtonText:'確定結單',cancelButtonText:'取消',confirmButtonColor:'#652D77'})
+      .then(r=>{ if(!r.isConfirmed) return;
+        $.post('/ORD/Rma/Complete',{id}, okReload);
+      });
+  }
+  function okReload(resp){
+    if(resp.ok){ Swal.fire('成功', resp.message, 'success').then(()=>{ $('#rmaDetailModal').modal('hide'); location.reload(); }); }
+    else{ Swal.fire('錯誤', resp.message, 'error'); }
+  }
+</script>
+}

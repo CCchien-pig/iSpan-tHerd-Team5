@@ -1,5 +1,8 @@
-﻿using FlexBackend.Infra.Models;
+﻿using FlexBackend.Core.Abstractions;
+using FlexBackend.Core.DTOs.USER;
+using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SUP.Data.Helpers;
@@ -10,10 +13,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 	public class SuppliersController : Controller
 	{
 		private readonly tHerdDBContext _context;
+		private readonly ICurrentUser _me;
+		private readonly UserManager<ApplicationUser> _userMgr;
 
-		public SuppliersController(tHerdDBContext context)
+		public SuppliersController(
+			tHerdDBContext context, 
+			ICurrentUser me,
+			UserManager<ApplicationUser> userMgr)
 		{
 			_context = context;
+			_me = me;
+			_userMgr = userMgr;
 		}
 
 		// GET: SUP/Suppliers/Index
@@ -109,6 +119,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([Bind("SupplierName,ContactName,Phone,Email,IsActive")] SupplierContactViewModel supplierVm)
 		{
+
+			var userId = _me.Id; // Claims 裡的 Id
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
+
 			if (ModelState.IsValid)
 			{
 				var supEntity = new SupSupplier
@@ -119,14 +140,14 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					Email = supplierVm.Email,
 					IsActive = supplierVm.IsActive,
 
-					Creator = supplierVm.Creator,
+					Creator = currentUserId,
 					CreatedDate = DateTime.Now,
 				};
 
 				_context.SupSuppliers.Add(supEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = true });
+				return Json(new { success = true, isCreate = true, supplier = supEntity });
 			}
 
 			// 驗證失敗回 Partial
@@ -144,10 +165,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			var supEntity = await _context.SupSuppliers.FindAsync(id);
 			if (supEntity == null) { return NotFound(); }
 
+
+			var userId = _me.Id; // Claims 裡的 Id
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
+
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
 			var viewModel = new SupplierContactViewModel
 			{
-				SupplierId = supEntity.SupplierId,
+				SupplierId = currentUserId,
 				SupplierName = supEntity.SupplierName,
 				ContactName = supEntity.ContactName,
 				Phone = supEntity.Phone,
@@ -190,6 +222,16 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						return Json(new { success = false, message = "未變更" });
 					}
 
+					var userId = _me.Id; // Claims 裡的 Id
+					var user = await _userMgr.Users
+						.AsNoTracking()
+						.FirstOrDefaultAsync(u => u.Id == userId);
+
+					if (user == null)
+						return Json(new { success = false, message = "找不到使用者資料" });
+
+					int currentUserId = user.UserNumberId;
+
 					// 有變更 → 更新欄位
 					supEntity.SupplierName = model.SupplierName;
 					supEntity.ContactName = model.ContactName;
@@ -197,7 +239,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					supEntity.Email = model.Email;
 					supEntity.IsActive = model.IsActive;
 
-					supEntity.Reviser = 111111; // TODO: 取登入ID
+					supEntity.Reviser = currentUserId;
 					supEntity.RevisedDate = DateTime.Now;
 
 					_context.Update(supEntity);
@@ -236,8 +278,18 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				if (supEntity == null)
 					return Json(new { success = false, message = "找不到該供應商" });
 
+				var userId = _me.Id; // Claims 裡的 Id
+				var user = await _userMgr.Users
+					.AsNoTracking()
+					.FirstOrDefaultAsync(u => u.Id == userId);
+
+				if (user == null)
+					return Json(new { success = false, message = "找不到使用者資料" });
+
+				int currentUserId = user.UserNumberId;
+
 				supEntity.IsActive = isActive;
-				supEntity.Reviser = 111111; // TODO: 取登入ID
+				supEntity.Reviser = currentUserId; // 取登入ID
 				supEntity.RevisedDate = DateTime.Now;
 
 				await _context.SaveChangesAsync();
@@ -291,14 +343,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> DeleteAjax(int id)
 		{
 			var supEntity = await _context.SupSuppliers.FindAsync(id);
-			if (supEntity != null)
+			if (supEntity == null)
+				return Json(new { success = false, message = "找不到該供應商" });
+
+			try
 			{
 				_context.SupSuppliers.Remove(supEntity);
 				await _context.SaveChangesAsync();
 				return Json(new { success = true });
 			}
-			return Json(new { success = false, message = "找不到該供應商" });
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
 		}
+
 
 		private bool SupSupplierExists(int id)
 		{
