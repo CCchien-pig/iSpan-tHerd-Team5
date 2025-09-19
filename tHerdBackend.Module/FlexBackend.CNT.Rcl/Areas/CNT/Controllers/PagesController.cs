@@ -135,7 +135,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			return (page, pageSize, keyword, status, pageTypeId);
 		}
-
+		//index
 		// ================================
 		// 文章列表 (Index)
 		// ================================
