@@ -147,8 +147,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				_context.SupSuppliers.Add(supEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = true, supplier = supEntity });
-			}
+        // 回傳前端需要的完整資料
+        return Json(new
+        {
+            success = true,
+            isCreate = true,
+            supplier = new
+            {
+                supplierId = supEntity.SupplierId,
+                supplierName = supEntity.SupplierName,
+                contactName = supEntity.ContactName,
+                phone = supEntity.Phone,
+                email = supEntity.Email,
+                isActive = supEntity.IsActive
+            }
+        });			}
 
 			// 驗證失敗回 Partial
 			//return PartialView("Partials/_SupplierFormPartial", supplierVm);
@@ -179,7 +192,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
 			var viewModel = new SupplierContactViewModel
 			{
-				SupplierId = currentUserId,
+				SupplierId = supEntity.SupplierId,
 				SupplierName = supEntity.SupplierName,
 				ContactName = supEntity.ContactName,
 				Phone = supEntity.Phone,
@@ -245,7 +258,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					_context.Update(supEntity);
 					await _context.SaveChangesAsync();
 
-					return Json(new { success = true });
+					return Json(new
+					{
+						success = true,
+						isCreate = false,
+						supplier = new
+						{
+							supplierId = supEntity.SupplierId,
+							supplierName = supEntity.SupplierName,
+							contactName = supEntity.ContactName,
+							phone = supEntity.Phone,
+							email = supEntity.Email,
+							isActive = supEntity.IsActive
+						}
+					});
+
 				}
 				catch (DbUpdateConcurrencyException)
 				{
