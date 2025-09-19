@@ -15,8 +15,8 @@
 </div>
 
 <!-- 初始化批號 -->
-<button id="btnInitBatches" class="btn btn-primary">初始化批號</button>
-<span id="initResult" style="margin-left:10px;"></span> 
+@* <button id="btnInitBatches" class="btn btn-primary">初始化批號</button>
+<span id="initResult" style="margin-left:10px;"></span>  *@
 
 <!-- 主庫存表格*2區塊 (.stockbatch-card) -->
 <div class="stockbatch-card">
@@ -643,7 +643,7 @@
                         className: 'text-center',
                         orderable: true,           // 可點擊排序
                         render: function(data, type, row, meta){
-                            return meta.row + 1;   // 顯示序號
+                            return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
                         }
                     },
                     { data: 'skuCode', title: 'SKU', className: 'text-center'},

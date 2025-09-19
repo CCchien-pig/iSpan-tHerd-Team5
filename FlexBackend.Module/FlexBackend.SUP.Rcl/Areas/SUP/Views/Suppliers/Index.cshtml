@@ -75,6 +75,15 @@
                 },
                 columns: [
                     {
+                        data: 'sortDate',          // 後端給每筆資料一個排序用時間
+                        title: '#',
+                        className: 'text-center',
+                        orderable: true,
+                        render: function(data, type, row, meta) {
+                            return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
+                        }
+                    },
+                    {
                         data: 'supplierName',
                         title: '供應商名稱',
                         render: function(data, type, row) {
