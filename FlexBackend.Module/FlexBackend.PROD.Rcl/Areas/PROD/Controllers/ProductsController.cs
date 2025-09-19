@@ -17,8 +17,8 @@ namespace FlexBackend.Products.Rcl.Areas.PROD.Controllers
             _qrepo = qrepo;
         }
 
-        // GET: Products/Index
-        public async Task<IActionResult> Index()
+		// GET: Products/Index
+		public async Task<IActionResult> Index()
         {
             var products = await _repo.GetAllAsync();
 
