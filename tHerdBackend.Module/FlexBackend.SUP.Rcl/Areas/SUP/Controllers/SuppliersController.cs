@@ -68,12 +68,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			// 排序
 			query = sortColumnIndex switch
 			{
-				0 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
-				1 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
-				2 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
-				3 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
-				4 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
-				_ => query.OrderBy(s => s.SupplierId),
+				0 => sortDirection == "asc"
+						? query.OrderBy(s => s.RevisedDate ?? s.CreatedDate)
+						: query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
+				1 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
+				2 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
+				3 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
+				4 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
+				5 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
+				_ => query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
 			};
 
 			// 分頁與選取欄位
@@ -87,7 +90,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					contactName = s.ContactName,
 					phone = s.Phone,
 					email = s.Email,
-					isActive = s.IsActive
+					isActive = s.IsActive,
+		            sortDate = s.RevisedDate ?? s.CreatedDate  // 前端序號排序用
 				}).ToListAsync();
 
 			// 回傳給 DataTables
