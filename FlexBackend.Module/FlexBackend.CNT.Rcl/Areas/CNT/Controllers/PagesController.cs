@@ -182,9 +182,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 								.FirstOrDefault() ?? "未知類別"
 				});
 
-			// ================================
 			// 下拉選單資料
-			// ================================
 			ViewBag.StatusList = new SelectList(
 				GetStatusSelectList(null, includeAll: true, includeDeleted: false),
 				"Value", "Text", status);
@@ -195,11 +193,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100 }, pageSize);
 
-			// ================================
-			// 顯示用：目前篩選條件（中文）
-			// ================================
-
-			// 狀態中文
+			// 顯示用：目前篩選條件
 			if (!string.IsNullOrEmpty(status) && int.TryParse(status, out int statusInt))
 			{
 				var statusEnum = (PageStatus)statusInt;
@@ -217,7 +211,6 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				ViewBag.StatusName = null;
 			}
 
-			// 分類中文
 			if (pageTypeId.HasValue && pageTypeId.Value > 0)
 			{
 				ViewBag.PageTypeName = _db.CntPageTypes
@@ -230,13 +223,13 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				ViewBag.PageTypeName = null;
 			}
 
-			// 關鍵字
+			// 🔑 回傳原始篩選值（避免清掉錯誤）
 			ViewBag.Keyword = keyword;
+			ViewBag.Status = status;       // ← 新增這個！
+			ViewBag.PageTypeId = pageTypeId;
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
-
-
 
 		// ================================
 		// 新增 (Create)
