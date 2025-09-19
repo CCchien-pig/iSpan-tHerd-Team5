@@ -226,18 +226,37 @@
 
                             // 如果後端回傳 supplier，直接新增一列到 table
                             if (data.supplier) {
-                                table.row.add({
-                                    supplierId: data.supplier.SupplierId || 0,
-                                    supplierName: data.supplier.SupplierName || '',
-                                    contactName: data.supplier.ContactName || '',
-                                    phone: data.supplier.Phone || '',
-                                    email: data.supplier.Email || '',   
-                                    isActive: data.supplier.IsActive || false
-                                }).draw(false);
-                            } else {
-                                // fallback，重新載入 table
-                                table.ajax.reload(null, false);
+                                if (data.isCreate) {
+                                    // 新增列
+                                    table.row.add({
+                                        supplierId: data.supplier.SupplierId,
+                                        supplierName: data.supplier.SupplierName,
+                                        contactName: data.supplier.ContactName,
+                                        phone: data.supplier.Phone,
+                                        email: data.supplier.Email,
+                                        isActive: data.supplier.IsActive
+                                    }).draw(false);
+                                } else {
+                                    // 編輯 → 更新對應 row
+                                    var row = table.row(function(idx, d, node) {
+                                        return d.supplierId === data.supplier.SupplierId;
+                                    });
+                                    if (row.any()) {
+                                        row.data({
+                                            supplierId: data.supplier.SupplierId,
+                                            supplierName: data.supplier.SupplierName,
+                                            contactName: data.supplier.ContactName,
+                                            phone: data.supplier.Phone,
+                                            email: data.supplier.Email,
+                                            isActive: data.supplier.IsActive
+                                        }).draw(false);
+                                    } else {
+                                        // fallback 重新載入 table
+                                        table.ajax.reload(null, false);
+                                    }
+                                }
                             }
+
 
                         } else if (data.message === "未變更") {
                             Swal.fire('未變更', '', 'info');
