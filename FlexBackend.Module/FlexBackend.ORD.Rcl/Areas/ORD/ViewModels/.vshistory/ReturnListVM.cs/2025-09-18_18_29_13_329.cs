@@ -18,4 +18,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
         public string Spec { get; set; } = "";  // 例：SKU:456
         public int Qty { get; set; }
     }
+
+
 }
