@@ -9,8 +9,8 @@
 
 @section Styles {
     <!-- DataTables × Bootstrap 5 -->
-    <link href="https://cdn.datatables.net/2.3.3/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-    <link href="https://cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.3.3/fh-4.0.3/datatables.min.css" />
+
     <link href="~/font-awesome/css/all.min.css" rel="stylesheet" />
 
     <style>
@@ -139,6 +139,11 @@
             font-weight: 600;
             letter-spacing: .02em;
         }
+
+        .dataTables_wrapper .dt-paging {
+            display: flex !important;
+        }
+
     </style>
 }
 
@@ -181,30 +186,33 @@
         <tbody>
             @foreach (var item in Model)
             {
-                var faqTitle = item.FaqTitle ?? "";
-             
-
                 <tr>
                     <td class="text-center">
                         <input type="checkbox" class="js-row-check" value="@item.KeywordId" />
                     </td>
                     <td>@item.Keyword</td>
                     <td>@item.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+
                     <td>
-                        <!-- 所屬 FAQ 欄位 -->
-                        @if (string.IsNullOrWhiteSpace(faqTitle))
+                        @if (item.Faqs == null || item.Faqs.Count == 0)
                         {
                             <span class="text-muted">（未對應 FAQ）</span>
                         }
                         else
                         {
-                            <a class="badge-faq line-clamp-1"
-                               asp-area="CS" asp-controller="Faqs" asp-action="Details"
-                               asp-route-id="@item.FaqId"
-                               asp-route-returnUrl="@backUrl"
-                               title="@faqTitle">@faqTitle</a>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var f in item.Faqs)
+                                {
+                                    <a class="badge-faq"
+                                       asp-area="CS" asp-controller="Faqs" asp-action="Details"
+                                       asp-route-id="@f.FaqId"
+                                       asp-route-returnUrl="@backUrl"
+                                       title="@f.Title">@f.Title</a>
+                                }
+                            </div>
                         }
                     </td>
+
                     <td class="text-nowrap">
                         <div class="btn-group" role="group" aria-label="Actions">
                             <a asp-area="CS" asp-controller="FaqKeywords" asp-action="Edit" asp-route-id="@item.KeywordId"
@@ -226,6 +234,7 @@
                 </tr>
             }
         </tbody>
+
     </table>
 </div>
 
@@ -239,10 +248,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- DataTables -->
-    <script src="https://cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.3/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedheader/4.0.3/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.3.3/fh-4.0.3/datatables.min.js"></script>
+
 
     <script>
         // Overlay 控制
@@ -258,19 +265,20 @@
 
             // DataTables
             const table = new DataTable('#kwTable', {
-                fixedHeader: true,
-                layout: {
-                    topStart: 'pageLength',
-                    topEnd: 'search',
-                    bottomStart: 'info',
-                    bottomEnd: 'paging'
-                },
-                paging: true,
-                searching: true,
-                ordering: true,
+                   fixedHeader: true,
+           paging: true,
+           pageLength: 10,
+           lengthMenu: [5,10,25,50,100],
+           layout: {
+             topStart: { pageLength: { menu: [5,10,25,50,100] } },
+             topEnd: 'search',
+             bottomStart: 'info',
+             bottomEnd: { paging: { firstLast: true, numbers: 5 } }
+           },
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json" },
                 columnDefs: [
                     { targets: 0, orderable:false, searchable:false, className:"text-center", width:36 },
+                      { targets: 3,  orderable:false },
                     { targets: -1, orderable:false, searchable:false, className:"text-nowrap", width:120 }
                 ],
                 order: [[1, 'asc']]

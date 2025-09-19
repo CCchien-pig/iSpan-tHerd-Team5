@@ -1,0 +1,33 @@
+﻿@using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels
+@model ReturnListPageVM
+@{
+    ViewData["Title"] = "售後申請審核";
+}
+
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <style>
+        :root{
+            --brand-500:#652D77; --brand-600:#7A3A8F; --brand-700:#4E225D;
+            --bs-primary:var(--brand-500); --bs-primary-rgb:101,45,119;
+            --row-odd:#fff; --row-even:#efeaf2; --row-hover:#f2e8f7; --row-selected:#eadff4;
+        }
+
+        td.order-toggle{ cursor:pointer; color:#622872; text-decoration:underline; }
+        tr.shown td.order-toggle{ font-weight:bold; }
+
+        .order-detail-card{ background:#f9f9f9; padding:1rem; margin-bottom:1rem; border-radius:.5rem; border:1px solid #ddd; }
+        .order-summary{ text-align:right; margin-top:1rem; }
+        #jumpPageInput{ width:80px; display:inline-block; text-align:center; }
+        th.no-sort::after{ display:none !important; }
+
+        table.rcl-table{ border-collapse:separate; border-spacing:0; }
+        table.rcl-table>tbody>tr>td:first-child{ position:relative; }
+        table.rcl-table>tbody>tr:nth-of-type(odd)>td{ background:var(--row-odd) !important; }
+        table.rcl-table>tbody>tr:nth-of-type(even)>td{ background:var(--row-even) !important; }
+        table.rcl-table>tbody>tr:hover>td{ background:var(--row-hover) !important; }
+        table.rcl-table>tbody>tr.is-selected>td{ background:var(--row-selected) !important; }
+        table.rcl-table>tbody>tr.child>td{ background:inherit !important; }
+        table.rcl-table>tbody>tr>td{ transition:background-color .18s ease; }
+        table.rcl-table>tbody>tr:hover>td:first-child::before,
+        table.rcl-table>tbody>tr.is-selected>t
