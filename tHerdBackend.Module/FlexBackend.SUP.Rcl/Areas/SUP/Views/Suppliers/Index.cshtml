@@ -50,6 +50,7 @@
 
     <script>
         $(document).ready(function() {
+            
             // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Suppliers/...）
             var indexJsonUrl = '@Url.Action("IndexJson", "Suppliers", new { area = "SUP" })';
             var createUrl = '@Url.Action("Create", "Suppliers", new { area = "SUP" })';
@@ -175,8 +176,8 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
                     icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
@@ -188,7 +189,7 @@
                         checkbox.prop('checked', !newStatus);
                     } else {
                         // 使用者確認 → 更新提示 p
-                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態，進貨權限將會一同變動`);
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態`);
                     }
                 });
             });
@@ -198,15 +199,20 @@
                 e.preventDefault();
                 var form = $(this);
 
+                // 手動把 checkbox 值更新到 hidden input
+                var isActive = $('#IsActive').prop('checked');
+                $('input[name="IsActive"][type="hidden"]', form).val(isActive);
+
                 $.post(form.attr('action'), form.serialize())
                 .done(function(res) {
                     // 判斷回傳結果是否為 JSON
                     var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
                     var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
 
-                    if(data){
-                        if(data.success){
+                    if (data) {
+                        if (data.success) {
                             $('#supplierModal').modal('hide');
+
                             Swal.fire({
                                 position: 'center',
                                 icon: 'success',
@@ -214,8 +220,23 @@
                                 showConfirmButton: false,
                                 timer: 1200
                             });
-                            table.ajax.reload(null, false);
-                        } else if(data.message === "未變更") {
+
+                            // 如果後端回傳 supplier，直接新增一列到 table
+                            if (data.supplier) {
+                                table.row.add({
+                                    supplierId: data.supplier.SupplierId || 0,
+                                    supplierName: data.supplier.SupplierName || '',
+                                    contactName: data.supplier.ContactName || '',
+                                    phone: data.supplier.Phone || '',
+                                    email: data.supplier.Email || '',   
+                                    isActive: data.supplier.IsActive || false
+                                }).draw(false);
+                            } else {
+                                // fallback，重新載入 table
+                                table.ajax.reload(null, false);
+                            }
+
+                        } else if (data.message === "未變更") {
                             Swal.fire('未變更', '', 'info');
                         } else {
                             $('#supplierModalContent').html(res);
@@ -223,10 +244,11 @@
                         }
                     }
                 })
-                .fail(function(){
+                .fail(function() {
                     Swal.fire('操作失敗', '', 'error');
                 });
             });
+
 
             // ======= 啟用/停用供應商 =======
             $('#supplierTable').on('change', '.toggle-active', function() {
@@ -241,8 +263,8 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
                     icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
@@ -270,6 +292,7 @@
                     }
                 });
             });
+
 
             // ======= 查看詳情i =======
             $('#supplierTable').on('click', '.details-btn', function() {
@@ -310,8 +333,9 @@
                                     Swal.fire('刪除失敗', res.message || '', 'error');
                                 }
                             },
-                            error: function() {
-                                Swal.fire('刪除失敗', '', 'error');
+                            error: function(xhr) {
+                                var msg = xhr.responseJSON?.message || '刪除失敗';
+                                Swal.fire('刪除失敗', msg, 'error');
                             }
                         });
                     }
