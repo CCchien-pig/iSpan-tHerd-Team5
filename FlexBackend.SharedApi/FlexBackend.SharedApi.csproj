@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aca58b01-0cf3-4cc4-a740-9c78b68ca6a6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Infra\FlexBackend.Infra.csproj" />
+    <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
+  </ItemGroup>
+
+</Project>
