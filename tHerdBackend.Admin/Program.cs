@@ -1,19 +1,20 @@
-﻿using FlexBackend.Admin.Infrastructure.Auth;
+﻿using CloudinaryDotNet;
+using FlexBackend.Admin.Infrastructure.Auth;
 using FlexBackend.Composition;
 using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.USER;
+using FlexBackend.Core.Interfaces.Abstractions;
 using FlexBackend.CS.Rcl.Areas.CS.Controllers;
 using FlexBackend.Infra;
+using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
 using FlexBackend.Services.USER;
 using FlexBackend.UIKit.Rcl;
 using FlexBackend.USER.Rcl;
-using FlexBackend.USER.Rcl.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -102,8 +103,20 @@ namespace FlexBackend.Admin
 					Path.Combine(builder.Environment.ContentRootPath, "dp-keys")))
 				.SetApplicationName("FlexBackend");
 
-			// 全站預設需要登入 
-			var mvc = builder.Services.AddControllersWithViews(options => {
+            // 讀取 Cloudinary 設定
+            var cloudinarySettings = builder.Configuration.GetSection("CloudinarySettings");
+
+            var account = new Account(
+                cloudinarySettings.GetValue<string>("CloudName"),
+                cloudinarySettings.GetValue<string>("ApiKey"),
+                cloudinarySettings.GetValue<string>("ApiSecret")
+            );
+
+            var cloudinary = new Cloudinary(account);
+            builder.Services.AddSingleton(cloudinary);
+
+            // 全站預設需要登入 
+            var mvc = builder.Services.AddControllersWithViews(options => {
 				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
 				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
 			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly)
@@ -135,8 +148,6 @@ namespace FlexBackend.Admin
 			//	await RoleInitializer.SeedRolesAsync(sp);
 			//	await UserInitializer.SeedUsersAsync(sp);
 			//}
-
-			
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
