@@ -117,7 +117,6 @@
     </div>
 </div>
 
-
 <!-- 異動後，浮現的批次異動明細 Modal (#batchMovementModal) -->
 <div id="batchMovementModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -178,6 +177,34 @@
     </div>
 </div>
 
+<!-- 其他庫存操作 Modal -->
+<!-- 下拉選單 -->
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        其他庫存操作
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item otherStockOp" data-type="Sale" href="#">銷售出庫</a></li>
+        <li><a class="dropdown-item otherStockOp" data-type="Return" href="#">退貨入庫</a></li>
+        <li><a class="dropdown-item otherStockOp" data-type="Expire" href="#">到期報廢</a></li>
+    </ul>
+</div>
+<div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="stockBatchModalTitle" class="modal-title">庫存</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body (AJAX 載入) -->
+            <div id="stockBatchModalContent" class="modal-body p-4">
+                <!-- 這裡會用 AJAX 載入 _StockBatchFormPartial -->
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -284,29 +311,27 @@
                     // var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
                     var isAllowBackorder = info.isAllowBackorder;
 
-                    // var isAdd;
-                    // if(movementType === 'Purchase') {
-                    //     isAdd = true; 採購入庫一定是增加
-                    // } else if(movementType === 'Adjust') {
-                    //     isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                    // } else {
-                    //     isAdd = true; 其他類型預設增加
-                    // }
-                    // console.log('[SKU Info] Is Add:', isAdd);
-
                     // 判斷異動方向
                     var movementType = $('#MovementTypeSelect').val();
                     var isAdd;
                     switch(movementType) {
                         case 'Purchase':
-                            isAdd = true; // 採購入庫一定是增加
+                            isAdd = true;
                             break;
                         case 'Adjust':
-                            isAdd = $('input[name="IsAdd"]:checked').val() === 'true'; // 手動調整依使用者選擇
+                            isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                            break;
+                        case 'Sale':
+                        case 'Expire':
+                            isAdd = false; // 出庫/報廢都減少
+                            break;
+                        case 'Return':
+                            isAdd = true; // 退貨入庫增加
                             break;
                         default:
-                            isAdd = true; // 其他類型預設增加
+                            isAdd = true;
                     }
+
                     console.log('[SKU Info] Is Add:', isAdd);
 
                     // 計算異動上限
@@ -351,10 +376,16 @@
                 $.get('/SUP/StockBatches/GetMovementTypes', function(types) {
                     console.log('MovementTypes:', types);
                     movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
+                    
                     types.forEach(t => {
                         var selected = (t.value === (isEdit ? 'Adjust' : '')) ? 'selected' : '';
                         movementTypeSelect.append(`<option value="${t.value}" ${selected}>${t.text}</option>`);
                     });
+
+                    // 手動加這三種新類型
+                    movementTypeSelect.append('<option value="Sale">銷售出庫</option>');
+                    movementTypeSelect.append('<option value="Return">退貨入庫</option>');
+                    movementTypeSelect.append('<option value="Expire">到期報廢</option>');
 
                     // 編輯模式固定為 Adjust
                     if(isEdit) {
@@ -454,9 +485,10 @@
                 var predictedStock;
                 if (movementType === 'Adjust') {
                     predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
+                } else if (movementType === 'Sale' || movementType === 'Expire') {
+                    predictedStock = currentStock - changeQty; // 減少
                 } else {
-                    // 其他異動類型一律加
-                    predictedStock = currentStock + changeQty;
+                    predictedStock = currentStock + changeQty; // 入庫型(Purchase / Return)
                 }
 
                 // 出庫不允許超賣，預計庫存不得為負
@@ -921,7 +953,6 @@
                 });
             });
 
-
             // ===== 編輯單筆庫存異動 =====
             $('#stockBatchTable').on('click', '.edit-stock-btn', function() {
                 var id = $(this).data('id');
@@ -995,8 +1026,6 @@
                 });
             });
 
-
-
             // ===== 點擊品牌異動紀錄按鈕 =====
             $('#stockBatchTable').on('click', '.stock-history-btn', function()
             {
@@ -1028,7 +1057,6 @@
                     showConfirmButton: false
                 });
             });
-
 
             // ===== 點擊修改備註按鈕 =====
             $('#historyTable').on('click', '.stock-text-btn', function()
@@ -1090,6 +1118,28 @@
             });
 
 
+            // 綁定「其他庫存操作」選單事件
+            $(document).on('click', '.otherStockOp', function (e) {
+                e.preventDefault();
+
+                var type = $(this).data('type');
+
+                $.get('/SUP/StockBatches/OtherOperation', { type: type }, function (html) {
+                    let titleMap = {
+                        "Sale": "銷售出庫",
+                        "Return": "退貨入庫",
+                        "Expire": "到期報廢"
+                    };
+
+                    $('#stockBatchModalTitle').text("其他庫存操作 - " + (titleMap[type] || ""));
+                    $('#stockBatchModalContent').html(html);
+                    $('#stockBatchModal').modal('show');
+                });
+            });
+
+
+
+
             // ===== 點擊 submit =====
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
@@ -1102,14 +1152,12 @@
                 var movementType = $('#MovementTypeSelect').val();
                 var isAdd;
 
-                if (movementType === 'Purchase') {
-                    // 採購固定為增加
+                if (movementType === 'Purchase' || movementType === 'Return') {
                     isAdd = true;
-                } else if (movementType === 'Return') {
-                    // 退貨固定為減少
+                } else if (movementType === 'Sale' || movementType === 'Expire') {
                     isAdd = false;
                 } else {
-                    // 其他才根據 radio 選擇
+                    // Adjust 根據 radio 選擇
                     var $checkedRadio = form.find('input[name="IsAdd"]:checked');
                     if ($checkedRadio.length > 0) {
                         isAdd = $checkedRadio.val() === 'true';
@@ -1212,6 +1260,7 @@
                 case 'Purchase': return '採購入庫';
                 case 'Sale': return '出貨';
                 case 'Return': return '退貨';
+                case 'Expire': return '報廢';
                 default: return type;
             }
         }
