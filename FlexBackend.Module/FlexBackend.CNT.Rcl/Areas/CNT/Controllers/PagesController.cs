@@ -543,7 +543,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 		// 詳細頁面 (Details)
 		// ================================
 		public IActionResult Details(int id, int? page, int pageSize = 10, string? keyword = null, string? status = null)
-			{
+		{
 			var pageEntity = _db.CntPages
 				.Include(p => p.CntPageBlocks) // 撈文章區塊
 				.FirstOrDefault(p => p.PageId == id && p.Status != "9"); // ⭐ 排除已刪除
