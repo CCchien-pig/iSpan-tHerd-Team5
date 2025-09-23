@@ -1016,7 +1016,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
+		// GET:/SUP/StockBatches/OtherOperation
 		[HttpGet]
 		public IActionResult OtherOperation(string type)
 		{
@@ -1033,7 +1033,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					_ => "Unknown"
 				};
 
-				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchSalePartial.cshtml", vm);
+				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchOtherPartial.cshtml", vm);
 			}
 			catch (Exception ex)
 			{
@@ -1076,6 +1076,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 				int requestedQty = vm.ChangeQty.Value;
 
+				if (sku.StockQty < requestedQty)
+					return Json(new { success = false, message = "庫存不足，無法出庫" });
+
 				var userId = _me.Id;
 				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 				int currentUserId = user?.UserNumberId ?? 1006;
@@ -1105,7 +1108,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 			catch (Exception ex)
 			{
-				return Json(new { success = false, message = "伺服器錯誤：" + ex.Message });
+				var inner = ex.InnerException != null ? ex.InnerException.Message : "";
+				var fullMessage = $"伺服器錯誤: {ex.Message}" + (string.IsNullOrEmpty(inner) ? "" : " | Inner: " + inner);
+				return Json(new { success = false, message = fullMessage });
 			}
 		}
 
