@@ -22,12 +22,26 @@
 <div class="stockbatch-card">
     <!-- 庫存紀錄 stockBatchTable -->
     <div id="stockTableWrapper">
-        <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-        <div class="legend">
-            <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
-            <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
-            @* <span><span class="dot normal"></span> 正常</span>*@
+        <div class="d-flex align-items-center mb-2">
+            <div class="btn-group me-2">
+                <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
+                <button id="importStockBatchBtn" class="btn btn-outline-primary">匯入Excel</button>
+                <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    匯出
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
+                    <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
+                    <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
+                </ul>
+            </div>
+
+            <div class="legend">
+                <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
+                <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
+            </div>
         </div>
+
         <div class="d-flex mb-2">
             <select id="stockExpireFilter" class="form-select form-select-sm me-2">
                 <option value="">全部</option>
@@ -35,6 +49,7 @@
                 <option value="expired">已過期</option>
             </select>
         </div>
+
         <table id="stockBatchTable" class="display" style="width:100%">
             <thead>
                 <tr>
@@ -54,13 +69,28 @@
             <tbody></tbody>
         </table>
     </div>
+
     <!-- 異動紀錄 historyTable -->
     <div id="historyTableWrapper" style="display:none;">
-        <select id="historyExpireFilter" class="form-select form-select-sm mb-2">
-            <option value="">全部</option>
-            <option value="valid">未過期</option>
-            <option value="expired">已過期</option>
-        </select>
+        <div class="d-flex align-items-center mb-2">
+            <div class="btn-group me-2">
+                <button id="exportHistoryBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    匯出
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" id="exportHistoryCsv">CSV</a></li>
+                    <li><a class="dropdown-item" id="exportHistoryExcel">Excel</a></li>
+                    <li><a class="dropdown-item" id="exportHistoryPdf">PDF</a></li>
+                </ul>
+            </div>
+
+            <select id="historyExpireFilter" class="form-select form-select-sm">
+                <option value="">全部</option>
+                <option value="valid">未過期</option>
+                <option value="expired">已過期</option>
+            </select>
+        </div>
+
         <table id="historyTable" class="display" style="width:100%">
             <thead>
                 <tr>
@@ -176,19 +206,6 @@
         </div>
     </div>
 </div>
-
-<!-- 其他庫存操作 Modal -->
-<!-- 下拉選單 -->
-@* <div class="btn-group">
-    <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-        其他庫存操作
-    </button>
-    <ul class="dropdown-menu">
-        <li><a class="dropdown-item otherStockOp" data-type="Sale" href="#">銷售出庫</a></li>
-        <li><a class="dropdown-item otherStockOp" data-type="Return" href="#">退貨入庫</a></li>
-        <li><a class="dropdown-item otherStockOp" data-type="Expire" href="#">到期報廢</a></li>
-    </ul>
-</div> *@
 
 
 @section Scripts {
