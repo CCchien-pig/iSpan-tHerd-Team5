@@ -189,22 +189,7 @@
         <li><a class="dropdown-item otherStockOp" data-type="Expire" href="#">到期報廢</a></li>
     </ul>
 </div>
-<div id="stockBatchModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bg-white container">
-            <!-- Header -->
-            <div class="modal-header">
-                <h5 id="stockBatchModalTitle" class="modal-title">庫存</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
 
-            <!-- Body (AJAX 載入) -->
-            <div id="stockBatchModalContent" class="modal-body p-4">
-                <!-- 這裡會用 AJAX 載入 _StockBatchFormPartial -->
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <script>
@@ -217,26 +202,26 @@
             var productSelect = $('#ProductSelect');
             var skuSelect = $('#SkuSelect');
             var movementTypeSelect = $('#MovementTypeSelect');
+            var changeQtyInput = $('#ChangeQtyInput');
+            var changeQtyHelp = $('#ChangeQtyHelp');
 
-            // 清空下拉
+            // ---------- 初始化下拉 ----------
             brandSelect.empty().append('<option value="">請選品牌</option>');
             productSelect.empty().append('<option value="">請選商品</option>').prop('disabled', true);
             skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
             movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
+            changeQtyInput.val(1).prop('max', 0);
+            changeQtyHelp.hide();
 
-            // 取得品牌列表
+            // ---------- 取得品牌列表 ----------
             $.get('/SUP/StockBatches/GetBrands', function(brands) {
                 brands.forEach(b => {
                     brandSelect.append(`<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>${b.brandName}</option>`);
                 });
-
-                // 若是編輯模式，有指定品牌，直接觸發 change 事件載入商品
-                if(selectedBrandId) {
-                    brandSelect.trigger('change');
-                }
+                if(selectedBrandId) brandSelect.trigger('change');
             });
 
-            // 品牌 change → 載入商品
+            // ---------- 品牌 change → 載入商品 ----------
             brandSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var brandId = $(this).val();
@@ -245,379 +230,133 @@
                     skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                     return;
                 }
-
                 $.get('/SUP/StockBatches/GetProductsByBrand', { brandId: brandId }, function(products) {
                     productSelect.empty().append('<option value="">請選商品</option>');
                     products.forEach(p => {
                         productSelect.append(`<option value="${p.productId}" ${p.productId == selectedProductId ? 'selected' : ''}>${p.productName}</option>`);
                     });
                     productSelect.prop('disabled', false);
-
-                    // 若是編輯模式，有指定商品，直接觸發 change 事件載入 SKU
                     if(selectedProductId) productSelect.trigger('change');
                 });
             });
 
-            // 商品 change → 載入 SKU，並清空下階
+            // ---------- 商品 change → 載入 SKU ----------
             productSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var productId = $(this).val();
-
-                // 清空下階層
                 skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
-                resetStockInfo();
-
                 if (!productId) return;
 
                 $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
-                    skuSelect.empty().append('<option value="">請選 SKU</option>');
                     skus.forEach(sku => {
                         skuSelect.append(`<option value="${sku.skuId}" ${sku.skuId == selectedSkuId ? 'selected' : ''}>${sku.skuCode}</option>`);
                     });
                     skuSelect.prop('disabled', false);
-
-                    // 若是編輯模式，有指定 SKU，延遲觸發 change
-                    if(selectedSkuId) {
-                        setTimeout(() => skuSelect.trigger('change'), 50);
-                    }
+                    if(selectedSkuId) setTimeout(() => skuSelect.trigger('change'), 50);
                 });
             });
 
-            // SKU change → 載入 SKU 資訊
+            // ---------- SKU change → 載入 SKU 資訊 ----------
             skuSelect.off('change').on('change', function() {
                 var skuId = $(this).val();
-                console.log('[SKU Change] Selected SKU ID:', skuId);
-
-                if(!skuId) {
-                    $('#CurrentQty, #PredictedQty, #MaxStockQty, #ReorderPoint, #SafetyStockQty, #IsAllowBackorderText').text('0');
-                    $('#ChangeQtyInput').val(0).prop('max', 0);
-                    return;
-                }
+                if(!skuId) return resetStockInfo();
 
                 $.get('/SUP/StockBatches/GetSkuInfo', { skuId: skuId }, function(info) {
-                    console.log('SKU Info:', info); // 確認回傳資料
-                    var currentStock = info.currentStock || 0;
-                    var maxStock = info.maxStockQty || 0;
-
-                    $('#CurrentQty').text(currentStock);
-                    $('#PredictedQty').text(info.expectedStock);
-                    $('#MaxStockQty').text(maxStock);
-                    $('#ReorderPoint').text(info.reorderPoint);
-                    $('#SafetyStockQty').text(info.safetyStockQty);
+                    $('#CurrentQty').text(info.currentStock || 0);
+                    $('#MaxStockQty').text(info.maxStockQty || 0);
+                    $('#PredictedQty').text(info.expectedStock || 0);
+                    $('#ReorderPoint').text(info.reorderPoint || 0);
+                    $('#SafetyStockQty').text(info.safetyStockQty || 0);
                     $('#IsAllowBackorderText').text(info.isAllowBackorder ? '允許預購' : '不允許預購');
 
-                    // 根據異動類型計算可輸入上限
-                    var movementType = $('#MovementTypeSelect').val();
-                    // var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                    var isAllowBackorder = info.isAllowBackorder;
-
-                    // 判斷異動方向
-                    var movementType = $('#MovementTypeSelect').val();
-                    var isAdd;
-                    switch(movementType) {
-                        case 'Purchase':
-                            isAdd = true;
-                            break;
-                        case 'Adjust':
-                            isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                            break;
-                        case 'Sale':
-                        case 'Expire':
-                            isAdd = false; // 出庫/報廢都減少
-                            break;
-                        case 'Return':
-                            isAdd = true; // 退貨入庫增加
-                            break;
-                        default:
-                            isAdd = true;
-                    }
-
-                    console.log('[SKU Info] Is Add:', isAdd);
-
-                    // 計算異動上限
-                    var maxChange = 0;
-                    if (movementType === 'Adjust') {
-                        // 調整型 → 不限制，交給使用者
-                        maxChange = Number.MAX_SAFE_INTEGER;
-                    } else {
-                        if (isAdd) {
-                            // 入庫：不能超過最大庫存
-                            maxChange = maxStock - currentStock;
-                            if (maxChange < 0) maxChange = 0;
-                        } else {
-                            // maxChange = isAllowBackorder ? Number.MAX_SAFE_INTEGER : currentStock;
-                            // 出庫：不能超過現有庫存（所有出庫都不允許預購）
-                            maxChange = currentStock;
-                        }
-                    }
-
-                    $('#ChangeQtyInput').prop('max', maxChange);
-                    if(parseInt($('#ChangeQtyInput').val()) > maxChange){
-                        $('#ChangeQtyInput').val(maxChange);
-                    }
-
-                    // 預計庫存
-                    updatePredictedStock();
-
-                    // 預計庫存初始值
-                    var predictedStock = currentStock + (parseInt($('#ChangeQtyInput').val()) || 0);
-
-                    if (!isAllowBackorder && !isAdd && predictedStock < 0) predictedStock = 0;
-
-                    $('#PredictedQty').text(predictedStock);
-
-                    updateChangeQtyLimitAndPredicted();
+                    updateStockInfo();
                 });
             });
 
-            // 異動類型切換+/-
-            $(document).ready(function(){
-                // 取得異動類型
-                $.get('/SUP/StockBatches/GetMovementTypes', function(types) {
-                    console.log('MovementTypes:', types);
-                    movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
-                    
-                    types.forEach(t => {
-                        var selected = (t.value === (isEdit ? 'Adjust' : '')) ? 'selected' : '';
-                        movementTypeSelect.append(`<option value="${t.value}" ${selected}>${t.text}</option>`);
-                    });
+            // ---------- 取得異動類型 ----------
+            $.get('/SUP/StockBatches/GetMovementTypes', function(types) {
+                movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
+                types.forEach(t => movementTypeSelect.append(`<option value="${t.value}">${t.text}</option>`));
+                // 加入其他庫存操作
+                [{ value: 'Sale', text: '銷售出庫' }, { value: 'Return', text: '退貨入庫' }, { value: 'Expire', text: '到期報廢' }]
+                    .forEach(t => movementTypeSelect.append(`<option value="${t.value}">${t.text}</option>`));
 
-                    // 手動加這三種新類型
-                    movementTypeSelect.append('<option value="Sale">銷售出庫</option>');
-                    movementTypeSelect.append('<option value="Return">退貨入庫</option>');
-                    movementTypeSelect.append('<option value="Expire">到期報廢</option>');
-
-                    // 編輯模式固定為 Adjust
-                    if(isEdit) {
-                        movementTypeSelect.val('Adjust').prop('disabled', true);
-                        $('#AdjustOptions').show();
-                    } else {
-                        movementTypeSelect.prop('disabled', false);
-                        $('#AdjustOptions').hide();
-                    }
-
-                    // 異動庫存量欄位永遠顯示
-                    $('#ChangeQtyInput').closest('.form-floating').show();
-
-                    // 每次切換都重新計算上限與預計庫存
-                    updateChangeQtyLimitAndPredicted();
-                });
-
-                // 異動類型選擇事件
-                movementTypeSelect.on('change', function(){
-                    var newType = $(this).val();
-                    console.log('[Movement Type Change] New Type:', newType);
-                    if ($(this).val() === 'Adjust') {
-                        $('#AdjustOptions').show();
-                    } else {
-                        $('#AdjustOptions').hide();
-                    }
-
-                    // 異動類型切換時，立即刷新數量上限與預計庫存
-                        updateChangeQtyLimitAndPredicted();
-                });
-
+                if(isEdit){
+                    movementTypeSelect.val('Adjust').prop('disabled', true);
+                    $('#AdjustOptions').show();
+                } else {
+                    movementTypeSelect.prop('disabled', false);
+                    $('#AdjustOptions').hide();
+                }
+                updateStockInfo();
             });
 
-            // 綁定異動數量輸入檢查（即時修正輸入）
-            $('#ChangeQtyInput').on('input', function () {
-                let val = parseInt($(this).val()) || 0;
-
-                // 取得當前上下限
-                var currentStock = parseInt($('#CurrentQty').text()) || 0;
-                var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-                var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                var movementType = $('#MovementTypeSelect').val();
-                var maxChange = 0;
-                const min = 1; // 異動數量最小為 1
-
-                // 計算上限
-                if (movementType === 'Adjust') {
-                    maxChange = isAdd ? maxStock - currentStock : currentStock;
-                } else {
-                    // 採購入庫或其他異動類型 → 上限 = 最大庫存 - 當前庫存
-                    maxChange = maxStock - currentStock;
-                }
-                if (maxChange < 0) maxChange = 0;
-
-                // 修正輸入值
-                if (val < min) val = min;
-                if (val > maxChange) val = maxChange;
-
-                $(this).val(val);
-
-                // 同步更新預計庫存
-                updatePredictedStock();
+            // ---------- 異動類型 change ----------
+            movementTypeSelect.off('change').on('change', function() {
+                $('#AdjustOptions').toggle($(this).val() === 'Adjust');
+                updateStockInfo();
             });
 
-            // 即時更新「預計庫存」欄位
-            function updatePredictedStock() {
-                var changeQty = parseInt($('#ChangeQtyInput').val()) || 0;
-                var currentStock = parseInt($('#CurrentQty').text()) || 0;
-                var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-                var isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
-                var movementType = $('#MovementTypeSelect').val();
-                var maxChange = 0;
+            // ---------- Adjust radio change ----------
+            $(document).off('change', 'input[name="IsAdd"]').on('change', 'input[name="IsAdd"]', updateStockInfo);
 
-                // 計算異動上限
-                if (movementType === 'Adjust') {
-                    if (isAdd) {
-                        // 手動增加 → 上限 = 最大庫存 - 當前庫存
-                        maxChange = maxStock - currentStock;
-                    } else {
-                        // 手動減少 → 上限 = 當前庫存，不允許超賣
-                        maxChange = currentStock;
-                    }
-                } else {
-                    // 採購入庫或其他異動類型 → 上限 = 最大庫存 - 當前庫存
-                    maxChange = maxStock - currentStock;
-                }
-
-                if (maxChange < 0) maxChange = 0;
-
-                // 修正輸入值，不超過上限
-                if (changeQty > maxChange) {
-                    changeQty = maxChange;
-                    $('#ChangeQtyInput').val(changeQty);
-                }
-
-                // 計算預計庫存
-                var predictedStock;
-                if (movementType === 'Adjust') {
-                    predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
-                } else if (movementType === 'Sale' || movementType === 'Expire') {
-                    predictedStock = currentStock - changeQty; // 減少
-                } else {
-                    predictedStock = currentStock + changeQty; // 入庫型(Purchase / Return)
-                }
-
-                // 出庫不允許超賣，預計庫存不得為負
-                if (!isAdd && predictedStock < 0) {
-                    predictedStock = 0;
-                }
-
-                $('#PredictedQty').text(predictedStock);
-            }
-
-            // 當變動數量輸入時即時更新
-            $('#ChangeQtyInput').off('input').on('input', function () {
-                let changeQty = parseInt($(this).val()) || 0;
-
-                // 取得當前異動類型
-                var movementType = $('#MovementTypeSelect').val();
-
-                if (movementType !== 'Adjust') {
-                    // 非Adjust，一律強制為正數
-                    if (changeQty < 0) {
-                        changeQty = Math.abs(changeQty);
-                        $(this).val(changeQty);
-                    }
-                }
-
-                // 預計庫存
-                updatePredictedStock();
-            });
-
-            // 清空庫存顯示並清空異動輸入數量
-            function resetStockInfo() {
-                $('#CurrentQty, #PredictedQty, #MaxStockQty, #ReorderPoint, #SafetyStockQty, #IsAllowBackorderText')
-                    .text('0');
-                $('#ChangeQtyInput').val('').prop('max', 0);
-            }
-
-            // 當加/減 radio 改變時，即時更新預計庫存
-            $('input[name="IsAdd"]').off('change').on('change', function() {
-                var isAdd = $(this).val() === 'true';
-                console.log('[IsAdd Change] Selected:', isAdd);
-
-                var currentStock = parseInt($('#CurrentQty').text()) || 0;
-                var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-                var isAllowBackorder = $('#IsAllowBackorderText').text() === '允許預購';
-
-                var changeQtyInput = $('#ChangeQtyInput');
-                var changeQty = parseInt(changeQtyInput.val()) || 0;
-
-                if (isAdd) {
-                    // 增加時上限 = 最大庫存 - 當前庫存
-                    var maxChange = maxStock - currentStock;
-                    if (maxChange < 0) maxChange = 0;
-                    changeQtyInput.prop('max', maxChange);
-
-                    // 超過上限自動切換到上限
-                    if (changeQty > maxChange) changeQtyInput.val(maxChange);
-                } else {
-                    // 減少時上限 = 當前庫存（不可超賣）
-                    var maxChange = isAllowBackorder ? Number.MAX_SAFE_INTEGER : currentStock;
-                    changeQtyInput.prop('max', maxChange);
-
-                    // 超過上限自動切換到上限
-                    if (changeQty > maxChange) changeQtyInput.val(maxChange);
-                }
-
-                // 更新預計庫存
-                updatePredictedStock();
-
-                updateChangeQtyLimitAndPredicted();
-            });
-
-            // 異動數量直接輸入時自動修正
-            $('#ChangeQtyInput').on('input', function() {
-                let val = parseInt($(this).val());
-
-                // 如果輸入不是數字或小於 1，修正為最小值 1
-                if (isNaN(val) || val < 1) {
-                    val = 1;
-                    $(this).val(val);
-                }
-
-                // 取得上限
+            // ---------- 異動數量輸入 ----------
+            changeQtyInput.off('input').on('input', function() {
+                let val = parseInt($(this).val()) || 1;
                 const max = parseInt($(this).attr('max')) || Number.MAX_SAFE_INTEGER;
-                if (val > max) {
-                    val = max;
-                    $(this).val(val);
+                if(val < 1) val = 1;
+                if(val > max) val = max;
+                $(this).val(val);
+                updateStockInfo();
+            });
+
+            // ---------- 初始化日期 ----------
+            $('#ManufactureDate').val(new Date().toISOString().split('T')[0]);
+
+            // ---------- 工具函式 ----------
+            function resetStockInfo() {
+                $('#CurrentQty, #PredictedQty, #MaxStockQty, #ReorderPoint, #SafetyStockQty, #IsAllowBackorderText').text('0');
+                changeQtyInput.val(1).prop('max', 0);
+            }
+
+            function calcMaxAllowed(movementType, isAdd, currentStock, maxStock) {
+                if(movementType !== 'Adjust' && (movementType !== 'Sale' && movementType !== 'Expire')) isAdd = true;
+                if(isAdd){
+                    var allowed = maxStock - currentStock; if(allowed<0) allowed=0; return allowed;
+                } else {
+                    var allowed = currentStock; if(allowed<0) allowed=0; return allowed;
+                }
+            }
+
+            function updateStockInfo() {
+                var changeQty = parseInt(changeQtyInput.val()) || 1;
+                var currentStock = parseInt($('#CurrentQty').text()) || 0;
+                var maxStock = parseInt($('#MaxStockQty').text()) || 0;
+                var movementType = movementTypeSelect.val();
+                var isAdd = true;
+
+                if(movementType === 'Adjust'){
+                    isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                } else if(movementType === 'Sale' || movementType === 'Expire'){
+                    isAdd = false;
+                } else {
+                    isAdd = true;
                 }
 
-                // 更新預計庫存
-                updateChangeQtyLimitAndPredicted();
-            });
+                var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
+                changeQtyInput.prop('max', maxAllowed);
+                if(changeQty > maxAllowed) { changeQty = maxAllowed; changeQtyInput.val(changeQty); }
+                if(changeQty < 1){ changeQty = 1; changeQtyInput.val(changeQty); }
 
-            // 異動數量提示
-            $(document).ready(function() {
-                const changeQtyHelp = $('#ChangeQtyHelp'); // 異動數量提示元素
-                const movementTypeSelect = $('#MovementTypeSelect'); // 異動類型下拉選單
+                var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
+                if(!isAdd && predictedStock < 0) predictedStock = 0;
+                $('#PredictedQty').text(predictedStock);
 
-                // 初始隱藏
-                changeQtyHelp.hide();
-
-                movementTypeSelect.on('change', function() {
-                    const selectedType = $(this).val();
-
-                    if (selectedType) {
-                        // 有選擇類型才顯示提示
-                        changeQtyHelp.show();
-
-                        // 可根據選擇類型動態改提示文字
-                        if (selectedType === 'Purchase') {
-                            changeQtyHelp.text('採購入庫，異動數量上限 = 最大庫存 - 目前庫存');
-                        } else if (selectedType === 'Adjust') {
-                            changeQtyHelp.text('手動調整，可選增加或減少');
-                        } else {
-                            changeQtyHelp.text('異動數量提示');
-                        }
-                    } else {
-                        changeQtyHelp.hide();
-                    }
-                });
-            });
-
-
-            // 異動日期預設今天
-            $(document).ready(function() {
-                var today = new Date().toISOString().split('T')[0]; // yyyy-MM-dd
-                $('#ManufactureDate').val(today);
-            });
+                changeQtyHelp.show();
+                changeQtyHelp.text('異動數量上限: '+maxAllowed+(isAdd?'（可增加）':'（可減少）'));
+            }
         }
-
+        
         // 初始化庫存 DataTable 與按鈕事件
         $(document).ready(function () {
 
@@ -1119,28 +858,37 @@
 
 
             // 綁定「其他庫存操作」選單事件
-            $(document).on('click', '.otherStockOp', function (e) {
-                e.preventDefault();
+            // $(document).on('click', '.otherStockOp', function (e) {
+            //     e.preventDefault();
 
-                var type = $(this).data('type');
+            //     var type = $(this).data('type'); Sale / Return / Expire
+            //     console.log('[OtherStockOp] 選擇異動類型:', type);
 
-                $.get('/SUP/StockBatches/OtherOperation', { type: type }, function (html) {
-                    let titleMap = {
-                        "Sale": "銷售出庫",
-                        "Return": "退貨入庫",
-                        "Expire": "到期報廢"
-                    };
+            //     $.get('/SUP/StockBatches/OtherOperation', { type: type }, function (html) {
+            //         let titleMap = {
+            //             "Sale": "銷售出庫",
+            //             "Return": "退貨入庫",
+            //             "Expire": "到期報廢"
+            //         };
 
-                    $('#stockBatchModalTitle').text("其他庫存操作 - " + (titleMap[type] || ""));
-                    $('#stockBatchModalContent').html(html);
-                    $('#stockBatchModal').modal('show');
-                });
-            });
+            //         $('#stockBatchModalTitle').text("其他庫存操作 - " + (titleMap[type] || ""));
+            //         $('#stockBatchModalContent').html(html);
+            //         確保 hidden input MovementType 有值
+            //         $('#OtherSelectedMovementType').val(type);
+
+            //         初始化表單 (帶入指定異動類型)
+            //         initStockBatchForm(null, null, null, { movementType: type });
+
+            //         $('#stockBatchModal').modal('show');
+            //     });
+            // });
+
 
 
 
 
             // ===== 點擊 submit =====
+            
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
             .on('submit', '#stockBatchForm', function (e) {
@@ -1265,45 +1013,54 @@
             }
         }
 
-
         // 計算上限
         function calcMaxAllowed(movementType, isAdd, currentStock, maxStock) {
-            // 非 Adjust 當作增加
-            if (movementType !== 'Adjust') {
-                isAdd = true;
-            }
-
-            if (isAdd) {
-                var allowed = (maxStock - currentStock);
-                if (allowed < 0) allowed = 0;
-                return allowed;
-            } else {
-                var allowed = currentStock;
-                if (allowed < 0) allowed = 0;
-                return allowed;
+            switch (movementType) {
+                case 'Adjust':
+                    // 調整型，使用 isAdd 判斷
+                    return isAdd ? Math.max(maxStock - currentStock, 0) : Math.max(currentStock, 0);
+                case 'Sale':
+                case 'Expire':
+                    // 出庫 / 報廢 → 最大不可超過現有庫存
+                    return Math.max(currentStock, 0);
+                case 'Return':
+                case 'Purchase':
+                    // 入庫 → 最大不可超過最大庫存
+                    return Math.max(maxStock - currentStock, 0);
+                default:
+                    // 預設當作入庫
+                    return Math.max(maxStock - currentStock, 0);
             }
         }
 
+
         // 更新 input 的 max 與 helper，並自動修正輸入值
         function updateChangeQtyLimitAndPredicted() {
+            // 取得當前庫存與最大庫存
             var currentStock = parseInt($('#CurrentQty').text()) || 0;
             var maxStock = parseInt($('#MaxStockQty').text()) || 0;
             console.log('[UpdateStock] CurrentQty:', currentStock, 'MaxStockQty:', maxStock);
 
             var movementType = $('#MovementTypeSelect').val() || '';
-            var isAdd = true;
-            console.log('[UpdateStock] movementType:', movementType, 'isAdd:', isAdd);
+            var isAdd = true; // 預設為增加
+            console.log('[UpdateStock] movementType:', movementType, 'isAdd (預設):', isAdd);
 
 
-            // 只有 "手動調整" 才用 radio 判斷
+            // 判斷異動方向
             if (movementType === 'Adjust') {
-                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';
+                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';  // 手動調整需要用 radio 判斷
+            } else if (movementType === 'Sale' || movementType === 'Expire') {
+                isAdd = false; // 出庫 / 報廢
+            } else if (movementType === 'Return' || movementType === 'Purchase') {
+                isAdd = true;  // 入庫
             }
+            console.log('isAdd:', isAdd);
 
             console.log('currentStock:', $('#CurrentQty').text(), '=>', currentStock);
             console.log('maxStock:', $('#MaxStockQty').text(), '=>', maxStock);
             console.log('movementType:', movementType, 'isAdd:', isAdd);
 
+            // 計算最大可輸入數量
             var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
             console.log('[UpdateStock] maxAllowed:', maxAllowed);
 
@@ -1328,17 +1085,23 @@
                 curVal = 1;
             }
 
-            // 更新預計庫存顯示
+            // 計算預計庫存
             var predicted;
             if (movementType === 'Adjust') {
                 predicted = isAdd ? currentStock + curVal : currentStock - curVal;
+            } else if (movementType === 'Sale' || movementType === 'Expire') {
+                predicted = currentStock - curVal;
             } else {
-                // 其他類型視為增加（例如 Purchase）
-                predicted = currentStock + curVal;
+                predicted = currentStock + curVal; // Purchase / Return
             }
+            console.log('[UpdateStock] predicted:', predicted);
+
             // 非允許預購暫不實作 -> 如低於0則顯示 0
             if (predicted < 0) predicted = 0;
             $('#PredictedQty').text(predicted);
+            
+            // 更新 helper
+            $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
         }
 
 
