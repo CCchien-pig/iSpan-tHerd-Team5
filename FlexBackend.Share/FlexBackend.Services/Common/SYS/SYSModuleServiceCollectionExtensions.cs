@@ -9,10 +9,11 @@ namespace FlexBackend.Services.PROD
         public static IServiceCollection AddSYSModule(this IServiceCollection services)
         {
             // 註冊 Service
-            //services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<ISysAssetFileService, SysAssetFileService>();
 
             // 註冊 Repository (實作在 Infra)
             services.AddScoped<ISysProgramConfigRepository, SysProgramConfigRepository>();
+            services.AddScoped<ISysAssetFileRepository, SysAssetFileRepository>();
 
             return services;
         }
