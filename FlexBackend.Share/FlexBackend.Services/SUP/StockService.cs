@@ -40,6 +40,7 @@ namespace FlexBackend.Services.SUP
 			int? orderItemId = null // 銷售/退貨要傳訂單明細編號
 		)
 		{
+
 			var result = new StockAdjustResultDto
 			{
 				SkuId = skuId,

@@ -75,7 +75,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								sb.Qty,
 								sku.SafetyStockQty,
 								sku.ReorderPoint,
-								sb.IsSellable,
+								//sb.IsSellable,
+								p.IsPublished,
 
 								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
 								RevisedDate=sb.RevisedDate,
@@ -1057,6 +1058,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		{
 			try
 			{
+
 				if (!ModelState.IsValid)
 				{
 					var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
@@ -1092,8 +1094,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					movementType: "Sale",
 					reviserId: currentUserId,
 					remark: vm.Remark,
-					orderItemId: vm.OrderItemId
+					//orderItemId: vm.OrderItemId
+					orderItemId: 2521  // TODO:目前寫死對應訂單明細
+
 				);
+				//var result = await _stockService.AdjustStockAsync(
+				//	batchId: 9131,      // 指定已存在的批號
+				//	skuId: 1084,
+				//	changeQty: 1,
+				//	isAdd: false,
+				//	movementType: "Sale",
+				//	reviserId: 1004,
+				//	remark: null,
+				//	orderItemId: 2521  // 對應訂單明細
+				//);
+
 
 				if (!result.Success)
 					return Json(new { success = false, message = result.Message });
@@ -1159,7 +1174,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					movementType: "Return",
 					reviserId: currentUserId,
 					remark: vm.Remark,
-					orderItemId: vm.OrderItemId
+					//orderItemId: vm.OrderItemId
+					orderItemId: 2521  // TODO:目前寫死對應訂單明細
 				);
 
 				if (!result.Success)

@@ -179,7 +179,7 @@
 
 <!-- 其他庫存操作 Modal -->
 <!-- 下拉選單 -->
-<div class="btn-group">
+@* <div class="btn-group">
     <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
         其他庫存操作
     </button>
@@ -188,7 +188,7 @@
         <li><a class="dropdown-item otherStockOp" data-type="Return" href="#">退貨入庫</a></li>
         <li><a class="dropdown-item otherStockOp" data-type="Expire" href="#">到期報廢</a></li>
     </ul>
-</div>
+</div> *@
 
 
 @section Scripts {
@@ -918,9 +918,21 @@
                 formData.set('IsAdd', isAdd);
                 console.log("異動類型:", movementType, "加減選擇:", isAdd ? "增加" : "減少");
 
+                // 根據異動類型動態決定 URL
+                let url;
+                switch (movementType) {
+                    case 'Sale':
+                        url = '/SUP/StockBatches/SaleStock';
+                        break;
+                    case 'Return':
+                        url = '/SUP/StockBatches/ReturnStock';
+                        break;
+                    default:
+                        url = form.attr('action'); // Adjust 或其他共用
+                }
 
                 $.ajax({
-                    url: form.attr('action'),
+                    url: url,
                     type: 'POST',
                     data: formData,
                     processData: false,
@@ -931,29 +943,11 @@
                     success: function (res) {
                         console.log("後端回傳完整資料:", res);
 
-                        // 避免 batchMovements 為 undefined
-                        var batchMovements = res.batchMovements || [];
-                        console.log("batchMovements:", batchMovements);
-
                         if (res.success) {
                             $('#stockBatchModal').modal('hide');
-
-                            Swal.fire({
-                                position: 'center',
-                                icon: 'success',
-                                title: res.message || '操作成功',
-                                showConfirmButton: false,
-                                timer: 1200
-                            });
-
-                            // 更新 DataTable
+                            Swal.fire({ position: 'center', icon: 'success', title: res.message || '操作成功', showConfirmButton: false, timer: 1200 });
                             stockBatchTable.ajax.reload(null, true);
-
-                            if (batchMovements.length > 0) {
-                                showbatchMovements(batchMovements);
-                                console.log("有異動紀錄:", batchMovements);
-                            }
-
+                            if (res.batchMovements?.length > 0) showbatchMovements(res.batchMovements);
                         } else {
                             Swal.fire('操作失敗', res.message || '資料格式錯誤', 'error');
                         }
@@ -964,7 +958,6 @@
                     }
                 });
             });
-
         });
 
         // 異動後浮現批次明細表格
