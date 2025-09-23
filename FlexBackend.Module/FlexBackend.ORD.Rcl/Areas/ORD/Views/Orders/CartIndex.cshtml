@@ -1,0 +1,59 @@
+﻿@model List<FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.CartItemVM>
+
+@{
+    ViewData["Title"] = "購物車";
+    decimal total = Model.Sum(i => i.UnitPrice * i.Qty);
+}
+
+<h2>購物車</h2>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">購物車目前沒有商品。</div>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>商品名稱</th>
+                <th>規格</th>
+                <th>單價</th>
+                <th>數量</th>
+                <th>小計</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ProductName</td>
+                    <td>@item.SpecCode</td>
+                    <td>@item.UnitPrice</td>
+                    <td>@item.Qty</td>
+                    <td>@(item.UnitPrice* item.Qty)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="text-end">
+        <h4>總金額：@total 元</h4>
+        <button class="btn btn-primary" id="btnCheckout">結帳</button>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $("#btnCheckout").on("click", function () {
+            $.post("/ORD/Orders/CheckoutFromCart", { userNumberId: 1001 }, function (res) {
+                if (res.success) {
+                    Swal.fire("下單成功", "訂單編號：" + res.orderNo, "success");
+                    setTimeout(function () { location.reload(); }, 2000);
+                } else {
+                    Swal.fire("失敗", res.message, "error");
+                }
+            });
+        });
+    </script>
+}

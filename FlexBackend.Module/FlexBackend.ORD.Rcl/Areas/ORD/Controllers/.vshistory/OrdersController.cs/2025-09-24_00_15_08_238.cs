@@ -11,16 +11,14 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 	public class OrdersController : Controller
 	{
 		private readonly tHerdDBContext _db;
-        private readonly IStockService _stockService;
 
-        public OrdersController(tHerdDBContext db, IStockService stockService)
-        {
-            _db = db;
-            _stockService = stockService;
-        }
+		public OrdersController(tHerdDBContext db)
+		{
+			_db = db;
+		}
 
-        // GET: /ORD/Orders
-        public async Task<IActionResult> Index(
+		// GET: /ORD/Orders
+		public async Task<IActionResult> Index(
 			string? Keyword,
 			string? OrderStatusId,
 			string? PaymentStatus,
@@ -540,5 +538,17 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 				.Where(c => c.ModuleId == ModuleId && codeIds.Contains(c.CodeId) && c.IsActive)
 				.ToListAsync();
 		}
+
+        // ======================
+        // 建構子注入(IStockService)
+        // ======================
+        private readonly IStockService _stockService;
+
+        public OrdersController(tHerdDBContext db, IStockService stockService)
+        {
+            _db = db;
+            _stockService = stockService;
+        }
+
     }
 }

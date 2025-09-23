@@ -1,5 +1,4 @@
-﻿using FlexBackend.Core.Interfaces.SUP;
-using FlexBackend.Infra.Models;
+﻿using FlexBackend.Infra.Models;
 using FlexBackend.ORD.Rcl.Areas.ORD.ViewModels;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -11,16 +10,14 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 	public class OrdersController : Controller
 	{
 		private readonly tHerdDBContext _db;
-        private readonly IStockService _stockService;
 
-        public OrdersController(tHerdDBContext db, IStockService stockService)
-        {
-            _db = db;
-            _stockService = stockService;
-        }
+		public OrdersController(tHerdDBContext db)
+		{
+			_db = db;
+		}
 
-        // GET: /ORD/Orders
-        public async Task<IActionResult> Index(
+		// GET: /ORD/Orders
+		public async Task<IActionResult> Index(
 			string? Keyword,
 			string? OrderStatusId,
 			string? PaymentStatus,
@@ -355,6 +352,50 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
+
+
+        //      // ======================
+        //      // 批量更新訂單狀態
+        //      // ======================
+        //      [HttpPost]
+        //public async Task<IActionResult> BulkUpdateOrders(
+        //[FromForm] List<int> orderIds,
+        //[FromForm] string? shippingStatusId,
+        //[FromForm] string? orderStatusId)
+        //{
+        //	if (orderIds == null || !orderIds.Any())
+        //		return Json(new { success = false, message = "沒有選擇訂單" });
+
+        //	try
+        //	{
+        //		var orders = await _db.OrdOrders
+        //			.Where(o => orderIds.Contains(o.OrderId))
+        //			.ToListAsync();
+
+        //		if (!orders.Any())
+        //			return Json(new { success = false, message = "找不到訂單" });
+
+        //		foreach (var order in orders)
+        //		{
+        //			if (!string.IsNullOrEmpty(shippingStatusId))
+        //				order.ShippingStatusId = shippingStatusId;
+
+        //			if (!string.IsNullOrEmpty(orderStatusId))
+        //				order.OrderStatusId = orderStatusId;
+
+        //			order.RevisedDate = DateTime.Now;
+        //		}
+
+        //		await _db.SaveChangesAsync();
+        //		return Json(new { success = true });
+        //	}
+        //	catch (Exception ex)
+        //	{
+        //		return Json(new { success = false, message = ex.Message });
+        //	}
+        //}
+
+
         // ======================
         // 批量列印出貨單
         // ======================
@@ -416,102 +457,6 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             return Json(new { success = true, visible });
         }
 
-        // ======================
-        // 購物車頁面
-        // ======================
-        [HttpGet]
-        public async Task<IActionResult> CartIndex(int userNumberId = 1001)
-        {
-            var cart = await _db.OrdShoppingCarts
-                .Include(c => c.OrdShoppingCartItems)
-                    .ThenInclude(i => i.Product)
-                .FirstOrDefaultAsync(c => c.UserNumberId == userNumberId);
-
-            if (cart == null || !cart.OrdShoppingCartItems.Any())
-            {
-                return View(new List<CartItemVM>());
-            }
-
-            var items = cart.OrdShoppingCartItems.Select(i => new CartItemVM
-            {
-                ProductId = i.ProductId,
-                ProductName = i.Product?.ProductName ?? "",
-                Qty = i.Qty,
-                UnitPrice = i.UnitPrice,
-                Subtotal = i.UnitPrice * i.Qty
-            }).ToList();
-
-            return View(items);
-        }
-
-
-
-        // ======================
-        // 購物車結帳Action
-        // ======================
-
-        [HttpPost]
-        public async Task<IActionResult> CheckoutFromCart(int userNumberId = 1001)
-        {
-            // 1. 取得購物車
-            var cart = await _db.OrdShoppingCarts
-                .Include(c => c.OrdShoppingCartItems)
-                .FirstOrDefaultAsync(c => c.UserNumberId == userNumberId);
-
-            if (cart == null || !cart.OrdShoppingCartItems.Any())
-            {
-                return Json(new { success = false, message = "購物車是空的" });
-            }
-
-            // 2. 建立訂單主檔
-            var order = new OrdOrder
-            {
-                UserNumberId = userNumberId,
-                CreatedDate = DateTime.Now,
-
-                // 狀態預設
-                OrderStatusId = "pending",      // → 對應 SysCode (ORD/07 待成立)
-                PaymentStatus = "pending",      // → 對應 SysCode (ORD/04 待授權)
-                ShippingStatusId = "picking",   // → 對應 SysCode (ORD/05 揀貨中)
-
-                // 金額欄位
-                Subtotal = cart.OrdShoppingCartItems.Sum(i => i.UnitPrice * i.Qty),
-                DiscountTotal = 0,   // 可依需求從 Coupon 算
-                ShippingFee = 0,     // 先給 0，之後再計算運費
-
-                ReceiverName = "測試收件人",
-                ReceiverPhone = "0900-000-000",
-                ReceiverAddress = "測試地址",
-
-                HasShippingLabel = false,
-                IsVisibleToMember = true
-            };
-
-            // 3. 建立訂單明細
-            order.OrdOrderItems = cart.OrdShoppingCartItems.Select(i => new OrdOrderItem
-            {
-                ProductId = i.ProductId,
-                SkuId = 0,
-                UnitPrice = i.UnitPrice,
-                Qty = i.Qty
-            }).ToList();
-
-            // 4. 儲存到 DB
-            _db.OrdOrders.Add(order);
-
-            // 清空購物車
-            _db.OrdShoppingCartItems.RemoveRange(cart.OrdShoppingCartItems);
-            _db.OrdShoppingCarts.Remove(cart);
-
-            await _db.SaveChangesAsync();
-
-            // 5. 回傳成功訊息
-            return Json(new { success = true, orderId = order.OrderId });
-        }
-
-
-
-
 
 
         // 讀取 sysCode 的描述
@@ -533,12 +478,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
 				.ToList();
 		}
 
-        // 撈系統代碼
-        private async Task<List<SysCode>> GetsysStatuses(string ModuleId, List<string> codeIds)
+		private async Task<List<SysCode>> GetsysStatuses(string ModuleId, List<string> codeIds)
 		{
 			return await _db.SysCodes
 				.Where(c => c.ModuleId == ModuleId && codeIds.Contains(c.CodeId) && c.IsActive)
 				.ToListAsync();
 		}
-    }
+	}
 }
