@@ -1,0 +1,28 @@
+﻿@model List<FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.CartItemVM>
+
+<h2>CartTest 測試購物車</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>商品</th>
+            <th>數量</th>
+            <th>單價</th>
+            <th>小計</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var i in Model)
+        {
+            <tr>
+                <td>@i.ProductName</td>
+                <td>@i.Qty</td>
+                <td>@i.UnitPrice</td>
+                <td>@(i.Qty* i.UnitPrice)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<form asp-action="Checkout" method="post">
+    <button type="submit" class="btn btn-primary">模擬結帳</button>
+</form>
