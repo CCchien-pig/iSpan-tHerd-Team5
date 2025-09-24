@@ -16,21 +16,22 @@ namespace FlexBackend.Core.Interfaces.SUP
 			bool isAdd,           // 是否增加 (手動調整專用)
 			string movementType,  // 異動類型: "Purchase", "Adjust", "Order", etc.
 			int reviserId,
-			string remark);
+			string remark,
+			int? orderItemId = null);
 
 
 
-		Task<StockAdjustResultDto> ReturnStockAsync(
-			int skuId,
-			int changeQty,
-			List<int> batchIds,
-			int reviserId = 0,
-			string remark = null);
+		//Task<StockAdjustResultDto> ReturnStockAsync(
+		//	int skuId,
+		//	int changeQty,
+		//	List<int> batchIds,
+		//	int reviserId = 0,
+		//	string remark = null);
 
 
-		Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(
-			int skuId, 
-			bool forDecrease);
+		//Task<List<SupStockBatchDto>> GetBatchesBySkuAsync(
+		//	int skuId, 
+		//	bool forDecrease);
 	}
 }
 

@@ -66,6 +66,9 @@ namespace FlexBackend.Services.SUP
 				.FirstOrDefaultAsync();
 		}
 
+		/// <summary>
+		/// 單筆手動調整
+		/// </summary>
 		public async Task<SupStockMovementDto> SaveStockMovementAsync(SupStockMovementDto dto)
 		{
 			if (dto == null)
