@@ -367,3 +367,46 @@ button.dt-paging-button.current:not(:disabled):hover {
 .stock-edit-adjustOptions label {
     margin-bottom: 0; /* 移除底部空隙 */
 }
+
+
+
+/* 讓中間邊框以左邊按鈕為主 */
+.btn-group .btn + .btn {
+    margin-left: -1px; /* 保持邊框連續 */
+}
+
+/* 調整匯入與匯出中間線顏色 */
+#exportStockBatchBtn {
+    border-left-color: #0d6efd; /* 匯入按鈕的藍色 */
+}
+
+/* 指定匯出按鈕紫色 */
+#exportStockBatchBtn,
+#exportHistoryBtn {
+    border-color: #a349a4 !important;
+    color: #a349a4 !important;
+    background-color: transparent !important;
+}
+
+    /* Hover / focus */
+    #exportStockBatchBtn:hover,
+    #exportStockBatchBtn:focus,
+    #exportHistoryBtn:hover,
+    #exportHistoryBtn:focus {
+        border-color: #a349a4 !important;
+        color: #fff !important;
+        background-color: #a349a4 !important;
+    }
+
+    /* 點擊 / active / show (下拉展開) */
+    #exportStockBatchBtn:active,
+    #exportStockBatchBtn.active,
+    #exportStockBatchBtn.show,
+    #exportHistoryBtn:active,
+    #exportHistoryBtn.active,
+    #exportHistoryBtn.show {
+        border-color: #a349a4 !important;
+        color: #fff !important;
+        background-color: #a349a4 !important;
+        box-shadow: none;
+    }

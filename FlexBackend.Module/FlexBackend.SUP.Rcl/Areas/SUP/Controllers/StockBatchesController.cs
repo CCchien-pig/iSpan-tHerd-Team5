@@ -4,9 +4,17 @@ using FlexBackend.Core.DTOs.USER;
 using FlexBackend.Core.Interfaces.SUP;
 using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
+using iText.IO.Font;
+using iText.IO.Font.Constants;
+using iText.Kernel.Font;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using SupStockBatch = FlexBackend.Infra.Models.SupStockBatch;
 using SupStockHistory = FlexBackend.Infra.Models.SupStockHistory;
@@ -43,9 +51,13 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return View();
 		}
 
-		// POST: StockBatches/IndexJson
-		[HttpPost]
-		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+		// POST: /SUP/StockBatches/IndexJson
+		[HttpPost("SUP/StockBatches/IndexJson")]
+		public async Task<IActionResult> IndexJson(
+			[FromForm] string supplierId = null,
+			[FromForm] string expireFilter = null,
+			[FromForm] string startDate = null,
+			[FromForm] string endDate = null)
 		{
 			try
 			{
@@ -79,7 +91,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								p.IsPublished,
 
 								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
-								RevisedDate=sb.RevisedDate,
+								RevisedDate = sb.RevisedDate,
 								// 非 null 排序欄位
 								SortDate = sb.RevisedDate ?? sb.CreatedDate,
 
@@ -100,8 +112,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								// 後端 BatchStockStatus
 								//BatchStockStatus = sku.StockQty < sku.SafetyStockQty ? "danger" :
 								//   (sku.StockQty >= sku.SafetyStockQty && sku.StockQty < sku.ReorderPoint ? "low" : "normal"),
-
-
 
 								// 規格陣列 群組 + 規格選項
 								Specifications = sb.Sku.SpecificationOptions
@@ -136,6 +146,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					}
 				}
 
+				// 建立日期篩選
+				if (DateTime.TryParse(startDate, out var sDate))
+				{
+					query = query.Where(x => x.CreatedDate != null && x.CreatedDate >= sDate);
+				}
+				if (DateTime.TryParse(endDate, out var eDate))
+				{
+					// 包含當天整天
+					var endOfDay = eDate.AddDays(1);
+					query = query.Where(x => x.CreatedDate != null && x.CreatedDate < endOfDay);
+				}
 
 				// 搜尋功能
 				if (!string.IsNullOrEmpty(searchValue))
@@ -568,8 +589,13 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#endregion
 
-		[HttpPost]
-		public async Task<IActionResult> GetAllStockHistory([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+		// POST： /SUP/StockBatches/GetAllStockHistory
+		[HttpPost("SUP/StockBatches/GetAllStockHistory")]
+		public async Task<IActionResult> GetAllStockHistory(
+			[FromForm] string supplierId = null,
+			[FromForm] string expireFilter = null,
+			[FromForm] string startDate = null,
+			[FromForm] string endDate = null)
 		{
 			// 1. DataTables 參數
 			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
@@ -617,6 +643,18 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
 				else if (expireFilter == "expired")
 					query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+			}
+
+			// RevisedDate 篩選
+			if (DateTime.TryParse(startDate, out var sDate))
+			{
+				query = query.Where(x => x.RevisedDate >= sDate);
+			}
+			if (DateTime.TryParse(endDate, out var eDate))
+			{
+				// 包含當天整天
+				var endOfDay = eDate.AddDays(1);
+				query = query.Where(x => x.RevisedDate < endOfDay);
 			}
 
 			// 5. 搜尋
@@ -863,6 +901,248 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return _context.SupStockBatches.Any(e => e.StockBatchId == id);
 		}
 
+		// 匯出
+		[HttpGet]
+		public async Task<IActionResult> ExportStockFiltered(
+			string searchValue = null,
+			string startDate = null,
+			string endDate = null,
+			string expireFilter = null,
+			string type = "csv")
+		{
+			var query = from sb in _context.SupStockBatches
+						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+						join b in _context.SupBrands on p.BrandId equals b.BrandId
+						select new
+						{
+							sb.StockBatchId,
+							SKU = sku.SkuCode,
+							sb.BatchNumber,
+							ProductName = p.ProductName,
+							BrandName = b.BrandName,
+							BrandCode = b.BrandCode,
+							sb.Qty,
+							sb.ExpireDate,
+							sb.ManufactureDate,
+							sb.CreatedDate
+						};
+
+			var today = DateTime.Today;
+
+			// 到期日篩選
+			if (!string.IsNullOrEmpty(expireFilter))
+			{
+				switch (expireFilter)
+				{
+					case "valid":
+						query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+						break;
+					case "expired":
+						query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+						break;
+				}
+			}
+
+			// 建立日期篩選
+			if (DateTime.TryParse(startDate, out var sDate))
+				query = query.Where(x => x.CreatedDate != null && x.CreatedDate >= sDate);
+
+			if (DateTime.TryParse(endDate, out var eDate))
+			{
+				var endOfDay = eDate.AddDays(1);
+				query = query.Where(x => x.CreatedDate != null && x.CreatedDate < endOfDay);
+			}
+
+			// 全局搜尋
+			if (!string.IsNullOrEmpty(searchValue))
+			{
+				query = query.Where(s =>
+					EF.Functions.Like(s.SKU, $"%{searchValue}%") ||
+					EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
+					EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
+					EF.Functions.Like(s.BrandName, $"%{searchValue}%") ||
+					EF.Functions.Like(s.BrandCode, $"%{searchValue}%")
+				);
+			}
+
+			var data = await query.ToListAsync();
+
+			return type.ToLower() switch
+			{
+				"csv" => ExportCsv(data),
+				"excel" => ExportExcel(data),
+				"pdf" => await ExportPdf(searchValue, startDate, endDate, expireFilter), // 傳搜尋與篩選條件
+				_ => BadRequest("未知匯出類型")
+			};
+		}
+
+
+		#region 匯出API (CSV/Excel/PDF)
+		private IActionResult ExportCsv(IEnumerable<object> data)
+		{
+			var sb = new StringBuilder();
+			using (var writer = new StringWriter(sb))
+			using (var csv = new CsvHelper.CsvWriter(writer, CultureInfo.InvariantCulture))
+				csv.WriteRecords(data);
+			// UTF8 + BOM
+			var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+			return File(bytes, "text/csv", "StockBatch.csv");
+		}
+
+		private IActionResult ExportExcel(IEnumerable<object> data)
+		{
+			using var workbook = new ClosedXML.Excel.XLWorkbook();
+			var ws = workbook.Worksheets.Add("StockBatch");
+			ws.Cell(1, 1).InsertTable(data);
+			using var ms = new MemoryStream();
+			workbook.SaveAs(ms);
+			return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "StockBatch.xlsx");
+		}
+
+		private PdfFont GetChineseFont()
+		{
+			string[] fontPaths = new[]
+			{
+			@"C:\Windows\Fonts\msjhlui.ttc,0",
+			@"C:\Windows\Fonts\msjh.ttc,0",
+			@"C:\Windows\Fonts\msjh.ttf"
+		};
+
+			foreach (var path in fontPaths)
+			{
+				try
+				{
+					return PdfFontFactory.CreateFont(path, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED);
+				}
+				catch
+				{
+					// 無法載入就繼續下一個
+				}
+			}
+
+			// 都失敗時用預設字型
+			return PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+		}
+		private async Task<IActionResult> ExportPdf(string searchValue, string startDate, string endDate, string expireFilter)
+		{
+			// 1️ 取得資料，套用 DataTables 篩選
+			var query = from sb in _context.SupStockBatches
+						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+						join b in _context.SupBrands on p.BrandId equals b.BrandId
+						select new
+						{
+							sb.StockBatchId,
+							sku.SkuCode,
+							sb.BatchNumber,
+							p.ProductName,
+							b.BrandName,
+							sb.ExpireDate,
+							sb.Qty,
+							sb.CreatedDate
+						};
+
+			var today = DateTime.Today;
+
+			if (!string.IsNullOrEmpty(expireFilter))
+			{
+				switch (expireFilter)
+				{
+					case "valid":
+						query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+						break;
+					case "expired":
+						query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+						break;
+				}
+			}
+
+			if (DateTime.TryParse(startDate, out var sDate))
+				query = query.Where(x => x.CreatedDate >= sDate);
+
+			if (DateTime.TryParse(endDate, out var eDate))
+			{
+				var endOfDay = eDate.AddDays(1);
+				query = query.Where(x => x.CreatedDate < endOfDay);
+			}
+
+			if (!string.IsNullOrEmpty(searchValue))
+			{
+				query = query.Where(x =>
+					EF.Functions.Like(x.SkuCode, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BatchNumber, $"%{searchValue}%") ||
+					EF.Functions.Like(x.ProductName, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BrandName, $"%{searchValue}%")
+				);
+			}
+
+			var data = await query
+				.Select(x => new
+				{
+					x.SkuCode,
+					x.BatchNumber,
+					x.BrandName,
+					x.ProductName,
+					x.ExpireDate,
+					x.Qty
+				})
+				.ToListAsync();
+
+			// 2️ 匯出 PDF
+			if (!data.Any())
+				return Content("No data to export");
+
+			// 建立 PDF
+			using var ms = new MemoryStream();
+			var writer = new PdfWriter(ms);
+			var pdf = new PdfDocument(writer);
+
+			// 設為橫向
+			var doc = new Document(pdf, iText.Kernel.Geom.PageSize.A4.Rotate());
+			var font = GetChineseFont();
+
+			// 指定欄位順序與名稱
+			var columns = new[]
+			{
+				new { Title = "SKU", Func = (Func<dynamic, string>)(x => x.SkuCode) },
+				new { Title = "批號", Func = (Func<dynamic, string>)(x => x.BatchNumber) },
+				new { Title = "品牌名", Func = (Func<dynamic, string>)(x => x.BrandName) },
+				new { Title = "商品名稱", Func = (Func<dynamic, string>)(x => x.ProductName) },
+				new { Title = "到期日", Func = (Func<dynamic, string>)(x => x.ExpireDate.HasValue ? x.ExpireDate.Value.ToString("yyyy-MM-dd") : "無") },
+				new { Title = "批次庫存量", Func = (Func<dynamic, string>)(x => x.Qty.ToString()) }
+			};
+
+			var table = new Table(columns.Length).UseAllAvailableWidth();
+
+			// 表頭
+			foreach (var col in columns)
+			{
+				table.AddHeaderCell(new Cell().Add(new Paragraph(col.Title).SetFont(font).SetFontSize(10)));
+			}
+
+			// 資料列
+			foreach (var row in data)
+			{
+				if (row == null) continue;
+
+				table.AddCell(new Cell().Add(new Paragraph(row.SkuCode ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new Cell().Add(new Paragraph(row.BatchNumber ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new Cell().Add(new Paragraph(row.BrandName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new Cell().Add(new Paragraph(row.ProductName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new Cell().Add(new Paragraph(row.ExpireDate?.ToString("yyyy-MM-dd") ?? "無").SetFont(font).SetFontSize(10)));
+				table.AddCell(new Cell().Add(new Paragraph(row.Qty.ToString()).SetFont(font).SetFontSize(10)));
+			}
+
+
+			doc.Add(table);
+			doc.Close();
+
+			return File(ms.ToArray(), "application/pdf", "StockBatch.pdf");
+		}
+
+		#endregion
+
 		#region 初始化所有 SKU 批號
 		[HttpPost]
 		[ValidateAntiForgeryToken]
@@ -952,8 +1232,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 		#endregion
 
-
-
 		/// <summary>
 		/// 到期報廢 (Expire)，自動 FIFO 扣庫
 		/// 不指定批號，AdjustStockAsync 會自動按 FIFO 扣庫
@@ -1014,31 +1292,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			catch (Exception ex)
 			{
 				return Json(new { success = false, message = "伺服器錯誤：" + ex.Message });
-			}
-		}
-
-		// GET:/SUP/StockBatches/OtherOperation
-		[HttpGet]
-		public IActionResult OtherOperation(string type)
-		{
-			try
-			{
-				var vm = new StockBatchContactViewModel();
-
-				// 判斷類型，給 PartialView 用
-				ViewBag.FormAction = type switch
-				{
-					"Sale" => "Sale",
-					"Return" => "Return",
-					"Expire" => "Expire",
-					_ => "Unknown"
-				};
-
-				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchOtherPartial.cshtml", vm);
-			}
-			catch (Exception ex)
-			{
-				return Content("錯誤：" + ex.Message);
 			}
 		}
 
