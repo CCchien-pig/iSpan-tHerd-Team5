@@ -163,10 +163,19 @@
 
     <script>
                 function formatDateTimeLocal(dt) {
-            if (!dt) return "";
-            const d = new Date(dt);
-            if (isNaN(d)) return "";
-            return d.toISOString().slice(0,16); // yyyy-MM-ddTHH:mm
+            // if (!dt) return "";
+            // const d = new Date(dt);
+            // if (isNaN(d)) return "";
+            // return d.toISOString().slice(0,16); yyyy-MM-ddTHH:mm
+                  if (!dt) return "";
+        const d = new Date(dt);
+        if (isNaN(d)) return "";
+        const yyyy = d.getFullYear();
+        const MM = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");     // 本地小時
+        const mm = String(d.getMinutes()).padStart(2, "0");   // 本地分鐘
+        return `${yyyy}-${MM}-${dd}T${hh}:${mm}`; // 給 datetime-local 用
         }
         // 翻譯錯誤訊息 (英轉中 + 過濾英文系統字樣)
         function translateErrorMessage(msg) {
@@ -195,6 +204,7 @@
             var calendarEl = document.getElementById("calendar");
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: "dayGridMonth",
+                timeZone: 'Asia/Taipei',            // << 新增這行
                 themeSystem: 'bootstrap5',
                 displayEventTime: false,
                 height: 700,
@@ -203,7 +213,9 @@
                     left: "prev,next",
                     center: "title",
                     right: "dayGridMonth,timeGridWeek,timeGridDay"
+                     
                 },
+                   
                 buttonText: {
                     month: '月',
                     week: '週',
