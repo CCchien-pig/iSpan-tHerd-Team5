@@ -37,7 +37,10 @@
                 <h5 id="supplierModalTitle" class="modal-title">供應商</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
+            <div class="d-flex ">
+                <button type="button" id="fillNameContact" class="btn d-flex mt-3 me-2" style="background-color:#35afe6;color:#fff;">自動填入名稱與聯絡人</button>
+                <button type="button" id="fillEmail" class="btn d-flex mt-3" style="background-color:#35afe6;color:#fff;">自動填入電子信箱</button>
+            </div>
             <!-- Body -->
             <div id="supplierModalContent" class="modal-body p-4">
                 <!-- 透過 AJAX 載入 _SupplierFormPartial.cshtml -->
@@ -71,6 +74,15 @@
                     dataSrc: 'data'
                 },
                 columns: [
+                    {
+                        data: 'sortDate',          // 後端給每筆資料一個排序用時間
+                        title: '#',
+                        className: 'text-center',
+                        orderable: true,
+                        render: function(data, type, row, meta) {
+                            return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
+                        }
+                    },
                     {
                         data: 'supplierName',
                         title: '供應商名稱',
@@ -223,18 +235,37 @@
 
                             // 如果後端回傳 supplier，直接新增一列到 table
                             if (data.supplier) {
-                                table.row.add({
-                                    supplierId: data.supplier.SupplierId || 0,
-                                    supplierName: data.supplier.SupplierName || '',
-                                    contactName: data.supplier.ContactName || '',
-                                    phone: data.supplier.Phone || '',
-                                    email: data.supplier.Email || '',   
-                                    isActive: data.supplier.IsActive || false
-                                }).draw(false);
-                            } else {
-                                // fallback，重新載入 table
-                                table.ajax.reload(null, false);
+                                if (data.isCreate) {
+                                    // 新增列
+                                    table.row.add({
+                                        supplierId: data.supplier.SupplierId,
+                                        supplierName: data.supplier.SupplierName,
+                                        contactName: data.supplier.ContactName,
+                                        phone: data.supplier.Phone,
+                                        email: data.supplier.Email,
+                                        isActive: data.supplier.IsActive
+                                    }).draw(false);
+                                } else {
+                                    // 編輯 → 更新對應 row
+                                    var row = table.row(function(idx, d, node) {
+                                        return d.supplierId === data.supplier.SupplierId;
+                                    });
+                                    if (row.any()) {
+                                        row.data({
+                                            supplierId: data.supplier.SupplierId,
+                                            supplierName: data.supplier.SupplierName,
+                                            contactName: data.supplier.ContactName,
+                                            phone: data.supplier.Phone,
+                                            email: data.supplier.Email,
+                                            isActive: data.supplier.IsActive
+                                        }).draw(false);
+                                    } else {
+                                        // fallback 重新載入 table
+                                        table.ajax.reload(null, false);
+                                    }
+                                }
                             }
+
 
                         } else if (data.message === "未變更") {
                             Swal.fire('未變更', '', 'info');
@@ -386,6 +417,36 @@
                         console.error('❌ AJAX 失敗:', status, error);
                     }
                 });
+            });
+
+            $(function () {
+                // 重新解析 jQuery Validation
+                $.validator.unobtrusive.parse('#supplierForm');
+
+                // 按鈕1：自動填入名稱與聯絡人
+                $('#fillNameContact').click(function () {
+                    const now = new Date();
+                    const hour = now.getHours();   // 小時
+                    const minute = now.getMinutes(); // 分鐘
+
+                    $('#SupplierName').val(`供應商${hour}點`);
+                    $('#ContactName').val(`聯絡人${minute}分`);
+                });
+
+                // 按鈕2：自動填入電子信箱
+                $('#fillEmail').click(function () {
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    const account = `${hh}${mm}`; // 例如 0935
+
+                    // 隨機選一個 domain
+                    const domains = ['@@ispan.com', '@@fuen43.com', '@@gggmail.com', '@@yyymail.com'];
+                    const domain = domains[Math.floor(Math.random() * domains.length)];
+
+                    $('#Email').val(`${account}${domain}`);
+                });
+
             });
         });
     </script>

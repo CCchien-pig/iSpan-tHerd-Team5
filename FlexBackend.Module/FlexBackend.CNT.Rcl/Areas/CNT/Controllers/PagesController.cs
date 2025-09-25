@@ -135,7 +135,7 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			return (page, pageSize, keyword, status, pageTypeId);
 		}
-
+		//index
 		// ================================
 		// 文章列表 (Index)
 		// ================================
@@ -230,13 +230,15 @@ namespace FlexBackend.CNT.Rcl.Areas.CNT.Controllers
 				ViewBag.PageTypeName = null;
 			}
 
-			// 關鍵字
+			// ================================
+			// 給前端保留條件
+			// ================================
 			ViewBag.Keyword = keyword;
+			ViewBag.Status = status;
+			ViewBag.PageTypeId = pageTypeId;
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
-
-
 
 		// ================================
 		// 新增 (Create)
