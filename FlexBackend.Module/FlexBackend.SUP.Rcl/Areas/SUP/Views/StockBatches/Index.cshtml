@@ -26,6 +26,8 @@
             <!-- 第一排：匯出按鈕 -->
             <div class="btn-group me-2">
                 <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
+                <button id="downloadTemplateExcel" class="btn btn-outline-secondary">下載範例 Excel</button>
+                <button id="downloadTemplateCsv" class="btn btn-outline-secondary">下載範例 CSV</button>
                 <button id="importStockBatchBtn" class="btn btn-outline-primary">匯入Excel</button>
                 <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                     匯出
@@ -58,15 +60,12 @@
             <div class="d-none d-md-block col-md-4"></div>
 
             <!-- 日期區間 -->
-            <div class="col-12 col-md-4 d-flex align-items-end">
-                <div class="me-1" style="flex:1">
-                    <label for="startDate" class="form-label" style="margin-bottom:2px;padding-left:6px;">篩選建立日期</label>
-                    <input type="date" id="startDate" class="form-control form-control-sm" />
-                </div>
-                <div class="px-1" style="padding-bottom: 4px;">~</div>
-                <div class="ms-1" style="flex:1">
-                    <label for="endDate" class="form-label" style="margin-bottom:2px;padding-left:6px;">EndDate</label>
-                    <input type="date" id="endDate" class="form-control form-control-sm" />
+            <div class="col-12 col-md-4">
+                <label class="form-label" style="margin-bottom:2px;padding-left:6px;">篩選建立日期</label>
+                <div class="input-group input-group-sm">
+                    <input type="date" id="startDate" class="form-control" />
+                    <span class="input-group-text bg-white">~</span>
+                    <input type="date" id="endDate" class="form-control" />
                 </div>
             </div>
         </div>
@@ -995,7 +994,7 @@
                     }
                 });
             });
-                        
+
             const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
             // 篩選，End預設今天
@@ -1164,6 +1163,34 @@
         }
 
 
+        $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplate?type=excel');
+        $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplate?type=csv');
+
+        // 點擊匯入按鈕
+        $('#importStockBatchBtn').click(function() {
+            var file = $('#stockImportFile')[0].files[0];
+            if (!file) { alert('請選擇檔案'); return; }
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            $.ajax({
+                url: '/SUP/StockBatches/ImportStockBatch',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res){
+                    if(res.success){
+                        alert('匯入完成:\n' + res.messages.join('\n'));
+                        location.reload(); // 可刷新表格
+                    } else {
+                        alert('匯入失敗: ' + res.message);
+                    }
+                }
+            });
+        });
+
         // stockBatchTable 匯出目前篩選結果
         function exportStockFiltered(type) {
             const table = $('#stockBatchTable').DataTable();
@@ -1184,6 +1211,33 @@
         $('#exportStockCsv').on('click', () => exportStockFiltered('csv'));
         $('#exportStockExcel').on('click', () => exportStockFiltered('excel'));
         $('#exportStockPdf').on('click', () => exportStockFiltered('pdf'));
+
+        // historyTable 匯出目前篩選結果
+        function exportHistoryFiltered(type) {
+            var table = $('#historyTable').DataTable();
+
+            // DataTables 全局搜尋
+            var searchValue = table.search();
+
+            // 篩選條件
+            var startDate = $('#historyStartDate').val();
+            var endDate = $('#historyEndDate').val();
+            var expireFilter = $('#historyExpireFilter').val();
+
+            // 組 URL
+            let url = `/SUP/StockBatches/ExportHistoryFiltered?type=${type}`;
+            if (searchValue) url += `&searchValue=${encodeURIComponent(searchValue)}`;
+            if (startDate) url += `&startDate=${startDate}`;
+            if (endDate) url += `&endDate=${endDate}`;
+            if (expireFilter) url += `&expireFilter=${expireFilter}`;
+
+            window.location = url;
+        }
+
+        // 綁定匯出按鈕
+        $('#exportHistoryCsv').click(() => exportHistoryFiltered('csv'));
+        $('#exportHistoryExcel').click(() => exportHistoryFiltered('excel'));
+        $('#exportHistoryPdf').click(() => exportHistoryFiltered('pdf'));
 
 
     </script>

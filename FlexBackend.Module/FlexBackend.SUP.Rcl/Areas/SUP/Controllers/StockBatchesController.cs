@@ -1,4 +1,6 @@
-﻿using FlexBackend.Core.Abstractions;
+﻿using CsvHelper;
+using DocumentFormat.OpenXml.Spreadsheet;
+using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.SUP;
 using FlexBackend.Core.DTOs.USER;
 using FlexBackend.Core.Interfaces.SUP;
@@ -6,13 +8,18 @@ using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using iText.IO.Font;
 using iText.IO.Font.Constants;
+using iText.Kernel.Colors;
 using iText.Kernel.Font;
+using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
+using iText.Layout.Properties;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -901,7 +908,148 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return _context.SupStockBatches.Any(e => e.StockBatchId == id);
 		}
 
-		// 匯出
+		#region 匯入功能
+
+		[HttpGet]
+		public IActionResult DownloadStockBatchTemplate()
+		{
+			// 設定 EPPlus 非商業授權（個人）
+			ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
+
+			using var package = new ExcelPackage();
+			var ws = package.Workbook.Worksheets.Add("StockBatchTemplate");
+
+			// 表頭
+			ws.Cells[1, 1].Value = "SKU";
+			ws.Cells[1, 2].Value = "批號";
+			ws.Cells[1, 3].Value = "商品名稱";
+			ws.Cells[1, 4].Value = "到期日"; // yyyy-MM-dd 或留空
+			ws.Cells[1, 5].Value = "批次庫存量";
+
+			// 設定表頭樣式
+			using (var range = ws.Cells[1, 1, 1, 5])
+			{
+				range.Style.Font.Bold = true;
+				range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+			}
+
+			// 調整欄寬
+			ws.Column(1).Width = 15; // SKU
+			ws.Column(2).Width = 15; // 批號
+			ws.Column(3).Width = 25; // 商品名稱
+			ws.Column(4).Width = 15; // 到期日
+			ws.Column(5).Width = 15; // 批次庫存量
+
+			var stream = new MemoryStream();
+			package.SaveAs(stream);
+			stream.Position = 0;
+
+			// 回傳檔案
+			return File(
+				stream.ToArray(),
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"StockBatchTemplate.xlsx"
+			);
+		}
+
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ImportStockBatch(IFormFile file)
+		{
+			if (file == null || file.Length == 0)
+				return Json(new { success = false, message = "請選擇檔案" });
+
+			var list = new List<(string SkuCode, int Qty, string Remark)>();
+
+			using (var stream = new MemoryStream())
+			{
+				await file.CopyToAsync(stream);
+				using var package = new ExcelPackage(stream);
+				var ws = package.Workbook.Worksheets.FirstOrDefault();
+				if (ws == null)
+					return Json(new { success = false, message = "Excel 無工作表" });
+
+				int row = 2; // 假設第一列是標題
+				while (ws.Cells[row, 1].Value != null)
+				{
+					string skuCode = ws.Cells[row, 1].Text.Trim();
+					if (!int.TryParse(ws.Cells[row, 2].Text.Trim(), out int qty))
+						qty = 0;
+					string remark = ws.Cells[row, 3]?.Text?.Trim() ?? "";
+
+					if (!string.IsNullOrEmpty(skuCode) && qty > 0)
+						list.Add((skuCode, qty, remark));
+
+					row++;
+				}
+			}
+
+			var results = new List<string>();
+			foreach (var item in list)
+			{
+				var sku = await _context.ProdProductSkus
+					.Include(s => s.Product)
+						.ThenInclude(p => p.Brand)
+					.FirstOrDefaultAsync(s => s.SkuCode == item.SkuCode);
+
+				if (sku == null)
+				{
+					results.Add($"找不到 SKU: {item.SkuCode}");
+					continue;
+				}
+
+				// 建立新批號 (例如用時間+SKUCode)
+				string batchNumber = $"{item.SkuCode}-{DateTime.Now:yyyyMMddHHmmss}";
+
+				var userId = _me.Id; // Claims 裡的 Id
+				var user = await _userMgr.Users
+					.AsNoTracking()
+					.FirstOrDefaultAsync(u => u.Id == userId);
+
+				int currentUserId = user.UserNumberId;
+
+				if (user == null)
+					return Json(new { success = false, message = "找不到使用者資料" });
+
+				var stockBatch = new SupStockBatch
+				{
+					SkuId = sku.SkuId,
+					BatchNumber = batchNumber,
+					Qty = item.Qty,
+					ExpireDate = null, // 可由前端或預設邏輯填
+					ManufactureDate = null,
+					Creator = user.UserNumberId,
+					CreatedDate = DateTime.Now
+				};
+
+				_context.SupStockBatches.Add(stockBatch);
+				await _context.SaveChangesAsync();
+
+				// 新增庫存異動紀錄
+				var history = new SupStockHistory
+				{
+					StockBatchId = stockBatch.StockBatchId,
+					ChangeType = "Import",
+					ChangeQty = item.Qty,
+					BeforeQty = 0,
+					AfterQty = item.Qty,
+					Reviser = currentUserId,
+					RevisedDate = DateTime.Now,
+					Remark = item.Remark
+				};
+
+				_context.SupStockHistories.Add(history);
+				await _context.SaveChangesAsync();
+
+				results.Add($"匯入成功 SKU: {item.SkuCode}, Qty: {item.Qty}");
+			}
+
+			return Json(new { success = true, messages = results });
+		}
+
+		#endregion
+
+		#region 匯出功能
 		[HttpGet]
 		public async Task<IActionResult> ExportStockFiltered(
 			string searchValue = null,
@@ -977,20 +1125,94 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			};
 		}
 
+		[HttpGet]
+		public async Task<IActionResult> ExportHistoryFiltered(
+			string searchValue = null,
+			string startDate = null,
+			string endDate = null,
+			string expireFilter = null,
+			string type = "csv")
+		{
+			var query = from h in _context.SupStockHistories
+						join sb in _context.SupStockBatches on h.StockBatchId equals sb.StockBatchId
+						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+						join b in _context.SupBrands on p.BrandId equals b.BrandId
+						select new
+						{
+							h.StockHistoryId,
+							sku.SkuCode,
+							sb.BatchNumber,
+							p.ProductName,
+							b.BrandName,
+							sb.ExpireDate,
+							h.ChangeQty,
+							h.ChangeType,
+							h.RevisedDate,
+						};
+
+			var today = DateTime.Today;
+
+			// 過期與否
+			if (!string.IsNullOrEmpty(expireFilter))
+			{
+				switch (expireFilter)
+				{
+					case "valid":
+						query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+						break;
+					case "expired":
+						query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+						break;
+				}
+			}
+
+			// 最後異動日期篩選
+			if (DateTime.TryParse(startDate, out var sDate))
+				query = query.Where(x => x.RevisedDate >= sDate);
+
+			if (DateTime.TryParse(endDate, out var eDate))
+			{
+				var endOfDay = eDate.AddDays(1);
+				query = query.Where(x => x.RevisedDate < endOfDay);
+			}
+
+			// 全局搜尋
+			if (!string.IsNullOrEmpty(searchValue))
+			{
+				query = query.Where(s =>
+					EF.Functions.Like(s.SkuCode, $"%{searchValue}%") ||
+					EF.Functions.Like(s.BatchNumber, $"%{searchValue}%") ||
+					EF.Functions.Like(s.ProductName, $"%{searchValue}%") ||
+					EF.Functions.Like(s.BrandName, $"%{searchValue}%")
+				);
+			}
+
+			var data = await query.ToListAsync();
+
+			return type.ToLower() switch
+			{
+				"csv" => ExportCsv(data),
+				"excel" => ExportExcel(data),
+				"pdf" => await ExportHistoryPdf(searchValue, startDate, endDate, expireFilter),
+				_ => BadRequest("未知匯出類型")
+			};
+		}
+		#endregion
 
 		#region 匯出API (CSV/Excel/PDF)
-		private IActionResult ExportCsv(IEnumerable<object> data)
+		private IActionResult ExportCsv(IEnumerable<dynamic> data)
 		{
 			var sb = new StringBuilder();
 			using (var writer = new StringWriter(sb))
 			using (var csv = new CsvHelper.CsvWriter(writer, CultureInfo.InvariantCulture))
 				csv.WriteRecords(data);
-			// UTF8 + BOM
+
 			var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
 			return File(bytes, "text/csv", "StockBatch.csv");
 		}
 
-		private IActionResult ExportExcel(IEnumerable<object> data)
+		private IActionResult ExportExcel(IEnumerable<dynamic> data)
 		{
 			using var workbook = new ClosedXML.Excel.XLWorkbook();
 			var ws = workbook.Worksheets.Add("StockBatch");
@@ -1024,6 +1246,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			// 都失敗時用預設字型
 			return PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
 		}
+
 		private async Task<IActionResult> ExportPdf(string searchValue, string startDate, string endDate, string expireFilter)
 		{
 			// 1️ 取得資料，套用 DataTables 篩選
@@ -1058,6 +1281,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 			}
 
+			// 建立日期篩選
 			if (DateTime.TryParse(startDate, out var sDate))
 				query = query.Where(x => x.CreatedDate >= sDate);
 
@@ -1067,6 +1291,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				query = query.Where(x => x.CreatedDate < endOfDay);
 			}
 
+			// 全局搜尋
 			if (!string.IsNullOrEmpty(searchValue))
 			{
 				query = query.Where(x =>
@@ -1113,12 +1338,12 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				new { Title = "批次庫存量", Func = (Func<dynamic, string>)(x => x.Qty.ToString()) }
 			};
 
-			var table = new Table(columns.Length).UseAllAvailableWidth();
+			var table = new iText.Layout.Element.Table(columns.Length).UseAllAvailableWidth();
 
 			// 表頭
 			foreach (var col in columns)
 			{
-				table.AddHeaderCell(new Cell().Add(new Paragraph(col.Title).SetFont(font).SetFontSize(10)));
+				table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new Paragraph(col.Title).SetFont(font).SetFontSize(10)));
 			}
 
 			// 資料列
@@ -1126,12 +1351,12 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				if (row == null) continue;
 
-				table.AddCell(new Cell().Add(new Paragraph(row.SkuCode ?? "").SetFont(font).SetFontSize(10)));
-				table.AddCell(new Cell().Add(new Paragraph(row.BatchNumber ?? "").SetFont(font).SetFontSize(10)));
-				table.AddCell(new Cell().Add(new Paragraph(row.BrandName ?? "").SetFont(font).SetFontSize(10)));
-				table.AddCell(new Cell().Add(new Paragraph(row.ProductName ?? "").SetFont(font).SetFontSize(10)));
-				table.AddCell(new Cell().Add(new Paragraph(row.ExpireDate?.ToString("yyyy-MM-dd") ?? "無").SetFont(font).SetFontSize(10)));
-				table.AddCell(new Cell().Add(new Paragraph(row.Qty.ToString()).SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.SkuCode ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.BatchNumber ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.BrandName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ProductName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ExpireDate?.ToString("yyyy-MM-dd") ?? "無").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.Qty.ToString()).SetFont(font).SetFontSize(10)));
 			}
 
 
@@ -1139,6 +1364,118 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			doc.Close();
 
 			return File(ms.ToArray(), "application/pdf", "StockBatch.pdf");
+		}
+
+		private async Task<IActionResult> ExportHistoryPdf(string searchValue, string startDate, string endDate, string expireFilter)
+		{
+			var query = from h in _context.SupStockHistories
+						join sb in _context.SupStockBatches on h.StockBatchId equals sb.StockBatchId
+						join sku in _context.ProdProductSkus on sb.SkuId equals sku.SkuId
+						join p in _context.ProdProducts on sku.ProductId equals p.ProductId
+						join b in _context.SupBrands on p.BrandId equals b.BrandId
+						select new
+						{
+							sku.SkuCode,
+							sb.BatchNumber,
+							b.BrandName,
+							p.ProductName,
+							sb.ExpireDate,
+							h.ChangeQty,
+							h.ChangeType,
+							h.RevisedDate,
+							h.Remark
+						};
+
+			var today = DateTime.Today;
+
+			// 過期與否
+			if (!string.IsNullOrEmpty(expireFilter))
+			{
+				switch (expireFilter)
+				{
+					case "valid":
+						query = query.Where(x => !x.ExpireDate.HasValue || x.ExpireDate.Value.Date >= today);
+						break;
+					case "expired":
+						query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
+						break;
+				}
+			}
+
+			// 異動日期篩選
+			if (DateTime.TryParse(startDate, out var sDate))
+				query = query.Where(x => x.RevisedDate >= sDate);
+
+			if (DateTime.TryParse(endDate, out var eDate))
+			{
+				var endOfDay = eDate.AddDays(1);
+				query = query.Where(x => x.RevisedDate < endOfDay);
+			}
+
+			// 全局搜尋
+			if (!string.IsNullOrEmpty(searchValue))
+			{
+				query = query.Where(x =>
+					EF.Functions.Like(x.SkuCode, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BatchNumber, $"%{searchValue}%") ||
+					EF.Functions.Like(x.ProductName, $"%{searchValue}%") ||
+					EF.Functions.Like(x.BrandName, $"%{searchValue}%") ||
+					EF.Functions.Like(x.Remark, $"%{searchValue}%")
+				);
+			}
+
+			var data = await query.ToListAsync();
+
+			if (!data.Any())
+				return Content("No data to export");
+
+			using var ms = new MemoryStream();
+			var writer = new PdfWriter(ms);
+			var pdf = new PdfDocument(writer);
+			var doc = new Document(pdf, iText.Kernel.Geom.PageSize.A4.Rotate());
+			var font = GetChineseFont();
+
+			var columns = new[]
+			{
+				new { Title = "SkuCode", Func = (Func<dynamic, string>)(x => x.SkuCode) },
+				new { Title = "批號", Func = (Func<dynamic, string>)(x => x.BatchNumber) },
+				new { Title = "品牌名", Func = (Func<dynamic, string>)(x => x.BrandName) },
+				new { Title = "商品名稱", Func = (Func<dynamic, string>)(x => x.ProductName) },
+				new { Title = "到期日", Func = (Func<dynamic, string>)(x => x.ExpireDate.HasValue ? x.ExpireDate.Value.ToString("yyyy-MM-dd") : "無") },
+				new { Title = "異動數量", Func = (Func<dynamic, string>)(x => x.ChangeQty.ToString()) },
+				new { Title = "異動類型", Func = (Func<dynamic, string>)(x => x.ChangeType) },
+				new { Title = "異動時間", Func = (Func<dynamic, string>)(x => x.RevisedDate.ToString("yyyy-MM-dd HH:mm")) },
+				new { Title = "備註", Func = (Func<dynamic, string>)(x => x.Remark ?? "") } // ← 新增
+			};
+
+			var table = new iText.Layout.Element.Table(columns.Length).UseAllAvailableWidth();
+
+			// 表頭置中
+			foreach (var col in columns)
+			{
+				table.AddHeaderCell(new iText.Layout.Element.Cell()
+					.Add(new Paragraph(col.Title).SetFont(font).SetFontSize(10))
+					.SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER));
+			}
+
+			// 資料列
+			foreach (var row in data)
+			{
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.SkuCode ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.BatchNumber ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.BrandName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ProductName ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ExpireDate?.ToString("yyyy-MM-dd") ?? "無").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ChangeQty.ToString()).SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.ChangeType ?? "").SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.RevisedDate.ToString("yyyy-MM-dd HH:mm")).SetFont(font).SetFontSize(10)));
+				table.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(row.Remark ?? "").SetFont(font).SetFontSize(10)));
+			}
+
+			doc.Add(table);
+			doc.Close();
+
+			return File(ms.ToArray(), "application/pdf", "StockHistory.pdf");
 		}
 
 		#endregion
