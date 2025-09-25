@@ -888,8 +888,6 @@ public partial class tHerdDBContext : DbContext
 
             entity.ToTable("MKT_CouponRule", tb => tb.HasComment("優惠券規則分類檔（定義優惠券類型與條件）"));
 
-            entity.HasIndex(e => e.CouponType, "UQ_MKT_CouponRule_CouponType").IsUnique();
-
             entity.Property(e => e.RuleId).HasComment("規則Id");
             entity.Property(e => e.CouponType)
                 .IsRequired()
@@ -1139,6 +1137,9 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Subtotal)
                 .HasComment("小計金額")
                 .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.TrackingNumber)
+                .HasMaxLength(50)
+                .IsUnicode(false);
             entity.Property(e => e.UserNumberId).HasComment("會員編號（FK）");
 
             entity.HasOne(d => d.Coupon).WithMany(p => p.OrdOrders)
@@ -1603,9 +1604,15 @@ public partial class tHerdDBContext : DbContext
 
             entity.ToTable("ORD_ShoppingCartItem", tb => tb.HasComment("購物車明細（同一 Cart 相同商品不可重複；數量限制參照購物車上限）"));
 
+            entity.HasIndex(e => e.SkuId, "IX_ORD_ShoppingCartItem_SkuId");
+
             entity.HasIndex(e => e.CartId, "IX_ShoppingCartItem_CartId");
 
             entity.HasIndex(e => e.ProductId, "IX_ShoppingCartItem_ProductId");
+
+            entity.HasIndex(e => new { e.CartId, e.SkuId }, "UQ_ORD_ShoppingCartItem_CartId_SkuId")
+                .IsUnique()
+                .HasFilter("([SkuId] IS NOT NULL)");
 
             entity.HasIndex(e => new { e.CartId, e.ProductId }, "UQ_ShoppingCartItem_CartId_ProductId").IsUnique();
 
@@ -1631,6 +1638,10 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ORD_ShoppingCartItem_ProductId");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.OrdShoppingCartItems)
+                .HasForeignKey(d => d.SkuId)
+                .HasConstraintName("FK_ORD_ShoppingCartItem_Sku");
         });
 
         modelBuilder.Entity<ProdAttribute>(entity =>
@@ -2117,11 +2128,17 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode");
 
+            entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode_NotNull")
+                .IsUnique()
+                .HasFilter("([Barcode] IS NOT NULL AND [Barcode]<>'')");
+
+            entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode_OnlyWhenNotEmpty")
+                .IsUnique()
+                .HasFilter("([Barcode] IS NOT NULL AND [Barcode]<>'')");
+
             entity.HasIndex(e => e.IsActive, "IX_PROD_ProductSku_IsActive");
 
             entity.HasIndex(e => e.ProductId, "IX_PROD_ProductSku_ProductId");
-
-            entity.HasIndex(e => e.Barcode, "UQ_PROD_ProductSku_Barcode").IsUnique();
 
             entity.HasIndex(e => e.SkuCode, "UQ_PROD_ProductSku_SkuCode").IsUnique();
 
@@ -2296,8 +2313,6 @@ public partial class tHerdDBContext : DbContext
             entity.HasIndex(e => e.SpecificationConfigId, "IX_PROD_SpecificationOption_ConfigId");
 
             entity.HasIndex(e => e.OptionName, "IX_PROD_SpecificationOption_OptionName");
-
-            entity.HasIndex(e => new { e.SpecificationConfigId, e.OptionName }, "UQ_PROD_SpecificationOption_Config_OptionName ").IsUnique();
 
             entity.Property(e => e.SpecificationOptionId).HasComment("規格選項ID（主鍵）");
             entity.Property(e => e.OptionName)
@@ -3024,7 +3039,11 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.MemberRankId).HasName("PK__USER_Mem__DE307E3479CEB5B5");
 
-            entity.ToTable("USER_MemberRank", tb => tb.HasComment("會員等級設定"));
+            entity.ToTable("USER_MemberRank", tb =>
+                {
+                    tb.HasComment("會員等級設定");
+                    tb.HasTrigger("tr_MemberRankId");
+                });
 
             entity.HasIndex(e => e.RankName, "UQ_USER_MemberRank_RankName").IsUnique();
 
@@ -3151,6 +3170,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
             entity.Property(e => e.Reviser).HasComment("異動人員");
         });
+        modelBuilder.HasSequence("MemberRankIdSequence");
         modelBuilder.HasSequence<int>("UserNumberSequence").StartsAt(1001L);
 
         OnModelCreatingPartial(modelBuilder);
