@@ -1,10 +1,10 @@
 ﻿using FlexBackend.Core.DTOs;
-using Microsoft.AspNetCore.Http;
 
 namespace FlexBackend.Core.Interfaces.SYS
 {
     public interface ISysAssetFileRepository
     {
-        Task<bool> AddImages(List<IFormFile> files);
+        Task<AssetFileUploadDto> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
+        Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default);
     }
 }
