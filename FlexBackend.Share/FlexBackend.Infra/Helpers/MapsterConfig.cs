@@ -50,5 +50,19 @@ public static class MapsterConfig
             .IgnoreNullValues(true)
             .Ignore(d => d.SkuId)
             .Ignore(d => d.SkuCode);
+
+        // ========== ProdProductType ==========
+
+        // Create: DTO -> Entity
+        Default.NewConfig<ProdProductTypeDto, ProdProductType>()
+            .Ignore(d => d.ProductId);
+
+        // Entity -> DTO
+        Default.NewConfig<ProdProductType, ProdProductTypeDto>();
+
+        // Patch: DTO -> Entity
+        Patch.NewConfig<ProdProductTypeDto, ProdProductType>()
+            .IgnoreNullValues(true)
+            .Ignore(d => d.ProductId);
     }
 }

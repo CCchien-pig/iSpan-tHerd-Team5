@@ -7,6 +7,34 @@
     ViewData["Title"] = "商品管理";
 }
 
+<div class="d-flex justify-content-between mb-2">
+    <div>
+        <button type="button" class="btn btn-sm btn-success me-2" onclick="ImportProductExcelAsync()">讀取產品</button>
+        <button type="button" class="btn btn-primary" onclick="importTypeExcelAsync()">匯入 Excel</button>
+        <button type="button" class="btn btn-sm btn-warning me-2" onclick="refreshData()">更新資料</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="downloadTemplate()">下載範例檔</button>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        async function importTypeExcelAsync() {
+            const response = await fetch('/PROD/Productstemp/importTypeExcelAsync', { method: 'POST' }), {
+                method: 'POST'
+            });
+            if (response.ok) {
+                alert("匯入成功");
+                location.reload();
+            } else {
+                alert("匯入失敗");
+            }
+        }
+        
+    </script>
+}
+
+
 @{
     // 1) 資料 → JSON（保留 PascalCase）
     var dataJson = JsonSerializer.Serialize(

@@ -12,9 +12,9 @@ namespace FlexBackend.MKT.Rcl.Areas.MKT.Utils
 
         public static string RandomColor()
         {
-            int r = rancolor.Next(128, 230);
-            int g = rancolor.Next(0, 100);
-            int b = rancolor.Next(128, 255);
+            int r = rancolor.Next(0, 255);
+            int g = rancolor.Next(0, 255);
+            int b = rancolor.Next(0, 255);
 
             return $"#{r:X2}{g:X2}{b:X2}";
         }

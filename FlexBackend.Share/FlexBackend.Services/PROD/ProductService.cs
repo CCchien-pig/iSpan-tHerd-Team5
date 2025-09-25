@@ -4,6 +4,8 @@ using FlexBackend.Core.Exceptions;
 using FlexBackend.Core.Interfaces.PROD;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Core.Interfaces.SYS;
+using System.Formats.Asn1;
+using System.Globalization;
 
 namespace FlexBackend.Services.PROD
 {
@@ -30,6 +32,20 @@ namespace FlexBackend.Services.PROD
 			if (string.IsNullOrWhiteSpace(dto.ProductName))
 				return (false, "商品名稱為必填！");
 
+			// === B. 商品分類檢查 ===
+			if (dto.Types == null || !dto.Types.Any())
+				return (false, "至少必須選擇一個商品分類！");
+
+			if (!dto.Types.Any(t => t.IsPrimary))
+				return (false, "商品分類中必須設定一個主分類！ (可右鍵設定)");
+
+			// === C. 商品名稱唯一性檢查 ===
+			var existing = await _repo.GetByProductNameAsync(dto.ProductName.Trim(), dto.ProductId);
+			if (existing)
+			{
+				return (false, $"商品名稱「{dto.ProductName}」已存在，不可重複！");
+			}
+
 			// === B. SKU 必填 ===
 			foreach (var (sku, i) in dto.Skus.Select((x, i) => (x, i)))
 			{
@@ -51,6 +67,18 @@ namespace FlexBackend.Services.PROD
 					return (false, $"第 {i + 1} 筆 SKU 缺少最大庫存量！");
 				if (sku.StartDate == DateTime.MinValue)
 					return (false, $"第 {i + 1} 筆 SKU 缺少上架日期！");
+
+				// 檢查Sku碼的規格
+				foreach (var (specConfig, k) in dto.SpecConfigs.Select((a, k) => (a, k)))
+				{
+					var spec_value = specConfig.SpecOptions
+						.FirstOrDefault(o => o.SkuId == sku.SkuId)?.OptionName;
+
+					if (string.IsNullOrWhiteSpace(spec_value))
+					{
+						return (false, $"第 {i + 1} 筆 SKU 缺少規格值（規格 {k + 1}）！");
+					}
+				}
 			}
 
 			// === 1. 檢查 SKU 庫存層級 ===
@@ -69,19 +97,16 @@ namespace FlexBackend.Services.PROD
 				}
 			}
 
-			// === 2. 檢查表單內條碼是否重複 ===
-			var dupLocal = dto.Skus
-				.Where(s => !string.IsNullOrWhiteSpace(s.Barcode))
-				.GroupBy(s => s.Barcode.Trim())
-				.Where(g => g.Count() > 1)
-				.Select(g => g.Key)
-				.ToList();
+   //         var barcodesInForm = dto.Skus.Where(s => !string.IsNullOrWhiteSpace(s.Barcode))
+   //             .Select(s => s.Barcode.Trim())
+   //             .ToList();
 
-			if (dupLocal.Any())
-			{
-				errorMessage = $"表單內條碼重複：{string.Join("、", dupLocal)}，請修正！";
-				return (false, errorMessage);
-			}
+			//// === 2. 檢查表單內條碼是否重複 ===
+			//var barcode_existing = await _repo.CheckUniqulByBarcodeAsync(barcodesInForm);
+			//if (string.IsNullOrWhiteSpace(barcode_existing)==false)
+			//{
+			//	return (false, $"條碼「{barcode_existing}」已存在，不可重複！");
+			//}
 
 			// === 3. 檢查 DB 是否有重複條碼 ===
 			var excludeSkuIds = dto.Skus.Select(s => s.SkuId).ToList();
@@ -101,6 +126,23 @@ namespace FlexBackend.Services.PROD
 			}
 
 			return (true, errorMessage);
+		}
+
+		/// <summary>
+		/// 商品完整分類清單
+		/// </summary>
+		/// <returns></returns>
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+		{
+			try
+			{
+				return await _repo.GetAllProductTypesAsync(ct);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
 		}
 
 		/// <summary>

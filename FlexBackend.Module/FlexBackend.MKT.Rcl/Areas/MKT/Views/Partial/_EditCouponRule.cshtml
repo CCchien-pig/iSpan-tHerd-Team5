@@ -9,23 +9,24 @@
     <form id="editRuleForm">
         @Html.AntiForgeryToken()
 
+        <!-- DefaultCondition -->
+        <div class="mb-3">
+            <label class="form-label">使用門檻</label>
+            <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
+                <option value="">請選擇欲修改的使用門檻</option>
+            </select>
+        </div>
+
         <!-- RuleId -->
         <div class="mb-3">
-            <label class="form-label">規則編號 (RuleId)</label>
+            <label class="form-label">規則編號</label>
             <input type="text" name="RuleId" id="editRuleId" class="form-control" readonly />
         </div>
 
         <!-- CouponType 隱藏回傳 pmd -->
         <input type="hidden" name="CouponType" value="pmd" />
 
-        <!-- DefaultCondition -->
-        <div class="mb-3">
-            <label class="form-label">預設條件</label>
-            <select id="editDefaultCondition" name="DefaultCondition" class="form-select">
-                <option value="">請選擇預設條件</option>
-            </select>
-        </div>
-
+        
         <!-- Description -->
         <div class="mb-3">
             <label class="form-label">說明</label>
@@ -67,12 +68,18 @@
 
             $("#editRuleId").val(ruleId);
 
-            $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (data) {
-                $("#editDescription").prop("readonly", false).val(data.description || "");
-                $("#editIsActive").prop("disabled", false).prop("checked", data.isActive);
+                $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (res) {
+                if (!res || res.success === false) {
+                    Swal.fire("錯誤", res.message || "無法取得規則資料", "error");
+                    return;
+                }
+
+                $("#editDescription").prop("readonly", false).val(res.description || "");
+                $("#editIsActive").prop("disabled", false).prop("checked", res.isActive === true || res.isActive === 1);
             }).fail(function () {
-                Swal.fire("錯誤", "取得規則資料失敗", "error");
+                Swal.fire("錯誤", "伺服器發生錯誤", "error");
             });
+
         });
 
         // 儲存變更
@@ -86,7 +93,7 @@
             };
 
             $.ajax({
-                url: '/MKT/Coupons/UpdateRule',
+                url: '/MKT/Coupons/EditRule',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(data),

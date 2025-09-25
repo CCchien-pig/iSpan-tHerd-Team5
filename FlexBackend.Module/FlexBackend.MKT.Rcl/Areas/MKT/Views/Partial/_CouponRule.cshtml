@@ -9,14 +9,16 @@
         <!-- 優惠券類型 -->
         <div class="mb-3">
             <label class="form-label">優惠券類型</label>
-            <input type="text" class="form-control" value="滿額折扣" disabled />
-            <input type="hidden" name="CouponType" value="pmd" />
+            <select name="CouponType" class="form-select" required>
+                <option value="cmd" selected>滿額折扣</option>
+            </select>
         </div>
+
 
         <!-- 預設條件 -->
         <div class="mb-3">
             <label class="form-label">使用門檻</label>
-            <input type="text" name="DefaultCondition" class="form-control" placeholder="例如 : 單筆消費滿500元"/>
+            <input type="text" name="DefaultCondition" class="form-control" placeholder="例如 : 單筆消費滿500元" />
         </div>
 
         <!-- 說明 -->
@@ -25,16 +27,19 @@
             <textarea name="Description" class="form-control"></textarea>
         </div>
 
-        <!-- 是否啟用 -->
+        @* <!-- 是否啟用 -->
         <div class="form-check form-switch mb-3">
             <input type="checkbox" class="form-check-input" id="createIsActive" name="IsActive" checked />
             <label class="form-check-label" for="createIsActive">啟用</label>
-        </div>
+        </div> *@
+        <!-- 是否啟用 (隱藏，固定回傳 1) -->
+        <input type="hidden" name="IsActive" value="1" />
+
 
         <!-- 建檔人員 -->
         <div class="mb-3">
             <label class="form-label">建檔人員</label>
-            <input type="number" class="form-control" id="createCreator" name="Creator" value=""  />
+            <input type="number" class="form-control" id="createCreator" name="Creator" value="" />
         </div>
 
         <!-- 建檔時間 -->
@@ -91,4 +96,3 @@
         });
     });
 </script>
-

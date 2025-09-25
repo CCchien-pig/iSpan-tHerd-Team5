@@ -115,9 +115,11 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 			}
 		}
 
-
 		// 提供前端選單用
 		public List<SkuOption> SkuOptions { get; set; } = new();
+
+		// 出貨/退貨用，訂單明細ID
+		public int? OrderItemId { get; set; }
 	}
 
 	// 前端下拉選單用的 DTO

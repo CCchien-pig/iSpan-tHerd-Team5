@@ -92,13 +92,13 @@
                 <thead>
                     <tr>
                         <th rowspan="2"></th>
-                        <th rowspan="2">供應商</th>
+                        <th rowspan="2">選項</th>
                         <th rowspan="2">品牌</th>
                         <th colspan="4" class="no-sort-group text-center" data-orderable="false">商品</th>
+                        <th rowspan="2">供應商</th>
                         <th rowspan="2">是否上架</th>
                         <th rowspan="2">建檔人員</th>
                         <th rowspan="2">建檔日期</th>
-                        <th rowspan="2">選項</th>
                     </tr>
                     <tr>
                         <th>編號</th>
@@ -214,7 +214,19 @@
                 data: null,
                 defaultContent: ''
               },
-              { data: 'SupplierName' },
+              {
+                  data: null,
+                  orderable: false,
+                    render: function (data, type, row) {
+                      // 用 querystring 最保險（不用管結尾斜線）
+                      const url = `${upsertBase}?id=${row.ProductId}`;
+                      return `
+                        <a href="${url}" class="btn btn-sm btn-outline-primary me-1">
+                          <i class="fas fa-edit"></i> 編輯
+                        </a>
+                      `;
+                    }
+                },
               { data: 'BrandName' },
               { data: 'ProductId' },
               {
@@ -228,6 +240,8 @@
               },
               { data: 'ProductCode' },
               { data: 'ProductName' },
+    
+              { data: 'SupplierName' },
               {
               data: 'IsPublished',
               orderable: false,
@@ -240,26 +254,14 @@
                       class="form-check-input publish-toggle"
                       data-id="${row.ProductId}"
                       ${checked}
+                        disabled
                     >
                   </div>
                 `;
               }
             },
               { data: 'CreatorNm' },
-              { data: 'FormateCreatedDate' },
-            {
-              data: null,
-              orderable: false,
-                render: function (data, type, row) {
-                  // 用 querystring 最保險（不用管結尾斜線）
-                  const url = `${upsertBase}?id=${row.ProductId}`;
-                  return `
-                    <a href="${url}" class="btn btn-sm btn-outline-primary me-1">
-                      <i class="fas fa-edit"></i> 編輯
-                    </a>
-                  `;
-                }
-            }
+              { data: 'FormateCreatedDate' }
           ],
           colReorder: true, 
         columnDefs: [

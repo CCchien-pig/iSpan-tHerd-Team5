@@ -25,5 +25,7 @@ namespace FlexBackend.Core.DTOs.SUP
 		public int PredictedQty { get; set; }        // 前端預計庫存，考慮增加/減少及是否允許預購
 		public string Message { get; set; }          // 操作訊息
 		public List<SupStockMovementDto> BatchMovements { get; set; } = new();  // 每個批次扣庫明細
+		public int ReturnedToOriginal { get; set; }   // 實際退回原批次的數量
+		public int ExpiredQty { get; set; }           // 超過最大庫存報廢的數量
 	}
 }

@@ -44,6 +44,9 @@
             <dt class="col-sm-3">文章狀態</dt>
             <dd class="col-sm-9"><span class="badge @Model.StatusBadgeClass">@Model.StatusText</span></dd>
         </dl>
+
+        <!-- ✅ 保留 PageId，方便後續操作 -->
+        <input type="hidden" asp-for="PageId" />
         <hr />
         <div class="d-flex gap-3 mt-3">
             <a class="btn btn-outline-secondary btn-lg"

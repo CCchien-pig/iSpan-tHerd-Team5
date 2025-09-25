@@ -1,12 +1,17 @@
-﻿using Dapper;
+﻿//using CsvHelper;
+using Dapper;
+using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.PROD;
+using FlexBackend.Core.DTOs.USER;
 using FlexBackend.Core.Interfaces.Products;
 using FlexBackend.Infra.DBSetting;
 using FlexBackend.Infra.Helpers;
 using FlexBackend.Infra.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Linq;
+using System.Formats.Asn1;
+using System.Globalization;
 using static Dapper.SqlMapper;
 
 namespace FlexBackend.Infra.Repository.PROD
@@ -15,14 +20,47 @@ namespace FlexBackend.Infra.Repository.PROD
     {
         private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
         private readonly tHerdDBContext _db;                 // 寫入與交易來源
+        private readonly ICurrentUser _currentUser;
 
-        public ProdProductRepository(ISqlConnectionFactory factory, tHerdDBContext db)
+		private readonly UserManager<ApplicationUser> _userMgr;
+
+		public ProdProductRepository(ISqlConnectionFactory factory,
+			UserManager<ApplicationUser> userMgr,
+			SignInManager<ApplicationUser> signInMgr,
+			tHerdDBContext db, ICurrentUser currentUser)
         {
             _factory = factory;
             _db = db;
+            _currentUser = currentUser;
+			_userMgr = userMgr;
+		}
+
+		/// <summary>
+		/// 取得所有有效分類
+		/// </summary>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+        {
+            string sql = @"SELECT ProductTypeId, ParentId, ProductTypeCode, 
+                            ProductTypeName
+                            FROM PROD_ProductTypeConfig
+                            WHERE IsActive=1
+                            ORDER BY OrderSeq";
+
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var cmd = new CommandDefinition(sql, transaction: tx, cancellationToken: ct);
+                return conn.Query<ProdProductTypeConfigDto>(cmd).ToList();
+			}
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
         }
 
-        public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
+		public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
         {
             string sql = @"SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                 p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
@@ -88,7 +126,7 @@ namespace FlexBackend.Infra.Repository.PROD
                             FROM PROD_Product p
                             JOIN SUP_Brand b ON b.BrandId=p.BrandId
                             JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
-                                WHERE p.ProductId=@ProductId;";
+                            WHERE p.ProductId=@ProductId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
@@ -98,6 +136,11 @@ namespace FlexBackend.Infra.Repository.PROD
 
                 if (item == null) return null;
 
+                var repo = new AspnetusersNameRepository(_factory, _db);
+                var emp = await repo.GetAllUserNameAsync(ct);
+                item.CreatorNm = emp.FirstOrDefault(e => e.UserNumberId == item.Creator)?.FullName;
+                item.ReviserNm = emp.FirstOrDefault(e => e.UserNumberId == item.Reviser)?.FullName;
+                
                 var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId);
 
                 item.Seo = seo == null ? null : new PRODSeoConfigDto
@@ -191,7 +234,27 @@ namespace FlexBackend.Infra.Repository.PROD
                     item.SpecConfigs = new List<ProdSpecificationConfigDto>();
                 }
 
-                return item;
+                item.Types = await _db.ProdProductTypes
+                    .Where(t => t.ProductId == item.ProductId)
+                    .Select(t => new ProdProductTypeDto
+                    {
+                        ProductTypeId = t.ProductTypeId,
+                        ProductId = t.ProductId,
+                        IsPrimary = t.IsPrimary
+                    }).OrderByDescending(a=>a.IsPrimary).ToListAsync();
+
+				var img_sql = @"
+                        SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.IsMain, pi.OrderSeq,
+                               af.FileUrl, af.AltText
+                        FROM   PROD_ProductImage pi
+                        JOIN   SYS_AssetFile af ON pi.ImgId = af.FileId
+                        WHERE  pi.ProductId = @ProductId
+                        ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
+
+				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
+				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
+
+				return item;
 			}
             finally
             {
@@ -202,11 +265,15 @@ namespace FlexBackend.Infra.Repository.PROD
         // 新增
         public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
+
+			var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
 
             try
             {
+                var now = DateTime.Now;
+
                 // === 1. 新增 Product 主檔 ===
                 var productId = await conn.ExecuteScalarAsync<int>(@"
                     INSERT INTO PROD_Product
@@ -232,8 +299,10 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Creator = 1003,
-                        Reviser = 1003
+                        Creator = u.UserNumberId,
+                        Reviser = u.UserNumberId,
+                        CreatedDate = now,
+                        RevisedDate = now
                     }, tran);
 
                 // 更新正式 ProductCode
@@ -272,10 +341,12 @@ namespace FlexBackend.Infra.Repository.PROD
 				.ToListAsync();
 		}
 
-		// 修改
-		public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
+        // 修改
+        public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-            var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
+
+			var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
 
             try
@@ -308,7 +379,7 @@ namespace FlexBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Reviser = 1003,
+                        Reviser = u.UserNumberId,
                         RevisedDate = DateTime.Now,
                         dto.ProductId
                     }, tran);
@@ -338,10 +409,7 @@ namespace FlexBackend.Infra.Repository.PROD
 						"SELECT ISNULL(MAX(SkuId),0) FROM PROD_ProductSku;", transaction: tran)) ?? 0;
 
 					sku.SkuCode = GenerateSkuCode(dto.BrandCode, dto.ProductTypeCode, dto.ProductCode, maxSeq + 1, sku.SpecCode);
-				}
 
-				if (sku.SkuId == 0)
-				{
 					sku.SkuId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_ProductSku
                   (ProductId, SpecCode, SkuCode, Barcode,
@@ -439,13 +507,23 @@ namespace FlexBackend.Infra.Repository.PROD
                       VALUES (@ProductId, @GroupName, @OrderSeq);",
 					new { dto.ProductId, cfg.GroupName, cfg.OrderSeq }, tran);
 
-				foreach (var opt in cfg.SpecOptions ?? new())
+				for (int i = 0; i < (cfg.SpecOptions?.Count ?? 0); i++)
 				{
+					var opt = cfg.SpecOptions[i];
+
+                    if (opt == null) continue;
+
 					var optionId = await conn.ExecuteScalarAsync<int>(
 						@"INSERT INTO PROD_SpecificationOption (SpecificationConfigId, OptionName, OrderSeq)
                           OUTPUT INSERTED.SpecificationOptionId
                           VALUES (@SpecificationConfigId, @OptionName, @OrderSeq);",
 						new { SpecificationConfigId = cfgId, opt.OptionName, opt.OrderSeq }, tran);
+
+					// === 用 index 來對應 dto.Skus ===
+					if (opt.SkuId == 0 && i < dto.Skus.Count)
+					{
+						opt.SkuId = dto.Skus[i].SkuId;
+					}
 
 					// 關聯到 SKU
 					if (opt.SkuId > 0)
@@ -456,6 +534,19 @@ namespace FlexBackend.Infra.Repository.PROD
 							new { opt.SkuId, SpecificationOptionId = optionId }, tran);
 					}
 				}
+            }
+
+            // === Step 4: 商品分類處理 (ProdProductType) ===
+            await conn.ExecuteAsync(
+				"DELETE FROM PROD_ProductType WHERE ProductId = @ProductId",
+                new { dto.ProductId }, tran);
+
+            foreach (var opt in dto.Types ?? new())
+            {
+                var optionId = await conn.ExecuteScalarAsync<int>(
+                    @"INSERT INTO PROD_ProductType (ProductTypeId, ProductId, IsPrimary)
+                          VALUES (@ProductTypeId, @ProductId, @IsPrimary);",
+                    new { opt.ProductTypeId, dto.ProductId, opt.IsPrimary }, tran);
             }
         }
 
@@ -600,5 +691,29 @@ namespace FlexBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-    }
+
+		public async Task<bool> GetByProductNameAsync(string name, int id, CancellationToken ct = default)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				return false;
+
+			return _db.ProdProducts
+	                .AsNoTracking()
+	                .Where(p => p.ProductName == name && p.ProductId != id).Count()>0;
+		}
+
+		//public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
+		//{
+		//	if (barcodes == null || !barcodes.Any())
+		//		return string.Empty;
+
+		//	var exists = await _db.ProdProductSkus
+		//		.AsNoTracking()
+		//		.Where(p => barcodes.Contains(p.Barcode))
+		//		.Select(p => p.Barcode)   // 只取出條碼字串
+		//		.ToListAsync(ct);
+
+		//	return string.Join("、", exists);
+		//}
+	}
 }

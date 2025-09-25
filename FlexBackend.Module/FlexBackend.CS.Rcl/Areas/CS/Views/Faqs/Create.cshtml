@@ -1,63 +1,63 @@
 ﻿@model FlexBackend.Infra.Models.CsFaq
 @{
     ViewData["Title"] = "新增 FAQ";
+    var backUrl = Url.Action("Index", "Faqs", new { area = "CS" });
+    var createAjaxUrl = Url.Action("CreateAjax", "Faqs", new { area = "CS" });
 }
 
-@section Styles {
-    <!-- Summernote Lite -->
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
-    <style>
-        .page-actions.sticky-top {
-            z-index: 1020;
-        }
+<!-- 內嵌樣式：沒有 Layout 就自己放 -->
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
+<style>
+    .page-actions.sticky-top {
+        z-index: 1020;
+    }
 
-        .card {
-            border-radius: 1rem;
-        }
+    .card {
+        border-radius: 1rem;
+    }
 
-        .card-header {
-            background: #fff;
-            font-weight: 600;
-        }
+    .card-header {
+        background: #fff;
+        font-weight: 600;
+    }
 
-        .form-text {
-            color: #6c757d;
-        }
+    .form-text {
+        color: #6c757d;
+    }
 
-        .btn-icon {
-            width: 2.25rem;
-            height: 2.25rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
+    .btn-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
 
-        :root {
-            --cat-bg: #f3e8ff;
-            --cat-bd: #e9d5ff;
-            --cat-fg: #6d28d9;
-        }
+    :root {
+        --cat-bg: #f3e8ff;
+        --cat-bd: #e9d5ff;
+        --cat-fg: #6d28d9;
+    }
 
-        .badge-category {
-            display: inline-block;
-            padding: .28rem .5rem;
-            font-size: .85rem;
-            font-weight: 600;
-            color: var(--cat-fg);
-            background: var(--cat-bg);
-            border: 1px solid var(--cat-bd);
-            border-radius: .3rem;
-            line-height: 1.1;
-        }
-    </style>
-}
+    .badge-category {
+        display: inline-block;
+        padding: .28rem .5rem;
+        font-size: .85rem;
+        font-weight: 600;
+        color: var(--cat-fg);
+        background: var(--cat-bg);
+        border: 1px solid var(--cat-bd);
+        border-radius: .3rem;
+        line-height: 1.1;
+    }
+</style>
 
 <div class="page-actions sticky-top bg-white pt-3 pb-2 mb-3 border-bottom">
     <div class="d-flex align-items-center justify-content-between">
         <h1 class="h4 mb-0">@ViewData["Title"]</h1>
         <div class="btn-group">
-            <a asp-action="Index" class="btn btn-outline-secondary">
+            <a href="@backUrl" class="btn btn-outline-secondary">
                 <i class="fa-solid fa-arrow-left"></i> 返回列表
             </a>
             <button type="submit" form="faqForm" class="btn btn-primary">
@@ -67,11 +67,12 @@
     </div>
 </div>
 
-<form id="faqForm" asp-action="Create" method="post">
+<!-- 重點：明確指定 action，避免打回 /CS/Faqs/Create -->
+<form id="faqForm" action="@createAjaxUrl" method="post">
     @Html.AntiForgeryToken()
+    <input type="hidden" name="returnUrl" value="@backUrl" />
 
     <div class="row g-4">
-        <!-- 左：主要內容 -->
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
@@ -94,7 +95,6 @@
             </div>
         </div>
 
-        <!-- 右：設定/中繼資訊 -->
         <div class="col-lg-4">
             <div class="card shadow-sm mb-3">
                 <div class="card-header">顯示與分類</div>
@@ -133,39 +133,69 @@
     </div>
 </form>
 
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
-    <script>
-        // 標題字數
-        const $title = document.querySelector('[name="Title"]');
-        const $titleCount = document.getElementById('titleCount');
-        function syncCount(){ $titleCount.textContent = ($title.value || '').length; }
-        $title.addEventListener('input', syncCount); syncCount();
+<!-- 先載 jQuery，再載 summernote（順序很重要） -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 
-        // Summernote
-        $('#answerEditor').summernote({
-            placeholder: '輸入 FAQ 的解答內容…',
-            height: 280,
-            toolbar: [
-                ['style', ['bold','italic','underline','clear']],
-                ['para', ['ul','ol','paragraph']],
-                ['insert', ['link']],
-                ['view', ['codeview']]
-            ]
-        });
+<script>
+    // 幫手：穩定拿到 jQuery 物件（不要用 $，避免衝突）
+    const $jq = window.jQuery;
 
-        // 「現在」快捷
-        document.getElementById('btnNow')?.addEventListener('click', function(){
-            const now = new Date();
-            const pad = n => String(n).padStart(2,'0');
-            const v = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-            document.querySelector('[name="LastPublishedTime"]').value = v;
+    // DOM 準備好之後再跑
+    document.addEventListener('DOMContentLoaded', function () {
+      // ① 安全初始化 Summernote（有就啟用，沒有就略過，不丟錯）
+      if ($jq && $jq.fn && $jq.fn.summernote) {
+        $jq('#answerEditor').summernote({
+          placeholder: '輸入 FAQ 的解答內容…',
+          height: 280,
+          toolbar: [
+            ['style', ['bold','italic','underline','clear']],
+            ['para',  ['ul','ol','paragraph']],
+            ['insert',['link']],
+            ['view',  ['codeview']]
+          ]
         });
+      } else {
+        console.warn('Summernote 沒有載入成功，改用原生 textarea。');
+      }
 
-        // 提交前把編輯器內容寫回 textarea
-        document.getElementById('faqForm').addEventListener('submit', function(){
-            const html = $('#answerEditor').summernote('code');
-            document.getElementById('answerEditor').value = html;
-        });
-    </script>
-}
+      // ② 「現在」快捷
+      document.getElementById('btnNow')?.addEventListener('click', function(){
+        const now = new Date(); const pad = n => String(n).padStart(2,'0');
+        document.querySelector('[name="LastPublishedTime"]').value =
+          `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      });
+
+      // ③ 攔截提交，改用 AJAX
+      const form = document.getElementById('faqForm');
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // 取 Summernote 內容；若沒載入成功就用 textarea 的值
+        let html;
+        if ($jq && $jq.fn && $jq.fn.summernote && $jq('#answerEditor').next('.note-editor').length) {
+          html = $jq('#answerEditor').summernote('code');
+        } else {
+          html = document.getElementById('answerEditor').value;
+        }
+        document.getElementById('answerEditor').value = html;
+
+        const fd = new FormData(form);
+        try {
+          const resp = await fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (resp.ok && data.ok) {
+            location.href = data.redirectUrl || '@Url.Action("Index", "Faqs", new { area = "CS" })';
+          } else {
+            alert(data.message || '發生錯誤，請稍後重試。');
+          }
+        } catch {
+          alert('網路或伺服器發生錯誤。');
+        }
+      });
+    });
+</script>

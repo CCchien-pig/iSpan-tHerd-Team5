@@ -1,5 +1,8 @@
-﻿using FlexBackend.Infra.Models;
+﻿using FlexBackend.Core.Abstractions;
+using FlexBackend.Core.DTOs.USER;
+using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SUP.Data.Helpers;
@@ -10,10 +13,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 	public class SuppliersController : Controller
 	{
 		private readonly tHerdDBContext _context;
+		private readonly ICurrentUser _me;
+		private readonly UserManager<ApplicationUser> _userMgr;
 
-		public SuppliersController(tHerdDBContext context)
+		public SuppliersController(
+			tHerdDBContext context, 
+			ICurrentUser me,
+			UserManager<ApplicationUser> userMgr)
 		{
 			_context = context;
+			_me = me;
+			_userMgr = userMgr;
 		}
 
 		// GET: SUP/Suppliers/Index
@@ -58,12 +68,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			// 排序
 			query = sortColumnIndex switch
 			{
-				0 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
-				1 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
-				2 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
-				3 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
-				4 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
-				_ => query.OrderBy(s => s.SupplierId),
+				0 => sortDirection == "asc"
+						? query.OrderBy(s => s.RevisedDate ?? s.CreatedDate)
+						: query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
+				1 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
+				2 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
+				3 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
+				4 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
+				5 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
+				_ => query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
 			};
 
 			// 分頁與選取欄位
@@ -77,7 +90,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					contactName = s.ContactName,
 					phone = s.Phone,
 					email = s.Email,
-					isActive = s.IsActive
+					isActive = s.IsActive,
+		            sortDate = s.RevisedDate ?? s.CreatedDate  // 前端序號排序用
 				}).ToListAsync();
 
 			// 回傳給 DataTables
@@ -109,6 +123,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([Bind("SupplierName,ContactName,Phone,Email,IsActive")] SupplierContactViewModel supplierVm)
 		{
+
+			var userId = _me.Id; // Claims 裡的 Id
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
+
 			if (ModelState.IsValid)
 			{
 				var supEntity = new SupSupplier
@@ -119,15 +144,28 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					Email = supplierVm.Email,
 					IsActive = supplierVm.IsActive,
 
-					Creator = supplierVm.Creator,
+					Creator = currentUserId,
 					CreatedDate = DateTime.Now,
 				};
 
 				_context.SupSuppliers.Add(supEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = true });
-			}
+        // 回傳前端需要的完整資料
+        return Json(new
+        {
+            success = true,
+            isCreate = true,
+            supplier = new
+            {
+                supplierId = supEntity.SupplierId,
+                supplierName = supEntity.SupplierName,
+                contactName = supEntity.ContactName,
+                phone = supEntity.Phone,
+                email = supEntity.Email,
+                isActive = supEntity.IsActive
+            }
+        });			}
 
 			// 驗證失敗回 Partial
 			//return PartialView("Partials/_SupplierFormPartial", supplierVm);
@@ -143,6 +181,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			var supEntity = await _context.SupSuppliers.FindAsync(id);
 			if (supEntity == null) { return NotFound(); }
+
+
+			var userId = _me.Id; // Claims 裡的 Id
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
 
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
 			var viewModel = new SupplierContactViewModel
@@ -190,6 +239,16 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 						return Json(new { success = false, message = "未變更" });
 					}
 
+					var userId = _me.Id; // Claims 裡的 Id
+					var user = await _userMgr.Users
+						.AsNoTracking()
+						.FirstOrDefaultAsync(u => u.Id == userId);
+
+					if (user == null)
+						return Json(new { success = false, message = "找不到使用者資料" });
+
+					int currentUserId = user.UserNumberId;
+
 					// 有變更 → 更新欄位
 					supEntity.SupplierName = model.SupplierName;
 					supEntity.ContactName = model.ContactName;
@@ -197,13 +256,27 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					supEntity.Email = model.Email;
 					supEntity.IsActive = model.IsActive;
 
-					supEntity.Reviser = 111111; // TODO: 取登入ID
+					supEntity.Reviser = currentUserId;
 					supEntity.RevisedDate = DateTime.Now;
 
 					_context.Update(supEntity);
 					await _context.SaveChangesAsync();
 
-					return Json(new { success = true });
+					return Json(new
+					{
+						success = true,
+						isCreate = false,
+						supplier = new
+						{
+							supplierId = supEntity.SupplierId,
+							supplierName = supEntity.SupplierName,
+							contactName = supEntity.ContactName,
+							phone = supEntity.Phone,
+							email = supEntity.Email,
+							isActive = supEntity.IsActive
+						}
+					});
+
 				}
 				catch (DbUpdateConcurrencyException)
 				{
@@ -236,8 +309,18 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				if (supEntity == null)
 					return Json(new { success = false, message = "找不到該供應商" });
 
+				var userId = _me.Id; // Claims 裡的 Id
+				var user = await _userMgr.Users
+					.AsNoTracking()
+					.FirstOrDefaultAsync(u => u.Id == userId);
+
+				if (user == null)
+					return Json(new { success = false, message = "找不到使用者資料" });
+
+				int currentUserId = user.UserNumberId;
+
 				supEntity.IsActive = isActive;
-				supEntity.Reviser = 111111; // TODO: 取登入ID
+				supEntity.Reviser = currentUserId; // 取登入ID
 				supEntity.RevisedDate = DateTime.Now;
 
 				await _context.SaveChangesAsync();
@@ -291,14 +374,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> DeleteAjax(int id)
 		{
 			var supEntity = await _context.SupSuppliers.FindAsync(id);
-			if (supEntity != null)
+			if (supEntity == null)
+				return Json(new { success = false, message = "找不到該供應商" });
+
+			try
 			{
 				_context.SupSuppliers.Remove(supEntity);
 				await _context.SaveChangesAsync();
 				return Json(new { success = true });
 			}
-			return Json(new { success = false, message = "找不到該供應商" });
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
 		}
+
 
 		private bool SupSupplierExists(int id)
 		{

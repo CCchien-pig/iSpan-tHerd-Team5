@@ -62,13 +62,20 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
 
         [Range(0, int.MaxValue, ErrorMessage = "排序需為 0 以上整數")]
         [Display(Name = "排序")]
-        public int OrderSeq { get; set; }
+        public int? OrderSeq { get; set; }   // ← 改成 int? 並加上 Required
+     
 
         [Display(Name = "最近發布時間")]
         public DateTime? LastPublishedTime { get; set; }
 
         [Display(Name = "啟用")]
         public bool IsActive { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? RevisedDate { get; set; }
+
+
+        // 新增：多個關鍵字（以字串清單表示）
+        public List<string> Keywords { get; set; } = new();
     }
 
     // =======================
@@ -123,10 +130,16 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
 
         [Range(0, int.MaxValue, ErrorMessage = "排序需為 0 以上整數")]
         [Display(Name = "排序")]
-        public int OrderSeq { get; set; }
+        public int? OrderSeq { get; set; }   // ← 改成 int? 並加上 Required
 
         [Display(Name = "啟用")]
         public bool IsActive { get; set; }
+    }
+    // 新增：一個關聯 FAQ 的小型 VM
+    public class FaqRefVM
+    {
+        public int FaqId { get; set; }
+        public string Title { get; set; } = "";
     }
 
     // =======================
@@ -143,11 +156,9 @@ namespace FlexBackend.CS.Rcl.Areas.CS.ViewModels
         [Display(Name = "建立時間")]
         public DateTime CreatedDate { get; set; }
 
-        [Display(Name = "FAQ")]
-        public int FaqId { get; set; }
-
-        [Display(Name = "FAQ標題")]
-        public string FaqTitle { get; set; } = default!;
+        // ⬇⬇ 取代原本的 FaqId / FaqTitle
+        [Display(Name = "所屬 FAQ")]
+        public List<FaqRefVM> Faqs { get; set; } = new();
     }
 
     // =======================

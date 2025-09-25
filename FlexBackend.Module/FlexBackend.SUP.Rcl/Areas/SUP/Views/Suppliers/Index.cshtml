@@ -37,7 +37,10 @@
                 <h5 id="supplierModalTitle" class="modal-title">供應商</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
+            <div class="d-flex ">
+                <button type="button" id="fillNameContact" class="btn d-flex mt-3 me-2" style="background-color:#35afe6;color:#fff;">自動填入名稱與聯絡人</button>
+                <button type="button" id="fillEmail" class="btn d-flex mt-3" style="background-color:#35afe6;color:#fff;">自動填入電子信箱</button>
+            </div>
             <!-- Body -->
             <div id="supplierModalContent" class="modal-body p-4">
                 <!-- 透過 AJAX 載入 _SupplierFormPartial.cshtml -->
@@ -50,6 +53,7 @@
 
     <script>
         $(document).ready(function() {
+            
             // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Suppliers/...）
             var indexJsonUrl = '@Url.Action("IndexJson", "Suppliers", new { area = "SUP" })';
             var createUrl = '@Url.Action("Create", "Suppliers", new { area = "SUP" })';
@@ -70,6 +74,15 @@
                     dataSrc: 'data'
                 },
                 columns: [
+                    {
+                        data: 'sortDate',          // 後端給每筆資料一個排序用時間
+                        title: '#',
+                        className: 'text-center',
+                        orderable: true,
+                        render: function(data, type, row, meta) {
+                            return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
+                        }
+                    },
                     {
                         data: 'supplierName',
                         title: '供應商名稱',
@@ -175,8 +188,8 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
                     icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
@@ -188,7 +201,7 @@
                         checkbox.prop('checked', !newStatus);
                     } else {
                         // 使用者確認 → 更新提示 p
-                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態，進貨權限將會一同變動`);
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態`);
                     }
                 });
             });
@@ -198,15 +211,20 @@
                 e.preventDefault();
                 var form = $(this);
 
+                // 手動把 checkbox 值更新到 hidden input
+                var isActive = $('#IsActive').prop('checked');
+                $('input[name="IsActive"][type="hidden"]', form).val(isActive);
+
                 $.post(form.attr('action'), form.serialize())
                 .done(function(res) {
                     // 判斷回傳結果是否為 JSON
                     var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
                     var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
 
-                    if(data){
-                        if(data.success){
+                    if (data) {
+                        if (data.success) {
                             $('#supplierModal').modal('hide');
+
                             Swal.fire({
                                 position: 'center',
                                 icon: 'success',
@@ -214,8 +232,42 @@
                                 showConfirmButton: false,
                                 timer: 1200
                             });
-                            table.ajax.reload(null, false);
-                        } else if(data.message === "未變更") {
+
+                            // 如果後端回傳 supplier，直接新增一列到 table
+                            if (data.supplier) {
+                                if (data.isCreate) {
+                                    // 新增列
+                                    table.row.add({
+                                        supplierId: data.supplier.SupplierId,
+                                        supplierName: data.supplier.SupplierName,
+                                        contactName: data.supplier.ContactName,
+                                        phone: data.supplier.Phone,
+                                        email: data.supplier.Email,
+                                        isActive: data.supplier.IsActive
+                                    }).draw(false);
+                                } else {
+                                    // 編輯 → 更新對應 row
+                                    var row = table.row(function(idx, d, node) {
+                                        return d.supplierId === data.supplier.SupplierId;
+                                    });
+                                    if (row.any()) {
+                                        row.data({
+                                            supplierId: data.supplier.SupplierId,
+                                            supplierName: data.supplier.SupplierName,
+                                            contactName: data.supplier.ContactName,
+                                            phone: data.supplier.Phone,
+                                            email: data.supplier.Email,
+                                            isActive: data.supplier.IsActive
+                                        }).draw(false);
+                                    } else {
+                                        // fallback 重新載入 table
+                                        table.ajax.reload(null, false);
+                                    }
+                                }
+                            }
+
+
+                        } else if (data.message === "未變更") {
                             Swal.fire('未變更', '', 'info');
                         } else {
                             $('#supplierModalContent').html(res);
@@ -223,10 +275,11 @@
                         }
                     }
                 })
-                .fail(function(){
+                .fail(function() {
                     Swal.fire('操作失敗', '', 'error');
                 });
             });
+
 
             // ======= 啟用/停用供應商 =======
             $('#supplierTable').on('change', '.toggle-active', function() {
@@ -241,8 +294,8 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
                     icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
@@ -270,6 +323,7 @@
                     }
                 });
             });
+
 
             // ======= 查看詳情i =======
             $('#supplierTable').on('click', '.details-btn', function() {
@@ -310,8 +364,9 @@
                                     Swal.fire('刪除失敗', res.message || '', 'error');
                                 }
                             },
-                            error: function() {
-                                Swal.fire('刪除失敗', '', 'error');
+                            error: function(xhr) {
+                                var msg = xhr.responseJSON?.message || '刪除失敗';
+                                Swal.fire('刪除失敗', msg, 'error');
                             }
                         });
                     }
@@ -362,6 +417,36 @@
                         console.error('❌ AJAX 失敗:', status, error);
                     }
                 });
+            });
+
+            $(function () {
+                // 重新解析 jQuery Validation
+                $.validator.unobtrusive.parse('#supplierForm');
+
+                // 按鈕1：自動填入名稱與聯絡人
+                $('#fillNameContact').click(function () {
+                    const now = new Date();
+                    const hour = now.getHours();   // 小時
+                    const minute = now.getMinutes(); // 分鐘
+
+                    $('#SupplierName').val(`供應商${hour}點`);
+                    $('#ContactName').val(`聯絡人${minute}分`);
+                });
+
+                // 按鈕2：自動填入電子信箱
+                $('#fillEmail').click(function () {
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    const account = `${hh}${mm}`; // 例如 0935
+
+                    // 隨機選一個 domain
+                    const domains = ['@@ispan.com', '@@fuen43.com', '@@gggmail.com', '@@yyymail.com'];
+                    const domain = domains[Math.floor(Math.random() * domains.length)];
+
+                    $('#Email').val(`${account}${domain}`);
+                });
+
             });
         });
     </script>

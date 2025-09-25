@@ -22,7 +22,8 @@
 
 /* ====== 表格基礎 ====== */
 #supplierTable,
-#stockBatchTable {
+#stockBatchTable,
+#historyTable {
     border-radius: 0.5rem;
     overflow: hidden;
     font-size: 0.95rem;
@@ -31,7 +32,8 @@
 
     /* ====== 表頭 ====== */
     #supplierTable thead th,
-    ##stockBatchTable thead th {
+    #stockBatchTable thead th,
+    #historyTable thead th {
         background: linear-gradient(135deg, #4a90e2, #007bff);
         color: #fff;
         font-weight: 600;
@@ -45,18 +47,21 @@
 
     /* ====== 奇偶行條紋 ====== */
     #supplierTable tbody tr:nth-child(odd),
-    #stockBatchTable tbody tr:nth-child(odd) {
+    #stockBatchTable tbody tr:nth-child(odd),
+    #historyTable tbody tr:nth-child(odd) {
         background-color: #f9fbff;
     }
 
     #supplierTable tbody tr:nth-child(even),
-    #stockBatchTable tbody tr:nth-child(even) {
+    #stockBatchTable tbody tr:nth-child(even),
+    #historyTable tbody tr:nth-child(even) {
         background-color: #ffffff;
     }
 
     /* ====== hover ====== */
     #supplierTable tbody tr:hover,
-    #stockBatchTable tbody tr:hover {
+    #stockBatchTable tbody tr:hover,
+    #historyTable tbody tr:hover {
         background-color: #e6f0ff;
         transition: background-color 0.2s ease;
     }
@@ -346,4 +351,19 @@ button.dt-paging-button.current:not(:disabled):hover {
 #stockBatchTable td:nth-child(8),
 #stockBatchTable td:nth-child(9) {
     text-align: center;
+}
+
+#batchMovementTable {
+    width: 100%;
+    table-layout: auto; /* 自動分配欄寬 */
+}
+
+
+.stock-edit-adjustOptions .form-check-input {
+    vertical-align: middle; /* 垂直置中 */
+    margin-top: 0; /* 移除多餘上邊距 */
+}
+
+.stock-edit-adjustOptions label {
+    margin-bottom: 0; /* 移除底部空隙 */
 }

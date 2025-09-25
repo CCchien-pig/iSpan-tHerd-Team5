@@ -23,6 +23,6 @@
         /// <summary>
         /// 全名
         /// </summary>
-        public string FullName => $"{FirstName} {LastName}";
+        public string FullName => $"{LastName} {FirstName}";
     }
 }

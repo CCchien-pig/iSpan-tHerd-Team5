@@ -104,6 +104,31 @@
                 font-size: .875rem;
                 color: #6c757d;
             }
+            /* 隱藏開關右邊的「啟用/停用」文字 */
+            .switch-wrap .form-check-label {
+                display: none !important;
+            }
+
+        /* 啟用欄位縮窄（可依需要調整） */
+        #faqTable th:nth-child(7),
+        #faqTable td:nth-child(7) {
+            width: 60px;
+        }
+        /* FAQ 列：奇數列淺灰 */
+        #faqTable.table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-accent-bg: #f6f7f9; /* 淺灰 */
+            color: inherit;
+        }
+
+        /* 滑過列時再深一點（可選） */
+        #faqTable.table-hover > tbody > tr:hover > * {
+            --bs-table-accent-bg: #eef1f5;
+        }
+
+        
+
+
+
     </style>
 }
 
@@ -132,7 +157,8 @@
      0 勾選、1 標題、2 答案、3 分類、4 排序、5 最近發布時間、
      6 啟用、7 建立時間、8 修改時間、9 操作
 -->
-<table id="faqTable" class="table table-sm table-hover table-clean align-middle">
+
+<table id="faqTable" class="table table-sm table-hover table-striped table-clean align-middle">
     <thead>
         <tr>
             <th style="width:36px;" class="text-center"><input type="checkbox" id="chkAll" /></th>
@@ -237,71 +263,72 @@
         $(function () {
             const antiToken = $('#antiForgeryForm input[name="__RequestVerificationToken"]').val();
 
-            // ====== DataTables 初始化 ======
-            const table = new DataTable('#faqTable', {
-                fixedHeader: true,
-                layout: {
-                    topStart: 'pageLength',
-                    topEnd: 'search',
-                    bottomStart: 'info',
-                    bottomEnd: 'paging'
+                   // ====== DataTables 初始化 ======
+        const table = new DataTable('#faqTable', {
+            fixedHeader: true,
+            layout: {
+                topStart: 'pageLength',
+                topEnd: 'search',
+                bottomStart: 'info',
+                bottomEnd: 'paging'
+            },
+            paging: true,
+            searching: true,
+            ordering: true,
+            responsive: true,
+            language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json" },
+
+            // 欄位渲染與寬度設定（索引請與表頭一致）
+            columnDefs: [
+                // 0: 勾選欄（不排序、不搜尋）
+                { targets: 0, orderable: false, searchable: false, className: "text-center", width: "36px" },
+
+                // 1: 標題 → 1 行省略 + title
+                {
+                    targets: 1, width: "18%",
+                    render: function (data, type) {
+                        const text = $('<div>').html(data || '').text().trim();
+                        if (type !== 'display') return text;
+                        const safe = text.replace(/"/g, '&quot;');
+                        return `<div class="line-clamp-1" title="${safe}">${text}</div>`;
+                    }
                 },
-                paging: true,
-                searching: true,
-                ordering: true,
-                responsive: true,
-                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json" },
 
-                // 欄位渲染與寬度設定（索引請與表頭一致）
-                columnDefs: [
-                    // 0: 勾選欄（不排序、不搜尋）
-                    { targets: 0, orderable: false, searchable: false, className: "text-center", width: "36px" },
+                // 2: 答案 → 轉純文字 + 2 行省略 + title
+                {
+                    targets: 2, width: "34%",
+                    render: function (data, type) {
+                        const text = $('<div>').html(data || '').text().trim();
+                        if (type !== 'display') return text;
+                        const safe = text.replace(/"/g, '&quot;');
+                        const short = text.length > 80 ? text.slice(0, 80) + '…' : text;
+                        return `<div class="line-clamp-2" title="${safe}">${short}</div>`;
+                    }
+                },
 
-                    // 1: 標題 → 1 行省略 + title
-                    {
-                        targets: 1, width: "18%",
-                        render: function (data, type) {
-                            const text = $('<div>').html(data || '').text().trim();
-                            if (type !== 'display') return text;
-                            const safe = text.replace(/"/g, '&quot;');
-                            return `<div class="line-clamp-1" title="${safe}">${text}</div>`;
-                        }
-                    },
+                // 3: 分類 → badge 呈現
+                {
+                    targets: 3, width: "12%",
+                    render: function (data, type) {
+                        if (type !== 'display') return data || '';
+                        const name = ($('<div>').html(data || '').text() || '').trim();
+                        if (!name) return '<span class="badge-category badge-category--muted">未分類</span>';
+                        const safe = $('<div>').text(name).html();
+                        return `<span class="badge-category">${safe}</span>`;
+                    }
+                },
 
-                    // 2: 答案 → 轉純文字 + 2 行省略 + title
-                    {
-                        targets: 2, width: "34%",
-                        render: function (data, type) {
-                            const text = $('<div>').html(data || '').text().trim();
-                            if (type !== 'display') return text;
-                            const safe = text.replace(/"/g, '&quot;');
-                            const short = text.length > 80 ? text.slice(0, 80) + '…' : text; // 可自行調整 80
-                            return `<div class="line-clamp-2" title="${safe}">${short}</div>`;
-                        }
-                    },
+                // 6: 啟用開關欄（不排序、不搜尋） → 只留 switch
+                { targets: 6, orderable: false, searchable: false, className: "text-center", width: "60px" },
 
-                    // 3: 分類 → 以 badge 呈現（若空值顯示「未分類」）
-                    {
-                        targets: 3, width: "12%",
-                        render: function (data, type) {
-                            if (type !== 'display') return data || '';
-                            const name = ($('<div>').html(data || '').text() || '').trim();
-                            if (!name) return '<span class="badge-category badge-category--muted">未分類</span>';
-                            const safe = $('<div>').text(name).html();
-                            return `<span class="badge-category">${safe}</span>`;
-                        }
-                    },
+                // 9: 操作欄（不排序、不搜尋）
+                { targets: -1, orderable: false, searchable: false, className: "text-nowrap", width: "120px" }
+            ],
 
-                    // 6: 啟用開關欄（不排序、不搜尋）
-                    { targets: 6, orderable: false, searchable: false, className: "text-center", width: "90px" },
+            // 建議預設排序：先「排序」升冪，再「最近發布時間」降冪
+            order: [[4, 'asc'], [5, 'desc']]
+        });
 
-                    // 9: 操作欄（不排序、不搜尋）
-                    { targets: -1, orderable: false, searchable: false, className: "text-nowrap", width: "120px" }
-                ],
-
-                // 建議預設排序：先「排序」升冪，再「最近發布時間」降冪
-                order: [[4, 'asc'], [5, 'desc']]
-            });
 
             // Tooltip（重繪時需重新掛）
             const initTooltips = () => {
