@@ -40,9 +40,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		[HttpGet]
 		public IActionResult Index()
 		{
-			//ViewBag.SupplierId = supplierId;
-			//ViewBag.BrandName = TempData["BrandName"] as string ?? "";
-
 			return View();
 		}
 
@@ -78,7 +75,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								sb.Qty,
 								sku.SafetyStockQty,
 								sku.ReorderPoint,
-								sb.IsSellable,
+								//sb.IsSellable,
+								p.IsPublished,
 
 								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
 								RevisedDate=sb.RevisedDate,
@@ -231,7 +229,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
 		// GET: /SUP/StockBatches/Create
 		[HttpGet]
 		public IActionResult Create()
@@ -251,10 +248,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
+		/// <summary>
+		/// 採購入庫跟手動調整的
+		/// </summary>
 		// POST: /SUP/StockBatches/CreateStockBatch
-		// To protect from overposting attacks, enable the specific properties you want to bind to.
-		// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> CreateStockBatch([FromForm] StockBatchContactViewModel vm)
@@ -409,8 +406,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
-
 		// 自動產生批號
 		// 批號{BrandCode}{yyyymmdd}-{流水號}
 		// 流水號每日統一遞增，不分品牌
@@ -440,7 +435,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			return $"{brandCode}{datePart}-{nextSeq:000}";
 		}
-
 
 		#region 新增庫存表單用 API
 
@@ -574,7 +568,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#endregion
 
-
 		[HttpPost]
 		public async Task<IActionResult> GetAllStockHistory([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
 		{
@@ -668,7 +661,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			});
 		}
 
-
 		// POST： /SUP/StockBatches/SaveStockMovement
 		[HttpPost]
 		[ValidateAntiForgeryToken]
@@ -684,10 +676,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				return Json(new { success = false, message = ex.Message });
 			}
 		}
-
-
-
-
 
 		// GET: /SUP/StockBatches/Edit/5
 		[HttpGet]
@@ -738,58 +726,61 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
+		public class StockBatchUpdateDto
+		{
+			public int ChangeQty { get; set; }
+			public bool IsAdd { get; set; }
+			public string Remark { get; set; }
+		}
 
-
-		// POST: /SUP/StockBatches/Update
 		[HttpPost]
 		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
 		{
+			// 取得批號
 			var batch = await _context.SupStockBatches.FindAsync(id);
 			if (batch == null)
 				return Json(new { success = false, message = "找不到批號" });
 
-			// 異動前數量
 			int beforeQty = batch.Qty;
 
-			// 計算異動數量（增加為 +，減少為 -）
+			// 增加/減少批號庫存
 			int changeQty = dto.IsAdd ? dto.ChangeQty : -dto.ChangeQty;
-
-			// 更新批次庫存
 			batch.Qty += changeQty;
-
-			// 異動後數量
 			int afterQty = batch.Qty;
 
-			var userId = _me.Id; // string
-			var user = await _userMgr.Users
-				.AsNoTracking()
-				.FirstOrDefaultAsync(u => u.Id == userId);
-
+			// 使用者資訊
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 			if (user == null)
 				return Json(new { success = false, message = "找不到使用者資料" });
-
 			int currentUserId = user.UserNumberId;
 
-			// 建立異動紀錄
+			// 異動紀錄
 			_context.SupStockHistories.Add(new SupStockHistory
 			{
 				StockBatchId = id,
-				ChangeType = "Adjust",   // 固定:手動調整
+				ChangeType = "Adjust",
 				ChangeQty = changeQty,
 				BeforeQty = beforeQty,
 				AfterQty = afterQty,
 				Remark = dto.Remark,
-				//Reviser = 1,
 				Reviser = currentUserId,
 				RevisedDate = DateTime.Now
 			});
 
+			// 更新 SKU 總庫存：依異動量增減，而不是重新 sum
+			var sku = await _context.ProdProductSkus.FirstOrDefaultAsync(s => s.SkuId == batch.SkuId);
+			if (sku != null)
+			{
+				sku.StockQty += changeQty; // 直接累加變動量
+				_context.Update(sku);
+			}
+
+			// 一次提交：批號 + 異動紀錄 + SKU 總庫存
 			await _context.SaveChangesAsync();
 
 			return Json(new { success = true });
 		}
-
-
 
 		// GET: /SUP/StockBatches/Remark/5
 		[HttpGet]
@@ -867,12 +858,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Json(new { success = true, stockHistoryId = history.StockHistoryId });
 		}
 
-
 		private bool SupStockBatchExists(int id)
 		{
 			return _context.SupStockBatches.Any(e => e.StockBatchId == id);
 		}
-
 
 		#region 初始化所有 SKU 批號
 		[HttpPost]
@@ -963,6 +952,250 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 		#endregion
 
+
+
+		/// <summary>
+		/// 到期報廢 (Expire)，自動 FIFO 扣庫
+		/// 不指定批號，AdjustStockAsync 會自動按 FIFO 扣庫
+		/// 前端只需要傳 SkuId 與 ChangeQty，可選 Remark
+		/// 回傳結果包含每個批次的扣庫紀錄 (batchMovements) 以及總扣庫數量 (expiredQty)
+		/// </summary>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ExpireStock([FromForm] StockBatchContactViewModel vm)
+		{
+			try
+			{
+				if (!ModelState.IsValid)
+				{
+					var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+					return Json(new { success = false, message = "資料格式錯誤", errors });
+				}
+
+				var sku = await _context.ProdProductSkus
+					.Include(s => s.Product)
+						.ThenInclude(p => p.Brand)
+					.FirstOrDefaultAsync(s => s.SkuId == vm.SkuId && s.IsActive);
+
+				if (sku == null)
+					return Json(new { success = false, message = "找不到 SKU" });
+
+				if ((vm.ChangeQty ?? 0) <= 0)
+					return Json(new { success = false, message = "異動數量必須大於 0" });
+
+				int expireQty = vm.ChangeQty.Value;
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				int currentUserId = user?.UserNumberId ?? 1006;
+
+				// 使用 AdjustStockAsync，服務自動處理 FIFO 扣庫
+				var result = await _stockService.AdjustStockAsync(
+					batchId: 0,          // 不指定批號
+					skuId: sku.SkuId,
+					changeQty: expireQty,
+					isAdd: false,
+					movementType: "Expire",
+					reviserId: currentUserId,
+					remark: vm.Remark
+				);
+
+				if (!result.Success)
+					return Json(new { success = false, message = result.Message });
+
+				return Json(new
+				{
+					success = true,
+					batchMovements = result.BatchMovements,
+					expiredQty = result.AdjustedQty,
+					totalStockQty = result.TotalStock
+				});
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "伺服器錯誤：" + ex.Message });
+			}
+		}
+
+		// GET:/SUP/StockBatches/OtherOperation
+		[HttpGet]
+		public IActionResult OtherOperation(string type)
+		{
+			try
+			{
+				var vm = new StockBatchContactViewModel();
+
+				// 判斷類型，給 PartialView 用
+				ViewBag.FormAction = type switch
+				{
+					"Sale" => "Sale",
+					"Return" => "Return",
+					"Expire" => "Expire",
+					_ => "Unknown"
+				};
+
+				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchOtherPartial.cshtml", vm);
+			}
+			catch (Exception ex)
+			{
+				return Content("錯誤：" + ex.Message);
+			}
+		}
+
+
+		#region 處理出庫 / 退貨
+		//前端只需傳：
+		//ExpireStock: SkuId, ChangeQty, 可選 Remark
+		//SaleStock: SkuId, ChangeQty, OrderItemId, 可選 Remark
+		//ReturnStock: SkuId, ChangeQty, OrderItemId, 可選 Remark
+
+		/// <summary>
+		/// 銷售出庫 (Sale)
+		/// </summary>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> SaleStock([FromForm] StockBatchContactViewModel vm)
+		{
+			try
+			{
+
+				if (!ModelState.IsValid)
+				{
+					var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+					return Json(new { success = false, message = "資料格式錯誤", errors });
+				}
+
+				var sku = await _context.ProdProductSkus
+					.Include(s => s.Product)
+						.ThenInclude(p => p.Brand)
+					.FirstOrDefaultAsync(s => s.SkuId == vm.SkuId && s.IsActive);
+
+				if (sku == null)
+					return Json(new { success = false, message = "找不到 SKU" });
+
+				if ((vm.ChangeQty ?? 0) <= 0)
+					return Json(new { success = false, message = "異動數量必須大於 0" });
+
+				int requestedQty = vm.ChangeQty.Value;
+
+				if (sku.StockQty < requestedQty)
+					return Json(new { success = false, message = "庫存不足，無法出庫" });
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				int currentUserId = user?.UserNumberId ?? 1006;
+
+				// 使用 AdjustStockAsync，服務自動處理 FIFO 扣庫
+				var result = await _stockService.AdjustStockAsync(
+					batchId: 0,          // 不指定批號
+					skuId: sku.SkuId,
+					changeQty: requestedQty,
+					isAdd: false,
+					movementType: "Sale",
+					reviserId: currentUserId,
+					remark: vm.Remark,
+					//orderItemId: vm.OrderItemId
+					orderItemId: 2521  // TODO:目前寫死對應訂單明細
+
+				);
+				//var result = await _stockService.AdjustStockAsync(
+				//	batchId: 9131,      // 指定已存在的批號
+				//	skuId: 1084,
+				//	changeQty: 1,
+				//	isAdd: false,
+				//	movementType: "Sale",
+				//	reviserId: 1004,
+				//	remark: null,
+				//	orderItemId: 2521  // 對應訂單明細
+				//);
+
+
+				if (!result.Success)
+					return Json(new { success = false, message = result.Message });
+
+				return Json(new
+				{
+					success = true,
+					batchMovements = result.BatchMovements,
+					appliedChangeQty = result.AdjustedQty,
+					totalStockQty = result.TotalStock
+				});
+			}
+			catch (Exception ex)
+			{
+				var inner = ex.InnerException != null ? ex.InnerException.Message : "";
+				var fullMessage = $"伺服器錯誤: {ex.Message}" + (string.IsNullOrEmpty(inner) ? "" : " | Inner: " + inner);
+				return Json(new { success = false, message = fullMessage });
+			}
+		}
+
+		/// <summary>
+		/// 退貨入庫 (Return)
+		/// 先入庫能存的量
+		/// 超過 SKU 最大庫存，依 FIFO 報廢（Expire）
+		/// </summary>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ReturnStock([FromForm] StockBatchContactViewModel vm)
+		{
+			try
+			{
+				if (!ModelState.IsValid)
+				{
+					var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+					return Json(new { success = false, message = "資料格式錯誤", errors });
+				}
+
+				var sku = await _context.ProdProductSkus
+					.Include(s => s.Product)
+						.ThenInclude(p => p.Brand)
+					.FirstOrDefaultAsync(s => s.SkuId == vm.SkuId && s.IsActive);
+
+				if (sku == null)
+					return Json(new { success = false, message = "找不到 SKU" });
+
+				if ((vm.ChangeQty ?? 0) <= 0)
+					return Json(new { success = false, message = "異動數量必須大於 0" });
+
+				int requestedQty = vm.ChangeQty.Value;
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				int currentUserId = user?.UserNumberId ?? 1006;
+
+				// 呼叫 AdjustStockAsync，讓服務自動處理：
+				// 1️ 回原銷售批次
+				// 2️ 超過 SKU.MaxStockQty → FIFO 報廢
+				var result = await _stockService.AdjustStockAsync(
+					batchId: 0,          // 不指定批號，由服務端找原批次
+					skuId: sku.SkuId,
+					changeQty: requestedQty,
+					isAdd: true,
+					movementType: "Return",
+					reviserId: currentUserId,
+					remark: vm.Remark,
+					//orderItemId: vm.OrderItemId
+					orderItemId: 2521  // TODO:目前寫死對應訂單明細
+				);
+
+				if (!result.Success)
+					return Json(new { success = false, message = result.Message });
+
+				return Json(new
+				{
+					success = true,
+					batchMovements = result.BatchMovements,
+					appliedChangeQty = result.AdjustedQty,
+					totalStockQty = result.TotalStock
+				});
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "伺服器錯誤：" + ex.Message });
+			}
+		}
+
+		#endregion
 
 	}
 }

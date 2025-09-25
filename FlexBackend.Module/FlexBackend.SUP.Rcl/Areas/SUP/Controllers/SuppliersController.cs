@@ -68,12 +68,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			// 排序
 			query = sortColumnIndex switch
 			{
-				0 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
-				1 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
-				2 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
-				3 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
-				4 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
-				_ => query.OrderBy(s => s.SupplierId),
+				0 => sortDirection == "asc"
+						? query.OrderBy(s => s.RevisedDate ?? s.CreatedDate)
+						: query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
+				1 => sortDirection == "asc" ? query.OrderBy(s => s.SupplierName) : query.OrderByDescending(s => s.SupplierName),
+				2 => sortDirection == "asc" ? query.OrderBy(s => s.ContactName) : query.OrderByDescending(s => s.ContactName),
+				3 => sortDirection == "asc" ? query.OrderBy(s => s.Phone) : query.OrderByDescending(s => s.Phone),
+				4 => sortDirection == "asc" ? query.OrderBy(s => s.Email) : query.OrderByDescending(s => s.Email),
+				5 => sortDirection == "asc" ? query.OrderBy(s => s.IsActive) : query.OrderByDescending(s => s.IsActive),
+				_ => query.OrderByDescending(s => s.RevisedDate ?? s.CreatedDate),
 			};
 
 			// 分頁與選取欄位
@@ -87,7 +90,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					contactName = s.ContactName,
 					phone = s.Phone,
 					email = s.Email,
-					isActive = s.IsActive
+					isActive = s.IsActive,
+		            sortDate = s.RevisedDate ?? s.CreatedDate  // 前端序號排序用
 				}).ToListAsync();
 
 			// 回傳給 DataTables
@@ -147,8 +151,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				_context.SupSuppliers.Add(supEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = true, supplier = supEntity });
-			}
+        // 回傳前端需要的完整資料
+        return Json(new
+        {
+            success = true,
+            isCreate = true,
+            supplier = new
+            {
+                supplierId = supEntity.SupplierId,
+                supplierName = supEntity.SupplierName,
+                contactName = supEntity.ContactName,
+                phone = supEntity.Phone,
+                email = supEntity.Email,
+                isActive = supEntity.IsActive
+            }
+        });			}
 
 			// 驗證失敗回 Partial
 			//return PartialView("Partials/_SupplierFormPartial", supplierVm);
@@ -179,7 +196,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
 			var viewModel = new SupplierContactViewModel
 			{
-				SupplierId = currentUserId,
+				SupplierId = supEntity.SupplierId,
 				SupplierName = supEntity.SupplierName,
 				ContactName = supEntity.ContactName,
 				Phone = supEntity.Phone,
@@ -245,7 +262,21 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 					_context.Update(supEntity);
 					await _context.SaveChangesAsync();
 
-					return Json(new { success = true });
+					return Json(new
+					{
+						success = true,
+						isCreate = false,
+						supplier = new
+						{
+							supplierId = supEntity.SupplierId,
+							supplierName = supEntity.SupplierName,
+							contactName = supEntity.ContactName,
+							phone = supEntity.Phone,
+							email = supEntity.Email,
+							isActive = supEntity.IsActive
+						}
+					});
+
 				}
 				catch (DbUpdateConcurrencyException)
 				{
