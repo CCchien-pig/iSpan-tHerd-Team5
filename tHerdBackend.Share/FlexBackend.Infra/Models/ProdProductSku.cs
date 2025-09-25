@@ -102,6 +102,8 @@ public partial class ProdProductSku
 
     public virtual ICollection<OrdOrderItem> OrdOrderItems { get; set; } = new List<OrdOrderItem>();
 
+    public virtual ICollection<OrdShoppingCartItem> OrdShoppingCartItems { get; set; } = new List<OrdShoppingCartItem>();
+
     public virtual ICollection<ProdProductImage> ProdProductImages { get; set; } = new List<ProdProductImage>();
 
     public virtual ICollection<ProdProductReview> ProdProductReviews { get; set; } = new List<ProdProductReview>();
