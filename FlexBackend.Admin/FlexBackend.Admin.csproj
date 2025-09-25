@@ -37,6 +37,7 @@
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.ORD.Rcl\FlexBackend.ORD.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.PROD.Rcl\FlexBackend.PROD.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.SUP.Rcl\FlexBackend.SUP.Rcl.csproj" />
+    <ProjectReference Include="..\FlexBackend.Module\FlexBackend.SYS.Rcl\FlexBackend.SYS.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Module\FlexBackend.Users.Rcl\FlexBackend.USER.Rcl.csproj" />
     <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Composition\FlexBackend.Composition.csproj" />
     <ProjectReference Include="..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />

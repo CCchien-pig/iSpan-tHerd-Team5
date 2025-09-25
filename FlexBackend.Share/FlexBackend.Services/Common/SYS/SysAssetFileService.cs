@@ -1,7 +1,7 @@
-﻿using FlexBackend.Core.Interfaces.SYS;
-using Microsoft.AspNetCore.Http;
+﻿using FlexBackend.Core.DTOs;
+using FlexBackend.Core.Interfaces.SYS;
 
-namespace FlexBackend.Services.PROD
+namespace FlexBackend.Services.Common.SYS
 {
     public class SysAssetFileService : ISysAssetFileService
     {
@@ -12,14 +12,19 @@ namespace FlexBackend.Services.PROD
             _frepo = frepo;
         }
 
+        public Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default)
+        {
+            return _frepo.GetFiles(moduleId, progId, ct);
+        }
+
         /// <summary>
         /// 新增相片至 Cloudinary 並存入資料庫
         /// </summary>
         /// <param name="files"></param>
         /// <returns></returns>
-        public Task<bool> AddImages(List<IFormFile> files)
+        public async Task<AssetFileUploadDto> AddImages(AssetFileUploadDto uploadDto)
         {
-            return _frepo.AddImages(files);
+            return await _frepo.AddImages(uploadDto);
         }
     }
 }
