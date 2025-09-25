@@ -2,7 +2,7 @@
 using FlexBackend.Infra.Repository.SYS;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexBackend.Services.PROD
+namespace FlexBackend.Services.Common.SYS
 {
     public static class SYSModuleServiceCollectionExtensions
     {

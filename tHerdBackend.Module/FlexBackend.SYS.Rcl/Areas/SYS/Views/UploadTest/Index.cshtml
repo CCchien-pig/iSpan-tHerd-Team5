@@ -1,0 +1,199 @@
+﻿@using FlexBackend.Core.DTOs
+@using System.Linq
+@model List<SysAssetFileDto>
+
+@{
+    ViewData["Title"] = "上傳圖片測試";
+}
+
+@section Styles {
+    <style>
+        /* 預覽區圖片 */
+        #preview img {
+            max-width: 300px;
+            max-height: 200px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 輪播圖圖片 */
+        #carouselFiles img {
+            max-width: 300px;
+            max-height: 200px;
+            object-fit: contain;
+        }
+
+        .thumb-img.active {
+            border: 3px solid #007bff;
+        }
+    </style>
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Index" asp-controller="UploadTest" method="post" enctype="multipart/form-data">
+    <!-- 拖拉區塊 -->
+    <div id="dropArea" class="border border-2 border-primary rounded p-5 text-center mb-3 bg-light">
+        <p class="mb-2">拖拉圖片到這裡，或點擊下方選擇檔案</p>
+        <input type="file" id="fileInput" class="form-control d-none" multiple />
+        <button type="button" id="selectBtn" class="btn btn-outline-primary">選擇圖片</button>
+    </div>
+
+    <!-- 預覽區 -->
+    <div id="preview" class="row row-cols-1 row-cols-md-3 g-3 mb-3"></div>
+
+    <!-- 隱藏 input 集合 -->
+    <div id="hiddenInputs"></div>
+
+    <button type="submit" class="btn btn-primary">上傳</button>
+</form>
+
+@if (ViewBag.Message != null)
+{
+    <div class="alert alert-info mt-3">@ViewBag.Message</div>
+}
+
+@if (Model != null && Model.Any())
+{
+    <div class="row">
+        <!-- 左側大圖 -->
+        <div class="col-md-9">
+            <div id="carouselFiles" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var file = Model[i];
+                        <div class="carousel-item @(i == 0 ? "active" : "")">
+                            <img src="@file.FileUrl"
+                                 class="d-block mx-auto img-fluid"
+                                 style="max-height:600px; object-fit:contain;"
+                                 alt="@file.AltText" />
+                            <div class="carousel-caption d-none d-md-block">
+                                <p>@file.Caption</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselFiles" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselFiles" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 右側縮圖 (上下滑動) -->
+        <div class="col-md-3">
+            <div class="overflow-auto" style="max-height:600px;">
+                <div class="d-flex flex-column align-items-center">
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var file = Model[i];
+                        <img src="@file.FileUrl"
+                             class="img-thumbnail mb-2 thumb-img"
+                             style="cursor:pointer; width:100px; height:50px; object-fit:cover;"
+                             data-bs-target="#carouselFiles"
+                             data-bs-slide-to="@i"
+                             alt="@file.AltText" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const carousel = document.getElementById("carouselFiles");
+            const thumbs = document.querySelectorAll(".thumb-img");
+
+            // 當 carousel 切換時，更新縮圖高亮
+            carousel.addEventListener("slid.bs.carousel", function (e) {
+                thumbs.forEach(t => t.classList.remove("active"));
+                thumbs[e.to].classList.add("active");
+            });
+
+            // 預設第一張高亮
+            if (thumbs.length > 0) thumbs[0].classList.add("active");
+        });
+
+        const dropArea = document.getElementById("dropArea");
+        const fileInput = document.getElementById("fileInput");
+        const selectBtn = document.getElementById("selectBtn");
+        const preview = document.getElementById("preview");
+        const hiddenInputs = document.getElementById("hiddenInputs");
+
+        selectBtn.addEventListener("click", () => fileInput.click());
+
+        function showPreview(files) {
+            preview.innerHTML = "";
+            hiddenInputs.innerHTML = "";
+
+            [...files].forEach((file, index) => {
+                if (!file.type.startsWith("image/")) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const col = document.createElement("div");
+                    col.className = "col";
+
+                    col.innerHTML = `
+                        <div class="card h-100 shadow-sm">
+                            <img src="${e.target.result}" class="card-img-top img-thumbnail" />
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <label class="form-label">AltText</label>
+                                    <input type="text" name="Files[${index}].AltText" class="form-control" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Caption</label>
+                                    <input type="text" name="Files[${index}].Caption" class="form-control" />
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" name="Files[${index}].IsActive" value="true" class="form-check-input" checked />
+                                    <label class="form-check-label">啟用</label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    preview.appendChild(col);
+
+                    // 隱藏 File input
+                    const hiddenFileInput = document.createElement("input");
+                    hiddenFileInput.type = "file";
+                    hiddenFileInput.name = `Files[${index}].File`;
+                    hiddenFileInput.classList.add("d-none");
+
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    hiddenFileInput.files = dataTransfer.files;
+
+                    hiddenInputs.appendChild(hiddenFileInput);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        fileInput.addEventListener("change", () => showPreview(fileInput.files));
+
+        ["dragenter", "dragover"].forEach(evt => {
+            dropArea.addEventListener(evt, e => {
+                e.preventDefault();
+                dropArea.classList.add("bg-white");
+            });
+        });
+        ["dragleave", "drop"].forEach(evt => {
+            dropArea.addEventListener(evt, e => {
+                e.preventDefault();
+                dropArea.classList.remove("bg-white");
+            });
+        });
+        dropArea.addEventListener("drop", e => {
+            e.preventDefault();
+            fileInput.files = e.dataTransfer.files;
+            showPreview(fileInput.files);
+        });
+    </script>
+}
