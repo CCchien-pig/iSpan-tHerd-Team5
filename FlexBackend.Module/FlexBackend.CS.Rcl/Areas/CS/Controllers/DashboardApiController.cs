@@ -313,12 +313,27 @@ ORDER BY Dte;";
             // 1) 讀出實際有對應設定的品類（避免出現孤兒設定）
             // 子分類（leaf）：與右側長條、Top 表格一致（例：草本補充品 HERB）
             using var cmd = conn.CreateCommand();
+        //    cmd.CommandText = @"
+        //SELECT ProductTypeCode AS Code,
+        //       ProductTypeName AS Name
+        //FROM PROD_ProductTypeConfig
+        //WHERE ParentId IS NOT NULL AND IsActive = 1
+        //ORDER BY ParentId, OrderSeq, ProductTypeName;";
+
             cmd.CommandText = @"
-        SELECT ProductTypeCode AS Code,
-               ProductTypeName AS Name
-        FROM PROD_ProductTypeConfig
-        WHERE ParentId IS NOT NULL AND IsActive = 1
-        ORDER BY ParentId, OrderSeq, ProductTypeName;";
+                SELECT DISTINCT
+                       ptc.ProductTypeCode AS Code,
+                       ptc.ProductTypeName AS Name
+                FROM ORD_OrderItem oi
+                JOIN ORD_Order o ON o.OrderId = oi.OrderId
+                JOIN PROD_Product p ON p.ProductId = oi.ProductId
+                JOIN PROD_ProductType pt ON pt.ProductId = p.ProductId
+                JOIN PROD_ProductTypeConfig ptc ON pt.ProductTypeId = ptc.ProductTypeId
+                WHERE ptc.IsActive = 1
+                  AND o.CreatedDate >= DATEADD(DAY, -90, CAST(GETDATE() AS date)) -- 近90天
+                ORDER BY ptc.ProductTypeName;
+
+                ";
 
 
 
@@ -347,7 +362,8 @@ WHERE pt.ProductId IS NULL;";
                 list.Add(new CodeName("__NULL__", "未分類"));
             }
 
-            return Ok(list);
+            return Ok(list.OrderBy(a => a.name));
+
         }
 
         // ───────────────────────────────────────────────────────────────────────────
