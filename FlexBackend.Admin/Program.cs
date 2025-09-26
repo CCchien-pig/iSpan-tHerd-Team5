@@ -107,12 +107,12 @@ namespace FlexBackend.Admin
             var cloudinarySettings = builder.Configuration.GetSection("CloudinarySettings");
 
             var account = new Account(
-                cloudinarySettings.GetValue<string>("CloudName"),
-                cloudinarySettings.GetValue<string>("ApiKey"),
-                cloudinarySettings.GetValue<string>("ApiSecret")
+                builder.Configuration["CloudinarySettings:CloudName"],
+                builder.Configuration["CloudinarySettings:ApiKey"],
+                builder.Configuration["CloudinarySettings:ApiSecret"]
             );
 
-            var cloudinary = new Cloudinary(account);
+            var cloudinary = new Cloudinary(account) { Api = { Secure = true } };
             builder.Services.AddSingleton(cloudinary);
 
             // 全站預設需要登入 

@@ -12,13 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="itext" Version="9.3.0" />
+    <PackageReference Include="CloudinaryDotNet" Version="1.27.7" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
+    <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Core\FlexBackend.Core.csproj" />
     <ProjectReference Include="..\..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
 
