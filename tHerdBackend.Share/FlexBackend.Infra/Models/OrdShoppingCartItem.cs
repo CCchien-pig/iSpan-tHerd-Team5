@@ -40,7 +40,11 @@ public partial class OrdShoppingCartItem
     /// </summary>
     public DateTime CreatedDate { get; set; }
 
+    public int? SkuId { get; set; }
+
     public virtual OrdShoppingCart Cart { get; set; }
 
     public virtual ProdProduct Product { get; set; }
+
+    public virtual ProdProductSku Sku { get; set; }
 }

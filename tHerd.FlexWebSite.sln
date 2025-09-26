@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.Composition", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.SharedApi", "FlexBackend.SharedApi\FlexBackend.SharedApi.csproj", "{F2BE6FE3-56C2-4493-BE5E-F76E4BBA1C3E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexBackend.SYS.Rcl", "FlexBackend.Module\FlexBackend.SYS.Rcl\FlexBackend.SYS.Rcl.csproj", "{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,10 @@ Global
 		{F2BE6FE3-56C2-4493-BE5E-F76E4BBA1C3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2BE6FE3-56C2-4493-BE5E-F76E4BBA1C3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2BE6FE3-56C2-4493-BE5E-F76E4BBA1C3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -117,6 +123,7 @@ Global
 		{DD378CC9-9658-45BD-AD62-116F27644C81} = {9FF153ED-5BD2-4161-A7BC-0758E5993E6F}
 		{5607354A-AB9E-4B99-B7E8-A9131146D906} = {9FF153ED-5BD2-4161-A7BC-0758E5993E6F}
 		{F2BE6FE3-56C2-4493-BE5E-F76E4BBA1C3E} = {9FF153ED-5BD2-4161-A7BC-0758E5993E6F}
+		{CCFDBB96-1B55-432F-BAE6-5E9B44D9796D} = {B8CF0AB5-AB76-451A-9A5B-5B06E59DC85A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBAB1EE1-8942-4641-99D6-AFC92F0F1E14}

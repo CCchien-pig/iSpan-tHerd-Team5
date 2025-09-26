@@ -1,0 +1,10 @@
+﻿using FlexBackend.Core.DTOs;
+
+namespace FlexBackend.Core.Interfaces.SYS
+{
+    public interface ISysAssetFileRepository
+    {
+        Task<AssetFileUploadDto> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
+        Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default);
+    }
+}
