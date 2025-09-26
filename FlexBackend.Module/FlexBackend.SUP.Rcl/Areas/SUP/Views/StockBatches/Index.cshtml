@@ -134,7 +134,7 @@
                 <label for="historyExpireFilter" class="form-label" style="margin-bottom:2px; padding-left:6px;">過期與否篩選</label>
                 <select id="historyExpireFilter" class="form-select form-select-sm">
                     <option value="">全部</option>
-                    <option value="valid">未過期</option>
+                    <option value="valid" selected>未過期</option>
                     <option value="expired">已過期</option>
                 </select>
             </div>
@@ -487,7 +487,7 @@
                         d.endDate = $('#endDate').val();
                     },
                     dataSrc: function(json) {
-                        //console.log(json);      // 印出整個 JSON
+                        console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
                         return json.data;
                     },
@@ -506,10 +506,24 @@
                             return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
                         }
                     },
-                    { data: 'skuCode', title: 'SKU', className: 'text-center'},
+                    { 
+                        data: 'skuCode', 
+                        title: 'SkuCode', 
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            console.log(data);
+                            console.log(row.skuId);
+                            if (!data) return '';
+                            return `<span data-bs-toggle="tooltip"
+                                         data-bs-placement="top"
+                                         title="SkuId: ${row.skuId}">
+                                        ${data}
+                                    </span>`;
+                        }
+                    },
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
                     { data: 'brandName', title: '品牌', className: 'text-center'},
-                    { data: 'productName', title: '商品名稱', className: 'text-center'},
+                    { data: 'productName', title: '商品名稱', className: 'text-center text-wrap', width: "200px"},
                     {
                         data: 'expireDate',
                         title: '到期日',
@@ -578,7 +592,7 @@
                         className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
-                            console.log(row.brandName);
+                            // console.log(row.brandName);
                             return `
                                 <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="該筆批次異動">
                                     <i class="fa-solid fa-right-from-bracket" style="color: #977ee2;"></i>
@@ -709,7 +723,7 @@
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
                 },
-                order: [[7, 'desc']], // 預設依時間新到舊
+                order: [[7, 'desc']], // 預設依異動時間新到舊
             });
 
             // 下拉選單切換事件
@@ -1181,6 +1195,7 @@
             // 更新 helper
             $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
         }
+
 
         // 點擊下載匯入範例
         $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateExcel');

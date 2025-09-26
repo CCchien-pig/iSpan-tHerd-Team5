@@ -84,6 +84,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 								SupplierId = b.SupplierId,
 
 								sb.StockBatchId,
+								skuId = sku.SkuId,
 								SkuCode = sku.SkuCode,
 								sb.BatchNumber,
 								sb.ExpireDate,
@@ -203,6 +204,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					d.StockBatchId,
 					SkuCode = d.SkuCode ?? "",   // 保護 null
+					skuId = d.skuId,
 					d.BatchNumber,
 					//d.ExpireDate,
 					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
