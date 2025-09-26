@@ -1,5 +1,4 @@
-﻿using CsvHelper;
-using DocumentFormat.OpenXml.Spreadsheet;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
 using FlexBackend.Core.Abstractions;
 using FlexBackend.Core.DTOs.SUP;
 using FlexBackend.Core.DTOs.USER;
@@ -8,13 +7,10 @@ using FlexBackend.Infra.Models;
 using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using iText.IO.Font;
 using iText.IO.Font.Constants;
-using iText.Kernel.Colors;
 using iText.Kernel.Font;
-using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
-using iText.Layout.Properties;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -577,6 +573,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 		// 取得異動類型 (僅回傳 Purchase / Adjust)
+		// GET: /SUP/StockBatches/GetMovementTypes
 		[HttpGet]
 		public async Task<IActionResult> GetMovementTypes()
 		{
@@ -778,6 +775,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			public string Remark { get; set; }
 		}
 
+		// POST: /SUP/StockBatches/Update
 		[HttpPost]
 		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
 		{
@@ -877,6 +875,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			});
 		}
 
+		// POST: /SUP/StockBatches/UpdateHistoryRemark
 		[HttpPost]
 		public async Task<JsonResult> UpdateHistoryRemark(StockHistoryRemarkDto dto)
 		{
@@ -910,8 +909,10 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#region 匯入功能
 
+		// 下載匯入範例(.xlsx)
+		// GET: /SUP/StockBatches/DownloadStockBatchTemplateExcel
 		[HttpGet]
-		public IActionResult DownloadStockBatchTemplate()
+		public IActionResult DownloadStockBatchTemplateExcel()
 		{
 			// 設定 EPPlus 非商業授權（個人）
 			ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
@@ -920,25 +921,32 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			var ws = package.Workbook.Worksheets.Add("StockBatchTemplate");
 
 			// 表頭
-			ws.Cells[1, 1].Value = "SKU";
-			ws.Cells[1, 2].Value = "批號";
-			ws.Cells[1, 3].Value = "商品名稱";
-			ws.Cells[1, 4].Value = "到期日"; // yyyy-MM-dd 或留空
-			ws.Cells[1, 5].Value = "批次庫存量";
+			ws.Cells[1, 1].Value = "SkuCode (必填)";
+			ws.Cells[1, 2].Value = "數量 (必填)";
+			ws.Cells[1, 3].Value = "製造日期 (可選)";
+			ws.Cells[1, 4].Value = "備註 (可選)";
 
 			// 設定表頭樣式
-			using (var range = ws.Cells[1, 1, 1, 5])
+			using (var range = ws.Cells[1, 1, 1, 4])
 			{
 				range.Style.Font.Bold = true;
 				range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
 			}
 
 			// 調整欄寬
-			ws.Column(1).Width = 15; // SKU
-			ws.Column(2).Width = 15; // 批號
-			ws.Column(3).Width = 25; // 商品名稱
-			ws.Column(4).Width = 15; // 到期日
-			ws.Column(5).Width = 15; // 批次庫存量
+			ws.Column(1).Width = 25; // SkuCode
+			ws.Column(2).Width = 15; // Qty
+			ws.Column(3).Width = 20; // MfgDate
+			ws.Column(4).Width = 15; // Remark
+			ws.Column(5).Width = 25;
+
+			// 範例資料
+			ws.Cells[2, 1].Value = "AN-Y-P1180-0002-M";
+			ws.Cells[2, 2].Value = 20;
+			ws.Cells[2, 3].Value = DateTime.Today;
+			ws.Cells[2, 3].Style.Numberformat.Format = "yyyy/MM/dd"; // 設定為日期格式
+			ws.Cells[2, 4].Value = "Import";
+			ws.Cells[2, 5].Value = "←為範例，請勿刪除";
 
 			var stream = new MemoryStream();
 			package.SaveAs(stream);
@@ -952,100 +960,331 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			);
 		}
 
+		// 下載匯入範例(.csv)
+		// GET: /SUP/StockBatches/DownloadStockBatchTemplateCsv
+		[HttpGet]
+		public IActionResult DownloadStockBatchTemplateCsv()
+		{
+			var sb = new StringBuilder();
+
+			// 表頭
+			sb.AppendLine("SkuCode (必填),數量 (必填),製造日期 (可選),備註 (可選),說明");
+
+			// 範例資料
+			sb.AppendLine($"AN-Y-P1180-0002-M,20,{DateTime.Today:yyyy/MM/dd},Import,←為範例，請勿刪除");
+
+			// UTF-8 + BOM
+			var bytes = Encoding.UTF8.GetPreamble()
+						.Concat(Encoding.UTF8.GetBytes(sb.ToString()))
+						.ToArray();
+
+			return File(bytes, "text/csv", "StockBatchTemplate.csv");
+		}
+
+
+		// 匯入檔案上傳
+		// 新增批次與異動紀錄
+		// 回傳每筆成功或失敗訊息
+		// POST: /SUP/StockBatches/ImportStockBatchExcel
 		[HttpPost]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> ImportStockBatch(IFormFile file)
+		public async Task<IActionResult> ImportStockBatchExcel(IFormFile file)
+		{
+			// 設定 EPPlus 非商業授權（個人）
+			ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
+
+			if (file == null || file.Length == 0)
+				return Json(new { success = false, message = "沒有收到檔案，請選擇檔案" });
+
+			// 在 list 中存原始 Excel 列號
+			var list = new List<(int Row, string SkuCode, int Qty, DateTime? MfgDate, string Remark)>();
+
+			var successResults = new List<(int Row, string Message)>();
+			var failResults = new List<(int Row, string Message)>();
+
+			try
+			{
+				using (var stream = new MemoryStream())
+				{
+					await file.CopyToAsync(stream);
+					using var package = new ExcelPackage(stream);
+					var ws = package.Workbook.Worksheets.FirstOrDefault();
+					if (ws == null)
+						return Json(new { success = false, message = "Excel 無工作表" });
+
+					//int row = 3; // 第一列是標題，第二列是範例，從第三列開始讀
+
+					// 讀Excel，檢查SKU與數量必填					
+					int startRow = 3; // 第一列標題，第二列範例
+					int endRow = ws.Dimension.End.Row; // 最後一列
+					for (int row = startRow; row <= endRow; row++)
+					{
+						// 判斷該列是否完全為空 (前四欄)
+						bool isEmpty = true;
+						for (int col = 1; col <= 4; col++)
+						{
+							if (!string.IsNullOrWhiteSpace(ws.Cells[row, col]?.Text))
+							{
+								isEmpty = false;
+								break;
+							}
+						}
+						if (isEmpty)
+							continue; // 整列空就跳過
+
+						string skuCode = ws.Cells[row, 1].Text.Trim();
+						string qtyText = ws.Cells[row, 2].Text.Trim();
+						int qty = int.TryParse(qtyText, out int q) ? q : 0;
+
+						DateTime? mfgDate = null;
+						if (DateTime.TryParse(ws.Cells[row, 3]?.Text?.Trim(), out var dt))
+							mfgDate = dt;
+
+						string remark = ws.Cells[row, 4]?.Text?.Trim() ?? "";
+
+						if (string.IsNullOrEmpty(skuCode) || qty <= 0)
+						{
+							failResults.Add((row, $"第 {row} 列資料格式錯誤，必須同時填寫 SkuCode 與數量"));
+							continue;
+						}
+
+						list.Add((row, skuCode, qty, mfgDate, remark));
+					}
+				}
+
+				foreach (var item in list)
+				{
+					try
+					{
+						var sku = await _context.ProdProductSkus
+							.Include(s => s.Product)
+								.ThenInclude(p => p.Brand)
+							.FirstOrDefaultAsync(s => s.SkuCode == item.SkuCode);
+
+						if (sku == null)
+						{
+							failResults.Add((item.Row, $"找不到 SKU: {item.SkuCode}"));
+							continue;
+						}
+
+						string batchNumber = GenerateBatchNumber(sku.Product?.Brand?.BrandCode ?? "XX");
+
+						var userId = _me.Id;
+						var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+						if (user == null)
+						{
+							failResults.Add((item.Row, $"找不到 userId"));
+							continue;
+						}
+						int currentUserId = user.UserNumberId;
+
+						DateTime? expireDate = null;
+						if (item.MfgDate.HasValue && sku.ShelfLifeDays > 0)
+							expireDate = item.MfgDate.Value.AddDays(sku.ShelfLifeDays);
+
+						// 建立最少資訊批次
+						var stockBatch = new SupStockBatch
+						{
+							SkuId = sku.SkuId,
+							BatchNumber = batchNumber,
+							Qty = 0, // Qty 交給 service 更新
+							ManufactureDate = item.MfgDate,
+							ExpireDate = expireDate,
+							Creator = currentUserId,
+							CreatedDate = DateTime.Now
+						};
+						_context.SupStockBatches.Add(stockBatch);
+						await _context.SaveChangesAsync();
+
+						// 呼叫 service 入庫 + 異動紀錄
+						var adjustResult = await _stockService.AdjustStockAsync(
+							stockBatch.StockBatchId,
+							sku.SkuId,
+							item.Qty,
+							isAdd: true,
+							movementType: "Purchase",
+							reviserId: currentUserId,
+							remark: string.IsNullOrWhiteSpace(item.Remark) ? "Import" : item.Remark
+						);
+
+						if (!adjustResult.Success)
+						{
+							failResults.Add((item.Row, $"第 {item.Row} 列匯入失敗。SkuCode：{item.SkuCode}, 原因: {adjustResult.Message}"));
+							continue;
+						}
+
+						successResults.Add((item.Row, $"第 {item.Row} 列匯入成功。SkuCode：{item.SkuCode}, 數量：{item.Qty}"));
+					}
+					catch (Exception ex)
+					{
+						failResults.Add((item.Row, $"第 {item.Row} 列匯入失敗, 原因: {ex.Message}"));
+					}
+				}
+
+				// 依行號排序
+				successResults = successResults.OrderBy(r => r.Row).ToList();
+				failResults = failResults.OrderBy(r => r.Row).ToList();
+
+				var messages = new List<string>();
+				if (successResults.Any())
+				{
+					messages.Add("----匯入成功----");
+					messages.AddRange(successResults.Select(r => r.Message));
+				}
+				if (failResults.Any())
+				{
+					messages.Add("----匯入失敗----");
+					messages.AddRange(failResults.Select(r => r.Message));
+				}
+
+				return Json(new { success = true, messages });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "匯入過程發生錯誤: " + ex.Message });
+			}
+		}
+
+		// POST: /SUP/StockBatches/ImportStockBatchCsv
+		[HttpPost]
+		public async Task<IActionResult> ImportStockBatchCsv(IFormFile file)
 		{
 			if (file == null || file.Length == 0)
-				return Json(new { success = false, message = "請選擇檔案" });
+				return Json(new { success = false, message = "沒有收到檔案，請選擇檔案" });
 
-			var list = new List<(string SkuCode, int Qty, string Remark)>();
+			var list = new List<(int Row, string SkuCode, int Qty, DateTime? MfgDate, string Remark)>();
+			var successResults = new List<(int Row, string Message)>();
+			var failResults = new List<(int Row, string Message)>();
 
-			using (var stream = new MemoryStream())
+			try
 			{
-				await file.CopyToAsync(stream);
-				using var package = new ExcelPackage(stream);
-				var ws = package.Workbook.Worksheets.FirstOrDefault();
-				if (ws == null)
-					return Json(new { success = false, message = "Excel 無工作表" });
-
-				int row = 2; // 假設第一列是標題
-				while (ws.Cells[row, 1].Value != null)
+				using (var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8))
 				{
-					string skuCode = ws.Cells[row, 1].Text.Trim();
-					if (!int.TryParse(ws.Cells[row, 2].Text.Trim(), out int qty))
-						qty = 0;
-					string remark = ws.Cells[row, 3]?.Text?.Trim() ?? "";
+					int row = 0;
+					while (!reader.EndOfStream)
+					{
+						row++;
+						var line = await reader.ReadLineAsync();
+						if (string.IsNullOrWhiteSpace(line))
+							continue;
 
-					if (!string.IsNullOrEmpty(skuCode) && qty > 0)
-						list.Add((skuCode, qty, remark));
+						// CSV 拆欄
+						var columns = line.Split(',');
 
-					row++;
+						// 第一列是表頭，第二列是範例
+						if (row <= 2)
+							continue;
+
+						string skuCode = columns.Length > 0 ? columns[0].Trim() : "";
+						string qtyText = columns.Length > 1 ? columns[1].Trim() : "";
+						int qty = int.TryParse(qtyText, out int q) ? q : 0;
+
+						DateTime? mfgDate = null;
+						if (columns.Length > 2 && DateTime.TryParse(columns[2]?.Trim(), out var dt))
+							mfgDate = dt;
+
+						string remark = columns.Length > 3 ? columns[3].Trim() : "";
+
+						if (string.IsNullOrEmpty(skuCode) || qty <= 0)
+						{
+							failResults.Add((row, $"第 {row} 列資料格式錯誤，必須同時填寫 SkuCode 與數量"));
+							continue;
+						}
+
+						list.Add((row, skuCode, qty, mfgDate, remark));
+					}
 				}
-			}
 
-			var results = new List<string>();
-			foreach (var item in list)
+				foreach (var item in list)
+				{
+					try
+					{
+						var sku = await _context.ProdProductSkus
+							.Include(s => s.Product)
+								.ThenInclude(p => p.Brand)
+							.FirstOrDefaultAsync(s => s.SkuCode == item.SkuCode);
+
+						if (sku == null)
+						{
+							failResults.Add((item.Row, $"找不到 SKU: {item.SkuCode}"));
+							continue;
+						}
+
+						string batchNumber = GenerateBatchNumber(sku.Product?.Brand?.BrandCode ?? "XX");
+
+						var userId = _me.Id;
+						var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+						if (user == null)
+						{
+							failResults.Add((item.Row, $"找不到 userId"));
+							continue;
+						}
+						int currentUserId = user.UserNumberId;
+
+						DateTime? expireDate = null;
+						if (item.MfgDate.HasValue && sku.ShelfLifeDays > 0)
+							expireDate = item.MfgDate.Value.AddDays(sku.ShelfLifeDays);
+
+						var stockBatch = new SupStockBatch
+						{
+							SkuId = sku.SkuId,
+							BatchNumber = batchNumber,
+							Qty = 0,
+							ManufactureDate = item.MfgDate,
+							ExpireDate = expireDate,
+							Creator = currentUserId,
+							CreatedDate = DateTime.Now
+						};
+						_context.SupStockBatches.Add(stockBatch);
+						await _context.SaveChangesAsync();
+
+						var adjustResult = await _stockService.AdjustStockAsync(
+							stockBatch.StockBatchId,
+							sku.SkuId,
+							item.Qty,
+							isAdd: true,
+							movementType: "Purchase",
+							reviserId: currentUserId,
+							remark: string.IsNullOrWhiteSpace(item.Remark) ? "Import" : item.Remark
+						);
+
+						if (!adjustResult.Success)
+						{
+							failResults.Add((item.Row, $"第 {item.Row} 列匯入失敗。SkuCode：{item.SkuCode}, 原因: {adjustResult.Message}"));
+							continue;
+						}
+
+						successResults.Add((item.Row, $"第 {item.Row} 列匯入成功。SkuCode：{item.SkuCode}, 數量：{item.Qty}"));
+					}
+					catch (Exception ex)
+					{
+						failResults.Add((item.Row, $"第 {item.Row} 列匯入失敗, 原因: {ex.Message}"));
+					}
+				}
+
+				// 排序
+				successResults = successResults.OrderBy(r => r.Row).ToList();
+				failResults = failResults.OrderBy(r => r.Row).ToList();
+
+				var messages = new List<string>();
+				if (successResults.Any())
+				{
+					messages.Add("----匯入成功----");
+					messages.AddRange(successResults.Select(r => r.Message));
+				}
+				if (failResults.Any())
+				{
+					messages.Add("----匯入失敗----");
+					messages.AddRange(failResults.Select(r => r.Message));
+				}
+
+				return Json(new { success = true, messages });
+			}
+			catch (Exception ex)
 			{
-				var sku = await _context.ProdProductSkus
-					.Include(s => s.Product)
-						.ThenInclude(p => p.Brand)
-					.FirstOrDefaultAsync(s => s.SkuCode == item.SkuCode);
-
-				if (sku == null)
-				{
-					results.Add($"找不到 SKU: {item.SkuCode}");
-					continue;
-				}
-
-				// 建立新批號 (例如用時間+SKUCode)
-				string batchNumber = $"{item.SkuCode}-{DateTime.Now:yyyyMMddHHmmss}";
-
-				var userId = _me.Id; // Claims 裡的 Id
-				var user = await _userMgr.Users
-					.AsNoTracking()
-					.FirstOrDefaultAsync(u => u.Id == userId);
-
-				int currentUserId = user.UserNumberId;
-
-				if (user == null)
-					return Json(new { success = false, message = "找不到使用者資料" });
-
-				var stockBatch = new SupStockBatch
-				{
-					SkuId = sku.SkuId,
-					BatchNumber = batchNumber,
-					Qty = item.Qty,
-					ExpireDate = null, // 可由前端或預設邏輯填
-					ManufactureDate = null,
-					Creator = user.UserNumberId,
-					CreatedDate = DateTime.Now
-				};
-
-				_context.SupStockBatches.Add(stockBatch);
-				await _context.SaveChangesAsync();
-
-				// 新增庫存異動紀錄
-				var history = new SupStockHistory
-				{
-					StockBatchId = stockBatch.StockBatchId,
-					ChangeType = "Import",
-					ChangeQty = item.Qty,
-					BeforeQty = 0,
-					AfterQty = item.Qty,
-					Reviser = currentUserId,
-					RevisedDate = DateTime.Now,
-					Remark = item.Remark
-				};
-
-				_context.SupStockHistories.Add(history);
-				await _context.SaveChangesAsync();
-
-				results.Add($"匯入成功 SKU: {item.SkuCode}, Qty: {item.Qty}");
+				return Json(new { success = false, message = "匯入過程發生錯誤: " + ex.Message });
 			}
-
-			return Json(new { success = true, messages = results });
 		}
+
 
 		#endregion
 

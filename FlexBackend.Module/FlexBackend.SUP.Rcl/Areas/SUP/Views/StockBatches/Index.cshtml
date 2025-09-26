@@ -23,21 +23,41 @@
     <!-- 庫存紀錄 stockBatchTable -->
     <div id="stockTableWrapper">
         <div class="d-flex align-items-center mb-2">
-            <!-- 第一排：匯出按鈕 -->
+            <!-- 第一排：按鈕 -->
             <div class="btn-group me-2">
+                <!-- 庫存操作 -->
                 <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-                <button id="downloadTemplateExcel" class="btn btn-outline-secondary">下載範例 Excel</button>
-                <button id="downloadTemplateCsv" class="btn btn-outline-secondary">下載範例 CSV</button>
-                <button id="importStockBatchBtn" class="btn btn-outline-primary">匯入Excel</button>
-                <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                    匯出
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
-                    <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
-                    <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
-                </ul>
+                
+                <!-- 匯入下拉 -->
+                <div class="btn-group">
+                    <button id="importDropdownBtn" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                        匯入
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" id="downloadTemplateExcel">下載Excel匯入範例</a></li>
+                        <li><a class="dropdown-item" id="downloadTemplateCsv">下載CSV匯入範例</a></li>
+                        <li><a class="dropdown-item" id="importStockBatchExcel">匯入 Excel (.xlsx,.xls)</a></li>
+                        <li><a class="dropdown-item" id="importStockBatchCSV">匯入 CSV (.csv)</a></li>
+                    </ul>
+                </div>
+                <!-- 隱藏的檔案選擇器 -->
+                <input type="file" id="fileInputExcel" accept=".xlsx,.xls" style="display:none" />
+                <input type="file" id="fileInputCsv" accept=".csv" style="display:none" />
+
+                <!-- 匯出下拉 -->
+                <div class="btn-group">
+                    <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        匯出
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
+                        <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
+                        <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
+                    </ul>
+                </div>
             </div>
+
+            <!-- 標示圖例 -->
             <div class="legend ms-auto">
                 <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
                 <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
@@ -1162,34 +1182,75 @@
             $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
         }
 
+        // 點擊下載匯入範例
+        $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateExcel');
+        $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateCsv');
+        
+        // 點擊匯入 → 觸發選檔
+        $('#importStockBatchExcel').click(function(e) {
+            e.preventDefault(); // 阻止下拉自動收合衝突
+            $('#fileInputExcel').click();
+        });
+        $('#importStockBatchCSV').click(function(e) {
+            e.preventDefault(); // 阻止下拉自動收合衝突
+            $('#fileInputCsv').click();
+        });
 
-        $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplate?type=excel');
-        $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplate?type=csv');
+        // Excel 選完檔案後上傳
+        $('#fileInputExcel').change(async function () {
+            const file = this.files[0];
+            if (!file) return alert('請選擇檔案');
 
-        // 點擊匯入按鈕
-        $('#importStockBatchBtn').click(function() {
-            var file = $('#stockImportFile')[0].files[0];
-            if (!file) { alert('請選擇檔案'); return; }
-
-            var formData = new FormData();
+            const formData = new FormData();
             formData.append('file', file);
 
-            $.ajax({
-                url: '/SUP/StockBatches/ImportStockBatch',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(res){
-                    if(res.success){
-                        alert('匯入完成:\n' + res.messages.join('\n'));
-                        location.reload(); // 可刷新表格
-                    } else {
-                        alert('匯入失敗: ' + res.message);
-                    }
+            try {
+                const res = await fetch('/SUP/StockBatches/ImportStockBatchExcel', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('匯入完成！\n' + data.messages.join('\n'));
+                    location.reload();
+                } else {
+                    alert('匯入失敗：' + (data.message || '未知錯誤'));
                 }
-            });
+            } catch (err) {
+                alert('上傳發生錯誤，請再試一次\n' + err);
+            }
+
+            // 清空 input 避免重複選擇同一檔案不觸發 change
+            this.value = '';
         });
+
+        // Csv 選擇檔案後上傳
+        $('#fileInputCsv').change(async function () {
+            const file = this.files[0];
+            if (!file) return alert('請選擇檔案');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/SUP/StockBatches/ImportStockBatchCsv', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('匯入完成！\n' + data.messages.join('\n'));
+                    location.reload();
+                } else {
+                    alert('匯入失敗：' + (data.message || '未知錯誤'));
+                }
+            } catch (err) {
+                alert('上傳發生錯誤，請再試一次\n' + err);
+            }
+
+            this.value = '';
+        });
+
 
         // stockBatchTable 匯出目前篩選結果
         function exportStockFiltered(type) {
