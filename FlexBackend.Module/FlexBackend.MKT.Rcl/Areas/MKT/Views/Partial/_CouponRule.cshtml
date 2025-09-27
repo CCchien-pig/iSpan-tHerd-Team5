@@ -9,16 +9,21 @@
         <!-- 優惠券類型 -->
         <div class="mb-3">
             <label class="form-label">優惠券類型</label>
-            <select name="CouponType" class="form-select" required>
-                <option value="cmd" selected>滿額折扣</option>
+            <select id="CouponType" name="CouponType" class="form-select" required>
+                <option value="pmd" selected>滿額折扣</option>
+                <option value="ppd">點數回饋</option>
             </select>
         </div>
 
-
-        <!-- 預設條件 -->
+        <!-- 使用門檻 (同一組輸入框) -->
         <div class="mb-3">
             <label class="form-label">使用門檻</label>
-            <input type="text" name="DefaultCondition" class="form-control" placeholder="例如 : 單筆消費滿500元" />
+            <div class="input-group">
+                <span id="prefix" class="input-group-text">單筆消費滿</span>
+                <input type="number" id="DefaultCondition" name="DefaultCondition"
+                       class="form-control" placeholder="請輸入" min="0" />
+                <span id="suffix" class="input-group-text">元</span>
+            </div>
         </div>
 
         <!-- 說明 -->
@@ -26,15 +31,6 @@
             <label class="form-label">說明</label>
             <textarea name="Description" class="form-control"></textarea>
         </div>
-
-        @* <!-- 是否啟用 -->
-        <div class="form-check form-switch mb-3">
-            <input type="checkbox" class="form-check-input" id="createIsActive" name="IsActive" checked />
-            <label class="form-check-label" for="createIsActive">啟用</label>
-        </div> *@
-        <!-- 是否啟用 (隱藏，固定回傳 1) -->
-        <input type="hidden" name="IsActive" value="1" />
-
 
         <!-- 建檔人員 -->
         <div class="mb-3">
@@ -56,13 +52,14 @@
 </div>
 
 <script>
+    // 儲存規則
     $("#saveRuleBtn").off("click").on("click", function(){
         var form = $("#createRuleForm");
         var data = {
             CouponType: form.find("[name='CouponType']").val().trim(),
             DefaultCondition: form.find("[name='DefaultCondition']").val().trim(),
             Description: form.find("[name='Description']").val().trim(),
-            IsActive: form.find("[name='IsActive']").is(":checked"),
+            IsActive: true,
             Creator: parseInt(form.find("[name='Creator']").val()) || 1
         };
 
@@ -95,4 +92,22 @@
             }
         });
     });
+
+    // 優惠券類型切換（用 jQuery 寫法）
+    $(document).on("change", "#CouponType", function () {
+        var prefix = $("#prefix");
+        var suffix = $("#suffix");
+        var input  = $("#DefaultCondition");
+
+        if (this.value === "cmd") {
+            prefix.text("單筆消費滿");
+            suffix.text("元");
+            input.attr("placeholder", "請輸入金額").removeAttr("max");
+        } else if (this.value === "ppd") {
+            prefix.text("點數回饋");
+            suffix.text("%");
+            input.attr("placeholder", "請輸入比例").attr("max", "50");
+        }
+    });
+
 </script>
