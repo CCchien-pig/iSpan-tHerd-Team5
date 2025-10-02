@@ -12,6 +12,8 @@
     ViewData["Title"] = "物流 / 運費一覽";
 }
 
+<button id="create" class="btn btn-outline-success mb-2">新增物流商</button>
+
 @* 渲染 DataTable *@
 <div class="logistics-card">
     <h5>物流 / 運費管理</h5>
@@ -54,14 +56,21 @@
             
             // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Logistics/...）
             var indexJsonUrl = '@Url.Action("IndexJson", "Logistics", new { area = "SUP" })';
+            
             var createUrl = '@Url.Action("Create", "Logistics", new { area = "SUP" })';
-            var getByLogisticsIdUrl = '@Url.Action("GetByLogisticsId", "Logistics", new { area = "SUP" })';
-            var getLastWeightMax = '@Url.Action("GetLastWeightMax", "Logistics", new { area = "SUP" })';
-            var logisticsRate = '@Url.Action("LogisticsRate", "Logistics", new { area = "SUP" })';
             var detailsUrl = '@Url.Action("Details", "Logistics", new { area = "SUP" })';
+            var deleteUrl = '@Url.Action("Delete", "Logistics", new { area = "SUP" })';
             var editUrl = '@Url.Action("Edit", "Logistics", new { area = "SUP" })';
             var toggleActiveUrl = '@Url.Action("ToggleActive", "Logistics", new { area = "SUP" })';
-            var toggleRateActive = '@Url.Action("ToggleRateActive", "Logistics", new { area = "SUP" })';
+
+            var createRateUrl = '@Url.Action("CreateRate", "Logistics", new { area = "SUP" })';
+            var deleteRateUrl = '@Url.Action("DeleteRate", "Logistics", new { area = "SUP" })';
+            var getByLogisticsIdUrl = '@Url.Action("GetByLogisticsId", "Logistics", new { area = "SUP" })';
+            var getLastWeightMaxUrl  = '@Url.Action("GetLastWeightMax", "Logistics", new { area = "SUP" })';
+            var updateRateWeightMaxUrl  = '@Url.Action("UpdateRateWeightMax", "Logistics", new { area = "SUP" })';
+            var logisticsRateUrl = '@Url.Action("LogisticsRate", "Logistics", new { area = "SUP" })';
+            var toggleRateActiveUrl = '@Url.Action("ToggleRateActive", "Logistics", new { area = "SUP" })';
+
 
             // 初始化 DataTable
             var table = $('#logisticsTable').DataTable({
@@ -71,12 +80,31 @@
                     url: indexJsonUrl,
                     type: 'POST',
                     dataSrc: function(json) {
-                        console.log(json);      // 印出整個 JSON
-                        //console.log(json.data); // 印出每筆 row
-                       return json.data;
-                    },
+                    // console.log("整個 JSON 回傳：", json);
+
+                    // if (!json || !json.data) {
+                    //     console.warn("JSON 或 JSON.data 是空的！");
+                    //     return [];
+                    // }
+
+                    // 檢查每筆資料是否都有 logisticsId
+                    // json.data.forEach((row, idx) => {
+                    //     if (row.logisticsId === undefined) {
+                    //         console.error(`第 ${idx} 筆資料缺少 logisticsId`, row);
+                    //     }
+                    // });
+
+                    // console.log("DataTables 實際讀取的資料：", json.data.map(r => ({
+                    //     logisticsId: r.logisticsId,
+                    //     logisticsName: r.logisticsName,
+                    //     shippingMethod: r.shippingMethod,
+                    //     isActive: r.isActive
+                    // })));
+
+                    return json.data;
+                },
                     error: function(xhr, error, thrown) {
-                        console.log(xhr.responseText); // 印出後端錯誤訊息
+                        console.error("AJAX 失敗：", xhr.responseText, error, thrown); // 印出後端錯誤訊息
                         alert("資料載入失敗，請檢查後端或 console");
                     }
                 },
@@ -87,7 +115,7 @@
                         data: null,
                         defaultContent: '<i class="fa-solid fa-plus" style="color: #6688b7;cursor:pointer"></i>'
                     },
-                    { data: 'logisticsId', title: '物流Id', className: 'text-center' },
+                    { data: 'logisticsId', title: '物流Id', className: 'text-center', defaultContent: '' },
                     { data: 'logisticsName', title: '物流商名稱', className: 'text-center' },
                     { data: 'shippingMethod', title: '配送方式', className: 'text-center' },
                     {
@@ -148,8 +176,10 @@
                 });
             });
 
+
+
             // ====== 展開列事件(含新增運費區間btn) ======
-            $('#logisticsTable tbody').off('click', 'td.dt-control').on('click', 'td.dt-control', function() {
+            $('#logisticsTable tbody').off('click', 'td.dt-control').on('click', 'td.dt-control', function () {
                 var tr = $(this).closest('tr');
                 var row = table.row(tr);
 
@@ -157,16 +187,13 @@
                     // 關閉
                     row.child.hide();
                     tr.find('i.fa-plus').removeClass('fa-minus').addClass('fa-plus');
-                } 
-                else {
+                } else {
                     // SupLogistics.LogisticsId
                     var logisticsId = row.data().logisticsId;
                     console.log('該列logisticsId:', logisticsId);
 
-                    $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function(data) {
+                    $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function (data) {
                         console.log('收到資料:', data);
-                        console.log('型別:', typeof data);
-                        console.log('是不是陣列:', Array.isArray(data));
 
                         // 預設顯示「新增運費區間」按鈕
                         var childHtml = `<div class="mb-2">
@@ -175,26 +202,35 @@
                             </button>
                         </div>`;
 
-                        if(data.length === 0){
+                        if (data.length === 0) {
                             childHtml += `<p class="text-muted">尚無運費區間資料</p>`;
                         } else {
-                            childHtml += `<div class="d-flex flex-wrap gap-2">`;
-                            data.forEach(function(rate){
+                            childHtml += `<div class="d-flex flex-wrap gap-2 shipping-cards">`;
+                            data.forEach(function (rate) {
                                 childHtml += `
-                                <div class="card p-2" style="min-width: 220px;">
-                                    <div class="card-body p-2">
-                                        <p class="mb-1"><strong>最小重量:</strong> ${rate.weightMin}</p>
-                                        <p class="mb-1"><strong>最大重量:</strong> ${rate.weightMax || '無限大'}</p>
-                                        <p class="mb-1"><strong>運費:</strong> ${rate.shippingFee}</p>
-                                        <div class="form-check form-switch mb-1">
-                                            <input type="checkbox" class="form-check-input toggle-rate-active" data-id="${rate.logisticsRateId}" ${rate.isActive ? 'checked' : ''}>
-                                            <label class="form-check-label">啟用</label>
+                                    <div class="card" style="min-width:220px;">
+                                        <div class="card-body p-2">
+                                            <!-- 上半段：重量與運費 -->
+                                            <div class="mb-2">
+                                                <p class="mb-1"><strong>重量:</strong> ${rate.weightMin} ~ ${rate.weightMax || '無限大'} kg</p>
+                                                <p class="mb-1"><strong>運費:</strong> ${rate.shippingFee}</p>
+                                            </div>
+                                            <!-- 下半段：Switch + 刪除 -->
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <div class="form-check form-switch mb-0">
+                                                        <input type="checkbox" class="form-check-input toggle-rate-active" data-id="${rate.logisticsRateId}" ${rate.isActive ? 'checked' : ''}>
+                                                        <label class="form-check-label">啟用</label>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <button class="btn btn-sm btn-danger delete-rate-btn" data-id="${rate.logisticsRateId}">
+                                                        <i class="fa-solid fa-trash"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <button class="btn btn-sm btn-danger delete-rate-btn" data-id="${rate.logisticsRateId}">
-                                            <i class="fa-solid fa-trash"></i> 刪除
-                                        </button>
-                                    </div>
-                                </div>`;
+                                    </div>`;
                             });
                             childHtml += `</div>`;
                         }
@@ -202,57 +238,198 @@
                         // 顯示 child row
                         row.child(childHtml).show();
                         tr.find('i.fa-plus').removeClass('fa-plus').addClass('fa-minus');
-                    });
+            
+                        // ====== 綁定 Switch 事件 ======
+                        row.child().find('.toggle-rate-active').off('change').on('change', function () {
+                            var rateId = $(this).data('id');
+                            var isActive = $(this).prop('checked');
+                            var $switch = $(this);
+                            console.log("Switch 被切換:", { rateId, isActive });
+
+                            $.ajax({
+                                url: toggleRateActiveUrl,
+                                method: "POST",
+                                data: { id: rateId, isActive: isActive },
+                                success: function (res) {
+                                    if (!res.success) {
+                                        Swal.fire("錯誤", res.message, "error");
+                                        // 還原狀態
+                                        $switch.prop('checked', !isActive);
+                                    } else {
+                                        Swal.fire({
+                                            icon: "success",
+                                            title: "更新成功",
+                                            text: `運費區間已${res.newStatus ? "啟用" : "停用"}`
+                                        });
+                                        console.log("切換成功，狀態已更新:", res.newStatus);
+                                    }
+                                },
+                                error: function (xhr, status, err) {
+                                    console.error("AJAX 發生錯誤:", { status, err, response: xhr.responseText });
+                                    Swal.fire("錯誤", "伺服器連線失敗", "error");
+                                    // 還原狀態
+                                    $switch.prop('checked', !isActive);
+                                }
+                            });
+                        });                    });
                 }
             });
 
-
-            // ======= 新增運費區間 =======
+            // ======= 新增運費區間 (inline input) =======
             $('#logisticsTable tbody').off('click', '.add-rate-btn').on('click', '.add-rate-btn', function(){
                 var logisticsId = $(this).data('id');
                 var btn = $(this);
 
-                $.get(`${getLastWeightMax}/${logisticsId}`, function(lastMax){
-                    var newWeightMin = lastMax ? parseFloat(lastMax) + 0.001 : 0;
+                // 避免重複建立 input
+                if($(this).next('.new-rate-row').length) return;
 
-                    Swal.fire({
-                        title: '新增運費區間',
-                        html: `<input id="weightMax" type="number" class="swal2-input" placeholder="最大重量(kg)">
-                               <input id="shippingFee" type="number" class="swal2-input" placeholder="運費">
-                               <div class="form-check">
-                                   <input class="form-check-input" type="checkbox" id="isActive" checked>
-                                   <label class="form-check-label" for="isActive">啟用</label>
-                               </div>
-                               <p>最小重量(kg): ${newWeightMin}</p>`,
-                        focusConfirm: false,
-                        preConfirm: () => ({
-                            weightMin: newWeightMin,
-                            weightMax: parseFloat(document.getElementById('weightMax').value),
-                            shippingFee: parseFloat(document.getElementById('shippingFee').value),
-                            isActive: document.getElementById('isActive').checked
-                        })
-                    }).then((result)=>{
-                        if(result.isConfirmed){
-                            var payload = result.value;
-                            payload.logisticsId = logisticsId;
+                $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function(existingRates){
+                    var lastRate = existingRates[existingRates.length - 1];
+                    var defaultWeightMin = lastRate ? parseFloat(lastRate.weightMax || 0) : 0;
 
-                            $.post(`${createUrl}`, payload)
-                                .done(function(res){
-                                    if(res.success){
-                                        Swal.fire('新增成功','','success');
-                                        // 重新展開列刷新
-                                        var tr = btn.closest('tr');
-                                        table.row(tr).child.hide();
-                                        tr.find('td.dt-control').click();
-                                    } else {
-                                        Swal.fire('新增失敗', res.message || '', 'error');
-                                    }
-                                })
-                                .fail(function(){ Swal.fire('操作失敗','','error'); });
+                    var inputHtml = `
+                        <div class="new-rate-row d-flex gap-2 mt-2 align-items-center">
+                            <input type="number" class="form-control form-control-sm weightMin" placeholder="最小重量(kg)" style="width:100px" value="${defaultWeightMin.toFixed(1)}" min="0" step="0.1">
+                            <input type="number" class="form-control form-control-sm weightMax" placeholder="最大重量(kg)" style="width:100px" min="0" step="0.1">
+                            <input type="number" class="form-control form-control-sm shippingFee" placeholder="運費" style="width:80px" min="0" step="0.01">
+                            <div class="form-check form-switch mb-0">
+                                <input type="checkbox" class="form-check-input isActive" checked>
+                                <label class="form-check-label">啟用</label>
+                            </div>
+                            <button class="btn btn-sm btn-success save-rate-btn"><i class="fa-solid fa-check"></i></button>
+                            <button class="btn btn-sm btn-secondary cancel-rate-btn"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    `;
+                    $(btn).after(inputHtml);
+
+                    // 取消按鈕
+                    $('.cancel-rate-btn').off('click').on('click', function(){
+                        $(this).closest('.new-rate-row').remove();
+                    });
+
+                    // 儲存按鈕
+                    $('.save-rate-btn').off('click').on('click', function(){
+                        var rowDiv = $(this).closest('.new-rate-row');
+                        var weightMin = parseFloat(rowDiv.find('.weightMin').val());
+                        var weightMax = parseFloat(rowDiv.find('.weightMax').val());
+                        var shippingFee = parseFloat(rowDiv.find('.shippingFee').val());
+                        var isActive = rowDiv.find('.isActive').prop('checked');
+
+                        if(isNaN(weightMin) || isNaN(weightMax) || isNaN(shippingFee)){
+                            Swal.fire('錯誤','請輸入正確的重量與運費','error');
+                            return;
                         }
+
+                        if(weightMin < 0){
+                            Swal.fire('錯誤','最小重量不可小於 0','error');
+                            return;
+                        }
+
+                        if(weightMax <= weightMin){
+                            Swal.fire('錯誤','最大重量不可小於最小重量','error');
+                            return;
+                        }
+
+                        // 自動調整最小重量為 .1 結尾（非 0）
+                        if(weightMin !== 0){
+                            var intPart = Math.floor(weightMin);
+                            weightMin = intPart + 0.1;
+                            rowDiv.find('.weightMin').val(weightMin.toFixed(1));
+                        }
+
+                        // 呼叫 CreateRate API，後端會自動切割重疊區間
+                        $.post(`${createRateUrl}`, {
+                            logisticsId: logisticsId,
+                            weightMin: weightMin,
+                            weightMax: weightMax,
+                            shippingFee: shippingFee,
+                            isActive: isActive
+                        }).done(function(res){
+                            if(res.success){
+                                Swal.fire('新增成功','','success');
+
+                                // 刷新展開列
+                                var tr = btn.closest('tr');
+                                table.row(tr).child.hide();
+                                tr.find('td.dt-control').click();
+                            } else {
+                                Swal.fire('新增失敗', res.message || '', 'error');
+                            }
+                        }).fail(function(){
+                            Swal.fire('操作失敗','','error');
+                        });
                     });
                 });
             });
+
+            // ======= 刪除運費區間 ======
+            $('#logisticsTable').off('click', '.delete-rate-btn').on('click', '.delete-rate-btn', function () {
+                var rateId = $(this).data('id');
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                Swal.fire({
+                    title: '確定刪除？',
+                    text: "此動作將永久刪除此運費區間！",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post(deleteRateUrl, { rateId: rateId }, function(res){
+                            if(res.success){
+                                Swal.fire({ icon: 'success', title: '刪除成功', timer: 1500, showConfirmButton: false });
+
+                                // 重新抓該 logisticsId 的子資料
+                                var logisticsId = row.data().logisticsId;
+                                $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function (data) {
+                                    var childHtml = `<div class="mb-2">
+                                        <button class="btn btn-sm btn-outline-primary add-rate-btn" data-id="${logisticsId}">
+                                            <i class="fa-solid fa-plus"></i> 新增運費區間
+                                        </button>
+                                    </div>`;
+
+                                    if (data.length === 0) {
+                                        childHtml += `<p class="text-muted">尚無運費區間資料</p>`;
+                                    } else {
+                                        childHtml += `<div class="d-flex flex-wrap gap-2">`;
+                                        data.forEach(function (rate) {
+                                            childHtml += `
+                                                <div class="card p-2" style="min-width: 220px;">
+                                                    <div class="card-body p-2">
+                                                        <p class="mb-1"><strong>最小重量:</strong> ${rate.weightMin}</p>
+                                                        <p class="mb-1"><strong>最大重量:</strong> ${rate.weightMax || '無限大'}</p>
+                                                        <p class="mb-1"><strong>運費:</strong> ${rate.shippingFee}</p>
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div class="form-check form-switch">
+                                                                <input type="checkbox" class="form-check-input toggle-rate-active" data-id="${rate.logisticsRateId}" ${rate.isActive ? 'checked' : ''}>
+                                                                <label class="form-check-label">啟用</label>
+                                                            </div>
+                                                            <button class="btn btn-sm btn-danger delete-rate-btn" data-id="${rate.logisticsRateId}">
+                                                                <i class="fa-solid fa-trash"></i> 刪除
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>`;
+                                        });
+                                        childHtml += `</div>`;
+                                    }
+
+                                    row.child(childHtml).show();
+                                });
+
+                            } else {
+                                Swal.fire('錯誤', res.message || '刪除失敗', 'error');
+                            }
+                        }).fail(function(){
+                            Swal.fire('錯誤','伺服器錯誤','error');
+                        });
+                    }
+                });
+            });
+
 
 
             // ======= 新增物流商 =======
@@ -351,24 +528,37 @@
                 });
             });
 
-            // ======= 刪除運費區間 =======
-            $('#logisticsTable tbody').on('click', '.delete-rate-btn', function(){
-                var btn = $(this); 
+            // ======= 刪除物流商 =======
+            $('#logisticsTable').on('click', '.delete-btn', function() {
                 var id = $(this).data('id');
-                if(confirm('確定刪除此運費區間？')){
-                    $.post(`${logisticsRate}/${id}`)
-                        .done(function(res){
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                Swal.fire({
+                    title: '確定刪除？',
+                    text: "此動作將永久刪除此物流商！",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if(result.isConfirmed){
+                        $.post(`${deleteUrl}/${id}`, function(res){
                             if(res.success){
-                                // 找到主表的 row (子表 row 的上一個 tr)
-                                var tr = btn.closest('tr').prev();
-                                var logisticsId = tr.find('.add-rate-btn').data('id');
-                                reloadChildRow(tr, logisticsId);
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '刪除成功',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                row.remove().draw(false);
                             } else {
-                                alert(res.message || '刪除失敗');
+                                Swal.fire('錯誤', res.message || '刪除失敗', 'error');
                             }
-                        })
-                        .fail(function(){ alert('刪除失敗'); });
-                }
+                        }).fail(function(){ Swal.fire('錯誤', '伺服器錯誤', 'error'); });
+                    }
+                });
             });
 
             // ======= 提交表單 (新增/修改) =======
@@ -376,7 +566,7 @@
                 e.preventDefault();
                 var form = $(this);
 
-                // 手動把 checkbox 值更新到 hidden input
+                // 更新 checkbox 隱藏欄位值
                 var isActive = $('#IsActive').prop('checked');
                 $('input[name="IsActive"][type="hidden"]', form).val(isActive);
 

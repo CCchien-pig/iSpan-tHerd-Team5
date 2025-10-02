@@ -24,10 +24,6 @@
     <ProjectReference Include="..\..\FlexBackend.StyleMain\FlexBackend.UIKit.Rcl\FlexBackend.UIKit.Rcl.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Areas\SUP\Views\Logistics\" />
-  </ItemGroup>
-
 
 
 </Project>

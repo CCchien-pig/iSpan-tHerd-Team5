@@ -33,52 +33,75 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return View();
 		}
 
-		// POST: /SUP/Logistics/IndexJson
+		// POST: SUP/Logistics/IndexJson
 		[HttpPost("SUP/Logistics/IndexJson")]
 		public async Task<IActionResult> IndexJson()
 		{
-			var draw = Request.Form["draw"].FirstOrDefault();
-			var start = Request.Form["start"].FirstOrDefault();
-			var length = Request.Form["length"].FirstOrDefault();
-			var searchValue = Request.Form["search[value]"].FirstOrDefault();
+			// 取得 DataTables POST 參數
+			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
+			var start = Convert.ToInt32(Request.Form["start"].FirstOrDefault() ?? "0");
+			var length = Convert.ToInt32(Request.Form["length"].FirstOrDefault() ?? "10");
+			var searchValue = Request.Form["search[value]"].FirstOrDefault() ?? "";
 
-			int pageSize = length != null ? Convert.ToInt32(length) : 10;
-			int skip = start != null ? Convert.ToInt32(start) : 0;
+			// 排序資訊
+			var sortColumnIndex = Convert.ToInt32(Request.Form["order[0][column]"].FirstOrDefault() ?? "0");
+			var sortDirection = Request.Form["order[0][dir]"].FirstOrDefault() ?? "asc";
 
+			// 建立查詢
 			var query = _context.SupLogistics.AsQueryable();
 
-			// 搜尋 (物流商名稱 / 配送方式)
+			// 搜尋功能（物流商名稱 / 配送方式）
 			if (!string.IsNullOrEmpty(searchValue))
 			{
 				query = query.Where(l =>
-					l.LogisticsName.Contains(searchValue) ||
-					l.ShippingMethod.Contains(searchValue));
+					EF.Functions.Like(l.LogisticsName, $"%{searchValue}%") ||
+					EF.Functions.Like(l.ShippingMethod, $"%{searchValue}%")
+				);
 			}
 
-			int recordsTotal = await query.CountAsync();
+			// 總筆數與過濾後筆數
+			var totalRecords = await _context.SupLogistics.CountAsync();
+			var filteredRecords = await query.CountAsync();
 
+			// 排序
+			query = sortColumnIndex switch
+			{
+				0 => sortDirection == "asc"
+						? query.OrderBy(l => l.RevisedDate ?? l.CreatedDate)
+						: query.OrderByDescending(l => l.RevisedDate ?? l.CreatedDate),
+				1 => sortDirection == "asc" ? query.OrderBy(l => l.LogisticsId) : query.OrderByDescending(l => l.LogisticsId),
+				2 => sortDirection == "asc" ? query.OrderBy(l => l.LogisticsName) : query.OrderByDescending(l => l.LogisticsName),
+				3 => sortDirection == "asc" ? query.OrderBy(l => l.ShippingMethod) : query.OrderByDescending(l => l.ShippingMethod),
+				4 => sortDirection == "asc" ? query.OrderBy(l => l.IsActive) : query.OrderByDescending(l => l.IsActive),
+				_ => query.OrderByDescending(l => l.RevisedDate ?? l.CreatedDate)
+			};
+
+			// 分頁與選取欄位
 			var data = await query
-				.OrderBy(l => l.LogisticsId)
-				.Skip(skip)
-				.Take(pageSize)
+				.Skip(start)
+				.Take(length)
 				.Select(l => new
 				{
 					logisticsId = l.LogisticsId,
 					logisticsName = l.LogisticsName,
 					shippingMethod = l.ShippingMethod,
-					isActive = l.IsActive
+					isActive = l.IsActive,
+					sortDate = l.RevisedDate ?? l.CreatedDate
 				})
 				.ToListAsync();
 
+			// 回傳給 DataTables
 			return Json(new
 			{
-				draw = draw,
-				recordsFiltered = recordsTotal,
-				recordsTotal = recordsTotal,
-				data = data
+				draw,
+				recordsTotal = totalRecords,
+				recordsFiltered = filteredRecords,
+				data
 			});
 		}
 
+
+		#region 子表、Rate
 		// 子表展開
 		// GET: /SUP/Logistics/GetByLogisticsId
 		[HttpGet]
@@ -109,6 +132,167 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
+		// POST: /SUP/Logistics/CreateRate
+		[HttpPost]
+		public async Task<IActionResult> CreateRate(int logisticsId, decimal weightMin, decimal? weightMax, decimal shippingFee, bool isActive = true)
+		{
+			try
+			{
+				if (weightMin < 0)
+					return Json(new { success = false, message = "最小重量不可小於 0" });
+
+				if (weightMax.HasValue && weightMax <= weightMin)
+					return Json(new { success = false, message = "最大重量不可小於最小重量" });
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				if (user == null) return Json(new { success = false, message = "找不到使用者資料" });
+
+				// 取得現有區間
+				var existingRates = _context.SupLogisticsRates
+					.Where(r => r.LogisticsId == logisticsId)
+					.OrderBy(r => r.WeightMin)
+					.ToList();
+
+				var overlappingRates = existingRates
+					.Where(r => (r.WeightMax ?? decimal.MaxValue) > weightMin && r.WeightMin < (weightMax ?? decimal.MaxValue))
+					.OrderBy(r => r.WeightMin)
+					.ToList();
+
+				foreach (var rate in overlappingRates)
+				{
+					var rMin = rate.WeightMin;
+					var rMax = rate.WeightMax ?? decimal.MaxValue;
+
+					// 完全被覆蓋
+					if (weightMin <= rMin && (weightMax ?? decimal.MaxValue) >= rMax)
+					{
+						_context.SupLogisticsRates.Remove(rate);
+					}
+					// 部分重疊左側（新區間切掉舊區間前半段）
+					else if (weightMin <= rMin && (weightMax ?? decimal.MaxValue) < rMax)
+					{
+						rate.WeightMin = (weightMax ?? decimal.MaxValue) + 0.1M;
+						rate.RevisedDate = DateTime.Now;
+					}
+					// 部分重疊右側（新區間切掉舊區間後半段）
+					else if (weightMin > rMin && (weightMax ?? decimal.MaxValue) >= rMax)
+					{
+						rate.WeightMax = weightMin - 0.1M;
+						rate.RevisedDate = DateTime.Now;
+					}
+					// 中間切割（舊區間分兩段）
+					else if (weightMin > rMin && (weightMax ?? decimal.MaxValue) < rMax)
+					{
+						var newUpper = new SupLogisticsRate
+						{
+							LogisticsId = rate.LogisticsId,
+							WeightMin = (weightMax ?? decimal.MaxValue) + 0.1M,
+							WeightMax = rate.WeightMax,
+							ShippingFee = rate.ShippingFee,
+							IsActive = rate.IsActive,
+							Reviser = user.UserNumberId,
+							RevisedDate = DateTime.Now
+						};
+						_context.SupLogisticsRates.Add(newUpper);
+
+						rate.WeightMax = weightMin - 0.1M;
+						rate.RevisedDate = DateTime.Now;
+					}
+				}
+
+				// 新增新區間
+				var newRate = new SupLogisticsRate
+				{
+					LogisticsId = logisticsId,
+					WeightMin = weightMin,
+					WeightMax = weightMax,
+					ShippingFee = shippingFee,
+					IsActive = isActive,
+					Reviser = user.UserNumberId,
+					RevisedDate = DateTime.Now
+				};
+
+				_context.SupLogisticsRates.Add(newRate);
+
+				// 若最後一個區間是無限大，並且在新增區間之後，更新費用保持一致
+				var lastRate = existingRates.OrderByDescending(r => r.WeightMin).FirstOrDefault(r => !r.WeightMax.HasValue);
+				if (lastRate != null && (weightMax ?? decimal.MaxValue) >= lastRate.WeightMin)
+				{
+					lastRate.WeightMin = (weightMax ?? lastRate.WeightMin) + 0.1M;
+					lastRate.ShippingFee = shippingFee;
+					lastRate.RevisedDate = DateTime.Now;
+				}
+
+				await _context.SaveChangesAsync();
+
+				return Json(new { success = true, rate = newRate });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
+
+
+		// POST: /SUP/Logistics/UpdateRateWeightMax
+		[HttpPost]
+		public async Task<IActionResult> UpdateRateWeightMax(int logisticsId, int newRateId, decimal newWeightMin, decimal newWeightMax)
+		{
+			try
+			{
+				// 取得同一物流的所有區間（排好序）
+				var rates = await _context.SupLogisticsRates
+					.Where(r => r.LogisticsId == logisticsId)
+					.OrderBy(r => r.WeightMin)
+					.ToListAsync();
+
+				var newRate = rates.FirstOrDefault(r => r.LogisticsRateId == newRateId);
+				if (newRate == null)
+					return Json(new { success = false, message = "找不到新區間資料" });
+
+				// 更新新區間
+				newRate.WeightMin = newWeightMin;
+				newRate.WeightMax = newWeightMax;
+				newRate.RevisedDate = DateTime.Now;
+
+				// 調整與新區間重疊的舊區間
+				foreach (var rate in rates)
+				{
+					if (rate.LogisticsRateId == newRateId)
+						continue;
+
+					// 舊區間最大重量在新區間最小重量之後且最小重量在新區間最大重量之前 => 有重疊
+					if ((rate.WeightMax ?? decimal.MaxValue) > newWeightMin && rate.WeightMin < newWeightMax)
+					{
+						// 若舊區間完全被新區間包含，直接刪除舊區間或改成最小重量在新區間之前
+						if (rate.WeightMin < newWeightMin)
+						{
+							rate.WeightMax = newWeightMin; // 舊區間截斷到新區間最小重量
+						}
+						else
+						{
+							rate.WeightMin = newWeightMax; // 舊區間被截斷在新區間之後
+							if (rate.WeightMax <= rate.WeightMin)
+							{
+								// 若截斷後無效，刪除
+								_context.SupLogisticsRates.Remove(rate);
+							}
+						}
+						rate.RevisedDate = DateTime.Now;
+					}
+				}
+
+				await _context.SaveChangesAsync();
+				return Json(new { success = true });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
+		}
+
+
 		// GET: /SUP/Logistics/GetLastWeightMax
 		[HttpGet]
 		public IActionResult GetLastWeightMax(int logisticsId)
@@ -122,62 +306,68 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 
-		// POST: /SUP/Logistics/Create
+		// POST: /SUP/Logistics/DeleteRate
 		[HttpPost]
-		public async Task<IActionResult> Create([FromForm] LogisticsRateModel model)
-		{
-			if (model.WeightMax <= model.WeightMin)
-				return Json(new { success = false, message = "最大重量必須大於最小重量" });
-
-			var userId = _me.Id;
-			var user = await _userMgr.Users
-				.AsNoTracking()
-				.FirstOrDefaultAsync(u => u.Id == userId);
-
-			if (user == null)
-				return Json(new { success = false, message = "找不到使用者資料" });
-
-			int currentUserId = user.UserNumberId;
-
-			var rate = new SupLogisticsRate
-			{
-				LogisticsId = model.LogisticsId,
-				WeightMin = model.WeightMin,
-				WeightMax = model.WeightMax,
-				ShippingFee = model.ShippingFee,
-				IsActive = model.IsActive,
-				Reviser = currentUserId,
-				RevisedDate = DateTime.Now
-			};
-			_context.SupLogisticsRates.Add(rate);
-			await _context.SaveChangesAsync();
-			return Json(new { success = true });
-		}
-
-
-		// POST: /SUP/Logistics/Delete
-		[HttpPost]
-		public IActionResult Delete(int id)
-		{
-			var rate = _context.SupLogisticsRates.FirstOrDefault(r => r.LogisticsRateId == id);
-			if (rate == null)
-				return Json(new { success = false, message = "找不到資料" });
-			_context.SupLogisticsRates.Remove(rate);
-			_context.SaveChanges();
-			return Json(new { success = true });
-		}
-
-
-		// 切換物流商啟用狀態
-		// POST: /SUP/Logistics/ToggleActive
-		[HttpPost]
-		public async Task<IActionResult> ToggleActive(int id, bool isActive)
+		public async Task<IActionResult> DeleteRate(int rateId)
 		{
 			try
 			{
-				var logEntity = await _context.SupLogistics.FindAsync(id);
-				if (logEntity == null)
-					return Json(new { success = false, message = "找不到該物流商" });
+				// 找出要刪除的區間
+				var rate = await _context.SupLogisticsRates.FirstOrDefaultAsync(r => r.LogisticsRateId == rateId);
+				if (rate == null)
+					return Json(new { success = false, message = "找不到區間資料" });
+
+				var logisticsId = rate.LogisticsId;
+
+				// 取得同物流的所有區間，按 WeightMin 排序
+				var rates = await _context.SupLogisticsRates
+					.Where(r => r.LogisticsId == logisticsId && r.LogisticsRateId != rateId)
+					.OrderBy(r => r.WeightMin)
+					.ToListAsync();
+
+				// 找到被刪除區間的前後區間
+				var prev = rates.LastOrDefault(r => r.WeightMax <= rate.WeightMin);
+				var next = rates.FirstOrDefault(r => r.WeightMin >= rate.WeightMax);
+
+				// 自動整理前後區間，使連貫
+				if (prev != null && next != null)
+				{
+					prev.WeightMax = next.WeightMin; // 前區間的最大重量連到下一區間最小重量
+					prev.RevisedDate = DateTime.Now;
+				}
+				else if (prev != null && next == null)
+				{
+					prev.WeightMax = null; // 前區間接到無限大
+					prev.RevisedDate = DateTime.Now;
+				}
+				else if (prev == null && next != null)
+				{
+					next.WeightMin = 0; // 若前面沒有區間，下一區間從 0 開始
+					next.RevisedDate = DateTime.Now;
+				}
+
+				// 刪除目標區間
+				_context.SupLogisticsRates.Remove(rate);
+				await _context.SaveChangesAsync();
+
+				return Json(new { success = true, message = "刪除成功" });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "刪除失敗", error = ex.Message });
+			}
+		}
+
+		// 切換子表運費區間的啟用狀態
+		// POST: /SUP/Logistics/ToggleRateActive
+		[HttpPost]
+		public async Task<IActionResult> ToggleRateActive(int id, bool isActive)
+		{
+			try
+			{
+				var rate = await _context.SupLogisticsRates.FindAsync(id);
+				if (rate == null)
+					return Json(new { success = false, message = "找不到該運費區間" });
 
 				var userId = _me.Id;
 				var user = await _userMgr.Users
@@ -189,8 +379,172 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 				int currentUserId = user.UserNumberId;
 
-				logEntity.IsActive = isActive;
+				rate.IsActive = isActive;
+				rate.Reviser = currentUserId;
+				rate.RevisedDate = DateTime.Now;
+
+				await _context.SaveChangesAsync();
+				return Json(new { success = true, newStatus = isActive });
+			}
+			catch (DbUpdateException dbEx)
+			{
+				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+			}
+		}
+
+		#endregion
+
+		#region 物流商
+
+		// GET: /SUP/Logistics/Create
+		[HttpGet]
+		public IActionResult Create()
+		{
+			// 空物件給 Partial View 使用
+			var viewModel = new LogisticsContactViewModel();
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", viewModel);
+		}
+
+		// POST: /SUP/Logistics/Create
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Create(SupLogistic model)
+		{
+			if (!ModelState.IsValid)
+				return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", model);
+
+			try
+			{
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				if (user == null) return Json(new { success = false, message = "找不到使用者資料" });
+
+				model.Creator = user.UserNumberId;
+				model.CreatedDate = DateTime.Now;
+				model.Reviser = user.UserNumberId;
+				model.RevisedDate = DateTime.Now;
+
+				_context.SupLogistics.Add(model);
+				await _context.SaveChangesAsync();
+
+				return Json(new { success = true, isCreate = true, logistics = model });
+			}
+			catch (DbUpdateException dbEx)
+			{
+				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+			}
+		}
+
+
+		// GET: /SUP/Logistics/Edit/1000
+		[HttpGet]
+		public async Task<IActionResult> Edit(int id)
+		{
+			var log = await _context.SupLogistics.FindAsync(id);
+			if (log == null) return NotFound();
+
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", log);
+		}
+
+		// POST: /SUP/Logistics/Edit/1000
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Edit(SupLogistic model)
+		{
+			if (!ModelState.IsValid)
+				return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", model);
+
+			try
+			{
+				var logEntity = await _context.SupLogistics.FindAsync(model.LogisticsId);
+				if (logEntity == null)
+					return Json(new { success = false, message = "找不到該物流商" });
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				if (user == null)
+					return Json(new { success = false, message = "找不到使用者資料" });
+
+				int currentUserId = user.UserNumberId;
+
+				logEntity.LogisticsName = model.LogisticsName;
+				logEntity.ShippingMethod = model.ShippingMethod;
+				logEntity.IsActive = model.IsActive;
 				logEntity.Reviser = currentUserId;
+				logEntity.RevisedDate = DateTime.Now;
+
+				await _context.SaveChangesAsync();
+
+				return Json(new { success = true, isCreate = false, logistics = logEntity });
+			}
+			catch (DbUpdateException dbEx)
+			{
+				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+			}
+		}
+
+		// GET: /SUP/Logistics/Details/1000
+		[HttpGet]
+		public async Task<IActionResult> Details(int id)
+		{
+			var log = await _context.SupLogistics.AsNoTracking().FirstOrDefaultAsync(l => l.LogisticsId == id);
+			if (log == null) return NotFound();
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsDetailsPartial", log);
+		}
+
+		// POST: /SUP/Logistics/Delete
+		[HttpPost]
+		public async Task<IActionResult> Delete(int id)
+		{
+			try
+			{
+				var logEntity = await _context.SupLogistics.FindAsync(id);
+				if (logEntity == null)
+					return Json(new { success = false, message = "找不到該物流商" });
+
+				_context.SupLogistics.Remove(logEntity);
+				await _context.SaveChangesAsync();
+				return Json(new { success = true, message = "刪除成功" });
+			}
+			catch (DbUpdateException dbEx)
+			{
+				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+			}
+		}
+
+		// 切換物流商啟用狀態
+		// POST: /SUP/Logistics/ToggleActive
+		public async Task<IActionResult> ToggleActive(int id, bool isActive)
+		{
+			try
+			{
+				var logEntity = await _context.SupLogistics.FindAsync(id);
+				if (logEntity == null)
+					return Json(new { success = false, message = "找不到該物流商" });
+
+				var userId = _me.Id;
+				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+				if (user == null)
+					return Json(new { success = false, message = "找不到使用者資料" });
+
+				logEntity.IsActive = isActive;
+				logEntity.Reviser = user.UserNumberId;
 				logEntity.RevisedDate = DateTime.Now;
 
 				await _context.SaveChangesAsync();
@@ -206,31 +560,6 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-		// 切換子表運費區間的啟用狀態
-		// POST: /SUP/Logistics/ToggleRateActive
-		[HttpPost]
-		public async Task<IActionResult> ToggleRateActive(int id, bool isActive)
-		{
-			var rate = await _context.SupLogisticsRates.FindAsync(id);
-			if (rate == null)
-				return Json(new { success = false, message = "找不到該運費區間" });
-
-			var userId = _me.Id;
-			var user = await _userMgr.Users
-				.AsNoTracking()
-				.FirstOrDefaultAsync(u => u.Id == userId);
-
-			if (user == null)
-				return Json(new { success = false, message = "找不到使用者資料" });
-
-			int currentUserId = user.UserNumberId;
-
-			rate.IsActive = isActive;
-			rate.Reviser = currentUserId;
-			rate.RevisedDate = DateTime.Now;
-
-			await _context.SaveChangesAsync();
-			return Json(new { success = true, newStatus = isActive });
-		}
+		#endregion
 	}
 }

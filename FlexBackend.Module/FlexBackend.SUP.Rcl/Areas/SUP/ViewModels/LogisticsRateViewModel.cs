@@ -1,6 +1,6 @@
 ﻿namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 {
-	public class LogisticsRateModel
+	public class LogisticsRateViewModel
 	{
 		/// <summary>
 		/// 主鍵
