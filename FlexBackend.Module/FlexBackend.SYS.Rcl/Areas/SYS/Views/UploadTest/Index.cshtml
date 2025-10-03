@@ -105,7 +105,7 @@
     <!-- 拖拉區塊 -->
     <div id="dropArea" class="border border-2 border-primary rounded p-5 text-center mb-3 bg-light">
         <p class="mb-2">拖拉圖片到這裡，或點擊下方選擇檔案</p>
-        <input type="file" id="fileInput" class="form-control d-none" multiple />
+        <input type="file" id="fileInput" name="Files" class="form-control d-none" multiple />
         <button type="button" id="selectBtn" class="btn btn-outline-primary">選擇圖片</button>
     </div>
 
@@ -173,6 +173,8 @@
 </div>
 
 @section Scripts {
+    @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const modal = new bootstrap.Modal(document.getElementById("imgMetaModal"));
@@ -246,6 +248,8 @@
             // === 預覽功能 ===
             function showPreview(files) {
                 preview.innerHTML = ""; // 先清空舊的，避免疊加
+                hiddenInputs.innerHTML = "";  // ⚡ 每次清空再重建
+
                 [...files].forEach((file, index) => {
                     if (!file.type.startsWith("image/")) return;
 
@@ -259,10 +263,10 @@
                             <button type="button" class="btn-close-custom" aria-label="Close">
                                 <i class="bi bi-x-lg"></i>
                             </button>
-                            <input type="text" class="form-control mt-2"
-                                   placeholder="AltText" name="Files[${index}].AltText">
-                            <textarea class="form-control mt-2"
-                                      placeholder="Caption" name="Files[${index}].Caption"></textarea>
+                            <input type="text" class="form-control mt-2 alt-input"
+                                   placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
+                            <textarea class="form-control mt-2 caption-input"
+                                      placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
                         `;
 
                         // 移除按鈕
@@ -275,6 +279,16 @@
                         });
 
                         preview.appendChild(wrapper);
+
+                        // 把檔案也加進隱藏 input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        const fileInput = document.createElement("input");
+                        fileInput.type = "file";
+                        fileInput.name = "Files";
+                        fileInput.files = dataTransfer.files;
+                        fileInput.hidden = true;
+                        hiddenInputs.appendChild(fileInput);
                     };
                     reader.readAsDataURL(file);
                 });
