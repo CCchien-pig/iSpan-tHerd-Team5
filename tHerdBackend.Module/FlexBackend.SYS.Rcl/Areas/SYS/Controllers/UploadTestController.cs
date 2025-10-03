@@ -31,13 +31,20 @@ namespace FlexBackend.SYS.Rcl.Areas.SYS.Controllers
             uploadDto.ModuleId = "SYS";
             uploadDto.ProgId = "UploadTest";
 
-            var imageUrls = await _frepo.AddImages(uploadDto);
+            try
+            {
+                var imageUrls = await _frepo.AddImages(uploadDto);
 
-            ViewBag.ImageUrls = imageUrls; // 將圖片 URL 傳遞到 View
+                ViewBag.ImageUrls = imageUrls; // 將圖片 URL 傳遞到 View
 
-            ViewBag.Message = $"圖片已成功上傳！";
+                TempData["SuccessMessage"] = "圖片已成功上傳！";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"上傳失敗：{ex.Message}";
+            }
 
-            return View();
+            return RedirectToAction("Index"); // 建議 Redirect，避免重新整理重送
         }
 
         [HttpGet]
