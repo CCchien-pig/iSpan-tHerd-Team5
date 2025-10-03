@@ -449,7 +449,7 @@
             // ======= 編輯物流商 =======
             $('#logisticsTable').on('click', '.edit-btn', function () {
                 var id = $(this).data('id');
-
+                console.log(editUrl, id);
                 // 用 AJAX 把 Partial View 載入到 Modal 裡
                 $.get(`${editUrl}/${id}`, function (html) {
                     $("#logisticsModalTitle").text("修改物流商"); // 動態設定 Modal 標題

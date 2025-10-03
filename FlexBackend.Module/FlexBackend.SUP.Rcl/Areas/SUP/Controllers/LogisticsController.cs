@@ -26,6 +26,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			_userMgr = userMgr;
 		}
 
+		#region index
 		// GET: /SUP/Logistics/Index
 		[HttpGet]
 		public IActionResult Index()
@@ -100,6 +101,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			});
 		}
 
+		#endregion
 
 		#region 子表、Rate
 		// 子表展開
@@ -451,20 +453,29 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			var log = await _context.SupLogistics.FindAsync(id);
 			if (log == null) return NotFound();
 
-			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", log);
+			var vm = new LogisticsContactViewModel
+			{
+				LogisticsId = log.LogisticsId,
+				LogisticsName = log.LogisticsName,
+				ShippingMethod = log.ShippingMethod,
+				IsActive = log.IsActive,
+			};
+
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", vm);
 		}
+
 
 		// POST: /SUP/Logistics/Edit/1000
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(SupLogistic model)
+		public async Task<IActionResult> Edit(LogisticsContactViewModel vm)
 		{
 			if (!ModelState.IsValid)
-				return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", model);
+				return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", vm);
 
 			try
 			{
-				var logEntity = await _context.SupLogistics.FindAsync(model.LogisticsId);
+				var logEntity = await _context.SupLogistics.FindAsync(vm.LogisticsId);
 				if (logEntity == null)
 					return Json(new { success = false, message = "找不到該物流商" });
 
@@ -475,9 +486,9 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 				int currentUserId = user.UserNumberId;
 
-				logEntity.LogisticsName = model.LogisticsName;
-				logEntity.ShippingMethod = model.ShippingMethod;
-				logEntity.IsActive = model.IsActive;
+				logEntity.LogisticsName = vm.LogisticsName;
+				logEntity.ShippingMethod = vm.ShippingMethod;
+				logEntity.IsActive = vm.IsActive;
 				logEntity.Reviser = currentUserId;
 				logEntity.RevisedDate = DateTime.Now;
 
@@ -494,6 +505,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
 			}
 		}
+
+
 
 		// GET: /SUP/Logistics/Details/1000
 		[HttpGet]
