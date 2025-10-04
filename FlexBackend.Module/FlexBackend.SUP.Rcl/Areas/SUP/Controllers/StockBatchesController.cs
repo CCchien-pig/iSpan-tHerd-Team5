@@ -493,7 +493,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				.Select(b => new
 				{
 					BrandId = b.BrandId,
-					BrandName = b.BrandName
+					BrandName = b.BrandName,
+					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
 				})
 				.ToListAsync();
 			return Ok(brands);
@@ -523,7 +524,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetSkusByProduct(int productId)
 		{
 			var skus = await _context.ProdProductSkus
-				.Where(sku => sku.ProductId == productId && sku.IsActive)
+				.Where(sku => sku.ProductId == productId)
 				.Select(sku => new
 				{
 					sku.SkuId,
@@ -543,10 +544,8 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Ok(skus);
 		}
 
-
 		// 取得 SKU 詳細資訊 (選完 SKU 後自動帶入底下欄位)
-		// [HttpGet("skus/{skuId}")]
-		// /api/skus/{skuId}
+		[Route("SUP/StockBatches/GetSkuInfo")]
 		[HttpGet]
 		public async Task<IActionResult> GetSkuInfo(int skuId)
 		{

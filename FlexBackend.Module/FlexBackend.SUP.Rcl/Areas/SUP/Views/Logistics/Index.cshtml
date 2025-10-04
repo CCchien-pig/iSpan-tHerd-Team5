@@ -15,9 +15,9 @@
 <button id="create" class="btn btn-outline-success mb-2">新增物流商</button>
 
 @* 渲染 DataTable *@
-<div class="logistics-card">
+<div class="card logistics-card">
     <h5>物流 / 運費管理</h5>
-    <table id="logisticsTable" class="display" style="width:100%">
+    <table id="logisticsTable" class="display table" style="width:100%">
         <thead>
             <tr>
                 <th></th> <!-- 展開列按鈕 -->
@@ -32,13 +32,13 @@
     </table>
 </div>
 
-<!-- 新增/修改物流商 Modal -->
+<!-- 新增/修改/詳情物流 Modal -->
 <div id="logisticsModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content bg-white container">
             <!-- Header -->
             <div class="modal-header">
-                <h5 id="logisticsModalTitle" class="modal-title">物流商</h5>
+                <h5 id="logisticsModalTitle" class="modal-title">--物流--</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <!-- Body -->
@@ -138,11 +138,14 @@
                         orderable: false,   // 禁止排序
                         render: function(data) {
                             return `
+                                <button class="btn btn-sm history-btn" data-id="${data}" data-bs-toggle="tooltip" title="檢視紀錄">
+                                    <i class="fa-solid fa-circle-info" style="color: #30c6c7;"></i>
+                                </button>
                                 <button class="btn btn-sm edit-btn" data-id="${data}" data-bs-toggle="tooltip" title="編輯">
                                     <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
                                 </button>
-                                <button class="btn btn-sm history-btn" data-id="${data}" data-bs-toggle="tooltip" title="檢視紀錄">
-                                    <i class="fa-solid fa-clock-rotate-left" style="color: #1c7ed6;"></i>
+                                <button class="btn btn-sm delete-btn" data-id="${data}" data-bs-toggle="tooltip" title="刪除">
+                                    <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
                                 </button>
                             `;
                         }
@@ -449,9 +452,10 @@
             // ======= 編輯物流商 =======
             $('#logisticsTable').on('click', '.edit-btn', function () {
                 var id = $(this).data('id');
-                console.log(editUrl, id);
                 // 用 AJAX 把 Partial View 載入到 Modal 裡
                 $.get(`${editUrl}/${id}`, function (html) {
+                    console.log(`${editUrl}/${id}`);
+                    // console.log("PartialView html:", html);
                     $("#logisticsModalTitle").text("修改物流商"); // 動態設定 Modal 標題
                     $('#logisticsModalContent').html(html);  // 把表單塞進去
                     $.validator.unobtrusive.parse('#logisticsModalContent');
@@ -485,7 +489,7 @@
                 });
             });
 
-            // ======= 啟用/停用物流商 軟刪除（IsActive=0） =======
+            // ======= 啟用/停用物流商 =======
             $('#logisticsTable').on('change', '.toggle-active', function() {
                 var checkbox = $(this);
                 var id = checkbox.data('id');
@@ -593,22 +597,22 @@
                                 if (data.isCreate) {
                                     // 新增列
                                     table.row.add({
-                                        logisticsId: data.logistics.LogisticsId,
-                                        logisticsName: data.logistics.LogisticsName,
-                                        shippingMethod: data.logistics.ShippingMethod,
-                                        isActive: data.logistics.IsActive
+                                        logisticsId: data.logistics.logisticsId,
+                                        logisticsName: data.logistics.logisticsName,
+                                        shippingMethod: data.logistics.shippingMethod,
+                                        isActive: data.logistics.isActive
                                     }).draw(false);
                                 } else {
                                     // 編輯 → 更新對應 row
                                     var row = table.row(function(idx, d, node) {
-                                        return d.logisticsId === data.logistics.LogisticsId;
+                                        return d.logisticsId === data.logistics.logisticsId;
                                     });
                                     if (row.any()) {
                                         row.data({
-                                            logisticsId: data.logistics.LogisticsId,
-                                            logisticsName: data.logistics.LogisticsName,
-                                            shippingMethod: data.logistics.ShippingMethod,
-                                            isActive: data.logistics.IsActive
+                                            logisticsId: data.logistics.logisticsId,
+                                            logisticsName: data.logistics.logisticsName,
+                                            shippingMethod: data.logistics.shippingMethod,
+                                            isActive: data.logistics.isActive
                                         }).draw(false);
                                     } else {
                                         // fallback 重新載入 table
@@ -626,6 +630,36 @@
                 })
                 .fail(function() {
                     Swal.fire('操作失敗', '', 'error');
+                });
+            });
+
+            // ======= 檢視紀錄 =======
+            $('#logisticsTable').on('click', '.history-btn', function() {
+                var logisticsId = $(this).data('id');
+
+                // GET 詳細資料 Partial View
+                    $.get(`${detailsUrl}/${logisticsId}`, function(html) {
+                    $('#logisticsModalTitle').text("物流資訊");
+                    $('#logisticsModalContent').html(html);  // 塞進 Modal
+                    $('#logisticsModal').modal('show');      // 顯示 Modal
+                });
+            });
+
+
+            // 自動填入
+            $(function () {
+                // 重新解析 jQuery Validation
+                $.validator.unobtrusive.parse('#logisticsForm');
+
+                // 按鈕：自動填入物流商與配送方式
+                $('#logisticsModalContent').on('click', '#fillLogistics',function () {
+                // $('#fillLogistics').click(function () {
+                    const now = new Date();
+                    const hour = now.getHours();   // 小時
+                    const minute = now.getMinutes(); // 分鐘
+
+                    $('#LogisticsName').val(`物流商${hour}點`);
+                    $('#ShippingMethod').val(`配送方式${minute}分`);
                 });
             });
 

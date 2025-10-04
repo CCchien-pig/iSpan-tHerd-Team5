@@ -19,7 +19,7 @@
 <span id="initResult" style="margin-left:10px;"></span>  *@
 
 <!-- 主庫存表格*2區塊 (.stockbatch-card) -->
-<div class="stockbatch-card">
+<div class="card stockbatch-card">
     <!-- 庫存紀錄 stockBatchTable -->
     <div id="stockTableWrapper">
         <div class="d-flex align-items-center mb-2">
@@ -91,7 +91,7 @@
         </div>
 
         <!-- DataTable -->
-        <table id="stockBatchTable" class="display" style="width:100%">
+        <table id="stockBatchTable" class="display table rounded-0 " style="width:100%">
             <thead>
                 <tr>
                     <th>#</th> <!-- 序號欄 -->
@@ -157,7 +157,7 @@
         </div>
 
         <!-- DataTable -->
-        <table id="historyTable" class="display" style="width:100%">
+        <table id="historyTable" class="display table" style="width:100%">
             <thead>
                 <tr>
                     <th>SKU</th>
@@ -298,8 +298,24 @@
 
             // ---------- 取得品牌列表 ----------
             $.get('/SUP/StockBatches/GetBrands', function(brands) {
+                // console.log('回傳brands:', brands);
+                brandSelect.empty().append('<option value="">請選品牌</option>');
+
                 brands.forEach(b => {
-                    brandSelect.append(`<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>${b.brandName}</option>`);
+                    // 判斷供應商是否啟用
+                    if(b.isSupplierActive) {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.brandName}
+                            </option>`
+                        );
+                    } else {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" disabled style="color:gray;">
+                                ${b.brandName} (其供應商未啟用)
+                            </option>`
+                        );
+                    }
                 });
                 if(selectedBrandId) brandSelect.trigger('change');
             });
@@ -308,12 +324,15 @@
             brandSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var brandId = $(this).val();
+                console.log('已選擇品牌Id:', brandId);
+
                 if(!brandId) {
                     productSelect.empty().append('<option value="">請選商品</option>').prop('disabled', true);
                     skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                     return;
                 }
                 $.get('/SUP/StockBatches/GetProductsByBrand', { brandId: brandId }, function(products) {
+                    // console.log('回傳products:', products);
                     productSelect.empty().append('<option value="">請選商品</option>');
                     products.forEach(p => {
                         productSelect.append(`<option value="${p.productId}" ${p.productId == selectedProductId ? 'selected' : ''}>${p.productName}</option>`);
@@ -327,10 +346,17 @@
             productSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var productId = $(this).val();
+                console.log('已選擇商品Id:', productId);
+
                 skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                 if (!productId) return;
 
                 $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
+                    console.log('回傳skus:', skus);
+                    if(!skus || skus.length === 0) {
+                        skuSelect.empty().append('<option value="">沒有 SKU</option>');
+                        return;
+                    }
                     skus.forEach(sku => {
                         skuSelect.append(`<option value="${sku.skuId}" ${sku.skuId == selectedSkuId ? 'selected' : ''}>${sku.skuCode}</option>`);
                     });
@@ -342,9 +368,12 @@
             // ---------- SKU change → 載入 SKU 資訊 ----------
             skuSelect.off('change').on('change', function() {
                 var skuId = $(this).val();
+                console.log('已選擇skuId:', skuId);
+
                 if(!skuId) return resetStockInfo();
 
                 $.get('/SUP/StockBatches/GetSkuInfo', { skuId: skuId }, function(info) {
+                    console.log('回傳info:', info);
                     $('#CurrentQty').text(info.currentStock || 0);
                     $('#MaxStockQty').text(info.maxStockQty || 0);
                     $('#PredictedQty').text(info.expectedStock || 0);
@@ -426,10 +455,18 @@
                     isAdd = true;
                 }
 
+                // 計算最大可異動數量
                 var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
                 changeQtyInput.prop('max', maxAllowed);
-                if(changeQty > maxAllowed) { changeQty = maxAllowed; changeQtyInput.val(changeQty); }
-                if(changeQty < 1){ changeQty = 1; changeQtyInput.val(changeQty); }
+
+                // 當庫存已滿，且是增加動作，預設異動數量為 0
+                if(isAdd && maxAllowed === 0){
+                    changeQty = 0;
+                } else {
+                    if(changeQty > maxAllowed) changeQty = maxAllowed;
+                    if(changeQty < 1) changeQty = 1;
+                }
+                changeQtyInput.val(changeQty);
 
                 var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
                 if(!isAdd && predictedStock < 0) predictedStock = 0;
@@ -487,7 +524,7 @@
                         d.endDate = $('#endDate').val();
                     },
                     dataSrc: function(json) {
-                        console.log(json);      // 印出整個 JSON
+                        //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
                         return json.data;
                     },
@@ -511,12 +548,12 @@
                         title: 'SkuCode', 
                         className: 'text-center',
                         render: function(data, type, row) {
-                            console.log(data);
-                            console.log(row.skuId);
+                            //console.log(data);
+                            //console.log(row.skuId);
                             if (!data) return '';
                             return `<span data-bs-toggle="tooltip"
-                                         data-bs-placement="top"
-                                         title="SkuId: ${row.skuId}">
+                                            data-bs-placement="top"
+                                            title="SkuId: ${row.skuId}">
                                         ${data}
                                     </span>`;
                         }
@@ -539,7 +576,7 @@
                             return formatted;
                         }
                     },
-                  {
+                    {
                     data: 'qty',
                     title: '批次庫存量',
                     className: 'text-center',
@@ -653,7 +690,7 @@
                     dataSrc: function(json) {
                         //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
-                       return json.data;
+                        return json.data;
                     },
                     error: function(xhr, error, thrown) {
                         console.log(xhr.responseText); // 印出後端錯誤訊息
@@ -1126,77 +1163,6 @@
             }
         }
 
-        // 更新 input 的 max 與 helper，並自動修正輸入值
-        function updateChangeQtyLimitAndPredicted() {
-            // 取得當前庫存與最大庫存
-            var currentStock = parseInt($('#CurrentQty').text()) || 0;
-            var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-            console.log('[UpdateStock] CurrentQty:', currentStock, 'MaxStockQty:', maxStock);
-
-            var movementType = $('#MovementTypeSelect').val() || '';
-            var isAdd = true; // 預設為增加
-            console.log('[UpdateStock] movementType:', movementType, 'isAdd (預設):', isAdd);
-
-
-            // 判斷異動方向
-            if (movementType === 'Adjust') {
-                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';  // 手動調整需要用 radio 判斷
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                isAdd = false; // 出庫 / 報廢
-            } else if (movementType === 'Return' || movementType === 'Purchase') {
-                isAdd = true;  // 入庫
-            }
-            console.log('isAdd:', isAdd);
-
-            console.log('currentStock:', $('#CurrentQty').text(), '=>', currentStock);
-            console.log('maxStock:', $('#MaxStockQty').text(), '=>', maxStock);
-            console.log('movementType:', movementType, 'isAdd:', isAdd);
-
-            // 計算最大可輸入數量
-            var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
-            console.log('[UpdateStock] maxAllowed:', maxAllowed);
-
-            var $input = $('#ChangeQtyInput');
-            var curVal = parseInt($input.val()) || 0;
-
-            // 設定 html max 屬性（讓內建箭頭有上下限制）
-            $input.attr('max', maxAllowed);
-
-            // helper 顯示
-            $('#ChangeQtyHelp').text('上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
-
-            // 若輸入超過上限，直接改為上限
-            if (curVal > maxAllowed) {
-                $input.val(maxAllowed);
-                curVal = maxAllowed;
-            }
-
-            // 若輸入小於 1，強制為 1（因為前端要求正整數）
-            if (curVal < 1) {
-                $input.val(1);
-                curVal = 1;
-            }
-
-            // 計算預計庫存
-            var predicted;
-            if (movementType === 'Adjust') {
-                predicted = isAdd ? currentStock + curVal : currentStock - curVal;
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                predicted = currentStock - curVal;
-            } else {
-                predicted = currentStock + curVal; // Purchase / Return
-            }
-            console.log('[UpdateStock] predicted:', predicted);
-
-            // 非允許預購暫不實作 -> 如低於0則顯示 0
-            if (predicted < 0) predicted = 0;
-            $('#PredictedQty').text(predicted);
-
-            // 更新 helper
-            $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
-        }
-
-
         // 點擊下載匯入範例
         $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateExcel');
         $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateCsv');
@@ -1314,7 +1280,6 @@
         $('#exportHistoryCsv').click(() => exportHistoryFiltered('csv'));
         $('#exportHistoryExcel').click(() => exportHistoryFiltered('excel'));
         $('#exportHistoryPdf').click(() => exportHistoryFiltered('pdf'));
-
 
     </script>
 }

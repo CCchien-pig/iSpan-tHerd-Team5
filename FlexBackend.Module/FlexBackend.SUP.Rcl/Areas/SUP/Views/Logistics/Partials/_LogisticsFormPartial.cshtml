@@ -20,6 +20,9 @@
     }
 
     <div class="container-fluid">
+        <div class="d-flex ">
+            <button type="button" id="fillLogistics" class="btn d-flex mb-3" style="background-color:#35afe6;color:#fff;">+</button>
+        </div>
         <div class="form-floating mb-2">
             <input asp-for="LogisticsName" class="form-control" placeholder="" />
             <label asp-for="LogisticsName" class="form-label">@Html.DisplayNameFor(m => m.LogisticsName)</label>
@@ -34,9 +37,6 @@
 
         <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
             <label class="form-label mb-0 me-3 flex-shrink-0" for="IsActive">啟用狀態</label>
-
-            <!-- hidden values -->
-            <input type="hidden" id="LogisticsId" name="LogisticsId" value="@Model.LogisticsId" />
 
             <div class="form-check form-switch ms-3 mb-0">
                 <input type="hidden" name="IsActive" value="false" />

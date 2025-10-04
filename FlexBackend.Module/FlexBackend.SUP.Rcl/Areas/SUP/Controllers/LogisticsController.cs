@@ -461,6 +461,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				IsActive = log.IsActive,
 			};
 
+			ViewBag.FormAction = "Edit";
 			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", vm);
 		}
 
@@ -486,15 +487,29 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 				int currentUserId = user.UserNumberId;
 
+				// 更新欄位
 				logEntity.LogisticsName = vm.LogisticsName;
 				logEntity.ShippingMethod = vm.ShippingMethod;
 				logEntity.IsActive = vm.IsActive;
 				logEntity.Reviser = currentUserId;
 				logEntity.RevisedDate = DateTime.Now;
 
+
+				_context.Update(logEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = false, logistics = logEntity });
+				return Json(new
+				{
+					success = true,
+					isCreate = false,
+					logistics = new
+					{
+						logisticsId = logEntity.LogisticsId,
+						logisticsName = logEntity.LogisticsName,
+						shippingMethod = logEntity.ShippingMethod,
+						isActive = logEntity.IsActive
+					}
+				});
 			}
 			catch (DbUpdateException dbEx)
 			{
@@ -506,15 +521,32 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
-
 		// GET: /SUP/Logistics/Details/1000
 		[HttpGet]
 		public async Task<IActionResult> Details(int id)
 		{
-			var log = await _context.SupLogistics.AsNoTracking().FirstOrDefaultAsync(l => l.LogisticsId == id);
+			var log = await _context.SupLogistics
+				.AsNoTracking()
+				.FirstOrDefaultAsync(l => l.LogisticsId == id);
+
 			if (log == null) return NotFound();
-			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsDetailsPartial", log);
+
+			// 將 SupLogistic 轉成 ViewModel
+			var vm = new LogisticsContactViewModel
+			{
+
+				LogisticsId = log.LogisticsId,
+				LogisticsName = log.LogisticsName,
+				ShippingMethod = log.ShippingMethod,
+				IsActive = log.IsActive,
+				Creator = log.Creator,
+				CreatedDate = log.CreatedDate,
+				Reviser = log.Reviser,
+				RevisedDate = log.RevisedDate
+			};
+
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsInfoPartial.cshtml", vm);
+
 		}
 
 		// POST: /SUP/Logistics/Delete
