@@ -489,7 +489,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetBrands()
 		{
 			var brands = await _context.SupBrands
-				.Where(b => b.IsActive)
+				//.Where(b => b.IsActive)
 				.Select(b => new
 				{
 					BrandId = b.BrandId,
