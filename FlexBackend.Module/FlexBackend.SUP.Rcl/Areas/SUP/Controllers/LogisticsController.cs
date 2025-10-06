@@ -558,6 +558,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				var logEntity = await _context.SupLogistics.FindAsync(id);
 				if (logEntity == null)
 					return Json(new { success = false, message = "找不到該物流商" });
+				
+				// 先檢查是否存在子資料（運費分段）
+				bool hasRates = await _context.SupLogisticsRates.AnyAsync(r => r.LogisticsId == id);
+				if (hasRates)
+				{
+					return Json(new
+					{
+						success = false,
+						message = "該物流商仍有運費分段資料，請先刪除或轉移後再刪除物流商。"
+					});
+				}
 
 				_context.SupLogistics.Remove(logEntity);
 				await _context.SaveChangesAsync();
@@ -565,7 +576,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 			catch (DbUpdateException dbEx)
 			{
-				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+				//return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+				
+				// 外鍵違反等資料庫層異常（保險起見仍處理）
+				Console.WriteLine(dbEx);
+				return Json(new
+				{
+					success = false,
+					message = "刪除失敗：存在關聯資料（運費分段），請先刪除相關資料後再試。"
+				});
 			}
 			catch (Exception ex)
 			{
