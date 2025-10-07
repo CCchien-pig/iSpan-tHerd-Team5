@@ -15,7 +15,7 @@
             to="/"
             class="navbar-brand text-white text-decoration-none"
           >
-            <h3 class="mb-0 fw-bold">iHerb</h3>
+            <h3 class="mb-0 fw-bold">tHerd</h3>
           </router-link>
         </div>
 
@@ -25,7 +25,7 @@
             <input
               type="text"
               class="form-control form-control-lg rounded-pill pe-5"
-              placeholder="搜索所有 iHerb 商品"
+              placeholder="搜尋所有 tHerd 商品"
               v-model="searchQuery"
               @keyup.enter="handleSearch"
             />
@@ -57,7 +57,6 @@
                 <li><a class="dropdown-item" href="#">註冊</a></li>
                 <li><hr class="dropdown-divider" /></li>
                 <li><a class="dropdown-item" href="#">我的帳戶</a></li>
-                <li><a class="dropdown-item" href="#">訂單歷史</a></li>
               </ul>
             </div>
 
@@ -122,10 +121,6 @@ export default {
 </script>
 
 <style scoped>
-.main-header {
-  background: linear-gradient(135deg, #28a745, #20c997) !important;
-}
-
 @media (max-width: 768px) {
   .main-header .col-md-2,
   .main-header .col-md-6,

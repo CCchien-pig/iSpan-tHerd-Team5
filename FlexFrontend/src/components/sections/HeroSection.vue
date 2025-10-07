@@ -87,7 +87,7 @@ export default {
     // 主標題文字
     title: {
       type: String,
-      default: '健康生活，從 iHerb 開始',
+      default: '健康生活，從 tHerd 開始',
     },
     // 描述文字
     description: {

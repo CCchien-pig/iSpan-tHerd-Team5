@@ -1,109 +1,156 @@
-<!--
-  ProductCard.vue - 產品卡片組件
-  功能：展示單個產品的完整信息，包括圖片、名稱、評分、價格和操作按鈕
-  特色：組合多個子組件、懸停動畫效果、響應式設計
-  用途：用於產品列表、推薦產品等需要展示產品信息的區域
--->
 <template>
-  <!-- 產品卡片容器 -->
-  <div class="product-card h-100">
-    <!-- 產品圖片區域 -->
-    <div class="product-image">
-      <img :src="product.image" :alt="product.name" />
-      <!-- 產品標籤（如果有） -->
-      <ProductBadge v-if="product.badge" :badge="product.badge" />
-    </div>
-    <!-- 產品信息區域 -->
-    <div class="product-info">
-      <!-- 產品名稱 -->
-      <h6 class="product-name">{{ product.name }}</h6>
-      <!-- 產品評分 -->
-      <ProductRating :rating="5" :reviews="product.reviews" />
-      <!-- 產品價格 -->
-      <ProductPrice
-        :current-price="product.price"
-        :original-price="product.originalPrice"
-      />
-      <!-- 產品操作按鈕 -->
-      <ProductActions :product="product" />
+  <div class="product-card h-100 d-flex flex-column">
+  <!-- 商品圖片 -->
+  <div class="product-image position-relative">
+    <img :src="product.image" :alt="product.name" class="img-fluid" />
+
+    <!-- 加入購物車按鈕 -->
+    <button 
+      class="btn btn-warning add-to-cart-btn fw-bold"
+      @click="$emit('add-to-cart', product)"
+    >
+      加入購物車
+    </button>
+  </div>
+
+    <!-- 商品資訊 -->
+    <div class="product-info flex-grow-1 d-flex flex-column justify-content-between p-2">
+      <!-- 商品名稱 -->
+      <p class="product-name mb-1">{{ product.name }}</p>
+
+      <!-- 評分 + 評價數 -->
+      <div class="rating d-flex align-items-center mb-1">
+        <span v-for="i in 5" :key="i" class="star">
+          <i class="bi" 
+             :class="i <= Math.round(product.rating) ? 'bi-star-fill text-warning' : 'bi-star text-warning'">
+          </i>
+        </span>
+        <span class="reviews text-primary ms-1">{{ product.reviews }}</span>
+      </div>
+
+      <!-- 價格 -->
+      <div class="price">
+        <span class="current-price">NT${{ product.price }}</span>
+        <span v-if="product.originalPrice" class="original-price">NT${{ product.originalPrice }}</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-// 導入子組件
-import ProductBadge from './ProductBadge.vue'; // 產品標籤組件
-import ProductRating from './ProductRating.vue'; // 產品評分組件
-import ProductPrice from './ProductPrice.vue'; // 產品價格組件
-import ProductActions from './ProductActions.vue'; // 產品操作組件
-
-/**
- * ProductCard.vue 組件配置
- * 功能：可重用的產品卡片組件
- * 特色：組合多個子組件、完整的產品信息展示
- */
 export default {
-  name: 'ProductCard', // 組件名稱
-
-  /**
-   * 子組件註冊
-   */
-  components: {
-    ProductBadge,
-    ProductRating,
-    ProductPrice,
-    ProductActions,
-  },
-
-  /**
-   * Props定義 - 組件的可配置屬性
-   */
+  name: "ProductCard",
   props: {
-    // 產品數據對象
     product: {
       type: Object,
-      required: true, // 必須提供產品數據
-      // 驗證產品數據的完整性
-      validator: product => {
-        return product.id && product.name && product.image && product.price;
-      },
-    },
-  },
+      required: true,
+      validator: p => p.id && p.name && p.image && p.price
+    }
+  }
 };
 </script>
 
 <style scoped>
 .product-card {
-  background: white;
-  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 0.5rem;
   overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.2s;
+  cursor: pointer;
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  transform: translateY(-3px);
 }
 
 .product-image {
   position: relative;
-  height: 200px;
-  overflow: hidden;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
 }
 
 .product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.add-to-cart-btn {
+  position: absolute;
+  bottom: 10px;         /* 固定在底部 */
+  left: 20%;           /* 距離左邊 10px，不再用 translate */
+  right: 20%;          /* 距離右邊 10px，讓它自動置中 */
+  background-color: #f68b1e;
+  color: white;
+  border: none;
+  padding: 0.4rem 0;    /* 自動撐滿左右 */
+  font-size: 0.85rem;
+  border-radius: 4px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  width: 60%;
+}
+
+.product-card:hover .add-to-cart-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .product-info {
-  padding: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
 }
 
 .product-name {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.2rem;
   color: #333;
+  min-height: 2.4rem; /* 兩行固定高度 */
+  overflow: hidden;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 讓整塊置中 */
+  line-height: 1; /* 避免 baseline 不一樣 */
+}
+
+.rating .star i {
+  font-size: 0.9rem;
+  vertical-align: middle; /* 強制與數字同一高度 */
+}
+
+.reviews {
+  font-size: 0.8rem;
+  margin-left: 4px; /* 取代 ms-1 更精準 */
+  vertical-align: middle;
+}
+
+.rating .star {
+  font-size: 0.9rem;
+}
+.price {
+  margin-top: 0.2rem;
+}
+
+.current-price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #d32f2f;
+  margin-right: 0.4rem;
+}
+
+.original-price {
+  font-size: 0.85rem;
+  color: #999;
+  text-decoration: line-through;
 }
 </style>

@@ -39,13 +39,13 @@
       <div class="d-flex gap-2">
         <!-- 免運費提示按鈕 -->
         <AppButton
-          text="購物滿 NT$1,000 免運費"
+          text="歷史訂單查詢"
           variant="light"
           size="sm"
           :show-border="false"
           custom-class="d-none d-lg-block text-white bg-transparent border-0 p-2 rounded-pill"
         >
-          <span class="hover-none text-black">購物滿 NT$1,000 免運費</span>
+          <span class="hover-none text-black">歷史訂單查詢</span>
         </AppButton>
 
         <!-- 分享按鈕 -->
@@ -90,7 +90,7 @@ export default {
     // 左側促銷文字
     leftText: {
       type: String,
-      default: 'iHerb 自主研發品牌 71折',
+      default: 'tHerd 自主研發品牌 71折',
     },
     // 右側促銷文字
     rightText: {
