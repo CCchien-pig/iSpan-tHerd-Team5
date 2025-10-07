@@ -16,7 +16,7 @@
         <div class="col-12">
           <div class="page-header text-center py-5">
             <!-- TODO: 更新為API數據 -->
-            <h1 class="display-4 fw-bold text-success mb-4">關於 iHerb</h1>
+            <h1 class="display-4 fw-bold text-success mb-4">關於 tHerd</h1>
             <p class="lead">您的健康生活夥伴，致力於提供最優質的健康產品</p>
           </div>
         </div>
@@ -33,7 +33,7 @@
           <!-- TODO: 更新為API數據 -->
           <h2 class="mb-4">我們的使命</h2>
           <p class="lead">
-            iHerb 成立於 1996 年，是全球領先的健康產品電商平台。
+            tHerd 成立於 1996 年，是全球領先的健康產品電商平台。
             我們致力於為全球客戶提供最優質的維生素、礦物質、美容護膚、
             運動營養等健康產品，幫助人們實現更健康的生活方式。
           </p>
@@ -46,7 +46,7 @@
           <!-- 公司總部圖片 -->
           <img
             src="https://picsum.photos/600/400?random=15"
-            alt="iHerb 總部"
+            alt="tHerd 總部"
             class="img-fluid rounded shadow"
           />
         </div>
@@ -169,7 +169,7 @@
                 <div class="contact-item">
                   <i class="bi bi-envelope contact-icon"></i>
                   <h5>電子郵件</h5>
-                  <p>service@iherb.com</p>
+                  <p>service@tHerd.com</p>
                 </div>
               </div>
               <!-- 客服電話聯絡方式 -->

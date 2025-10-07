@@ -11,7 +11,7 @@
       <div class="row">
         <!-- 關於我們區塊 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="text-success mb-3">關於 iHerb</h5>
+          <h5 class="text-success mb-3">關於 tHerd</h5>
           <ul class="list-unstyled">
             <li>
               <a href="#" class="text-light text-decoration-none">關於我們</a>
@@ -118,7 +118,7 @@
       <!-- 底部資訊 -->
       <div class="row align-items-center">
         <div class="col-md-6">
-          <p class="mb-0 text-muted">© 2024 iHerb, LLC. 版權所有。</p>
+          <p class="mb-0 text-muted">© 2024 tHerd, LLC. 版權所有。</p>
         </div>
         <div class="col-md-6 text-md-end">
           <div class="payment-methods">

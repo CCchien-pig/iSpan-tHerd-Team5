@@ -1,3 +1,12 @@
+.main-header {
+  /*background: linear-gradient(135deg, #28a745, #20c997) !important;*/
+  background: linear-gradient(90deg, rgb(0, 112, 131),  rgb(0, 112, 131)) !important;
+}
+
+main-color-green {
+  background: linear-gradient(135deg, #73a2a5, #20c997) !important;
+}
+
 /* 全局按鈕樣式 */
 .btn {
   transition: all 0.2s ease;

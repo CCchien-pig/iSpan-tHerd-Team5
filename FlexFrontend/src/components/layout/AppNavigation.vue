@@ -5,26 +5,63 @@
   用途：作為所有頁面的主要導航區域
 -->
 <template>
-  <!-- 主導航容器 -->
   <nav class="main-navigation bg-white border-bottom">
     <div class="container-fluid">
       <div class="row">
         <div class="col-12">
-          <!-- 導航菜單列表 -->
           <ul class="nav nav-pills justify-content-center flex-wrap py-2">
-            <!-- 遍歷導航項目，生成導航鏈接 -->
-            <li
-              class="nav-item"
-              v-for="item in navigationItems"
-              :key="item.name"
-            >
-              <router-link
-                :to="item.path"
-                class="nav-link text-success fw-medium rounded-pill"
-                :class="{ active: $route.path.startsWith(item.path) }"
-              >
+            <!-- 其他導航項目 -->
+            <li v-for="item in navigationItems"
+                :key="item.name"
+                class="nav-item position-relative"
+                @mouseenter="item.name === '品牌 A-Z' ? (showBrands = true) : null"
+                @mouseleave="item.name === '品牌 A-Z' ? (showBrands = false) : null">
+
+              <!-- 品牌 A-Z nav-link 本身 -->
+              <router-link v-if="item.name === '品牌 A-Z'"
+                          to="#"
+                          class="nav-link text-success fw-medium rounded-pill"
+                          :class="{ active: showBrands }"
+                          style="cursor: pointer;"
+                          @click.prevent>
                 {{ item.name }}
               </router-link>
+
+              <!-- 其他項目 -->
+              <router-link v-else
+                          :to="item.path"
+                          class="nav-link text-success fw-medium rounded-pill"
+                          :class="{ active: $route.path.startsWith(item.path) }">
+                {{ item.name }}
+              </router-link>
+
+              <!-- ✅ Mega Menu 獨立出來，不要包在 nav-link 裡 -->
+              <transition name="fade">
+                <div v-if="item.name === '品牌 A-Z' && showBrands"
+                    class="mega-menu shadow-lg bg-white p-4">
+                  <div class="container">
+                    <div class="row">
+                      <div class="col-6 col-md-3" v-for="(group, gIdx) in brandGroups" :key="gIdx">
+                        <ul class="list-unstyled">
+                          <li v-for="brand in group" :key="brand" class="mb-2">
+                            <router-link :to="`/brands/${brand.toLowerCase()}`"
+                                        class="text-dark text-decoration-none">
+                              {{ brand }}
+                            </router-link>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="col-12 col-md-3 border-start">
+                        <h6 class="fw-bold text-success">推薦品牌</h6>
+                        <div v-for="rec in recommendedBrands" :key="rec.name" class="mb-3">
+                          <img :src="rec.logo" alt="" class="img-fluid mb-1" style="max-height:40px">
+                          <div class="small">{{ rec.name }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </transition>
             </li>
           </ul>
         </div>
@@ -66,12 +103,40 @@ export default {
         { name: '新產品', path: '/new-products' },
         { name: '健康中心', path: '/health-hub' },
       ],
+      showBrands: false,
+      // 品牌清單分組 (可從 API 帶入)
+      brandGroups: [
+        ["21st Century", "ACURE", "ALLMAX", "Beauty of Joseon"],
+        ["Doctor's Best", "Eucerin", "Fairhaven Health", "Garden of Life"],
+        ["Life Extension", "MegaFood", "NOW Foods", "Nature's Bounty"],
+        ["Solgar", "Thorne", "Vital Proteins", "The Vitamin Shoppe"],
+      ],
+      // 推薦品牌
+      recommendedBrands: [
+        { name: "Nature's Bounty", logo: "https://via.placeholder.com/80x40" },
+        { name: "21st Century", logo: "https://via.placeholder.com/80x40" },
+        { name: "Fairhaven", logo: "https://via.placeholder.com/80x40" },
+      ],
     };
   },
 };
 </script>
 
 <style scoped>
+.mega-menu {
+  top: 100%;
+  left: 0;           
+  z-index: 1050;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 .main-navigation {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -83,7 +148,7 @@ export default {
 
 .nav-link:hover {
   background-color: #e8f5e8;
-  color: #1e7e34 !important;
+  color: rgb(0,112,131) !important;
 }
 
 .nav-link.active {

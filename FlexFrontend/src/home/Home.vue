@@ -9,7 +9,7 @@
 import { useLoadingStore } from '@/stores/loading';
 
 // 導入產品相關組件
-import ProductList from '@/components/product/list/ProductList.vue';
+import ProductList from '@/components/modules/PROD/list/ProductList.vue';
 
 // 導入頁面區塊組件 - 每個區塊都是獨立的組件
 import HeroSection from '@/components/sections/HeroSection.vue'; // 英雄區塊
@@ -310,7 +310,7 @@ export default {
           id: 1,
           name: '張小明',
           title: '健康愛好者',
-          text: 'iHerb的產品品質很好，配送也很快，已經在這裡購買了兩年多，非常滿意！',
+          text: 'tHerd的產品品質很好，配送也很快，已經在這裡購買了兩年多，非常滿意！',
           avatar: 'https://picsum.photos/60/60?random=11',
         },
         {
@@ -324,7 +324,7 @@ export default {
           id: 3,
           name: '王大偉',
           title: '營養師',
-          text: '作為營養師，我經常推薦客戶到iHerb購買補充品，品質有保障。',
+          text: '作為營養師，我經常推薦客戶到tHerd購買補充品，品質有保障。',
           avatar: 'https://picsum.photos/60/60?random=13',
         },
       ],

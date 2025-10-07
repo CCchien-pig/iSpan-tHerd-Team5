@@ -36,7 +36,7 @@
 
 <script>
 // 導入產品卡片組件
-import ProductCard from '@/components/product/card/ProductCard.vue';
+import ProductCard from '@/components/modules/PROD/card/ProductCard.vue';
 
 /**
  * ProductList.vue 組件配置

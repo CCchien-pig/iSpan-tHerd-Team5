@@ -51,7 +51,7 @@ export default {
     // 區塊標題
     title: {
       type: String,
-      default: '為什麼選擇 iHerb',
+      default: '為什麼選擇 tHerd',
     },
     // 特色數據數組
     features: {
