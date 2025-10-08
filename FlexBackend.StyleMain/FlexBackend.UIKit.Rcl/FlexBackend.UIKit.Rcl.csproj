@@ -25,5 +25,4 @@
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Infra\FlexBackend.Infra.csproj" />
     <ProjectReference Include="..\..\FlexBackend.Share\FlexBackend.Services\FlexBackend.Services.csproj" />
   </ItemGroup>
-
 </Project>

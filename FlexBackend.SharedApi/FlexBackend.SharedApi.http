@@ -1,0 +1,6 @@
+@FlexBackend.SharedApi_HostAddress = http://localhost:5196
+
+GET {{FlexBackend.SharedApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
