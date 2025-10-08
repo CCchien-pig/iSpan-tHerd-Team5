@@ -182,9 +182,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 								.FirstOrDefault() ?? "未知類別"
 				});
 
-			// ================================
 			// 下拉選單資料
-			// ================================
 			ViewBag.StatusList = new SelectList(
 				GetStatusSelectList(null, includeAll: true, includeDeleted: false),
 				"Value", "Text", status);
@@ -195,11 +193,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100 }, pageSize);
 
-			// ================================
-			// 顯示用：目前篩選條件（中文）
-			// ================================
-
-			// 狀態中文
+			// 顯示用：目前篩選條件
 			if (!string.IsNullOrEmpty(status) && int.TryParse(status, out int statusInt))
 			{
 				var statusEnum = (PageStatus)statusInt;
@@ -217,7 +211,6 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				ViewBag.StatusName = null;
 			}
 
-			// 分類中文
 			if (pageTypeId.HasValue && pageTypeId.Value > 0)
 			{
 				ViewBag.PageTypeName = _db.CntPageTypes
@@ -550,7 +543,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 		// 詳細頁面 (Details)
 		// ================================
 		public IActionResult Details(int id, int? page, int pageSize = 10, string? keyword = null, string? status = null)
-			{
+		{
 			var pageEntity = _db.CntPages
 				.Include(p => p.CntPageBlocks) // 撈文章區塊
 				.FirstOrDefault(p => p.PageId == id && p.Status != "9"); // ⭐ 排除已刪除
