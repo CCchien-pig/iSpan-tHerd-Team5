@@ -53,7 +53,7 @@ public partial class ProdProductSku
     /// <summary>
     /// 優惠價
     /// </summary>
-    public decimal SalePrice { get; set; }
+    public decimal? SalePrice { get; set; }
 
     /// <summary>
     /// 目前庫存
