@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CloudinaryDotNet" Version="1.27.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Core\tHerdBackend.Core.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.StyleMain\tHerdBackend.UIKit.Rcl\tHerdBackend.UIKit.Rcl.csproj" />
+  </ItemGroup>
+
+
+
+</Project>

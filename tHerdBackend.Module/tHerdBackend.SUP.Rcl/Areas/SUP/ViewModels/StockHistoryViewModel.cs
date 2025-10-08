@@ -1,0 +1,71 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
+{
+	public class StockHistoryViewModel
+	{
+		/// <summary>
+		/// 庫存異動紀錄
+		/// </summary>
+		public partial class SupStockHistory
+		{
+			/// <summary>
+			/// 主鍵
+			/// </summary>
+			public int StockHistoryId { get; set; }
+
+			/// <summary>
+			/// 關聯庫存批次
+			/// </summary>
+			public int? StockBatchId { get; set; }
+
+			/// <summary>
+			/// 訂單明細編號(FK)
+			/// </summary>
+			public int? OrderItemId { get; set; }
+
+			/// <summary>
+			/// 異動類型
+			/// </summary>
+			public string ChangeType { get; set; }
+
+			/// <summary>
+			/// 異動數量 (CK ? 0)
+			/// </summary>
+			public int? ChangeQty { get; set; }
+
+			/// <summary>
+			/// 異動人員
+			/// </summary>
+			public int? Reviser { get; set; }
+
+			/// <summary>
+			/// 異動時間
+			/// </summary>
+			public DateTime RevisedDate { get; set; }
+
+			/// <summary>
+			/// 異動前數量
+			/// </summary>
+			public int? BeforeQty { get; set; }
+
+			/// <summary>
+			/// 異動後數量
+			/// </summary>
+			public int? AfterQty { get; set; }
+
+			/// <summary>
+			/// 備註
+			/// </summary>
+			public string Remark { get; set; }
+
+			public int TempOperationId { get; set; } // 臨時操作號
+
+
+		}
+	}
+}

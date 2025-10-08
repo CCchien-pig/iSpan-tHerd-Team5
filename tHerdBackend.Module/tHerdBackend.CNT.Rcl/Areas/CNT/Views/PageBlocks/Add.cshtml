@@ -1,0 +1,111 @@
+﻿@model tHerdBackend.CNT.Rcl.Areas.CNT.ViewModels.PageBlockEditVM
+@{
+    ViewData["Title"] = "新增區塊";
+}
+@section Styles
+{
+
+    <link rel="stylesheet" href="~/_content/tHerdBackend.CNT.Rcl/css/preview.css" asp-append-version="true" />@* 預覽樣式 *@      
+
+}
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@err.ErrorMessage</div>
+        }
+    </div>
+}
+<h3 class="mb-3">新增區塊</h3>
+
+<form asp-area="CNT" asp-controller="PageBlocks" asp-action="Add"
+      method="post" enctype="multipart/form-data"
+      onsubmit="tinymce.triggerSave()">
+    <input type="hidden" asp-for="PageId" />
+    @Html.AntiForgeryToken()
+
+    <!-- 區塊類型 -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div style="flex:1">
+            <label class="form-label">區塊類型</label>
+            <select asp-for="BlockType" class="form-select" id="blockType">
+                <option value="richtext">RichText</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="cta">CTA</option>
+            </select>
+        </div>
+        <div style="width:160px; margin-left:16px;">
+            <label asp-for="OrderSeq" class="form-label">順序</label>
+            <input asp-for="OrderSeq" type="number" class="form-control" />
+        </div>
+    </div>
+    <div style="display:flex;gap:20px;">
+        <!-- RichText -->
+        <div class="col-md-6 d-none" data-blocktype="richtext">
+            <textarea id="editor" asp-for="NewBlockContent"></textarea>
+            <span asp-validation-for="NewBlockContent" class="text-danger"></span>
+            <div id="editor-word-count" class="text-muted small mt-1"></div>
+        </div>
+
+        <!-- Image -->
+        <div class="col-md-6 d-none" data-blocktype="image">
+            <label class="form-label">上傳圖片</label>
+            <input type="file" name="imageFile" class="form-control" accept="image/*" />
+        </div>
+
+        <!-- Video -->
+        <div class="col-md-6 d-none" data-blocktype="video">
+            <label class="form-label">影片連結 (YouTube / MP4)</label>
+            <input type="url" asp-for="VideoUrl" class="form-control" placeholder="https://..." />
+        </div>
+
+        <!-- CTA -->
+        <div class="col-md-6 d-none" data-blocktype="cta">
+            <label class="form-label">按鈕文字</label>
+            <input type="text" asp-for="CtaText" class="form-control" />
+            <label class="form-label mt-2">按鈕連結</label>
+            <input type="url" asp-for="CtaUrl" class="form-control" placeholder="https://..." />
+        </div>
+
+        <!-- 預覽區（只給 RichText 用） -->
+        <div class="col-md-6 preview-box d-none" id="preview-box">
+            <h3 class="preview-title">即時預覽</h3>
+            <div id="live-preview" class="preview-content"></div>
+        </div>
+    </div>
+
+    <!-- 動作列 -->
+    <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-success btn-lg" type="submit">💾 新增</button>
+        <a asp-area="CNT" asp-controller="Pages" asp-action="Edit" asp-route-id="@Model.PageId" class="btn btn-outline-secondary btn-lg">🔙 回文章</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const sel = document.getElementById('blockType');
+
+        function toggleBox() {
+          const sections = document.querySelectorAll('[data-blocktype]');
+          sections.forEach(section => {
+            if (section.getAttribute('data-blocktype') === sel.value) {
+              section.classList.remove('d-none');
+              if (sel.value === 'richtext') {
+                document.getElementById('preview-box')?.classList.remove('d-none');
+              } else {
+                document.getElementById('preview-box')?.classList.add('d-none');
+              }
+            } else {
+              section.classList.add('d-none');
+            }
+          });
+        }
+        sel.addEventListener('change', toggleBox);
+        toggleBox();
+    </script>
+
+    <!-- 呼叫 Partial，直接吃你設定好的初始化 -->
+    <partial name="_TinyMceScripts" model='new TinyMceInitVM { Selector = "#editor" }' />
+}
