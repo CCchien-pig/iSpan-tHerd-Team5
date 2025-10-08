@@ -1,5 +1,5 @@
 ﻿using Dapper;
-using tHerdBackend.Core.DTOs.Commom;
+using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;

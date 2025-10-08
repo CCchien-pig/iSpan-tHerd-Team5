@@ -1,5 +1,18 @@
 ﻿namespace tHerdBackend.Core.DTOs.PROD;
 
+public partial class ProductFilterQueryDto
+{
+	public int PageIndex { get; set; } = 1;     // 第幾頁
+	public int PageSize { get; set; } = 10;     // 每頁筆數
+	public string? Keyword { get; set; }        // 關鍵字
+	public string? ProductTypeCode { get; set; }   // 類別簡碼
+	public int? BrandId { get; set; }           // 品牌
+	public decimal? MinPrice { get; set; }      // 最低價
+	public decimal? MaxPrice { get; set; }      // 最高價
+	public string? SortBy { get; set; }         // 排序欄位
+	public bool SortDesc { get; set; }          // 是否倒序
+}
+
 /// <summary>
 /// 商品基本資料
 /// </summary>

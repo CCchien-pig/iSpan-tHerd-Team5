@@ -1,10 +1,18 @@
-using tHerdBackend.Core.Interfaces.Abstractions;
-using tHerdBackend.Infra.Helpers;
-using tHerdBackend.Services.Common;
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using tHerdBackend.Admin.Infrastructure.Auth;
 using tHerdBackend.Composition;
+using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.Interfaces.Abstractions;
+using tHerdBackend.Infra.DBSetting;
+using tHerdBackend.Infra.Helpers;
+using tHerdBackend.Infra.Models;
+using tHerdBackend.Services.Common;
 
 namespace tHerdBackend.SharedApi
 {
@@ -58,10 +66,47 @@ namespace tHerdBackend.SharedApi
 			// Cloudinary
 			builder.Services.Configure<CloudinarySettings>(
                 builder.Configuration.GetSection("CloudinarySettings"));
-            builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
 
-            // Auth Service
-            builder.Services.AddScoped<AuthService>();
+			// 讀取設定值，建立 Cloudinary 實例
+			var cloudinaryConfig = builder.Configuration.GetSection("CloudinarySettings").Get<CloudinarySettings>();
+			if (cloudinaryConfig == null ||
+				string.IsNullOrEmpty(cloudinaryConfig.CloudName) ||
+				string.IsNullOrEmpty(cloudinaryConfig.ApiKey) ||
+				string.IsNullOrEmpty(cloudinaryConfig.ApiSecret))
+			{
+				throw new InvalidOperationException("CloudinarySettings 未正確設定於 appsettings.json");
+			}
+
+			var account = new Account(
+				cloudinaryConfig.CloudName,
+				cloudinaryConfig.ApiKey,
+				cloudinaryConfig.ApiSecret
+			);
+
+			// 註冊 Cloudinary 為 Singleton
+			var cloudinary = new Cloudinary(account);
+			builder.Services.AddSingleton(cloudinary);
+
+			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
+
+			// === SQL Connection Factory ===
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
+
+			// === DbContext (EF Core) ===
+			builder.Services.AddDbContext<tHerdDBContext>(options =>
+				options.UseSqlServer(connectionString));
+
+			// === Identity ===
+			builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+				.AddEntityFrameworkStores<tHerdDBContext>()
+				.AddDefaultTokenProviders();
+
+			// Auth Service
+			builder.Services.AddScoped<AuthService>();
+
+			// === CurrentUser ===
+			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
 			builder.Services.AddFlexBackend(builder.Configuration);
@@ -77,7 +122,8 @@ namespace tHerdBackend.SharedApi
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-                app.UseSwagger();
+				app.UseDeveloperExceptionPage();
+				app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
