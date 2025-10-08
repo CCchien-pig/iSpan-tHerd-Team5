@@ -25,7 +25,21 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<AspNetUserToken> AspNetUserTokens { get; set; }
 
+    public virtual DbSet<CntAnalyte> CntAnalytes { get; set; }
+
+    public virtual DbSet<CntAnalyteCategory> CntAnalyteCategories { get; set; }
+
+    public virtual DbSet<CntDataType> CntDataTypes { get; set; }
+
+    public virtual DbSet<CntFoodCategory> CntFoodCategories { get; set; }
+
+    public virtual DbSet<CntMeasurement> CntMeasurements { get; set; }
+
     public virtual DbSet<CntMedium> CntMedia { get; set; }
+
+    public virtual DbSet<CntNutritionFact> CntNutritionFacts { get; set; }
+
+    public virtual DbSet<CntNutritionStaging> CntNutritionStagings { get; set; }
 
     public virtual DbSet<CntPage> CntPages { get; set; }
 
@@ -36,6 +50,8 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<CntPageType> CntPageTypes { get; set; }
 
     public virtual DbSet<CntPurchase> CntPurchases { get; set; }
+
+    public virtual DbSet<CntSample> CntSamples { get; set; }
 
     public virtual DbSet<CntSchedule> CntSchedules { get; set; }
 
@@ -146,6 +162,8 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<SupBrandArticle> SupBrandArticles { get; set; }
 
     public virtual DbSet<SupBrandFavorite> SupBrandFavorites { get; set; }
+
+    public virtual DbSet<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; }
 
     public virtual DbSet<SupLogistic> SupLogistics { get; set; }
 
@@ -284,6 +302,147 @@ public partial class tHerdDBContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.AspNetUserTokens).HasForeignKey(d => d.UserId);
         });
 
+        modelBuilder.Entity<CntAnalyte>(entity =>
+        {
+            entity.HasKey(e => e.AnalyteId).HasName("PK__CNT_Anal__D434E8837C7F7D24");
+
+            entity.ToTable("CNT_Analyte", tb => tb.HasComment("營養素／分析項主檔"));
+
+            entity.HasIndex(e => new { e.AnalyteCategoryId, e.AnalyteName }, "IX_CNT_Analyte_Category");
+
+            entity.HasIndex(e => new { e.AnalyteCategoryId, e.AnalyteName, e.DefaultUnit }, "UQ_CNT_Analyte").IsUnique();
+
+            entity.Property(e => e.AnalyteId).HasComment("分析項 ID");
+            entity.Property(e => e.AnalyteCategoryId).HasComment("分析項分類 ID");
+            entity.Property(e => e.AnalyteName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("分析項名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DefaultUnit)
+                .HasMaxLength(50)
+                .HasComment("預設單位（mg / ug / kcal）");
+            entity.Property(e => e.IsPopular).HasComment("是否常用（十大項）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.AnalyteCategory).WithMany(p => p.CntAnalytes)
+                .HasForeignKey(d => d.AnalyteCategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Analyte_Category");
+        });
+
+        modelBuilder.Entity<CntAnalyteCategory>(entity =>
+        {
+            entity.HasKey(e => e.AnalyteCategoryId).HasName("PK__CNT_Anal__03762332EE9B221A");
+
+            entity.ToTable("CNT_AnalyteCategory", tb => tb.HasComment("營養素分類主檔（維生素、礦物質、脂肪酸等）"));
+
+            entity.HasIndex(e => e.CategoryName, "IX_CNT_AnalyteCategory_CategoryName");
+
+            entity.HasIndex(e => e.CategoryName, "UQ_CNT_AnalyteCategory_CategoryName").IsUnique();
+
+            entity.Property(e => e.AnalyteCategoryId).HasComment("營養素分類 ID");
+            entity.Property(e => e.CategoryName)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("營養素分類名稱");
+        });
+
+        modelBuilder.Entity<CntDataType>(entity =>
+        {
+            entity.HasKey(e => e.DataTypeId).HasName("PK__CNT_Data__4382081FD18E9F4F");
+
+            entity.ToTable("CNT_DataType", tb => tb.HasComment("資料類別主檔（樣品基本資料、加工程度等）"));
+
+            entity.HasIndex(e => e.TypeName, "IX_CNT_DataType_TypeName");
+
+            entity.HasIndex(e => e.TypeName, "UQ_CNT_DataType_TypeName").IsUnique();
+
+            entity.Property(e => e.DataTypeId).HasComment("資料類別 ID");
+            entity.Property(e => e.TypeName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("資料類別名稱");
+        });
+
+        modelBuilder.Entity<CntFoodCategory>(entity =>
+        {
+            entity.HasKey(e => e.CategoryId).HasName("PK__CNT_Food__19093A0B61368552");
+
+            entity.ToTable("CNT_FoodCategory", tb => tb.HasComment("食品分類主檔"));
+
+            entity.HasIndex(e => e.CategoryName, "IX_CNT_FoodCategory_CategoryName");
+
+            entity.HasIndex(e => e.CategoryName, "UQ_CNT_FoodCategory_CategoryName").IsUnique();
+
+            entity.Property(e => e.CategoryId).HasComment("食品分類 ID");
+            entity.Property(e => e.CategoryName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("食品分類名稱");
+        });
+
+        modelBuilder.Entity<CntMeasurement>(entity =>
+        {
+            entity.HasKey(e => e.MeasurementId).HasName("PK__CNT_Meas__85599FB86F093122");
+
+            entity.ToTable("CNT_Measurement", tb => tb.HasComment("樣品 × 營養素觀測值主表"));
+
+            entity.HasIndex(e => e.AnalyteId, "IX_CNT_Measurement_Analyte");
+
+            entity.HasIndex(e => e.SampleId, "IX_CNT_Measurement_Sample");
+
+            entity.HasIndex(e => e.Unit, "IX_CNT_Measurement_Unit");
+
+            entity.HasIndex(e => new { e.SampleId, e.AnalyteId, e.Unit }, "UQ_CNT_Measurement_Sample_Analyte_Unit").IsUnique();
+
+            entity.Property(e => e.MeasurementId).HasComment("觀測值 ID");
+            entity.Property(e => e.AnalyteId).HasComment("分析項 ID（外鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ExtraJson)
+                .HasMaxLength(400)
+                .HasComment("特例資訊（JSON 格式）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleCount).HasComment("樣本數");
+            entity.Property(e => e.SampleId).HasComment("樣品 ID（外鍵）");
+            entity.Property(e => e.ServingWeightTxt)
+                .HasMaxLength(50)
+                .HasComment("每單位重（原始文字）");
+            entity.Property(e => e.ServingWeightVal)
+                .HasComment("每單位重（數值）")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("實際資料的單位");
+            entity.Property(e => e.ValuePer100g)
+                .HasComment("每100克含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.ValuePerServing)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+
+            entity.HasOne(d => d.Analyte).WithMany(p => p.CntMeasurements)
+                .HasForeignKey(d => d.AnalyteId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Measurement_Analyte");
+
+            entity.HasOne(d => d.Sample).WithMany(p => p.CntMeasurements)
+                .HasForeignKey(d => d.SampleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Measurement_Sample");
+        });
+
         modelBuilder.Entity<CntMedium>(entity =>
         {
             entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF3998BBEF");
@@ -305,6 +464,154 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.PageBlockId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CNT_Media_PageBlockId");
+        });
+
+        modelBuilder.Entity<CntNutritionFact>(entity =>
+        {
+            entity.HasKey(e => e.NutritionFactId).HasName("PK__CNT_Nutr__A789FCB5C12B9BF8");
+
+            entity.ToTable("CNT_NutritionFacts", tb => tb.HasComment("營養成分主表"));
+
+            entity.HasIndex(e => e.AnalyteCategory, "IX_CNT_NutritionFacts_AnalyteCategory");
+
+            entity.HasIndex(e => e.AnalyteName, "IX_CNT_NutritionFacts_AnalyteName");
+
+            entity.HasIndex(e => e.FoodCategory, "IX_CNT_NutritionFacts_FoodCategory");
+
+            entity.HasIndex(e => new { e.IntegrationCode, e.AnalyteCategory, e.AnalyteName, e.Unit }, "UQ_CNT_NutritionFacts_Logical").IsUnique();
+
+            entity.Property(e => e.NutritionFactId).HasComment("主鍵 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("俗名");
+            entity.Property(e => e.AnalyteCategory)
+                .HasMaxLength(100)
+                .HasComment("分析項分類");
+            entity.Property(e => e.AnalyteName)
+                .HasMaxLength(200)
+                .HasComment("分析項");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容物描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataType)
+                .HasMaxLength(50)
+                .HasComment("資料類別");
+            entity.Property(e => e.FoodCategory)
+                .HasMaxLength(50)
+                .HasComment("食品分類");
+            entity.Property(e => e.IntegrationCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("整合編號");
+            entity.Property(e => e.Per100g)
+                .HasMaxLength(50)
+                .HasComment("每100克含量");
+            entity.Property(e => e.PerUnitAmount)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .HasMaxLength(100)
+                .HasComment("樣品名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣品英文名稱");
+            entity.Property(e => e.SampleSizeN).HasComment("樣本數");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("含量單位");
+            entity.Property(e => e.UnitWeightContent)
+                .HasComment("每單位重含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.UnitWeightText)
+                .HasMaxLength(50)
+                .HasComment("每單位重（文字）");
+            entity.Property(e => e.UnitWeightValue)
+                .HasComment("每單位重（數值）")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
+        });
+
+        modelBuilder.Entity<CntNutritionStaging>(entity =>
+        {
+            entity.HasKey(e => e.NutritionStagingId).HasName("PK__CNT_Nutr__DC271E3A135FDAE6");
+
+            entity.ToTable("CNT_NutritionStaging", tb => tb.HasComment("營養成分暫存表（原始資料匯入暫存用）"));
+
+            entity.HasIndex(e => e.AnalyteCategory, "IX_CNT_NutritionStaging_AnalyteCategory");
+
+            entity.HasIndex(e => e.FoodCategory, "IX_CNT_NutritionStaging_FoodCategory");
+
+            entity.HasIndex(e => e.IntegrationCode, "IX_CNT_NutritionStaging_IntegrationCode");
+
+            entity.HasIndex(e => new { e.IntegrationCode, e.AnalyteCategory, e.AnalyteName }, "UQ_CNT_NutritionStaging_Logical").IsUnique();
+
+            entity.Property(e => e.NutritionStagingId).HasComment("暫存資料 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("樣本別名");
+            entity.Property(e => e.AnalyteCategory)
+                .HasMaxLength(100)
+                .HasComment("成分類別");
+            entity.Property(e => e.AnalyteName)
+                .HasMaxLength(200)
+                .HasComment("成分名稱");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataType)
+                .HasMaxLength(50)
+                .HasComment("資料類別");
+            entity.Property(e => e.FoodCategory)
+                .HasMaxLength(50)
+                .HasComment("食品分類");
+            entity.Property(e => e.IntegrationCode)
+                .HasMaxLength(20)
+                .HasComment("整合代碼（原始資料代號）");
+            entity.Property(e => e.Per100g)
+                .HasMaxLength(100)
+                .HasComment("每100g含量");
+            entity.Property(e => e.PerUnitAmount)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .HasMaxLength(100)
+                .HasComment("樣本名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣本英文名稱");
+            entity.Property(e => e.SampleSizeN).HasComment("樣本數");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("單位");
+            entity.Property(e => e.UnitWeightContent)
+                .HasComment("單位重量數值")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.UnitWeightText)
+                .HasMaxLength(50)
+                .HasComment("單位重量（文字）");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
         });
 
         modelBuilder.Entity<CntPage>(entity =>
@@ -453,6 +760,57 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.PageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CNT_Purchase_Page");
+        });
+
+        modelBuilder.Entity<CntSample>(entity =>
+        {
+            entity.HasKey(e => e.SampleId).HasName("PK__CNT_Samp__8B99EC6A73ED4689");
+
+            entity.ToTable("CNT_Sample", tb => tb.HasComment("樣品主檔（對應營養成分樣本資料）"));
+
+            entity.HasIndex(e => new { e.CategoryId, e.DataTypeId, e.SampleName }, "IX_CNT_Sample_Search");
+
+            entity.HasIndex(e => e.IntegrationCode, "UQ_CNT_Sample_IntegrationCode").IsUnique();
+
+            entity.Property(e => e.SampleId).HasComment("樣品 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("俗名");
+            entity.Property(e => e.CategoryId).HasComment("食品分類 ID");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容物描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataTypeId).HasComment("資料類別 ID");
+            entity.Property(e => e.IntegrationCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("整合編號（唯一）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("樣品名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣品英文名稱");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.CntSamples)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Sample_Category");
+
+            entity.HasOne(d => d.DataType).WithMany(p => p.CntSamples)
+                .HasForeignKey(d => d.DataTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Sample_DataType");
         });
 
         modelBuilder.Entity<CntSchedule>(entity =>
@@ -2574,6 +2932,40 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.BrandId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BrandFavorite_BrandId");
+        });
+
+        modelBuilder.Entity<SupBrandLayoutConfig>(entity =>
+        {
+            entity.HasKey(e => e.LayoutId).HasName("PK__SUP_Bran__20358515D6831704");
+
+            entity.ToTable("SUP_BrandLayoutConfig", tb => tb.HasComment("品牌版面設定"));
+
+            entity.HasIndex(e => e.BrandId, "IX_SUP_BrandLayoutConfig_BrandId");
+
+            entity.HasIndex(e => new { e.BrandId, e.IsActive }, "UQ_SUP_BrandLayoutConfig_BrandId_IsActive")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.Property(e => e.LayoutId).HasComment("版面設定 ID");
+            entity.Property(e => e.BrandId).HasComment("關聯品牌 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive).HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.LayoutJson)
+                .IsRequired()
+                .HasComment("版面內容（JSON Array 格式，記錄 type/props/id）");
+            entity.Property(e => e.LayoutVersion)
+                .HasMaxLength(50)
+                .HasComment("版型版本");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandLayoutConfigs)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandLayoutConfig_BrandId");
         });
 
         modelBuilder.Entity<SupLogistic>(entity =>
