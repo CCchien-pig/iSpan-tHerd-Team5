@@ -102,5 +102,7 @@ public partial class SupBrand
 
     public virtual ICollection<SupBrandFavorite> SupBrandFavorites { get; set; } = new List<SupBrandFavorite>();
 
+    public virtual ICollection<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; } = new List<SupBrandLayoutConfig>();
+
     public virtual SupSupplier Supplier { get; set; }
 }
