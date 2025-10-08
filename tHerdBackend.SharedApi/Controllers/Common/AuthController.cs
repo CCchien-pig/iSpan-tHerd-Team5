@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace tHerdBackend.SharedApi.Controllers
+namespace tHerdBackend.SharedApi.Controllers.Common
 {
     [ApiController]
     [Route("api/[controller]")]
