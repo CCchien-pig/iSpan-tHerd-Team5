@@ -1,4 +1,4 @@
-﻿using FlexBackend.Infra.Models;
+﻿using tHerdBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 
-namespace FlexBackend.CNT.Rcl.Areas.CNT.Services
+namespace tHerdBackend.CNT.Rcl.Areas.CNT.Services
 {
 	public class SysCodeService
 	{
