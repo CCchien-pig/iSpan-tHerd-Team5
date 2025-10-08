@@ -1,0 +1,44 @@
+﻿@model tHerdBackend.CNT.Rcl.Areas.CNT.ViewModels.TagDeleteVM
+
+@{
+    ViewData["Title"] = "刪除標籤";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-danger-subtle text-dark fw-bold">
+        ⚠️ 刪除標籤確認
+    </div>
+    <div class="card-body">
+        <p><strong>標籤名稱：</strong> @Model.TagName</p>
+        <p><strong>狀態：</strong> @(Model.IsActive ? "啟用" : "停用")</p>
+
+        @if (Model.BoundPages != null && Model.BoundPages.Any())
+        {
+            <div class="alert alert-warning">
+                <strong>注意：</strong> 此標籤仍被以下文章使用，無法刪除：
+                <ul>
+                    @foreach (var page in Model.BoundPages)
+                    {
+                        <li>@(page)</li>
+                    }
+                </ul>
+            </div>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回</a>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                確定要刪除此標籤嗎？刪除後將無法復原。
+            </div>
+            
+            <form asp-action="DeleteConfirmed" method="post">
+                <div class="d-flex gap-3 mt-3 mb-4">
+                <input type="hidden" asp-for="TagId" />
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">↩ 返回</a>
+                <button type="submit" class="btn btn-outline-danger btn-lg">🗑️ 確定刪除</button>
+                </div>
+            </form>
+            
+        }
+    </div>
+</div>

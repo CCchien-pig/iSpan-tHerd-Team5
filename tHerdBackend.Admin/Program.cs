@@ -1,16 +1,14 @@
 ﻿using CloudinaryDotNet;
-using FlexBackend.Admin.Infrastructure.Auth;
-using FlexBackend.Composition;
-using FlexBackend.Core.Abstractions;
-using FlexBackend.Core.DTOs.USER;
-using FlexBackend.Core.Interfaces.Abstractions;
-using FlexBackend.CS.Rcl.Areas.CS.Controllers;
-using FlexBackend.Infra;
-using FlexBackend.Infra.Helpers;
-using FlexBackend.Infra.Models;
-using FlexBackend.Services.USER;
-using FlexBackend.UIKit.Rcl;
-using FlexBackend.USER.Rcl;
+using tHerdBackend.Admin.Infrastructure.Auth;
+using tHerdBackend.Composition;
+using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.CS.Rcl.Areas.CS.Controllers;
+using tHerdBackend.Infra;
+using tHerdBackend.Infra.Models;
+using tHerdBackend.Services.USER;
+using tHerdBackend.UIKit.Rcl;
+using tHerdBackend.USER.Rcl;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -18,7 +16,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlexBackend.Admin
+namespace tHerdBackend.Admin
 {
     public class Program
     {
@@ -51,7 +49,7 @@ namespace FlexBackend.Admin
 			// 電子郵件服務
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
-			builder.Services.AddScoped<FlexBackend.USER.Rcl.Services.UserService>();
+			builder.Services.AddScoped<tHerdBackend.USER.Rcl.Services.UserService>();
 
 			var connStr = builder.Configuration.GetConnectionString("THerdDB")!;
 

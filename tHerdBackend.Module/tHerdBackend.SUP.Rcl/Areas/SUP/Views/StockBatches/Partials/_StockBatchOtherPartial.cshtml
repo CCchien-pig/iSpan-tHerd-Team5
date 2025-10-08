@@ -1,0 +1,90 @@
+﻿@using tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
+@using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
+
+@* _StockBatchOtherPartial.cshtml，給 銷售出庫 / 退貨入庫 / 到期報廢 *@
+
+@model StockBatchContactViewModel
+
+@{
+    var formAction = ViewBag.FormAction switch
+    {
+        "Sale" => Url.Action("SaleStock", "StockBatches", new { area = "SUP" }),
+        "Return" => Url.Action("ReturnStock", "StockBatches", new { area = "SUP" }),
+        "Expire" => Url.Action("ExpireStock", "StockBatches", new { area = "SUP" }),
+        _ => "#"
+    };
+}
+
+<form id="stockBatchOtherForm" action="@formAction" method="post">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden" asp-for="SkuId" id="OtherSelectedSkuId" value="@Model.SkuId" />
+    <input type="hidden" asp-for="MovementType" id="OtherSelectedMovementType" value="@ViewBag.FormAction" />
+
+    <div class="container-fluid">
+
+        <!-- 品牌選擇 -->
+        <div class="form-floating mb-2">
+            <select class="form-select" id="OtherBrandSelect">
+                <option value="">請選品牌</option>
+            </select>
+            <label>品牌</label>
+        </div>
+
+        <!-- 商品選擇 -->
+        <div class="form-floating mb-2">
+            <select class="form-select" id="OtherProductSelect" disabled>
+                <option value="">請選商品</option>
+            </select>
+            <label>商品</label>
+        </div>
+
+        <!-- SKU 選擇 -->
+        <div class="form-floating mb-2">
+            <select asp-for="SkuId" class="form-select" id="OtherSkuSelect">
+                <option value="">請選 SKU</option>
+                @foreach (var sku in Model.SkuOptions)
+                {
+                    <option value="@sku.SkuId">@sku.SkuCode</option>
+                }
+            </select>
+            <label>SKU</label>
+        </div>
+
+        <!-- 唯讀庫存資訊 -->
+        <div class="mb-2">
+            <div>當前庫存: <span id="OtherCurrentQty">0</span> &nbsp;|&nbsp; 預計庫存: <span id="OtherPredictedQty">0</span></div>
+            <div>最大庫存量: <span id="OtherMaxStockQty">@Model.MaxStockQty</span></div>
+            <div>再訂購點: <span id="OtherReorderPoint">@Model.ReorderPoint</span> &nbsp;|&nbsp; 安全庫存量: <span id="OtherSafetyStockQty">@Model.SafetyStockQty</span></div>
+        </div>
+
+        <!-- 異動類型 -->
+        @* <div class="form-floating mb-2">
+            <select asp-for="MovementType" class="form-select OtherMovementTypeSelect" id="OtherMovementTypeSelect">
+                <option value="">請選異動類型</option>
+            </select>
+            <label>異動類型</label>
+        </div>
+
+        <!-- 異動數量 -->
+        <div class="form-floating mb-2">
+            <input asp-for="ChangeQty" type="number" class="form-control" min="1" step="1"
+                   id="OtherChangeQtyInput" value="@(Model.ChangeQty ?? 1)" />
+            <lab_StockBatchOtherPartialel>異動庫存量</lab_StockBatchOtherPartialel>
+            <small id="OtherChangeQtyHelp" class="text-muted"></small>
+        </div>
+
+        <!-- 備註 -->
+        @* <div class="form-floating mb-2">
+            <textarea asp-for="Remark" class="form-control" placeholder="輸入備註" id="OtherRemark">@Model.Remark</textarea>
+            <label>備註</label>
+        </div> *@
+
+        <!-- 按鈕 -->
+        <div class="d-flex justify-content-center mt-3">
+            <button type="submit" class="btn btn-success me-2">儲存</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        </div>
+
+    </div>
+</form>

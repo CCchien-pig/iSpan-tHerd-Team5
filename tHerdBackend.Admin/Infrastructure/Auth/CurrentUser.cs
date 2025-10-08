@@ -1,9 +1,9 @@
-﻿using FlexBackend.Core.Abstractions;
+﻿using tHerdBackend.Core.Abstractions;
 using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using System.Security.Claims;
 
-namespace FlexBackend.Admin.Infrastructure.Auth
+namespace tHerdBackend.Admin.Infrastructure.Auth
 {
 	public class CurrentUser : ICurrentUser
 	{

@@ -1,4 +1,4 @@
-﻿namespace FlexBackend.Admin.Infrastructure.Auth
+﻿namespace tHerdBackend.Admin.Infrastructure.Auth
 {
 	public class AppClaimTypes
 	{

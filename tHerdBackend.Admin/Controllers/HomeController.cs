@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using FlexBackend.Admin.Models;
+using tHerdBackend.Admin.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlexBackend.Admin.Controllers
+namespace tHerdBackend.Admin.Controllers
 {
     public class HomeController : Controller
     {
