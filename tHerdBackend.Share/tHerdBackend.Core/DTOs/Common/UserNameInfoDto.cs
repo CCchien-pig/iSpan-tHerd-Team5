@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.Commom
+﻿namespace tHerdBackend.Core.DTOs.Common
 {
     /// <summary>
     /// 使用者姓名

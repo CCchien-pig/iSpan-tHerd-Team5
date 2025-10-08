@@ -147,10 +147,42 @@ public partial class ProdProductDto
 	/// </summary>
 	public string ProductTypeCode { get; set; } = string.Empty;
 
-    /// <summary>
-    /// 分類敘述
-    /// </summary>
-    public List<string> ProductTypeDesc { get; set; }
+	/// <summary>
+	/// 商品狀態標籤
+	/// </summary>
+	public string Badge { get; set; } = string.Empty;
+
+
+	/// <summary>
+	/// 商品主圖
+	/// </summary>
+	public string ImageUrl { get; set; } = string.Empty;
+
+	/// <summary>
+	/// 主商品SkuId
+	/// </summary>
+	public string MainSkuId { get; set; } = string.Empty;
+
+	/// <summary>
+	/// 主商品原價
+	/// </summary>
+	public decimal? ListPrice { get; set; }
+
+
+	/// <summary>
+	/// 主商品單價
+	/// </summary>
+	public decimal? UnitPrice { get; set; }
+
+	/// <summary>
+	/// 主商品優惠價
+	/// </summary>
+	public decimal? SalePrice { get; set; }
+
+	/// <summary>
+	/// 分類敘述
+	/// </summary>
+	public List<string> ProductTypeDesc { get; set; }
 
     /// <summary>
     /// 分類敘述
