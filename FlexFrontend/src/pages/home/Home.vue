@@ -9,7 +9,7 @@
 import { useLoadingStore } from '@/stores/loading';
 
 // 導入產品相關組件
-import ProductList from '@/components/modules/PROD/list/ProductList.vue';
+import ProductList from '@/components/modules/prod/list/ProductList.vue';
 
 // 導入頁面區塊組件 - 每個區塊都是獨立的組件
 import HeroSection from '@/components/sections/HeroSection.vue'; // 英雄區塊
