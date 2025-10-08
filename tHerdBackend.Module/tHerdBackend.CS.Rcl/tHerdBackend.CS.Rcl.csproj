@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <UserSecretsId>90c0de62-ad71-40b1-89b4-af7306ab75a6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Services\tHerdBackend.Services.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.StyleMain\tHerdBackend.UIKit.Rcl\tHerdBackend.UIKit.Rcl.csproj" />
+  </ItemGroup>
+
+
+
+</Project>
