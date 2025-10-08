@@ -10,9 +10,8 @@ using tHerdBackend.Infra.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Formats.Asn1;
-using System.Globalization;
 using static Dapper.SqlMapper;
+using tHerdBackend.Core.DTOs.Common;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -34,6 +33,35 @@ namespace tHerdBackend.Infra.Repository.PROD
             _currentUser = currentUser;
 			_userMgr = userMgr;
 		}
+
+		/// <summary>
+		/// 前台: 依傳入條件，取得產品清單
+		/// </summary>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		//public async Task<List<ProdProductDto>> GetFrontProductListAsync(CancellationToken ct = default)
+		//{
+		//	// 等待非同步結果
+		//	var list = await GetAllAsync(ct);
+
+		//	// 判斷是否有資料
+		//	if (list == null || !list.Any())
+		//		return new List<ProdProductDto>();
+
+		//	// 篩選回前台需要的欄位
+		//	return list
+		//		.Select(x => new ProdProductDto
+		//		{
+		//			ProductId = x.ProductId,
+		//			ProductName = x.ProductName,
+		//			ImageUrl = x.ImageUrl,
+		//			Badge = x.Badge, // 標籤
+		//			ListPrice = x.ListPrice, // 建議售價
+		//			UnitPrice = x.UnitPrice, // 單價
+		//			SalePrice = x.SalePrice // 特價
+		//		})
+		//		.ToList();
+		//}
 
 		/// <summary>
 		/// 取得所有有效分類
@@ -663,7 +691,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                 {
                     Items = list.ToList(),
                     TotalCount = total,
-                    Page = query.PageIndex,
+					PageIndex = query.PageIndex,
                     PageSize = query.PageSize
                 };
             }

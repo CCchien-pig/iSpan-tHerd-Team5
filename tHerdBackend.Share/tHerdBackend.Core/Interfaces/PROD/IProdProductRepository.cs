@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.DTOs.PROD;
+﻿using tHerdBackend.Core.DTOs.Common;
+using tHerdBackend.Core.DTOs.PROD;
 
 namespace tHerdBackend.Core.Interfaces.Products
 {
@@ -31,13 +32,5 @@ namespace tHerdBackend.Core.Interfaces.Products
         public int PageIndex { get; set; } = 1;     // 第幾頁（1-based）
         public int PageSize { get; set; } = 10;    // 每頁筆數（預設 10，自己調整）
         public string? OrderBy { get; set; }       // e.g. "CreatedDate desc"
-    }
-
-    public sealed class PagedResult<T>
-    {
-        public int Page { get; init; }
-        public int PageSize { get; init; }
-        public int TotalCount { get; init; }
-        public IEnumerable<T> Items { get; init; } = [];
     }
 }
