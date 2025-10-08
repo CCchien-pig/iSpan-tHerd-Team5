@@ -1,12 +1,12 @@
 ﻿// Infrastructure/Auth/AppClaimsPrincipalFactory.cs
-using FlexBackend.Admin.Infrastructure.Auth;
-using FlexBackend.Core.DTOs.USER;
+using tHerdBackend.Admin.Infrastructure.Auth;
+using tHerdBackend.Core.DTOs.USER;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Globalization;
-using FlexBackend.Infra.Models;
-using FlexBackend.Core.Abstractions;
+using tHerdBackend.Infra.Models;
+using tHerdBackend.Core.Abstractions;
 
 public class AppClaimsPrincipalFactory
   : UserClaimsPrincipalFactory<ApplicationUser, ApplicationRole>

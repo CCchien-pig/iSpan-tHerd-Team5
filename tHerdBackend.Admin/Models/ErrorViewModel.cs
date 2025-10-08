@@ -1,4 +1,4 @@
-namespace FlexBackend.Admin.Models
+namespace tHerdBackend.Admin.Models
 {
     public class ErrorViewModel
     {
