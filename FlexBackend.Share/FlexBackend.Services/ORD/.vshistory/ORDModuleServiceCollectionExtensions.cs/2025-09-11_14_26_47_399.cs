@@ -1,5 +1,4 @@
-﻿using FlexBackend.Services.ORD;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexBackend.Services.ORD
 {
@@ -7,10 +6,6 @@ namespace FlexBackend.Services.ORD
     {
         public static IServiceCollection AddORDModule(this IServiceCollection services)
         {
-
-            // 加入 OrderService 註冊
-            services.AddScoped<OrderService>();
-
             return services;
         }
     }

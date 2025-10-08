@@ -1,0 +1,68 @@
+﻿@model IEnumerable<FlexBackend.ORD.Rcl.Areas.ORD.ViewModels.CartItemVM>
+
+@{
+    ViewData["Title"] = "購物車模擬測試";
+}
+
+<h2 class="mb-3">購物車模擬測試</h2>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">購物車目前沒有商品。</div>
+}
+else
+{
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>商品ID</th>
+                <th>商品名稱</th>
+                <th>規格</th>
+                <th>數量</th>
+                <th>單價</th>
+                <th>小計</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ProductId</td>
+                    <td>@item.ProductName</td>
+                    <td>@item.SpecCode</td>
+                    <td>@item.Qty</td>
+                    <td>@item.UnitPrice.ToString("C0")</td>
+                    <td>@item.Subtotal.ToString("C0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button id="btnCheckout" class="btn btn-primary mt-3">模擬結帳</button>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $("#btnCheckout").click(function () {
+            $.post("@Url.Action("CheckoutFromCart", "CartTest", new { area = "ORD" })", {}, function (res) {
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '結帳成功',
+                        text: '訂單已建立，訂單ID：' + res.orderId,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '結帳失敗',
+                        text: res.message || '發生錯誤'
+                    });
+                }
+            });
+        });
+    </script>
+}

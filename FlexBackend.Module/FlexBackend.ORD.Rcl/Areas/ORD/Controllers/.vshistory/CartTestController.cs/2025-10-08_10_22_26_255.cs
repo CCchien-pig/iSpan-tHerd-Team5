@@ -18,10 +18,8 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             _orderService = orderService;
         }
 
-        // ========================================
         // 購物車頁面
-        // ========================================
-        public async Task<IActionResult> Index(int userNumberId = 1000)
+        public async Task<IActionResult> Index(int userNumberId = 1056)
         {
             var cart = await _db.OrdShoppingCarts
                 .Include(c => c.OrdShoppingCartItems)
@@ -49,9 +47,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             return View(items);
         }
 
-        // ========================================
-        // 更新商品數量
-        // ========================================
+        // 更新數量
         [HttpPost]
         public async Task<IActionResult> UpdateQuantity(int productId, int delta, int userNumberId = 1000)
         {
@@ -109,9 +105,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
-        // ========================================
         // 移除商品
-        // ========================================
         [HttpPost]
         public async Task<IActionResult> RemoveItem(int productId, int userNumberId = 1000)
         {
@@ -145,9 +139,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
-        // ========================================
         // 購物車結帳
-        // ========================================
         [HttpPost]
         public async Task<IActionResult> CheckoutFromCart(int userNumberId = 1000)
         {
@@ -166,7 +158,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 }
 
                 // 2. 生成訂單編號
-                string orderNo = $"{DateTime.Now:yyyyMMdd}{new Random().Next(1000000, 9999999)}";
+                string orderNo = $"ORD{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";
 
                 // 3. 建立訂單
                 var order = new OrdOrder
@@ -182,7 +174,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     Subtotal = cart.OrdShoppingCartItems.Sum(i => i.UnitPrice * i.Qty),
                     DiscountTotal = 0,
                     ShippingFee = 0,
-                    PaymentConfigId = 1000,
+                    PaymentConfigId = 1000,  // MVP: 目前只有信用卡
+                                             // TODO: [未來擴充] 支援多種付款方式
+                                             // 1. 前端選擇付款方式
+                                             // 2. 傳入 paymentConfigId 參數
+                                             // 3. 移除寫死的 1000
 
                     ReceiverName = "測試收件人",
                     ReceiverPhone = "0900-000-000",
@@ -236,24 +232,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-
-                // 回傳完整錯誤訊息
-                var errorMessage = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMessage += $" | 內部錯誤: {ex.InnerException.Message}";
-
-                    if (ex.InnerException.InnerException != null)
-                    {
-                        errorMessage += $" | 詳細錯誤: {ex.InnerException.InnerException.Message}";
-                    }
-                }
-
-                return Json(new
-                {
-                    success = false,
-                    message = $"結帳失敗: {errorMessage}"
-                });
+                return Json(new { success = false, message = $"結帳失敗: {ex.Message}" });
             }
         }
     }

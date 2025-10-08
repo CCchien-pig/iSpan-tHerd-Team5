@@ -166,7 +166,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 }
 
                 // 2. 生成訂單編號
-                string orderNo = $"{DateTime.Now:yyyyMMdd}{new Random().Next(1000000, 9999999)}";
+                string orderNo = $"ORD{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";
 
                 // 3. 建立訂單
                 var order = new OrdOrder

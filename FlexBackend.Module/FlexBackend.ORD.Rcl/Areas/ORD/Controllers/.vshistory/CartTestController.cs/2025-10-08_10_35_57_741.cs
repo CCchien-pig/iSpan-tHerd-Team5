@@ -21,7 +21,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
         // ========================================
         // 購物車頁面
         // ========================================
-        public async Task<IActionResult> Index(int userNumberId = 1000)
+        public async Task<IActionResult> Index(int userNumberId = 1056)
         {
             var cart = await _db.OrdShoppingCarts
                 .Include(c => c.OrdShoppingCartItems)
@@ -166,7 +166,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                 }
 
                 // 2. 生成訂單編號
-                string orderNo = $"{DateTime.Now:yyyyMMdd}{new Random().Next(1000000, 9999999)}";
+                string orderNo = $"{DateTime.Now:yyyyMMdd}{new Random().Next(10000, 9999999)}";
 
                 // 3. 建立訂單
                 var order = new OrdOrder

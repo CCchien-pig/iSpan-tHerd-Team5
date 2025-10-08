@@ -18,9 +18,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             _orderService = orderService;
         }
 
-        // ========================================
+        // ======================
         // 購物車頁面
-        // ========================================
+        // ======================
         public async Task<IActionResult> Index(int userNumberId = 1000)
         {
             var cart = await _db.OrdShoppingCarts
@@ -40,23 +40,24 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                          {
                              ProductId = g.Key.ProductId,
                              ProductName = g.Key.Product?.ProductName ?? "",
+                             SpecCode = g.FirstOrDefault()?.SpecCode ?? "",
                              Qty = g.Key.Qty,
                              UnitPrice = g.Key.UnitPrice,
-                             Subtotal = g.Key.UnitPrice * g.Key.Qty,
-                             SpecCode = g.FirstOrDefault()?.SpecCode ?? ""
+                             Subtotal = g.Key.UnitPrice * g.Key.Qty
                          }).ToList();
 
             return View(items);
         }
 
-        // ========================================
+        // ======================
         // 更新商品數量
-        // ========================================
+        // ======================
         [HttpPost]
         public async Task<IActionResult> UpdateQuantity(int productId, int delta, int userNumberId = 1000)
         {
             try
             {
+                // 1. 取得購物車
                 var cart = await _db.OrdShoppingCarts
                     .Include(c => c.OrdShoppingCartItems)
                     .FirstOrDefaultAsync(c => c.UserNumberId == userNumberId);
@@ -66,6 +67,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     return Json(new { success = false, message = "找不到購物車" });
                 }
 
+                // 2. 找到對應的商品項目
                 var item = cart.OrdShoppingCartItems
                     .FirstOrDefault(i => i.ProductId == productId);
 
@@ -74,10 +76,13 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     return Json(new { success = false, message = "購物車中找不到此商品" });
                 }
 
+                // 3. 計算新數量
                 int newQty = item.Qty + delta;
 
+                // 4. 驗證數量 (必須 > 0)
                 if (newQty <= 0)
                 {
+                    // 數量歸零則移除該商品
                     _db.OrdShoppingCartItems.Remove(item);
                     await _db.SaveChangesAsync();
 
@@ -90,9 +95,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     });
                 }
 
+                // 5. 更新數量
                 item.Qty = newQty;
                 await _db.SaveChangesAsync();
 
+                // 6. 回傳新的小計
                 decimal newSubtotal = item.UnitPrice * item.Qty;
 
                 return Json(new
@@ -109,9 +116,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
-        // ========================================
+        // ======================
         // 移除商品
-        // ========================================
+        // ======================
         [HttpPost]
         public async Task<IActionResult> RemoveItem(int productId, int userNumberId = 1000)
         {
@@ -145,9 +152,9 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
             }
         }
 
-        // ========================================
+        // ======================
         // 購物車結帳
-        // ========================================
+        // ======================
         [HttpPost]
         public async Task<IActionResult> CheckoutFromCart(int userNumberId = 1000)
         {
@@ -165,24 +172,21 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     return Json(new { success = false, message = "購物車是空的" });
                 }
 
-                // 2. 生成訂單編號
-                string orderNo = $"{DateTime.Now:yyyyMMdd}{new Random().Next(1000000, 9999999)}";
-
-                // 3. 建立訂單
+                // 2. 建立訂單主檔
                 var order = new OrdOrder
                 {
-                    OrderNo = orderNo,
                     UserNumberId = userNumberId,
                     CreatedDate = DateTime.Now,
 
-                    OrderStatusId = "pending",
-                    PaymentStatus = "pending",
-                    ShippingStatusId = "pending",
+                    // 狀態預設
+                    OrderStatusId = "pending",      // 對應 SysCode (ORD/07 待成立)
+                    PaymentStatus = "pending",      // 對應 SysCode (ORD/04 待授權)
+                    ShippingStatusId = "pending",   // 對應 SysCode (ORD/05 待出貨)
 
+                    // 金額欄位
                     Subtotal = cart.OrdShoppingCartItems.Sum(i => i.UnitPrice * i.Qty),
                     DiscountTotal = 0,
                     ShippingFee = 0,
-                    PaymentConfigId = 1000,
 
                     ReceiverName = "測試收件人",
                     ReceiverPhone = "0900-000-000",
@@ -192,7 +196,7 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     IsVisibleToMember = true
                 };
 
-                // 4. 建立訂單明細
+                // 3. 建立訂單明細 (帶入 SkuId)
                 order.OrdOrderItems = (from i in cart.OrdShoppingCartItems
                                        join s in _db.ProdProductSkus on i.ProductId equals s.ProductId
                                        select new OrdOrderItem
@@ -203,11 +207,11 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                                            Qty = i.Qty
                                        }).ToList();
 
-                // 5. 儲存訂單
+                // 4. 儲存訂單到 DB (取得 OrderId 和 OrderItemId)
                 _db.OrdOrders.Add(order);
                 await _db.SaveChangesAsync();
 
-                // 6. 扣庫存
+                // 5. ✅ 呼叫 OrderService 扣庫存
                 var (success, message) = await _orderService.ProcessStockDeductionAsync(
                     order.OrderId,
                     userNumberId);
@@ -218,42 +222,25 @@ namespace FlexBackend.ORD.Rcl.Areas.ORD.Controllers
                     return Json(new { success = false, message });
                 }
 
-                // 7. 清空購物車
+                // 6. 清空購物車
                 _db.OrdShoppingCartItems.RemoveRange(cart.OrdShoppingCartItems);
                 _db.OrdShoppingCarts.Remove(cart);
                 await _db.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 
+                // 7. 回傳成功訊息
                 return Json(new
                 {
                     success = true,
                     orderId = order.OrderId,
-                    orderNo = order.OrderNo,
                     message = "結帳成功,庫存已扣減"
                 });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-
-                // 回傳完整錯誤訊息
-                var errorMessage = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMessage += $" | 內部錯誤: {ex.InnerException.Message}";
-
-                    if (ex.InnerException.InnerException != null)
-                    {
-                        errorMessage += $" | 詳細錯誤: {ex.InnerException.InnerException.Message}";
-                    }
-                }
-
-                return Json(new
-                {
-                    success = false,
-                    message = $"結帳失敗: {errorMessage}"
-                });
+                return Json(new { success = false, message = $"結帳失敗: {ex.Message}" });
             }
         }
     }
