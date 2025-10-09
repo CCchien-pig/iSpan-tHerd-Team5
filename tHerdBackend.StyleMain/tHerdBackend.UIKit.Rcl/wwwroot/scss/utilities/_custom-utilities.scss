@@ -1,0 +1,23 @@
+﻿// 文字 / 背景 / 邊框色
+@each $name, $value in $theme-colors {
+    .text-#{$name} {
+        color: $value !important;
+    }
+
+    .bg-#{$name} {
+        background-color: $value !important;
+    }
+
+    .border-#{$name} {
+        border-color: $value !important;
+    }
+}
+
+// 漸層（仿 .bg-gradient-primary 風格）
+@each $name, $value in $theme-colors {
+    .bg-gradient-#{$name} {
+        background-color: $value !important;
+        background-image: linear-gradient(180deg, $value 10%, darken($value, 15%) 100%) !important;
+        background-size: cover !important;
+    }
+}

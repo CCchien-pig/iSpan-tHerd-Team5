@@ -1,0 +1,13 @@
+﻿$theme-colors: () !default; // 消除未宣告警告，不影響主檔編譯
+
+@each $color, $value in $theme-colors {
+    .bg-#{$color} {
+        background-color: $value !important;
+    }
+
+    .bg-gradient-#{$color} {
+        background-color: $value !important;
+        background-image: linear-gradient(180deg, $value 10%, darken($value, 15%) 100%) !important;
+        background-size: cover !important;
+    }
+}

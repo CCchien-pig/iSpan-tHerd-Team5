@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Areas\USER\ViewModels\" />
+    <Folder Include="Data\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Core\tHerdBackend.Core.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.Share\tHerdBackend.Services\tHerdBackend.Services.csproj" />
+    <ProjectReference Include="..\..\tHerdBackend.StyleMain\tHerdBackend.UIKit.Rcl\tHerdBackend.UIKit.Rcl.csproj" />
+  </ItemGroup>
+
+
+
+</Project>

@@ -1,0 +1,369 @@
+﻿
+
+/* ====== 外層卡片區塊 ====== */
+.supplier-card, 
+.stockbatch-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e5e9f0;
+}
+
+    .supplier-card h5,
+    .stockbatch-card h5{
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        border-left: 4px solid #4a90e2;
+        padding-left: 0.5rem;
+    }
+
+/* ====== 表格基礎 ====== */
+#supplierTable,
+#stockBatchTable,
+#historyTable {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    font-size: 0.95rem;
+    background-color: #ffffff;
+}
+
+    /* ====== 表頭 ====== */
+    #supplierTable thead th,
+    #stockBatchTable thead th,
+    #historyTable thead th {
+        background: linear-gradient(135deg, #4a90e2, #007bff);
+        color: #fff;
+        font-weight: 600;
+        text-align: center;
+        vertical-align: middle;
+        border: none;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    /* ====== 奇偶行條紋 ====== */
+    #supplierTable tbody tr:nth-child(odd),
+    #stockBatchTable tbody tr:nth-child(odd),
+    #historyTable tbody tr:nth-child(odd) {
+        background-color: #f9fbff;
+    }
+
+    #supplierTable tbody tr:nth-child(even),
+    #stockBatchTable tbody tr:nth-child(even),
+    #historyTable tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+
+    /* ====== hover ====== */
+    #supplierTable tbody tr:hover,
+    #stockBatchTable tbody tr:hover,
+    #historyTable tbody tr:hover {
+        background-color: #e6f0ff;
+        transition: background-color 0.2s ease;
+    }
+
+    /* ====== 供應商名稱 & 聯絡人 ====== */
+    #supplierTable td:nth-child(1) {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    #supplierTable td:nth-child(2) {
+        color: #2c3e50;
+    }
+
+    /* ====== 電話 & Email ====== */
+    #supplierTable td:nth-child(3),
+    #supplierTable td:nth-child(4) { 
+    /* text-align: center;*/
+        font-family: monospace;
+        color: #555;
+    }
+
+
+    /* ====== 啟用 switch 置中 ====== */
+    #supplierTable td .form-check {
+        display: flex;
+        justify-content: center;
+    }
+
+    #supplierTable .form-check-input {
+        cursor: pointer;
+        width: 2.5rem;
+        height: 1.2rem;
+    }
+
+        #supplierTable .form-check-input:checked {
+            background-color: #4eb7d6;
+            border-color: #4eb7d6;
+        }
+
+    /* ====== 操作按鈕 ====== */
+    #supplierTable .inventory-btn {
+        background-color: #fff8e1;
+        border: 1px solid #f0c14b;
+        font-family: monospace;
+        color: #dca91e;
+    }
+
+        #supplierTable .inventory-btn:hover {
+            background-color: #ffd04dbe;
+        }
+
+    #supplierTable .edit-btn {
+        background-color: #f5f0ff;
+        border: 1px solid #c3b8f3;
+        color: #9073e8;
+    }
+
+        #supplierTable .edit-btn:hover {
+            background-color: #ded2fc;
+        }
+
+    #supplierTable .delete-btn {
+        background-color: #f8f9fa;
+        border: 1px solid #adb5bd;
+        color: #6688b7;
+    }
+
+        #supplierTable .delete-btn:hover {
+            background-color: #cee1f4;
+        }
+
+/* ====== 控制元件: 顯示筆數 dropdown ====== */
+.dataTables_length select {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    margin: 0 0.5rem;
+    background-color: #fff;
+}
+
+/* ====== 搜尋框 ====== */
+.dt-search .dt-input {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    background-color: #fff;
+    transition: all 0.2s ease;
+}
+
+    .dt-search .dt-input:focus {
+        border-color: #4a90e2;
+        box-shadow: 0 0 0 3px rgba(74,144,226,0.25);
+        outline: none;
+    }
+
+
+/* ====== 分頁 ====== */
+/* 分頁外框置中 */
+.dataTables_paginate {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+    /* 所有分頁按鈕 */
+    .dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        margin: 0 0.15rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background-color: #fff;
+        color: #007bff;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        /* 當前頁 */
+        .dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button.current {
+            background-color: #0984d9; /* 藍底 */
+            color: #fff !important; /* 白字 */
+            border-color: #007bff;
+            font-weight: 600;
+        }
+
+/* 全部按鈕 hover 淺藍 */
+button.dt-paging-button:not(:disabled):hover {
+    background: #ccd5f0 !important;
+    border-color: #007bff !important;
+    color: #0056b3 !important;
+}
+
+/* 當前頁 hover 深藍 */
+button.dt-paging-button.current:not(:disabled):hover {
+    background: #b7c9e9 !important;
+    color: #fff !important;
+    border-color: #5d6b99 !important;
+}
+
+/* Ellipsis … */
+.dataTables_paginate .ellipsis {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    margin: 0 0.15rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+
+/* ============ */
+
+/* 修改 tooltip 背景色與文字顏色 */
+.tooltip-inner {
+    background-color: #4a90e2 !important; /* 深藍色背景 */
+    color: #fff !important; /* 白色文字 */
+    font-size: 0.85rem; /* 字體大小 */
+    padding: 0.35rem 0.75rem; /* 內距 */
+    border-radius: 0.375rem; /* 圓角 */
+}
+
+/* tooltip 箭頭顏色 */
+/*.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #4a90e2 !important;
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #4a90e2 !important;
+}
+
+.tooltip.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: #4a90e2 !important;
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #4a90e2 !important;
+}*/
+
+/* 修改 tooltip 背景色與文字顏色 */
+.tooltip {
+    --bs-tooltip-bg: #4a90e2; /* 深藍色背景，箭頭也會跟著 */
+    --bs-tooltip-color: #fff; /* 文字顏色 */
+    font-size: 0.85rem;
+}
+
+    /* 可選：增加 padding 與圓角 */
+    .tooltip .tooltip-inner {
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.375rem;
+    }
+
+
+/* ============ */
+
+/* 庫存量數字 */
+/* 淺橘色：提醒 */
+.stock-low {
+    color: #f6cd54;
+    font-weight: bold;
+}
+
+/* 淺紅色：警告 */
+.stock-danger {
+    color: #db3546;
+    font-weight: bold;
+}
+
+/* 庫存量標示說明 */
+.legend {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    font-size: 14px;
+    margin-bottom: 10px;
+    justify-content: flex-end; /* 靠右 */
+}
+
+    .legend span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .legend .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* 淺紅色 */
+    .legend .danger {
+        background-color: #e66774;
+    }
+    /* 淺橘色 */
+    .legend .low {
+        background-color: #f6cd54;
+    }
+    /* 綠色 */
+    .legend .normal {
+        background-color: #2ecc71;
+    }
+
+/* ====== 重置搜尋按鈕 ====== */
+#resetSearchBtn {
+    background-color: #fff4f9; /* 淺粉底 */
+    border: 1px solid #f4a4d7; /* 粉色邊框 */
+    color: #d26ca0; /* 按鈕內文字/圖示顏色 */
+    font-family: monospace;
+    padding: 6px 8px; /* 比較小巧 */
+    border-radius: 4px;
+    display: inline-flex; /* 讓按鈕內內容可置中 */
+    align-items: center; /* 垂直置中 */
+    justify-content: center; /* 水平置中 */
+    height: 100%; /* 和輸入框高度對齊 */
+    vertical-align: middle; /* 與輸入框並排置中 */
+}
+
+    #resetSearchBtn:hover {
+        background-color: #fcd6e9; /* 滑鼠經過底色變深 */
+        color: #b54e86; /* 滑鼠經過字/圖示變深 */
+    }
+
+
+/* ====== 英數 ====== */
+#stockBatchTable td:nth-child(1),
+#stockBatchTable td:nth-child(2),
+#stockBatchTable td:nth-child(3),
+#stockBatchTable td:nth-child(5),
+#stockBatchTable td:nth-child(6),
+#stockBatchTable td:nth-child(7),
+#stockBatchTable td:nth-child(8) {
+    font-family: Lucida Console;
+    color: #555;
+}
+
+/* ====== 中 ====== */
+#stockBatchTable td:nth-child(4),
+#stockBatchTable td:nth-child(9) {
+    color: #2c3e50;
+}
+/*#stockBatchTable td:nth-child(5),*/
+#stockBatchTable td:nth-child(6),
+#stockBatchTable td:nth-child(7),
+#stockBatchTable td:nth-child(8),
+#stockBatchTable td:nth-child(9) {
+    text-align: center;
+}
+
+#batchMovementTable {
+    width: 100%;
+    table-layout: auto; /* 自動分配欄寬 */
+}
+
+
+.stock-edit-adjustOptions .form-check-input {
+    vertical-align: middle; /* 垂直置中 */
+    margin-top: 0; /* 移除多餘上邊距 */
+}
+
+.stock-edit-adjustOptions label {
+    margin-bottom: 0; /* 移除底部空隙 */
+}

@@ -1,0 +1,46 @@
+.main-header {
+  /*background: linear-gradient(135deg, #28a745, #20c997) !important;*/
+  background: linear-gradient(90deg, rgb(0, 112, 131),  rgb(0, 112, 131)) !important;
+}
+
+main-color-green {
+  background: linear-gradient(135deg, #73a2a5, #20c997) !important;
+}
+
+/* 全局按鈕樣式 */
+.btn {
+  transition: all 0.2s ease;
+}
+
+/* hover底線效果 */
+.btn:hover .hover-underline {
+  text-decoration: underline;
+}
+
+/* hover無效果 */
+.btn:hover .hover-none {
+  text-decoration: none !important;
+}
+
+/* 禁用狀態樣式 */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 自定義hover效果 */
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 按鈕大小調整 */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: 0.5rem 1rem;
+  font-size: 1.25rem;
+}

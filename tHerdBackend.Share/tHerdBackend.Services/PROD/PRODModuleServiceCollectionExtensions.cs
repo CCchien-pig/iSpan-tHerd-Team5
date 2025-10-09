@@ -1,0 +1,29 @@
+﻿using tHerdBackend.Core.Interfaces.PROD;
+using tHerdBackend.Core.Interfaces.Products;
+using tHerdBackend.Core.Interfaces.SYS;
+using tHerdBackend.Infra.Repository.PROD;
+using tHerdBackend.Infra.Repository.SYS;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace tHerdBackend.Services.PROD
+{
+    public static class PRODModuleServiceCollectionExtensions
+    {
+        public static IServiceCollection AddPRODModule(this IServiceCollection services)
+        {
+            // 註冊 Service
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<IProductQueryService, ProductQueryService>();
+			services.AddScoped<IProductListForApiService, ProductListForApiService>();
+
+			// 註冊 Repository (實作在 Infra)
+			services.AddScoped<IProdProductRepository, ProdProductRepository>();
+            services.AddScoped<IProdProductQueryRepository, ProductQueryRepository>();
+            services.AddScoped<ISysCodeRepository, SysCodeRepository>();
+
+            MapsterConfig.Register();
+
+            return services;
+        }
+    }
+}
