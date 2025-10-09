@@ -1,14 +1,14 @@
-﻿using FlexBackend.Core.Abstractions;
-using FlexBackend.Core.DTOs.SUP;
-using FlexBackend.Core.DTOs.USER;
-using FlexBackend.Infra.Models;
+﻿using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Infra.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static FlexBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers.LogisticsRateRequestDTO;
 
-namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers
+namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers
 {
 	[Area("SUP")]
 	[Route("api/[area]/[controller]")]

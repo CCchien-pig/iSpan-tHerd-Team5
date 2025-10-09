@@ -1,12 +1,7 @@
 ﻿
 
 /* ====== 外層卡片區塊 ====== */
-<<<<<<< HEAD
 .card {
-=======
-.supplier-card, 
-.stockbatch-card {
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
     background: #ffffff;
     border-radius: 0.75rem;
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
@@ -15,12 +10,7 @@
     border: 1px solid #e5e9f0;
 }
 
-<<<<<<< HEAD
     .card h5 {
-=======
-    .supplier-card h5,
-    .stockbatch-card h5{
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
         font-weight: 600;
         color: #2c3e50;
         margin-bottom: 1rem;
@@ -29,18 +19,11 @@
     }
 
 /* ====== 表格基礎 ====== */
-<<<<<<< HEAD
 .table {
-=======
-#supplierTable,
-#stockBatchTable,
-#historyTable {
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
     border-radius: 0.5rem;
     overflow: hidden;
     font-size: 0.95rem;
     background-color: #ffffff;
-<<<<<<< HEAD
     border: 1px solid #e5e9f0;
 }
 
@@ -49,16 +32,6 @@
 /*        background: linear-gradient(135deg, #4a90e2, #007bff);*/
 /*        background-color:#f9fbff;*/
         color: #2c3e50;
-=======
-}
-
-    /* ====== 表頭 ====== */
-    #supplierTable thead th,
-    #stockBatchTable thead th,
-    #historyTable thead th {
-        background: linear-gradient(135deg, #4a90e2, #007bff);
-        color: #fff;
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
         font-weight: 600;
         text-align: center;
         vertical-align: middle;
@@ -69,32 +42,21 @@
     }
 
     /* ====== 奇偶行條紋 ====== */
-<<<<<<< HEAD
-/*    .table tbody tr:nth-child(even) {
-        background-color: #f9fbff;
-    }*/
-
-    .table tbody tr:nth-child(odd) {
-=======
-    #supplierTable tbody tr:nth-child(odd),
-    #stockBatchTable tbody tr:nth-child(odd),
-    #historyTable tbody tr:nth-child(odd) {
-        background-color: #f9fbff;
+    .table tbody tr:nth-child(even) td{
+        background-color: #fff;
     }
 
-    #supplierTable tbody tr:nth-child(even),
-    #stockBatchTable tbody tr:nth-child(even),
-    #historyTable tbody tr:nth-child(even) {
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
-        background-color: #ffffff;
+    .table tbody tr:nth-child(odd) td{
+        background-color: #f9f4fc;
     }
 
     /* ====== hover ====== */
-<<<<<<< HEAD
     .table tbody tr:hover td {
-        background-color: #e6f0ff !important;
+        background-color: #4a87c4 !important;
+        color: #fff !important;
         transition: background-color 0.2s ease;
     }
+/*        background-color: #e6f0ff !important;*/
 
 #stockBatchTable {
     border-collapse: separate !important;
@@ -110,15 +72,6 @@
 
 
 
-=======
-    #supplierTable tbody tr:hover,
-    #stockBatchTable tbody tr:hover,
-    #historyTable tbody tr:hover {
-        background-color: #e6f0ff;
-        transition: background-color 0.2s ease;
-    }
-
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
     /* ====== 供應商名稱 & 聯絡人 ====== */
     #supplierTable td:nth-child(1) {
         font-weight: 600;
@@ -278,25 +231,6 @@ button.dt-paging-button.current:not(:disabled):hover {
     border-radius: 0.375rem; /* 圓角 */
 }
 
-<<<<<<< HEAD
-=======
-/* tooltip 箭頭顏色 */
-/*.tooltip.bs-tooltip-top .tooltip-arrow::before {
-    border-top-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
-    border-bottom-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-start .tooltip-arrow::before {
-    border-left-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-end .tooltip-arrow::before {
-    border-right-color: #4a90e2 !important;
-}*/
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
 /* 修改 tooltip 背景色與文字顏色 */
 .tooltip {
@@ -423,7 +357,6 @@ button.dt-paging-button.current:not(:disabled):hover {
 .stock-edit-adjustOptions label {
     margin-bottom: 0; /* 移除底部空隙 */
 }
-<<<<<<< HEAD
 
 
 /* 操作按鈕右邊框設藍色且細邊框 */
@@ -467,5 +400,3 @@ button.dt-paging-button.current:not(:disabled):hover {
         background-color: #a349a4 !important;
         box-shadow: none;
     }
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d

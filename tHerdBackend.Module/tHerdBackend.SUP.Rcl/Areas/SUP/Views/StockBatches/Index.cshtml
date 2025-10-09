@@ -19,7 +19,6 @@
 <span id="initResult" style="margin-left:10px;"></span>  *@
 
 <!-- 主庫存表格*2區塊 (.stockbatch-card) -->
-<<<<<<< HEAD
 <div class="card stockbatch-card">
     <!-- 庫存紀錄 stockBatchTable -->
     <div id="stockTableWrapper">
@@ -28,7 +27,7 @@
             <div class="btn-group me-2">
                 <!-- 庫存操作 -->
                 <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-                
+
                 <!-- 匯入下拉 -->
                 <div class="btn-group">
                     <button id="importDropdownBtn" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
@@ -60,32 +59,11 @@
 
             <!-- 標示圖例 -->
             <div class="legend ms-auto">
-=======
-<div class="stockbatch-card">
-    <!-- 庫存紀錄 stockBatchTable -->
-    <div id="stockTableWrapper">
-        <div class="d-flex align-items-center mb-2">
-            <div class="btn-group me-2">
-                <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-                <button id="importStockBatchBtn" class="btn btn-outline-primary">匯入Excel</button>
-                <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                    匯出
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
-                    <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
-                    <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
-                </ul>
-            </div>
-
-            <div class="legend">
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                 <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
                 <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
             </div>
         </div>
 
-<<<<<<< HEAD
         <!-- 第二排：篩選 -->
         <div class="row mb-2">
             <!-- 過期篩選 -->
@@ -114,17 +92,6 @@
 
         <!-- DataTable -->
         <table id="stockBatchTable" class="display table rounded-0 " style="width:100%">
-=======
-        <div class="d-flex mb-2">
-            <select id="stockExpireFilter" class="form-select form-select-sm me-2">
-                <option value="">全部</option>
-                <option value="valid" selected>未過期</option>
-                <option value="expired">已過期</option>
-            </select>
-        </div>
-
-        <table id="stockBatchTable" class="display" style="width:100%">
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
             <thead>
                 <tr>
                     <th>#</th> <!-- 序號欄 -->
@@ -146,16 +113,10 @@
 
     <!-- 異動紀錄 historyTable -->
     <div id="historyTableWrapper" style="display:none;">
-<<<<<<< HEAD
         <!-- 第一排：匯出按鈕 -->
         <div class="d-flex align-items-center mb-2">
             <div class="btn-group me-2">
                 <button id="exportHistoryBtn" class="btn btn-outline-secondary  dropdown-toggle" data-bs-toggle="dropdown" style="border-color:#a349a4; color:#a349a4;">
-=======
-        <div class="d-flex align-items-center mb-2">
-            <div class="btn-group me-2">
-                <button id="exportHistoryBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     匯出
                 </button>
                 <ul class="dropdown-menu">
@@ -164,7 +125,6 @@
                     <li><a class="dropdown-item" id="exportHistoryPdf">PDF</a></li>
                 </ul>
             </div>
-<<<<<<< HEAD
         </div>
 
         <!-- 第二排：篩選 -->
@@ -198,17 +158,6 @@
 
         <!-- DataTable -->
         <table id="historyTable" class="display table" style="width:100%">
-=======
-
-            <select id="historyExpireFilter" class="form-select form-select-sm">
-                <option value="">全部</option>
-                <option value="valid">未過期</option>
-                <option value="expired">已過期</option>
-            </select>
-        </div>
-
-        <table id="historyTable" class="display" style="width:100%">
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
             <thead>
                 <tr>
                     <th>SKU</th>
@@ -349,7 +298,6 @@
 
             // ---------- 取得品牌列表 ----------
             $.get('/SUP/StockBatches/GetBrands', function(brands) {
-<<<<<<< HEAD
                 // console.log('回傳brands:', brands);
                 brandSelect.empty().append('<option value="">請選品牌</option>');
 
@@ -368,10 +316,6 @@
                             </option>`
                         );
                     }
-=======
-                brands.forEach(b => {
-                    brandSelect.append(`<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>${b.brandName}</option>`);
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                 });
                 if(selectedBrandId) brandSelect.trigger('change');
             });
@@ -380,21 +324,15 @@
             brandSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var brandId = $(this).val();
-<<<<<<< HEAD
                 console.log('已選擇品牌Id:', brandId);
 
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                 if(!brandId) {
                     productSelect.empty().append('<option value="">請選商品</option>').prop('disabled', true);
                     skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                     return;
                 }
                 $.get('/SUP/StockBatches/GetProductsByBrand', { brandId: brandId }, function(products) {
-<<<<<<< HEAD
                     // console.log('回傳products:', products);
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     productSelect.empty().append('<option value="">請選商品</option>');
                     products.forEach(p => {
                         productSelect.append(`<option value="${p.productId}" ${p.productId == selectedProductId ? 'selected' : ''}>${p.productName}</option>`);
@@ -408,23 +346,17 @@
             productSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var productId = $(this).val();
-<<<<<<< HEAD
                 console.log('已選擇商品Id:', productId);
 
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                 skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                 if (!productId) return;
 
                 $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
-<<<<<<< HEAD
                     console.log('回傳skus:', skus);
                     if(!skus || skus.length === 0) {
                         skuSelect.empty().append('<option value="">沒有 SKU</option>');
                         return;
                     }
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     skus.forEach(sku => {
                         skuSelect.append(`<option value="${sku.skuId}" ${sku.skuId == selectedSkuId ? 'selected' : ''}>${sku.skuCode}</option>`);
                     });
@@ -436,18 +368,12 @@
             // ---------- SKU change → 載入 SKU 資訊 ----------
             skuSelect.off('change').on('change', function() {
                 var skuId = $(this).val();
-<<<<<<< HEAD
                 console.log('已選擇skuId:', skuId);
 
                 if(!skuId) return resetStockInfo();
 
                 $.get('/SUP/StockBatches/GetSkuInfo', { skuId: skuId }, function(info) {
                     console.log('回傳info:', info);
-=======
-                if(!skuId) return resetStockInfo();
-
-                $.get('/SUP/StockBatches/GetSkuInfo', { skuId: skuId }, function(info) {
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     $('#CurrentQty').text(info.currentStock || 0);
                     $('#MaxStockQty').text(info.maxStockQty || 0);
                     $('#PredictedQty').text(info.expectedStock || 0);
@@ -529,7 +455,6 @@
                     isAdd = true;
                 }
 
-<<<<<<< HEAD
                 // 計算最大可異動數量
                 var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
                 changeQtyInput.prop('max', maxAllowed);
@@ -542,12 +467,6 @@
                     if(changeQty < 1) changeQty = 1;
                 }
                 changeQtyInput.val(changeQty);
-=======
-                var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
-                changeQtyInput.prop('max', maxAllowed);
-                if(changeQty > maxAllowed) { changeQty = maxAllowed; changeQtyInput.val(changeQty); }
-                if(changeQty < 1){ changeQty = 1; changeQtyInput.val(changeQty); }
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
                 var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
                 if(!isAdd && predictedStock < 0) predictedStock = 0;
@@ -557,11 +476,7 @@
                 changeQtyHelp.text('異動數量上限: '+maxAllowed+(isAdd?'（可增加）':'（可減少）'));
             }
         }
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
         // 初始化庫存 DataTable 與按鈕事件
         $(document).ready(function () {
 
@@ -605,23 +520,17 @@
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
                         d.expireFilter = $('#stockExpireFilter').val(); // 傳到期日篩選值
-<<<<<<< HEAD
                         d.startDate = $('#startDate').val();
                         d.endDate = $('#endDate').val();
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     },
                     dataSrc: function(json) {
                         //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
                         return json.data;
-<<<<<<< HEAD
                     },
                     error: function(xhr, error, thrown) {
                         console.log(xhr.responseText); // 印出後端錯誤訊息
                         alert("資料載入失敗，請檢查後端或 console");
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     }
                 },
                 columns: [
@@ -634,10 +543,9 @@
                             return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
                         }
                     },
-<<<<<<< HEAD
-                    { 
-                        data: 'skuCode', 
-                        title: 'SkuCode', 
+                    {
+                        data: 'skuCode',
+                        title: 'SkuCode',
                         className: 'text-center',
                         render: function(data, type, row) {
                             //console.log(data);
@@ -653,12 +561,6 @@
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
                     { data: 'brandName', title: '品牌', className: 'text-center'},
                     { data: 'productName', title: '商品名稱', className: 'text-center text-wrap', width: "200px"},
-=======
-                    { data: 'skuCode', title: 'SKU', className: 'text-center'},
-                    { data: 'batchNumber', title: '批號', className: 'text-center'},
-                    { data: 'brandName', title: '品牌', className: 'text-center'},
-                    { data: 'productName', title: '商品名稱', className: 'text-center'},
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     {
                         data: 'expireDate',
                         title: '到期日',
@@ -674,11 +576,7 @@
                             return formatted;
                         }
                     },
-<<<<<<< HEAD
                     {
-=======
-                  {
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     data: 'qty',
                     title: '批次庫存量',
                     className: 'text-center',
@@ -731,11 +629,7 @@
                         className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
-<<<<<<< HEAD
                             // console.log(row.brandName);
-=======
-                            console.log(row.brandName);
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                             return `
                                 <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="該筆批次異動">
                                     <i class="fa-solid fa-right-from-bracket" style="color: #977ee2;"></i>
@@ -780,14 +674,6 @@
                 }
             });
 
-<<<<<<< HEAD
-=======
-            // 監聽 select 變更，重新載入 DataTable
-            $('#stockDateSort').on('change', function() {
-                stockBatchTable.ajax.reload(null, false);
-            });
-
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
             // ======= 初始化 2. 全站異動紀錄 DataTable =======
             var historyTable = $('#historyTable').DataTable({
                 serverSide: true,   // 用後端搜排分業
@@ -798,24 +684,17 @@
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
                         d.expireFilter = $('#historyExpireFilter').val(); // 傳到期日篩選值
-<<<<<<< HEAD
                         d.startDate = $('#historyStartDate').val();
                         d.endDate = $('#historyEndDate').val();
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     },
                     dataSrc: function(json) {
                         //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
-<<<<<<< HEAD
                         return json.data;
                     },
                     error: function(xhr, error, thrown) {
                         console.log(xhr.responseText); // 印出後端錯誤訊息
                         alert("資料載入失敗，請檢查後端或 console");
-=======
-                       return json.data;
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
                     }
                 },
                 columns: [
@@ -881,23 +760,12 @@
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
                 },
-<<<<<<< HEAD
                 order: [[7, 'desc']], // 預設依異動時間新到舊
             });
 
             // 下拉選單切換事件
             $('#startDate, #endDate, #stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
             $('#historyStartDate, #historyEndDate, #historyExpireFilter').on('change', () => historyTable.ajax.reload());
-=======
-                order: [[7, 'desc']], // 預設依時間新到舊
-            });
-
-
-            // 下拉選單事件
-            $('#stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
-            $('#historyExpireFilter').on('change', () => historyTable.ajax.reload());
-
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
             // 點擊按鈕切換 datatable
             $('#btnToggleStock').on('click', function () {
@@ -1127,43 +995,7 @@
                 });
             });
 
-<<<<<<< HEAD
             // ===== 點擊 submit =====
-=======
-
-            // 綁定「其他庫存操作」選單事件
-            // $(document).on('click', '.otherStockOp', function (e) {
-            //     e.preventDefault();
-
-            //     var type = $(this).data('type'); Sale / Return / Expire
-            //     console.log('[OtherStockOp] 選擇異動類型:', type);
-
-            //     $.get('/SUP/StockBatches/OtherOperation', { type: type }, function (html) {
-            //         let titleMap = {
-            //             "Sale": "銷售出庫",
-            //             "Return": "退貨入庫",
-            //             "Expire": "到期報廢"
-            //         };
-
-            //         $('#stockBatchModalTitle').text("其他庫存操作 - " + (titleMap[type] || ""));
-            //         $('#stockBatchModalContent').html(html);
-            //         確保 hidden input MovementType 有值
-            //         $('#OtherSelectedMovementType').val(type);
-
-            //         初始化表單 (帶入指定異動類型)
-            //         initStockBatchForm(null, null, null, { movementType: type });
-
-            //         $('#stockBatchModal').modal('show');
-            //     });
-            // });
-
-
-
-
-
-            // ===== 點擊 submit =====
-            
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
             .on('submit', '#stockBatchForm', function (e) {
@@ -1233,7 +1065,6 @@
                     }
                 });
             });
-<<<<<<< HEAD
 
             const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -1265,8 +1096,6 @@
                     $(this).val(today);
                 }
             });
-=======
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
         });
 
         // 異動後浮現批次明細表格
@@ -1303,10 +1132,6 @@
             $('#batchMovementModal').modal('show');
         }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
         function getMovementTypeText(type) {
             switch(type) {
                 case 'Adjust': return '手動調整';
@@ -1338,11 +1163,10 @@
             }
         }
 
-<<<<<<< HEAD
         // 點擊下載匯入範例
         $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateExcel');
         $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateCsv');
-        
+
         // 點擊匯入 → 觸發選檔
         $('#importStockBatchExcel').click(function(e) {
             e.preventDefault(); // 阻止下拉自動收合衝突
@@ -1456,79 +1280,6 @@
         $('#exportHistoryCsv').click(() => exportHistoryFiltered('csv'));
         $('#exportHistoryExcel').click(() => exportHistoryFiltered('excel'));
         $('#exportHistoryPdf').click(() => exportHistoryFiltered('pdf'));
-=======
-
-        // 更新 input 的 max 與 helper，並自動修正輸入值
-        function updateChangeQtyLimitAndPredicted() {
-            // 取得當前庫存與最大庫存
-            var currentStock = parseInt($('#CurrentQty').text()) || 0;
-            var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-            console.log('[UpdateStock] CurrentQty:', currentStock, 'MaxStockQty:', maxStock);
-
-            var movementType = $('#MovementTypeSelect').val() || '';
-            var isAdd = true; // 預設為增加
-            console.log('[UpdateStock] movementType:', movementType, 'isAdd (預設):', isAdd);
-
-
-            // 判斷異動方向
-            if (movementType === 'Adjust') {
-                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';  // 手動調整需要用 radio 判斷
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                isAdd = false; // 出庫 / 報廢
-            } else if (movementType === 'Return' || movementType === 'Purchase') {
-                isAdd = true;  // 入庫
-            }
-            console.log('isAdd:', isAdd);
-
-            console.log('currentStock:', $('#CurrentQty').text(), '=>', currentStock);
-            console.log('maxStock:', $('#MaxStockQty').text(), '=>', maxStock);
-            console.log('movementType:', movementType, 'isAdd:', isAdd);
-
-            // 計算最大可輸入數量
-            var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
-            console.log('[UpdateStock] maxAllowed:', maxAllowed);
-
-            var $input = $('#ChangeQtyInput');
-            var curVal = parseInt($input.val()) || 0;
-
-            // 設定 html max 屬性（讓內建箭頭有上下限制）
-            $input.attr('max', maxAllowed);
-
-            // helper 顯示
-            $('#ChangeQtyHelp').text('上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
-
-            // 若輸入超過上限，直接改為上限
-            if (curVal > maxAllowed) {
-                $input.val(maxAllowed);
-                curVal = maxAllowed;
-            }
-
-            // 若輸入小於 1，強制為 1（因為前端要求正整數）
-            if (curVal < 1) {
-                $input.val(1);
-                curVal = 1;
-            }
-
-            // 計算預計庫存
-            var predicted;
-            if (movementType === 'Adjust') {
-                predicted = isAdd ? currentStock + curVal : currentStock - curVal;
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                predicted = currentStock - curVal;
-            } else {
-                predicted = currentStock + curVal; // Purchase / Return
-            }
-            console.log('[UpdateStock] predicted:', predicted);
-
-            // 非允許預購暫不實作 -> 如低於0則顯示 0
-            if (predicted < 0) predicted = 0;
-            $('#PredictedQty').text(predicted);
-            
-            // 更新 helper
-            $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
-        }
-
->>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
     </script>
 }
