@@ -1,0 +1,60 @@
+﻿@model FaqKeywordEditVM
+
+@{
+    ViewData["Title"] = "編輯關鍵字";
+}
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" rel="stylesheet" />
+    <style>
+        .page-actions {
+            gap: .5rem;
+        }
+
+        .card {
+            border-radius: .8rem
+        }</style>
+}
+
+<h1 class="mb-3">@ViewData["Title"]</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="KeywordId" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="FaqId" class="form-label"></label>
+                <select asp-for="FaqId" class="form-select" asp-items="ViewBag.FaqId" id="FaqId"></select>
+                <span asp-validation-for="FaqId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Keyword" class="form-label"></label>
+                <input asp-for="Keyword" class="form-control" />
+                <span asp-validation-for="Keyword" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex page-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> 儲存
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-left me-1"></i> 回列表
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        new Choices('#FaqId', { shouldSort:false, searchPlaceholderValue:'搜尋 FAQ 標題…',
+            itemSelectText:'選擇', noResultsText:'找不到結果', noChoicesText:'沒有可選項目' });
+    </script>
+}

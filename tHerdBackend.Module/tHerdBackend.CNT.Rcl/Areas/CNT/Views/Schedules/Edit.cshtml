@@ -1,0 +1,101 @@
+﻿@model tHerdBackend.CNT.Rcl.Areas.CNT.ViewModels.ScheduleEditVM
+@{
+    ViewData["Title"] = "編輯排程";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/_content/tHerdBackend.CNT.Rcl/css/backtotop.css" asp-append-version="true" />
+    <style>
+        .bg-pink {
+            background-color: #d63384 !important;
+        }
+
+        .bg-purple {
+            background-color: #6f42c1 !important;
+        }
+    </style>
+}
+
+<partial name="_AlertMessage" />
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-warning-subtle text-dark fw-bold">
+        ⏰ 編輯排程
+    </div>
+
+    <div class="card-body">
+        <form asp-area="CNT" asp-controller="Schedules" asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ScheduleId" />
+            <input type="hidden" asp-for="PageId" /> 
+            <input type="hidden" asp-for="PageTitle" />
+            <input type="hidden" asp-for="PageTypeName" />
+
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <!-- 文章標題 -->
+            <div class="mb-3">
+                <label class="form-label">文章標題</label>
+                <input class="form-control" value="@Model.PageTitle" readonly />
+            </div>
+
+            <!-- 文章分類 -->
+            <div class="mb-3">
+                <label class="form-label">文章分類</label>
+                <input class="form-control" value="@Model.PageTypeName" readonly />
+            </div>
+
+            <!-- 動作 -->
+            <div class="mb-3">
+                <label asp-for="ActionType" class="form-label">預約動作</label>
+                <select asp-for="ActionType" class="form-select" asp-items="ViewBag.ActionTypeList"></select>
+            </div>
+
+            <!-- 預定時間 -->
+            <div class="mb-3">
+                <label asp-for="ScheduledDate" class="form-label">預定時間</label>
+                <input asp-for="ScheduledDate"
+                       class="form-control datepicker"
+                       value="@Model.ScheduledDate.ToString("yyyy-MM-dd HH:mm")" />
+            </div>
+
+            <!-- 狀態（唯讀：鎖死顯示） -->
+            <div class="mb-3">
+                <label class="form-label">排程執行狀態</label>
+                <input class="form-control" value="@Model.StatusText" readonly />
+            </div>
+
+            <hr />
+            <div class="d-flex gap-3 mt-3">
+                <a asp-area="CNT" asp-controller="Schedules" asp-action="Index"
+                   asp-route-page="@Context.Request.Query["page"]"
+                   asp-route-pageSize="@Context.Request.Query["pageSize"]"
+                   asp-route-keyword="@Context.Request.Query["keyword"]"
+                   asp-route-status="@Context.Request.Query["status"]"
+                   asp-route-pageTypeId="@Context.Request.Query["pageTypeId"]"
+                   class="btn btn-outline-secondary btn-lg">🔙 返回列表</a>
+                <button type="submit" class="btn btn-outline-success btn-lg">💾 儲存修改</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 回頂部 -->
+    <button onclick="scrollToTop()" id="btnTop" class="btn rounded-circle shadow-lg"
+            data-bs-toggle="tooltip" data-bs-placement="left" title="回到頂部">
+        <i class="bi bi-arrow-up-short fs-2"></i>
+    </button>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @await Html.PartialAsync("_FlatpickrScriptsPartial")
+    <script>
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        window.addEventListener("scroll", function () {
+            let btn = document.getElementById("btnTop");
+            if (document.documentElement.scrollTop > 200) btn.classList.add("show");
+            else btn.classList.remove("show");
+        });
+    </script>
+}

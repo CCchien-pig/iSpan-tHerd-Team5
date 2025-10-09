@@ -1,0 +1,431 @@
+﻿@{
+    ViewData["Title"] = "員工管理";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" />
+    <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
+}
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <div class="me-2">
+        <label class="form-label me-1">角色篩選</label>
+        <select id="roleFilter" class="form-select form-select-sm d-inline-block" style="width:220px">
+            <option value="">（全部非 Member 員工）</option>
+        </select>
+    </div>
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#dlgCreate">
+        新增員工
+    </button>
+</div>
+
+<div class="card shadow">
+    <div class="card-header">員工列表</div>
+    <div class="card-body">
+        <table id="tblUsers" class="table table-striped w-100">
+            <thead>
+                <tr>
+                    <th class="text-center">員編</th>
+                    <th class="text-center">姓</th>
+                    <th class="text-center">名</th>
+                    <th class="text-center">Email</th>
+                    <th class="text-center">電話</th>
+                    <th class="text-center">角色</th>
+                    <th class="text-center">啟用</th>
+                    <th class="text-center">建立時間</th>
+                    <th class="text-center">操作</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- 新增員工 Modal -->
+<div class="modal fade" id="dlgCreate" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增員工</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmCreate" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">姓</label>
+                            <input name="lastName" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">名</label>
+                            <input name="firstName" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email</label>
+                            <input name="email" type="email" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">電話</label>
+                            <input name="phone" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">角色</label>
+                            <select name="roleId" id="createRoleId" class="form-select" required></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">建立</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 詳細資料 Modal -->
+<div class="modal fade" id="dlgDetails" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">員工詳細資料</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="frmDetails" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="det_id" />
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">員編</label>
+                            <input id="det_number" class="form-control" disabled />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">姓</label>
+                            <input name="lastName" id="det_lastName" class="form-control" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">名</label>
+                            <input name="firstName" id="det_firstName" class="form-control" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">角色</label>
+                            <select name="roleId" id="det_roleId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input name="email" id="det_email" type="email" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">電話</label>
+                            <input name="phoneNumber" id="det_phone" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">性別</label>
+                            <select name="gender" id="det_gender" class="form-select">
+                                <option value="N/A">N/A</option>
+                                <option value="Male">男</option>
+                                <option value="Female">女</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">生日</label>
+                            <input name="birthDate" id="det_birth" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">地址</label>
+                            <input name="address" id="det_addr" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="det_active">
+                                <label class="form-check-label" for="det_active">啟用</label>
+                            </div>
+                            <input type="hidden" name="isActive" id="det_active_hidden" />
+                        </div>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <!-- 修改密碼 -->
+                    <div>
+                        <h6 class="mb-2">修改密碼</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label">新密碼</label>
+                                <input type="password" id="pwd_new" class="form-control" placeholder="至少8碼，含大小寫與數字">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">再次輸入新密碼</label>
+                                <input type="password" id="pwd_new2" class="form-control">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-primary w-100" id="btnChangePwd">變更密碼</button>
+                            </div>
+                        </div>
+                        <div class="form-text mt-1">
+                            密碼需至少 8 碼，並同時包含英文大寫、英文小寫與數字。
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">儲存</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+
+          let rolesCache = [];
+
+          function escapeHtml(s){ return (s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+          function getAntiForgeryToken(){ return document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''; }
+
+          // 載入角色下拉（篩選＋建立＋詳細）
+          async function loadRoles(){
+            const res = await fetch('/USER/Admins/RolesCombo');
+            rolesCache = await res.json();
+            const filter = document.getElementById('roleFilter');
+            const createSel = document.getElementById('createRoleId');
+            const detSel = document.getElementById('det_roleId');
+            rolesCache.forEach(r=>{
+              const opt = `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
+              filter.insertAdjacentHTML('beforeend', opt);
+              createSel.insertAdjacentHTML('beforeend', opt);
+              detSel.insertAdjacentHTML('beforeend', opt);
+            });
+          }
+          loadRoles();
+
+          function roleSelectHtml(userId, selectedId){
+            const opts = rolesCache.map(r=>`<option value="${r.id}" ${r.id===selectedId?'selected':''}>${escapeHtml(r.name)}</option>`).join('');
+            return `<select class="form-select form-select-sm role-select" data-id="${userId}">${opts}</select>`;
+          }
+          function activeSwitchHtml(userId, isActive){
+            return `<input type="checkbox" class="form-check-input form-switch is-active" data-id="${userId}" ${isActive?'checked':''}>`;
+          }
+
+          // DataTables
+          const dt = new DataTable('#tblUsers', {
+            processing: true,
+            serverSide: true,
+            language: {
+          url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+          processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+        },
+            searchDelay: 400,
+            ajax: {
+              url: '/USER/Admins/Users',
+              type: 'GET',
+              dataSrc: 'data',
+              data: d => { d.roleId = document.getElementById('roleFilter').value; }
+            },
+            columns: [
+              { data: 'number',className: 'text-center' }, //0
+              { data: 'lastName',className: 'text-center',
+                render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="lastName" contenteditable="false">${escapeHtml(d)}</span>` }, //1
+              { data: 'firstName',className: 'text-center',
+                render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="firstName" contenteditable="false">${escapeHtml(d)}</span>` }, //2
+              { data: 'email',className: 'text-center',
+                render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="email" contenteditable="false">${escapeHtml(d)}</span>` }, //3
+              { data: 'phoneNumber',className: 'text-center',
+                render: (d, t, row)=> `<span class="editable" data-id="${row.id}" data-field="phoneNumber" contenteditable="false">${escapeHtml(d)}</span>` }, //4
+              { data: 'roleId', orderable:false,className: 'text-center',
+                render: (d, t, row)=> roleSelectHtml(row.id, d) }, //5
+              { data: 'isActive',
+                render: (d, t, row)=> activeSwitchHtml(row.id, d), className:'text-center' }, //6
+              { data: 'createdDate',className: 'text-center' }, //7
+              { data: null, orderable:false, searchable:false,className: 'text-center', //8
+                render: (d,t,row)=> `
+                        <div class="btn-group btn-group-sm gap-2" role="group">
+          <button class="btn btn-outline-primary btn-detail btn-sm" data-id="${row.id}">詳細</button>
+          <button class="btn btn-outline-danger  btn-del   btn-sm" data-id="${row.id}">刪除</button>
+        </div>`}
+            ],
+            order: [[7,'desc']],
+            columnDefs: [
+              { targets: [5,8], orderable: false }
+            ]
+          });
+
+          // 角色篩選變更 → reload
+          document.getElementById('roleFilter').addEventListener('change', ()=> dt.ajax.reload());
+
+          // 就地編輯：雙擊開啟，Enter/blur 儲存
+          document.addEventListener('dblclick', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            el.setAttribute('contenteditable','true'); el.focus();
+            const rng = document.createRange(); rng.selectNodeContents(el); rng.collapse(false);
+            const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+          });
+          async function saveEditable(el){
+            const fd = new FormData();
+            fd.append('userId', el.dataset.id);
+            fd.append('field', el.dataset.field);
+            fd.append('value', el.textContent.trim());
+            el.setAttribute('contenteditable','false');
+            const res = await fetch('/USER/Admins/UpdateField', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(!(res.ok && json.ok)){ alert(json.message || '更新失敗'); dt.ajax.reload(null, false); }
+          }
+          document.addEventListener('keydown', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            if(e.key==='Enter'){ e.preventDefault(); saveEditable(el); }
+          });
+          document.addEventListener('blur', e=>{
+            const el = e.target.closest('.editable'); if(!el) return;
+            if(el.getAttribute('contenteditable')==='true') saveEditable(el);
+          }, true);
+
+          // 啟用切換
+          document.addEventListener('change', async (e)=>{
+            const sw = e.target.closest('.is-active'); if(!sw) return;
+            const fd = new FormData();
+            fd.append('userId', sw.dataset.id);
+            fd.append('field', 'isActive');
+            fd.append('value', sw.checked ? 'true' : 'false');
+            const res = await fetch('/USER/Admins/UpdateField', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(!(res.ok && json.ok)){ alert(json.message || '更新失敗'); dt.ajax.reload(null, false); }
+          });
+
+          // 角色變更
+          document.addEventListener('change', async (e)=>{
+            const sel = e.target.closest('.role-select'); if(!sel) return;
+            const fd = new FormData();
+            fd.append('userId', sel.dataset.id);
+            fd.append('roleId', sel.value);
+            const res = await fetch('/USER/Admins/ChangeRole', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(!(res.ok && json.ok)){ alert(json.message || '變更角色失敗'); dt.ajax.reload(null, false); }
+          });
+
+          // 詳細：開啟並載入
+          document.addEventListener('click', async (e)=>{
+            const btn = e.target.closest('.btn-detail'); if(!btn) return;
+            const id = btn.dataset.id;
+            const res = await fetch(`/USER/Admins/Details?id=${encodeURIComponent(id)}`);
+            if(!res.ok){ alert('讀取詳細資料失敗'); return; }
+            const d = await res.json();
+
+            document.getElementById('det_id').value = d.id;
+            document.getElementById('det_number').value = d.number ?? '';
+            document.getElementById('det_lastName').value = d.lastName ?? '';
+            document.getElementById('det_firstName').value = d.firstName ?? '';
+            document.getElementById('det_email').value = d.email ?? '';
+            document.getElementById('det_phone').value = d.phoneNumber ?? '';
+            document.getElementById('det_gender').value = d.gender ?? 'N/A';
+            document.getElementById('det_birth').value = d.birthDate ?? '';
+            document.getElementById('det_addr').value = d.address ?? '';
+            document.getElementById('det_active').checked = !!d.isActive;
+            document.getElementById('det_roleId').value = d.roleId ?? '';
+
+            new bootstrap.Modal(document.getElementById('dlgDetails')).show();
+          });
+
+          // 詳細：儲存
+          document.getElementById('frmDetails').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            document.getElementById('det_active_hidden').value = document.getElementById('det_active').checked ? 'true' : 'false';
+            const fd = new FormData(e.target);
+            const res = await fetch('/USER/Admins/UpdateDetails', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+              bootstrap.Modal.getInstance(document.getElementById('dlgDetails')).hide();
+              dt.ajax.reload(null, false);
+            }else{
+              alert(json.message || '儲存失敗');
+            }
+          });
+
+          // 詳細：變更密碼（前端強度檢查）
+          function isStrong(pwd){ return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(pwd); }
+          document.getElementById('btnChangePwd').addEventListener('click', async ()=>{
+            const userId = document.getElementById('det_id').value;
+            const p1 = document.getElementById('pwd_new').value;
+            const p2 = document.getElementById('pwd_new2').value;
+            if(!p1 || !p2){ alert('請輸入新密碼並再次確認'); return; }
+            if(p1 !== p2){ alert('兩次輸入的密碼不一致'); return; }
+            if(!isStrong(p1)){ alert('密碼需至少 8 碼，並同時包含英文大寫、英文小寫與數字。'); return; }
+
+            const fd = new FormData(); fd.append('userId', userId); fd.append('newPassword', p1);
+            const res = await fetch('/USER/Admins/ChangePassword', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+              document.getElementById('pwd_new').value = '';
+              document.getElementById('pwd_new2').value = '';
+              alert('密碼已更新');
+            }else{
+              alert(json.message || '變更密碼失敗');
+            }
+          });
+
+          // 刪除
+          document.addEventListener('click', async (e)=>{
+            const btn = e.target.closest('.btn-del'); if(!btn) return;
+            if(!confirm('確定要刪除此員工？')) return;
+            const id = btn.dataset.id;
+            const fd = new FormData(); fd.append('userId', id);
+            const res = await fetch('/USER/Admins/Delete', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+              dt.ajax.reload(null, false);
+            }else{
+              alert(json.message || '刪除失敗');
+            }
+          });
+
+          // 新增員工
+          document.getElementById('frmCreate').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const form = e.target;
+            const fd = new FormData(form);
+            const res = await fetch('/USER/Admins/Create', {
+              method:'POST', body: fd,
+              headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+              credentials: 'same-origin'
+            });
+            const json = await res.json().catch(()=>({ ok:false }));
+            if(res.ok && json.ok){
+              bootstrap.Modal.getInstance(document.getElementById('dlgCreate')).hide();
+              form.reset();
+              dt.ajax.reload(null, false);
+            }else{
+              alert(json.message || '建立失敗');
+            }
+          });
+
+        });
+    </script>
+}

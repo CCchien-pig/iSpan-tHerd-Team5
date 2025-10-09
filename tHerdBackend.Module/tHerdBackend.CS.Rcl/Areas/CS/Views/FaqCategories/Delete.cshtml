@@ -1,0 +1,43 @@
+﻿@model tHerdBackend.Infra.Models.CsFaqCategory
+@{
+    ViewData["Title"] = "刪除分類";
+}
+
+<h1 class="mb-3">@ViewData["Title"]</h1>
+
+<div class="alert alert-warning">
+    <div class="d-flex">
+        <i class="fa-regular fa-circle-question fa-lg me-2"></i>
+        <div>
+            你確定要刪除 <strong>@Model.CategoryName</strong> 嗎？<br />
+            此動作無法復原。若分類被 FAQ 參照，將無法刪除。
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-2">分類名稱</dt>
+            <dd class="col-sm-10">@Model.CategoryName</dd>
+
+            <dt class="col-sm-2">上層分類</dt>
+            <dd class="col-sm-10">@Model.ParentCategory?.CategoryName ?? "（最上層）"</dd>
+
+            <dt class="col-sm-2">排序</dt>
+            <dd class="col-sm-10">@Model.OrderSeq</dd>
+
+            <dt class="col-sm-2">啟用</dt>
+            <dd class="col-sm-10">@(Model.IsActive ? "啟用" : "停用")</dd>
+        </dl>
+
+        <form asp-area="CS" asp-controller="FaqCategories" asp-action="Delete" method="post" class="mt-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CategoryId" />
+            <button type="submit" class="btn btn-danger">
+                <i class="fa-regular fa-trash-can"></i> 確認刪除
+            </button>
+            <a asp-area="CS" asp-controller="FaqCategories" asp-action="Index" class="btn btn-outline-secondary">取消</a>
+        </form>
+    </div>
+</div>

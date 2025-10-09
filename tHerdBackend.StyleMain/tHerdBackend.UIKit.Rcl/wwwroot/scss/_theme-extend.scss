@@ -1,0 +1,11 @@
+﻿// scss/_theme-extend.scss
+
+// 讓 :root 產生 --purple2 CSS 變數（Bootstrap 從 $colors 產生）
+$colors: map-merge( $colors, ("purple2": $purple2) );
+
+// 讓我們的 utilities 產生 .bg- / .text- / .bg-gradient- 類別（我們從 $theme-colors 產生）
+$theme-colors: map-merge( $theme-colors, ("purple2": $purple2) );
+
+:root {
+    --purple2-check: #{map-get($colors, "purple2")};
+}
