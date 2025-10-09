@@ -14,9 +14,13 @@
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
+<<<<<<< HEAD
     <PackageReference Include="EPPlus" Version="8.2.0" />
     <PackageReference Include="itext" Version="9.3.0" />
     <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
+=======
+    <PackageReference Include="itext" Version="9.3.0" />
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
   </ItemGroup>
 
   <ItemGroup>

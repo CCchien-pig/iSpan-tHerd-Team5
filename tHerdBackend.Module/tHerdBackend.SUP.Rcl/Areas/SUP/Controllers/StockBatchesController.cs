@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:FlexBackend.Module/FlexBackend.SUP.Rcl/Areas/SUP/Controllers/StockBatchesController.cs
 ﻿using DocumentFormat.OpenXml.Spreadsheet;
 using FlexBackend.Core.Abstractions;
@@ -14,12 +15,15 @@ using iText.Layout;
 using iText.Layout.Element;
 using Microsoft.AspNetCore.Http;
 =======
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 ﻿using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
+<<<<<<< HEAD
 >>>>>>> 09d840c6e28a35653ce74b7b38dee9e31c301282:tHerdBackend.Module/tHerdBackend.SUP.Rcl/Areas/SUP/Controllers/StockBatchesController.cs
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +31,11 @@ using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Globalization;
 using System.Text;
+=======
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 using System.Text.Json;
 using SupStockBatch = tHerdBackend.Infra.Models.SupStockBatch;
 using SupStockHistory = tHerdBackend.Infra.Models.SupStockHistory;
@@ -63,6 +72,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return View();
 		}
 
+<<<<<<< HEAD
 		// POST: /SUP/StockBatches/IndexJson
 		[HttpPost("SUP/StockBatches/IndexJson")]
 		public async Task<IActionResult> IndexJson(
@@ -70,6 +80,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			[FromForm] string expireFilter = null,
 			[FromForm] string startDate = null,
 			[FromForm] string endDate = null)
+=======
+		// POST: StockBatches/IndexJson
+		[HttpPost]
+		public async Task<IActionResult> IndexJson([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		{
 			try
 			{
@@ -93,7 +108,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 								SupplierId = b.SupplierId,
 
 								sb.StockBatchId,
+<<<<<<< HEAD
 								skuId = sku.SkuId,
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 								SkuCode = sku.SkuCode,
 								sb.BatchNumber,
 								sb.ExpireDate,
@@ -104,7 +122,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 								p.IsPublished,
 
 								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
+<<<<<<< HEAD
 								RevisedDate = sb.RevisedDate,
+=======
+								RevisedDate=sb.RevisedDate,
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 								// 非 null 排序欄位
 								SortDate = sb.RevisedDate ?? sb.CreatedDate,
 
@@ -126,6 +148,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 								//BatchStockStatus = sku.StockQty < sku.SafetyStockQty ? "danger" :
 								//   (sku.StockQty >= sku.SafetyStockQty && sku.StockQty < sku.ReorderPoint ? "low" : "normal"),
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 								// 規格陣列 群組 + 規格選項
 								Specifications = sb.Sku.SpecificationOptions
 									.OrderBy(o => o.OrderSeq)
@@ -159,6 +186,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					}
 				}
 
+<<<<<<< HEAD
 				// 建立日期篩選
 				if (DateTime.TryParse(startDate, out var sDate))
 				{
@@ -170,6 +198,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					var endOfDay = eDate.AddDays(1);
 					query = query.Where(x => x.CreatedDate != null && x.CreatedDate < endOfDay);
 				}
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
 				// 搜尋功能
 				if (!string.IsNullOrEmpty(searchValue))
@@ -213,7 +243,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					d.StockBatchId,
 					SkuCode = d.SkuCode ?? "",   // 保護 null
+<<<<<<< HEAD
 					skuId = d.skuId,
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 					d.BatchNumber,
 					//d.ExpireDate,
 					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
@@ -498,12 +531,20 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetBrands()
 		{
 			var brands = await _context.SupBrands
+<<<<<<< HEAD
 				//.Where(b => b.IsActive)
 				.Select(b => new
 				{
 					BrandId = b.BrandId,
 					BrandName = b.BrandName,
 					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
+=======
+				.Where(b => b.IsActive)
+				.Select(b => new
+				{
+					BrandId = b.BrandId,
+					BrandName = b.BrandName
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 				})
 				.ToListAsync();
 			return Ok(brands);
@@ -533,7 +574,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetSkusByProduct(int productId)
 		{
 			var skus = await _context.ProdProductSkus
+<<<<<<< HEAD
 				.Where(sku => sku.ProductId == productId)
+=======
+				.Where(sku => sku.ProductId == productId && sku.IsActive)
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 				.Select(sku => new
 				{
 					sku.SkuId,
@@ -553,8 +598,15 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Ok(skus);
 		}
 
+<<<<<<< HEAD
 		// 取得 SKU 詳細資訊 (選完 SKU 後自動帶入底下欄位)
 		[Route("SUP/StockBatches/GetSkuInfo")]
+=======
+
+		// 取得 SKU 詳細資訊 (選完 SKU 後自動帶入底下欄位)
+		// [HttpGet("skus/{skuId}")]
+		// /api/skus/{skuId}
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		[HttpGet]
 		public async Task<IActionResult> GetSkuInfo(int skuId)
 		{
@@ -583,7 +635,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 		// 取得異動類型 (僅回傳 Purchase / Adjust)
+<<<<<<< HEAD
 		// GET: /SUP/StockBatches/GetMovementTypes
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		[HttpGet]
 		public async Task<IActionResult> GetMovementTypes()
 		{
@@ -603,6 +658,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#endregion
 
+<<<<<<< HEAD
 		// POST： /SUP/StockBatches/GetAllStockHistory
 		[HttpPost("SUP/StockBatches/GetAllStockHistory")]
 		public async Task<IActionResult> GetAllStockHistory(
@@ -610,6 +666,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			[FromForm] string expireFilter = null,
 			[FromForm] string startDate = null,
 			[FromForm] string endDate = null)
+=======
+		[HttpPost]
+		public async Task<IActionResult> GetAllStockHistory([FromForm] string supplierId = null, [FromForm] string expireFilter = null)
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		{
 			// 1. DataTables 參數
 			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
@@ -659,6 +719,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					query = query.Where(x => x.ExpireDate.HasValue && x.ExpireDate.Value.Date < today);
 			}
 
+<<<<<<< HEAD
 			// RevisedDate 篩選
 			if (DateTime.TryParse(startDate, out var sDate))
 			{
@@ -671,6 +732,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				query = query.Where(x => x.RevisedDate < endOfDay);
 			}
 
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 			// 5. 搜尋
 			if (!string.IsNullOrEmpty(searchValue))
 			{
@@ -785,7 +848,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			public string Remark { get; set; }
 		}
 
+<<<<<<< HEAD
 		// POST: /SUP/StockBatches/Update
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		[HttpPost]
 		public async Task<JsonResult> Update(int id, StockBatchUpdateDto dto)
 		{
@@ -885,7 +951,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			});
 		}
 
+<<<<<<< HEAD
 		// POST: /SUP/StockBatches/UpdateHistoryRemark
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		[HttpPost]
 		public async Task<JsonResult> UpdateHistoryRemark(StockHistoryRemarkDto dto)
 		{
@@ -917,6 +986,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return _context.SupStockBatches.Any(e => e.StockBatchId == id);
 		}
 
+<<<<<<< HEAD
 		#region 匯入功能
 
 		// 下載匯入範例(.xlsx)
@@ -1729,6 +1799,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#endregion
 
+=======
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		#region 初始化所有 SKU 批號
 		[HttpPost]
 		[ValidateAntiForgeryToken]
@@ -1818,6 +1890,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 		#endregion
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 		/// <summary>
 		/// 到期報廢 (Expire)，自動 FIFO 扣庫
 		/// 不指定批號，AdjustStockAsync 會自動按 FIFO 扣庫
@@ -1881,6 +1958,34 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
+<<<<<<< HEAD
+=======
+		// GET:/SUP/StockBatches/OtherOperation
+		[HttpGet]
+		public IActionResult OtherOperation(string type)
+		{
+			try
+			{
+				var vm = new StockBatchContactViewModel();
+
+				// 判斷類型，給 PartialView 用
+				ViewBag.FormAction = type switch
+				{
+					"Sale" => "Sale",
+					"Return" => "Return",
+					"Expire" => "Expire",
+					_ => "Unknown"
+				};
+
+				return PartialView("~/Areas/SUP/Views/StockBatches/Partials/_StockBatchOtherPartial.cshtml", vm);
+			}
+			catch (Exception ex)
+			{
+				return Content("錯誤：" + ex.Message);
+			}
+		}
+
+>>>>>>> adb3991c4150f76a818be45485721a96e96f6f3d
 
 		#region 處理出庫 / 退貨
 		//前端只需傳：
