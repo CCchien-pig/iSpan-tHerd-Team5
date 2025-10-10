@@ -1,6 +1,6 @@
-﻿namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers
+﻿namespace tHerdBackend.Core.DTOs.SUP
 {
-	public class LogisticsDTO
+	public class LogisticsDto
 	{
 		/// <summary>
 		/// 主鍵

@@ -1,6 +1,6 @@
 ﻿namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers
 {
-	public class LogisticsRateRequestDTO
+	public class LogisticsRateRequestDto
 	{
 		public class CreateLogisticsRateRequest
 		{
