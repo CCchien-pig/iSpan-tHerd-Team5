@@ -11,6 +11,7 @@ using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
+using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
 
 namespace tHerdBackend.SharedApi
@@ -106,9 +107,13 @@ namespace tHerdBackend.SharedApi
 			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
 			builder.Services.AddFlexBackend(builder.Configuration);
 
-			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-			// Controllers & Swagger
-			builder.Services.AddControllers();
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            // Controllers & Swagger
+            builder.Services.AddControllers(options =>
+            {
+                options.Conventions.Add(new FolderBasedRouteConvention());
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {

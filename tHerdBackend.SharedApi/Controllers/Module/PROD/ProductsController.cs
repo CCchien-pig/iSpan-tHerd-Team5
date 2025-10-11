@@ -8,8 +8,8 @@ using tHerdBackend.Core.ValueObjects;
 namespace tHerdBackend.SharedApi.Controllers.Module.PROD
 {
 	[ApiController]
-	[Route("api/[controller]")]   // 統一為 /api/Products
-	public class ProductsController : ControllerBase
+    [Route("api/[folder]/[controller]")]   // 統一為 /api/prod/Products
+    public class ProductsController : ControllerBase
 	{
 		private readonly IProductListForApiService _service;  // 服務注入
 
@@ -22,7 +22,10 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// <summary>
         /// 前台：查詢產品清單 (支援關鍵字、分類、價格區間、分頁)
         /// </summary>
-		[AllowAnonymous]  // 不用 JWT，前台也能看
+        /// <param name="query">查詢條件</param>
+        /// <param name="ct">連線</param>
+        /// <returns></returns>
+        [AllowAnonymous]  // 不用 JWT，前台也能看
         [HttpGet("search")]
 		public async Task<IActionResult> SearchProducts(
 			[FromQuery] ProductFilterQueryDto query,
