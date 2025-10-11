@@ -1,0 +1,200 @@
+[
+  {
+    "StoreID": "POST80001",
+    "StoreName": "台北大安郵局",
+    "Address": "台北市大安區忠孝東路四段1號",
+    "Latitude": 25.041751,
+    "Longitude": 121.543123,
+    "Type": "中華郵政",
+    "Phone": "02-80001111"
+  },
+  {
+    "StoreID": "POST80002",
+    "StoreName": "新北三重郵局",
+    "Address": "新北市三重區三和路一段8號",
+    "Latitude": 25.068321,
+    "Longitude": 121.497845,
+    "Type": "中華郵政",
+    "Phone": "02-80002222"
+  },
+  {
+    "StoreID": "POST80003",
+    "StoreName": "桃園中壢郵局",
+    "Address": "桃園市中壢區中山路100號",
+    "Latitude": 24.9575,
+    "Longitude": 121.2268,
+    "Type": "中華郵政",
+    "Phone": "03-80003333"
+  },
+  {
+    "StoreID": "POST80004",
+    "StoreName": "台中西區郵局",
+    "Address": "台中市西區公益路200號",
+    "Latitude": 24.147736,
+    "Longitude": 120.660923,
+    "Type": "中華郵政",
+    "Phone": "04-80004444"
+  },
+  {
+    "StoreID": "POST80005",
+    "StoreName": "台南中西郵局",
+    "Address": "台南市中西區中正路1號",
+    "Latitude": 22.997617,
+    "Longitude": 120.212617,
+    "Type": "中華郵政",
+    "Phone": "06-80005555"
+  },
+  {
+    "StoreID": "POST80006",
+    "StoreName": "高雄三民郵局",
+    "Address": "高雄市三民區九如一路50號",
+    "Latitude": 22.639444,
+    "Longitude": 120.325003,
+    "Type": "中華郵政",
+    "Phone": "07-80006666"
+  },
+  {
+    "StoreID": "POST80007",
+    "StoreName": "基隆港郵局",
+    "Address": "基隆市仁愛區港西街10號",
+    "Latitude": 25.12825,
+    "Longitude": 121.741405,
+    "Type": "中華郵政",
+    "Phone": "02-80007777"
+  },
+  {
+    "StoreID": "POST80008",
+    "StoreName": "新竹市東大郵局",
+    "Address": "新竹市東區光復路二段500號",
+    "Latitude": 24.79654,
+    "Longitude": 120.996223,
+    "Type": "中華郵政",
+    "Phone": "03-80008888"
+  },
+  {
+    "StoreID": "POST80009",
+    "StoreName": "嘉義市西區郵局",
+    "Address": "嘉義市西區博愛路1號",
+    "Latitude": 23.480075,
+    "Longitude": 120.4378,
+    "Type": "中華郵政",
+    "Phone": "05-80009999"
+  },
+  {
+    "StoreID": "POST80010",
+    "StoreName": "新竹縣竹北郵局",
+    "Address": "新竹縣竹北市光明六路88號",
+    "Latitude": 24.833611,
+    "Longitude": 121.012222,
+    "Type": "中華郵政",
+    "Phone": "03-8001010"
+  },
+  {
+    "StoreID": "POST80011",
+    "StoreName": "苗栗竹南郵局",
+    "Address": "苗栗縣竹南鎮中正路200號",
+    "Latitude": 24.6821,
+    "Longitude": 120.8769,
+    "Type": "中華郵政",
+    "Phone": "037-800111"
+  },
+  {
+    "StoreID": "POST80012",
+    "StoreName": "彰化市郵局",
+    "Address": "彰化縣彰化市中正路100號",
+    "Latitude": 24.0685,
+    "Longitude": 120.5417,
+    "Type": "中華郵政",
+    "Phone": "04-8001212"
+  },
+  {
+    "StoreID": "POST80013",
+    "StoreName": "南投草屯郵局",
+    "Address": "南投縣草屯鎮中山路123號",
+    "Latitude": 23.9715,
+    "Longitude": 120.6857,
+    "Type": "中華郵政",
+    "Phone": "049-8001313"
+  },
+  {
+    "StoreID": "POST80014",
+    "StoreName": "雲林斗六郵局",
+    "Address": "雲林縣斗六市雲林路一段456號",
+    "Latitude": 23.7086,
+    "Longitude": 120.5439,
+    "Type": "中華郵政",
+    "Phone": "05-8001414"
+  },
+  {
+    "StoreID": "POST80015",
+    "StoreName": "嘉義縣民雄郵局",
+    "Address": "嘉義縣民雄鄉中樂路27號",
+    "Latitude": 23.5514,
+    "Longitude": 120.4322,
+    "Type": "中華郵政",
+    "Phone": "05-8001515"
+  },
+  {
+    "StoreID": "POST80016",
+    "StoreName": "屏東潮州郵局",
+    "Address": "屏東縣潮州鎮中山路80號",
+    "Latitude": 22.5515,
+    "Longitude": 120.5439,
+    "Type": "中華郵政",
+    "Phone": "08-8001616"
+  },
+  {
+    "StoreID": "POST80017",
+    "StoreName": "宜蘭冬山郵局",
+    "Address": "宜蘭縣冬山鄉中正路36號",
+    "Latitude": 24.6324,
+    "Longitude": 121.8,
+    "Type": "中華郵政",
+    "Phone": "03-8001717"
+  },
+  {
+    "StoreID": "POST80018",
+    "StoreName": "花蓮市郵局",
+    "Address": "花蓮縣花蓮市中山路1號",
+    "Latitude": 23.9729,
+    "Longitude": 121.6048,
+    "Type": "中華郵政",
+    "Phone": "03-8001818"
+  },
+  {
+    "StoreID": "POST80019",
+    "StoreName": "台東市郵局",
+    "Address": "台東縣台東市更生北路200號",
+    "Latitude": 22.7553,
+    "Longitude": 121.1459,
+    "Type": "中華郵政",
+    "Phone": "089-8001919"
+  },
+  {
+    "StoreID": "POST80020",
+    "StoreName": "澎湖馬公郵局",
+    "Address": "澎湖縣馬公市中正路2號",
+    "Latitude": 23.565537,
+    "Longitude": 119.563103,
+    "Type": "中華郵政",
+    "Phone": "06-8002020"
+  },
+  {
+    "StoreID": "POST80021",
+    "StoreName": "金門金城郵局",
+    "Address": "金門縣金城鎮民權路65號",
+    "Latitude": 24.4297,
+    "Longitude": 118.3171,
+    "Type": "中華郵政",
+    "Phone": "082-8002121"
+  },
+  {
+    "StoreID": "POST80022",
+    "StoreName": "連江南竿郵局",
+    "Address": "連江縣南竿鄉復興村100號",
+    "Latitude": 26.16,
+    "Longitude": 119.9517,
+    "Type": "中華郵政",
+    "Phone": "0836-800222"
+  }
+]
