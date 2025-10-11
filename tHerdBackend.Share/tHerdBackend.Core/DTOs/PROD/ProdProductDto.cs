@@ -142,10 +142,15 @@ public partial class ProdProductDto
 
 	public string FormateRevisedDate => DateTimeHelper.ToDateTimeString(RevisedDate);
 
-	/// <summary>
-	/// 主分類簡碼
-	/// </summary>
-	public string ProductTypeCode { get; set; } = string.Empty;
+    /// <summary>
+    /// 主分類編號
+    /// </summary>
+    public int? ProductTypeId { get; set; }
+
+    /// <summary>
+    /// 主分類簡碼
+    /// </summary>
+    public string ProductTypeCode { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 商品狀態標籤
@@ -195,6 +200,11 @@ public partial class ProdProductDto
 	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
 
 	public List<ProductImageDto>? Images { get; set; } = new();
+
+    /// <summary>
+    /// 計算總數
+    /// </summary>
+    public int TotalCount { get; set; }
 }
 
 public class ProductImageDto
