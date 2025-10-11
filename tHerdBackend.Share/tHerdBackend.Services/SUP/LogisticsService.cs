@@ -15,5 +15,9 @@ namespace tHerdBackend.Services.SUP
 
 		public async Task<LogisticsDto?> GetByIdAsync(int id)
 			=> await _repository.GetByIdAsync(id);
+
+		public async Task<List<LogisticsDto>> GetActiveAsync()
+			=> await _repository.GetActiveAsync();
+
 	}
 }

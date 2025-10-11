@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Interfaces.SUP;
 
@@ -29,6 +30,22 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		// GET /api/Logistics/active
+		[HttpGet("active")]
+		public async Task<IActionResult> GetActiveLogistics()
+		{
+			try
+			{
+				var list = await _service.GetActiveAsync();
+				return Ok(list);
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = ex.Message });
+			}
+		}
+
+
 		[HttpGet("{id}")]
 		public async Task<IActionResult> Get(int id)
 		{
@@ -44,6 +61,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				return StatusCode(500, new { success = false, message = ex.Message });
 			}
 		}
+
+
 	}
 
 }

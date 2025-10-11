@@ -49,6 +49,24 @@ namespace tHerdBackend.Infra.Repository.SUP
 				})
 				.FirstOrDefaultAsync();
 		}
+		public async Task<List<LogisticsDto>> GetActiveAsync()
+		{
+			return await _context.SupLogistics
+				.AsNoTracking()
+				.Where(l => l.IsActive)
+				.Select(l => new LogisticsDto
+				{
+					LogisticsId = l.LogisticsId,
+					ShippingMethod = l.ShippingMethod,
+					LogisticsName = l.LogisticsName,
+					IsActive = l.IsActive,
+					Creator = l.Creator,
+					CreatedDate = l.CreatedDate,
+					Reviser = l.Reviser,
+					RevisedDate = l.RevisedDate
+				})
+				.ToListAsync();
+		}
 
 	}
 }

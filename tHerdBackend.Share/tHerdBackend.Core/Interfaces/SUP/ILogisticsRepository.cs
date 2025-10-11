@@ -6,5 +6,7 @@ namespace tHerdBackend.Core.Interfaces.SUP
 	{
 		Task<List<LogisticsDto>> GetAllAsync();
 		Task<LogisticsDto?> GetByIdAsync(int id);
+		Task<List<LogisticsDto>> GetActiveAsync();
+
 	}
 }
