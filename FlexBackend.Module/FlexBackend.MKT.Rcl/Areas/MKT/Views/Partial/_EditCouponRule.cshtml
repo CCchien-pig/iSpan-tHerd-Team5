@@ -49,67 +49,89 @@
 <script>
     $(document).ready(function () {
         // 載入所有規則
-        $.get('/MKT/Coupons/GetActiveRules', function (rules) {
-            var $select = $("#editDefaultCondition");
-            rules.forEach(function (r) {
-                $select.append('<option value="' + r.ruleId + '">' + r.defaultCondition + '</option>');
-            });
-        });
+    $.get('/MKT/Coupons/GetActiveRules', function (rules) {
+        var $select = $("#editDefaultCondition");
+        $select.empty().append('<option value="">請選擇欲修改的使用門檻</option>');
 
-        // 選擇 DefaultCondition 後自動帶入資料
+            rules.forEach(function (r) {
+        var id = r.RuleId ?? r.ruleId;
+        var type = r.CouponType ?? r.couponType;
+        var cond = r.DefaultCondition ?? r.defaultCondition;
+
+        var text = "";
+        if (type === "pmd") {
+            text = "單筆金額滿 " + cond + " 元";
+        } else if (type === "ppd") {
+            text = "點數回饋 " + cond + "%";
+        } else {
+            text = cond;
+        }
+
+        $("#editDefaultCondition").append(
+            '<option value="' + id +
+            '" data-defaultcondition="' + cond +
+            '" data-coupontype="' + type + '">' + text + '</option>'
+        );
+    });
+
+
+    });
+
+    // 選擇後自動帶入
         $("#editDefaultCondition").on("change", function () {
-            var ruleId = $(this).val();
-            if (!ruleId) {
-                $("#editRuleId").val("");
-                $("#editDescription").prop("readonly", true).val("");
-                $("#editIsActive").prop("disabled", true).prop("checked", false);
+        var ruleId = $(this).val(); // 🚀 這裡就是 RuleId
+        if (!ruleId) {
+            $("#editRuleId").val("");
+            $("#editDescription").prop("readonly", true).val("");
+            $("#editIsActive").prop("disabled", true).prop("checked", false);
+            return;
+        }
+
+        $("#editRuleId").val(ruleId);
+
+        $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (res) {
+            if (!res || res.success === false) {
+                Swal.fire("錯誤", res.message || "無法取得規則資料", "error");
                 return;
             }
 
-            $("#editRuleId").val(ruleId);
-
-                $.get('/MKT/Coupons/GetRuleById?id=' + ruleId, function (res) {
-                if (!res || res.success === false) {
-                    Swal.fire("錯誤", res.message || "無法取得規則資料", "error");
-                    return;
-                }
-
-                $("#editDescription").prop("readonly", false).val(res.description || "");
-                $("#editIsActive").prop("disabled", false).prop("checked", res.isActive === true || res.isActive === 1);
-            }).fail(function () {
-                Swal.fire("錯誤", "伺服器發生錯誤", "error");
-            });
-
+            $("#editDescription").prop("readonly", false).val(res.Description || "");
+            $("#editIsActive").prop("disabled", false).prop("checked", res.IsActive === true || res.IsActive === 1);
+        }).fail(function () {
+            Swal.fire("錯誤", "伺服器發生錯誤", "error");
         });
+    });
 
-        // 儲存變更
-        $("#updateRuleBtn").click(function () {
-            var data = {
-                RuleId: $("#editRuleId").val(),
-                CouponType: $("input[name='CouponType']").val(),
-                DefaultCondition: $("#editDefaultCondition option:selected").text(),
-                Description: $("#editDescription").val().trim(),
-                IsActive: $("#editIsActive").is(":checked")
-            };
 
-            $.ajax({
-                url: '/MKT/Coupons/EditRule',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function (res) {
-                    if (res.success) {
-                        Swal.fire("成功", "優惠規則已更新！", "success").then(() => {
-                            $("#couponRuleModal").modal("hide");
-                            if (typeof loadRules === "function") loadRules("#editRuleId");
-                        });
-                    } else Swal.fire("錯誤", res.message, "error");
-                },
-                error: function () {
-                    Swal.fire("錯誤", "更新失敗", "error");
-                }
-            });
+    // 儲存變更
+    $("#updateRuleBtn").click(function () {
+        var data = {
+            RuleId: $("#editRuleId").val(),
+            CouponType: $("input[name='CouponType']").val(),
+            DefaultCondition: $("#editDefaultCondition").val(), // ← 拿數字，不是字串
+            Description: $("#editDescription").val().trim(),
+            IsActive: $("#editIsActive").is(":checked")
+        };
+
+        $.ajax({
+            url: '/MKT/Coupons/EditRule',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire("成功", "優惠規則已更新！", "success").then(() => {
+                        $("#couponRuleModal").modal("hide");
+                        if (typeof loadRules === "function") loadRules("#editRuleId");
+                    });
+                } else Swal.fire("錯誤", res.message, "error");
+            },
+            error: function () {
+                Swal.fire("錯誤", "更新失敗", "error");
+            }
         });
+    });
+
 
         // 刪除規則
         $("#deleteRuleBtn").click(function () {
