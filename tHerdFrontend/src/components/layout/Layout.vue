@@ -8,10 +8,12 @@
   <!-- 主布局容器 - 使用Flexbox垂直布局 -->
   <div class="d-flex flex-column min-vh-100">
     <!-- 頂部促銷橫幅 -->
-    <PromoBanner />
+    <!-- <PromoBanner /> -->
 
     <!-- 主要Header - 包含Logo、搜索、用戶操作 -->
+     <header>
     <AppHeader />
+     </header>
 
     <!-- 導航欄 - 主要導航菜單 -->
     <AppNavigation />
@@ -20,7 +22,7 @@
     <SitePromoBanner />
 
     <!-- 麵包屑導航 - 頁面路徑導航 -->
-    <BreadcrumbNav />
+    <!-- <BreadcrumbNav /> -->
 
     <!-- 主要內容區域 - 頁面內容插槽 -->
     <main class="flex-fill py-4">
@@ -74,4 +76,10 @@ export default {
 
 <style scoped>
 /* 使用Bootstrap類，無需自定義CSS */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1050; /* 讓它浮在上層，不會被內容蓋住 */
+}
+
 </style>
