@@ -4,8 +4,7 @@ using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Interfaces.SYS;
-using System.Formats.Asn1;
-using System.Globalization;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Services.PROD
 {
@@ -166,11 +165,12 @@ namespace tHerdBackend.Services.PROD
         /// 商品基本資料清單
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<ProdProductDto>> GetAllAsync()
+        public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
+            ProductFilterQueryDto query, CancellationToken ct = default)
         {
             try
             {
-                return await _repo.GetAllAsync();
+                return await _repo.GetAllAsync(query, ct);
             }
             catch (Exception ex)
             {

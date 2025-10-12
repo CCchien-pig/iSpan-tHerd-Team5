@@ -1,5 +1,6 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
 
@@ -9,6 +10,9 @@ namespace tHerdBackend.Services.PROD
 	{
         private readonly IProdProductRepository _repo;
 
+        // 伺服器端「單頁最大筆數」卡控
+        private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
+
         public ProductListForApiService(IProdProductRepository repo)
         {
             _repo = repo;
@@ -17,76 +21,35 @@ namespace tHerdBackend.Services.PROD
         /// <summary>
         /// 前台: 依傳入條件，取得產品清單
         /// </summary>
-        /// <param name="ct"></param>
+        /// <param name="query">查詢條件</param>
+        /// <param name="ct">連線</param>
         /// <returns></returns>
-        public async Task<PagedResult<ProdProductDto>> GetFrontProductListAsync(ProductFilterQueryDto query, CancellationToken ct = default)
+        public async Task<PagedResult<ProdProductDto>> GetFrontProductListAsync(
+            ProductFilterQueryDto query, CancellationToken ct = default)
         {
-			// 查詢商品基本資料
-			var list = await _repo.GetAllAsync(ct);
+            try
+            {
+                // 參數防呆 + 卡控
+                var pageIndex = Math.Max(1, query.PageIndex);
+                var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
 
-			// 判斷是否有資料
-			if (list == null || !list.Any())
-				return new PagedResult<ProdProductDto>
-				{
-					TotalCount = 0,
-					PageIndex = query.PageIndex,
-					PageSize = query.PageSize,
-					Items = new List<ProdProductDto>()
-				};
+                // 查詢商品基本資料
+                var (list, total) = await _repo.GetAllAsync(query, ct);
 
-			// === 1. 條件篩選 ===
-			var filtered = list.AsQueryable();
-
-			if (string.IsNullOrWhiteSpace(query.Keyword) == false)
-				filtered = filtered.Where(x => x.ProductName.Contains(query.Keyword));
-
-			if (string.IsNullOrWhiteSpace(query.ProductTypeCode) == false)
-				filtered = filtered.Where(x => x.ProductTypeCode == query.ProductTypeCode);
-
-			if (query.BrandId.HasValue)
-				filtered = filtered.Where(x => x.BrandId == query.BrandId);
-
-			if (query.MinPrice.HasValue)
-				filtered = filtered.Where(x => x.UnitPrice >= query.MinPrice);
-
-			if (query.MaxPrice.HasValue)
-				filtered = filtered.Where(x => x.UnitPrice <= query.MaxPrice);
-
-			// === 2. 排序 ===
-			filtered = query.SortBy switch
-			{
-				"price" when query.SortDesc => filtered.OrderByDescending(x => x.UnitPrice),
-				"price" => filtered.OrderBy(x => x.UnitPrice),
-				"name" when query.SortDesc => filtered.OrderByDescending(x => x.ProductName),
-				"name" => filtered.OrderBy(x => x.ProductName),
-				_ => filtered.OrderBy(x => x.ProductId)
-			};
-
-			// === 3. 分頁 ===
-			int total = filtered.Count();
-			var items = filtered
-				.Skip((query.PageIndex - 1) * query.PageSize)
-				.Take(query.PageSize)
-				.Select(x => new ProdProductDto
-				{
-					ProductId = x.ProductId,
-					ProductName = x.ProductName,
-					ImageUrl = x.ImageUrl,
-					Badge = x.Badge,
-					ListPrice = x.ListPrice,
-					UnitPrice = x.UnitPrice,
-					SalePrice = x.SalePrice
-				})
-				.ToList();
-
-			// === 4. 組裝結果 ===
-			return new PagedResult<ProdProductDto>
-			{
-				TotalCount = total,
-				PageIndex = query.PageIndex,
-				PageSize = query.PageSize,
-				Items = items
-			};
-		}
+                // 回傳分頁結果
+                return new PagedResult<ProdProductDto>
+                {
+                    TotalCount = total,
+                    PageIndex = query.PageIndex,
+                    PageSize = query.PageSize,
+                    Items = list?.ToList() ?? [] // 若 list 是 null，就給空集合
+                };
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
     }
 }
