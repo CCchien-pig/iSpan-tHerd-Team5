@@ -20,7 +20,7 @@
               <!-- 品牌 A-Z nav-link 本身 -->
               <router-link v-if="item.name === '品牌 A-Z'"
                           to="#"
-                          class="nav-link text-success fw-medium rounded-pill"
+                          class="nav-link fw-medium rounded-pill"
                           :class="{ active: showBrands }"
                           style="cursor: pointer;"
                           @click.prevent>
@@ -30,9 +30,12 @@
               <!-- 其他項目 -->
               <router-link v-else
                           :to="item.path"
-                          class="nav-link text-success fw-medium rounded-pill"
+                          class="nav-link fw-medium rounded-pill d-flex align-items-center gap-2"
                           :class="{ active: $route.path.startsWith(item.path) }">
+                 <img v-if="item.icon" :src="item.icon" alt="" class="nav-icon">
+                 <span>
                 {{ item.name }}
+                 </span>
               </router-link>
 
               <!-- ✅ Mega Menu 獨立出來，不要包在 nav-link 裡 -->
@@ -87,14 +90,14 @@ export default {
       // 導航項目列表 - 包含產品分類和功能頁面
       // TODO: 更新為API數據或是寫成正確的導航項目
       navigationItems: [
-        { name: '補充劑', path: '/supplements' },
-        { name: '運動營養', path: '/sports-nutrition' },
-        { name: '沐浴', path: '/bath' },
-        { name: '美容美妝', path: '/beauty' },
-        { name: '食品百貨', path: '/grocery' },
-        { name: '健康家居', path: '/healthy-home' },
-        { name: '嬰童用品', path: '/baby-kids' },
-        { name: '寵物用品', path: '/pet-supplies' },
+        { name: '補充劑', path: '/supplements',icon: "/homePageIcon/supplement.png"},
+        { name: '運動營養', path: '/sports-nutrition',icon: "/homePageIcon/sport.png" },
+        { name: '沐浴', path: '/bath',icon: "/homePageIcon/bath.png" },
+        { name: '美容美妝', path: '/beauty',icon: "/homePageIcon/makeup.png" },
+        { name: '食品百貨', path: '/grocery',icon: "/homePageIcon/food.png" },
+        { name: '健康家居', path: '/healthy-home',icon: "/homePageIcon/health.png" },
+        { name: '嬰童用品', path: '/baby-kids',icon: "/homePageIcon/baby.png" },
+        { name: '寵物用品', path: '/pet-supplies',icon: "/homePageIcon/pet.png" },
         { name: '品牌 A-Z', path: '/brands' },
         { name: '健康主題', path: '/health-topics' },
         { name: '特惠', path: '/specials' },
@@ -142,7 +145,7 @@ export default {
 }
 
 .nav-link {
-  color: #28a745 !important;
+  color: rgb(0,112,131) !important;
   transition: all 0.3s ease;
 }
 
@@ -155,6 +158,13 @@ export default {
   background-color: #28a745;
   color: white !important;
 }
+
+.nav-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
 
 @media (max-width: 768px) {
   .nav {

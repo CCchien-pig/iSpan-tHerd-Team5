@@ -15,13 +15,13 @@
             to="/"
             class="navbar-brand text-white text-decoration-none"
           >
-            <h3 class="mb-0 fw-bold">tHerd</h3>
+            <h3 class="mb-0 fw-bold"><img src="../../../public/homePageIcon/tHerd-header.png" alt="" class="img-fluid w-100 h-100"></h3>
           </router-link>
         </div>
 
         <!-- 搜索欄 -->
         <div class="col-md-6">
-          <div class="search-container position-relative">
+          <div class="search-container position-relative ">
             <input
               type="text"
               class="form-control form-control-lg rounded-pill pe-5"
@@ -30,7 +30,7 @@
               @keyup.enter="handleSearch"
             />
             <button
-              class="btn btn-outline-light position-absolute top-50 end-0 translate-middle-y me-2 rounded-circle d-flex align-items-center justify-content-center"
+              class="btn btn-outline-primary position-absolute top-50 end-0 translate-middle-y me-2 rounded-circle d-flex align-items-center justify-content-center"
               style="width: 40px; height: 40px"
               @click="handleSearch"
             >
@@ -45,12 +45,12 @@
             <!-- 用戶登入 -->
             <div class="dropdown">
               <button
-                class="btn btn-outline-light btn-sm dropdown-toggle"
+                class="btn btn-lg dropdown-toggle main-color-green"
                 type="button"
                 data-bs-toggle="dropdown"
               >
-                <i class="bi bi-person me-1"></i>
-                登入
+                <i class="bi bi-person me-1 main-color-white-text"></i>
+                <span class="main-color-white-text">登入</span>
               </button>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#">登入</a></li>
@@ -61,9 +61,9 @@
             </div>
 
             <!-- 購物車 -->
-            <button class="btn btn-outline-light btn-sm position-relative">
-              <i class="bi bi-cart3 me-1"></i>
-              購物車
+            <button class="btn btn-lg position-relative main-color-green">
+              <i class="bi bi-cart3 me-1 main-color-white-text"></i>
+              <span class="main-color-white-text">購物車</span>
               <span
                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
               >
