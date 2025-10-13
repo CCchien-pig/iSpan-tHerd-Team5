@@ -20,11 +20,16 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		// GET: Products/Index
 		public async Task<IActionResult> Index()
         {
-            var products = await _repo.GetAllAsync();
+            var query = new ProductFilterQueryDto
+            {
+                PageIndex = 1,
+                PageSize = 100 // 一次載入 1000 筆（自行調整）
+            };
+            var (list, total) = await _repo.GetAllAsync(query);
 
             //var products = await _qrepo.GetAllProductQueryListAsync(1000);
             await GetData();
-            return View(products);
+            return View(list);
         }
 
         // 取得品牌選項
