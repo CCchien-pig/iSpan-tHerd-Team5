@@ -12,7 +12,7 @@ onMounted(async () => {
   loading.value = true
   try {
     // 取得全部啟用中物流商資料（用 baseAddress 組成完整 API 路徑）
-    const res = await axios.get(`${baseAddress}/api/Logistics/active`)
+    const res = await axios.get(`${baseAddress}/api/sup/Logistics/active`)
     logisticsList.value = res.data
   } catch (err) {
     error.value = '載入失敗: ' + (err?.response?.data?.message || err.message)

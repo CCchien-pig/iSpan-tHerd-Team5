@@ -14,6 +14,8 @@ namespace tHerdBackend.Services.SUP
 
 			services.AddScoped<ILogisticsService, LogisticsService>();
 			services.AddScoped<ILogisticsRateService, LogisticsRateService>();
+			services.AddAntiforgery();
+
 
 			// 註冊 Repository
 			services.AddScoped<ILogisticsRepository, LogisticsRepository>();

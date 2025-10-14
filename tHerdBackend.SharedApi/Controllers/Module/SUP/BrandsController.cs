@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/[folder]/[controller]")]
 	public class BrandsController : ControllerBase
 	{
 		private readonly IBrandService _service;
@@ -15,6 +15,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			_service = service;
 		}
 
+		//GET /api/sup/Brands
 		[HttpGet]
 		public async Task<IActionResult> GetAllBrands()
 		{
@@ -29,6 +30,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		//GET /api/sup/Brands/{id}
 		[HttpGet("{id}")]
 		public async Task<IActionResult> GetByBrandId(int id)
 		{
@@ -45,6 +47,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		//GET /api/sup/Brands/Active
 		[HttpGet("Active")]
 		public async Task<IActionResult> GetActiveBrands()
 		{
@@ -59,6 +62,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		//GET /api/sup/Brands/ActiveDiscount
 		[HttpGet("ActiveDiscount")]
 		public async Task<IActionResult> GetActiveDiscountBrands()
 		{
@@ -73,6 +77,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		//GET /api/sup/Brands/ActiveFeatured
 		[HttpGet("ActiveFeatured")]
 		public async Task<IActionResult> GetActiveFeaturedBrands()
 		{
@@ -87,6 +92,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		//GET /api/sup/Brands/LikeCount/{id}
 		[HttpGet("LikeCount/{id}")]
 		public async Task<IActionResult> GetBrandLikeCount(int id)
 		{

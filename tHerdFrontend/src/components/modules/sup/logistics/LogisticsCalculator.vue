@@ -15,7 +15,7 @@ const rates = ref([])
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await axios.get(`${baseAddress}/api/Logistics`)
+    const { data } = await axios.get(`${baseAddress}/api/sup/Logistics`)
     logisticsList.value = data
   } catch (err) {
     error.value = '物流商載入失敗: ' + (err?.response?.data?.message || err.message)
@@ -31,7 +31,7 @@ watch(selectedMethod, async (val) => {
   rateLoading.value = true
   try {
     const { data } = await axios.get(
-      `${baseAddress}/api/LogisticsRate/bylogistics/${val.logisticsId}`,
+      `${baseAddress}/api/sup/LogisticsRate/bylogistics/${val.logisticsId}`,
     )
     rates.value = data
   } catch (err) {

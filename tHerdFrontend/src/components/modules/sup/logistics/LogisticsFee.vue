@@ -13,7 +13,7 @@ const error = ref('')
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await axios.get(`${baseAddress}/api/Logistics`)
+    const { data } = await axios.get(`${baseAddress}/api/sup/Logistics`)
     logisticsList.value = data
   } catch (err) {
     error.value = '物流商載入失敗: ' + (err?.response?.data?.message || err.message)
@@ -27,7 +27,7 @@ function isOpen(id) {
 }
 async function fetchRates(id) {
   if (ratesMap.value[id]) return
-  const { data } = await axios.get(`${baseAddress}/api/LogisticsRate/bylogistics/${id}`)
+  const { data } = await axios.get(`${baseAddress}/api/sup/LogisticsRate/bylogistics/${id}`)
   ratesMap.value[id] = data
 }
 function toggle(id) {
