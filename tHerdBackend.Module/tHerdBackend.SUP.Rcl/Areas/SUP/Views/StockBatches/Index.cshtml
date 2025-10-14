@@ -19,38 +19,79 @@
 <span id="initResult" style="margin-left:10px;"></span>  *@
 
 <!-- 主庫存表格*2區塊 (.stockbatch-card) -->
-<div class="stockbatch-card">
+<div class="card stockbatch-card">
     <!-- 庫存紀錄 stockBatchTable -->
     <div id="stockTableWrapper">
         <div class="d-flex align-items-center mb-2">
+            <!-- 第一排：按鈕 -->
             <div class="btn-group me-2">
+                <!-- 庫存操作 -->
                 <button id="createStockBatchBtn" class="btn btn-outline-success">庫存操作</button>
-                <button id="importStockBatchBtn" class="btn btn-outline-primary">匯入Excel</button>
-                <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                    匯出
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
-                    <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
-                    <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
-                </ul>
+
+                <!-- 匯入下拉 -->
+                <div class="btn-group">
+                    <button id="importDropdownBtn" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                        匯入
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" id="downloadTemplateExcel">下載Excel匯入範例</a></li>
+                        <li><a class="dropdown-item" id="downloadTemplateCsv">下載CSV匯入範例</a></li>
+                        <li><a class="dropdown-item" id="importStockBatchExcel">匯入 Excel (.xlsx,.xls)</a></li>
+                        <li><a class="dropdown-item" id="importStockBatchCSV">匯入 CSV (.csv)</a></li>
+                    </ul>
+                </div>
+                <!-- 隱藏的檔案選擇器 -->
+                <input type="file" id="fileInputExcel" accept=".xlsx,.xls" style="display:none" />
+                <input type="file" id="fileInputCsv" accept=".csv" style="display:none" />
+
+                <!-- 匯出下拉 -->
+                <div class="btn-group">
+                    <button id="exportStockBatchBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        匯出
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" id="exportStockCsv">CSV</a></li>
+                        <li><a class="dropdown-item" id="exportStockExcel">Excel</a></li>
+                        <li><a class="dropdown-item" id="exportStockPdf">PDF</a></li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="legend">
+            <!-- 標示圖例 -->
+            <div class="legend ms-auto">
                 <span><span class="dot danger"></span> 危險（低於安全庫存）</span>
                 <span><span class="dot low"></span> 須補貨（低於再訂購點）</span>
             </div>
         </div>
 
-        <div class="d-flex mb-2">
-            <select id="stockExpireFilter" class="form-select form-select-sm me-2">
-                <option value="">全部</option>
-                <option value="valid" selected>未過期</option>
-                <option value="expired">已過期</option>
-            </select>
+        <!-- 第二排：篩選 -->
+        <div class="row mb-2">
+            <!-- 過期篩選 -->
+            <div class="col-12 col-md-4">
+                <label for="stockExpireFilter" class="form-label" style="margin-bottom:2px; padding-left:6px;">過期與否篩選</label>
+                <select id="stockExpireFilter" class="form-select form-select-sm">
+                    <option value="">全部</option>
+                    <option value="valid" selected>未過期</option>
+                    <option value="expired">已過期</option>
+                </select>
+            </div>
+
+            <!-- 中間空白 -->
+            <div class="d-none d-md-block col-md-4"></div>
+
+            <!-- 日期區間 -->
+            <div class="col-12 col-md-4">
+                <label class="form-label" style="margin-bottom:2px;padding-left:6px;">篩選建立日期</label>
+                <div class="input-group input-group-sm">
+                    <input type="date" id="startDate" class="form-control" />
+                    <span class="input-group-text bg-white">~</span>
+                    <input type="date" id="endDate" class="form-control" />
+                </div>
+            </div>
         </div>
 
-        <table id="stockBatchTable" class="display" style="width:100%">
+        <!-- DataTable -->
+        <table id="stockBatchTable" class="display table rounded-0 " style="width:100%">
             <thead>
                 <tr>
                     <th>#</th> <!-- 序號欄 -->
@@ -72,9 +113,10 @@
 
     <!-- 異動紀錄 historyTable -->
     <div id="historyTableWrapper" style="display:none;">
+        <!-- 第一排：匯出按鈕 -->
         <div class="d-flex align-items-center mb-2">
             <div class="btn-group me-2">
-                <button id="exportHistoryBtn" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <button id="exportHistoryBtn" class="btn btn-outline-secondary  dropdown-toggle" data-bs-toggle="dropdown" style="border-color:#a349a4; color:#a349a4;">
                     匯出
                 </button>
                 <ul class="dropdown-menu">
@@ -83,15 +125,39 @@
                     <li><a class="dropdown-item" id="exportHistoryPdf">PDF</a></li>
                 </ul>
             </div>
-
-            <select id="historyExpireFilter" class="form-select form-select-sm">
-                <option value="">全部</option>
-                <option value="valid">未過期</option>
-                <option value="expired">已過期</option>
-            </select>
         </div>
 
-        <table id="historyTable" class="display" style="width:100%">
+        <!-- 第二排：篩選 -->
+        <div class="row mb-2">
+            <!-- 過期篩選 -->
+            <div class="col-12 col-md-4">
+                <label for="historyExpireFilter" class="form-label" style="margin-bottom:2px; padding-left:6px;">過期與否篩選</label>
+                <select id="historyExpireFilter" class="form-select form-select-sm">
+                    <option value="">全部</option>
+                    <option value="valid" selected>未過期</option>
+                    <option value="expired">已過期</option>
+                </select>
+            </div>
+
+            <!-- 中間空白 -->
+            <div class="d-none d-md-block col-md-4"></div>
+
+            <!-- 日期區間 -->
+            <div class="col-12 col-md-4 d-flex align-items-end">
+                <div class="me-1" style="flex:1">
+                    <label for="historyStartDate" class="form-label" style="margin-bottom:2px;padding-left:6px;">篩選最後異動日期</label>
+                    <input type="date" id="historyStartDate" class="form-control form-control-sm" />
+                </div>
+                <div class="px-1" style="padding-bottom: 4px;">~</div>
+                <div class="ms-1" style="flex:1">
+                    <label for="historyEndDate" class="form-label" style="margin-bottom:2px;padding-left:6px;">EndDate</label>
+                    <input type="date" id="historyEndDate" class="form-control form-control-sm" />
+                </div>
+            </div>
+        </div>
+
+        <!-- DataTable -->
+        <table id="historyTable" class="display table" style="width:100%">
             <thead>
                 <tr>
                     <th>SKU</th>
@@ -232,8 +298,24 @@
 
             // ---------- 取得品牌列表 ----------
             $.get('/SUP/StockBatches/GetBrands', function(brands) {
+                // console.log('回傳brands:', brands);
+                brandSelect.empty().append('<option value="">請選品牌</option>');
+
                 brands.forEach(b => {
-                    brandSelect.append(`<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>${b.brandName}</option>`);
+                    // 判斷供應商是否啟用
+                    if(b.isSupplierActive) {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.brandName}
+                            </option>`
+                        );
+                    } else {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" disabled style="color:gray;">
+                                ${b.brandName} (其供應商未啟用)
+                            </option>`
+                        );
+                    }
                 });
                 if(selectedBrandId) brandSelect.trigger('change');
             });
@@ -242,12 +324,15 @@
             brandSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var brandId = $(this).val();
+                console.log('已選擇品牌Id:', brandId);
+
                 if(!brandId) {
                     productSelect.empty().append('<option value="">請選商品</option>').prop('disabled', true);
                     skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                     return;
                 }
                 $.get('/SUP/StockBatches/GetProductsByBrand', { brandId: brandId }, function(products) {
+                    // console.log('回傳products:', products);
                     productSelect.empty().append('<option value="">請選商品</option>');
                     products.forEach(p => {
                         productSelect.append(`<option value="${p.productId}" ${p.productId == selectedProductId ? 'selected' : ''}>${p.productName}</option>`);
@@ -261,10 +346,17 @@
             productSelect.off('change').on('change', function() {
                 resetStockInfo();
                 var productId = $(this).val();
+                console.log('已選擇商品Id:', productId);
+
                 skuSelect.empty().append('<option value="">請選 SKU</option>').prop('disabled', true);
                 if (!productId) return;
 
                 $.get('/SUP/StockBatches/GetSkusByProduct', { productId: productId }, function(skus) {
+                    console.log('回傳skus:', skus);
+                    if(!skus || skus.length === 0) {
+                        skuSelect.empty().append('<option value="">沒有 SKU</option>');
+                        return;
+                    }
                     skus.forEach(sku => {
                         skuSelect.append(`<option value="${sku.skuId}" ${sku.skuId == selectedSkuId ? 'selected' : ''}>${sku.skuCode}</option>`);
                     });
@@ -276,9 +368,12 @@
             // ---------- SKU change → 載入 SKU 資訊 ----------
             skuSelect.off('change').on('change', function() {
                 var skuId = $(this).val();
+                console.log('已選擇skuId:', skuId);
+
                 if(!skuId) return resetStockInfo();
 
                 $.get('/SUP/StockBatches/GetSkuInfo', { skuId: skuId }, function(info) {
+                    console.log('回傳info:', info);
                     $('#CurrentQty').text(info.currentStock || 0);
                     $('#MaxStockQty').text(info.maxStockQty || 0);
                     $('#PredictedQty').text(info.expectedStock || 0);
@@ -360,10 +455,18 @@
                     isAdd = true;
                 }
 
+                // 計算最大可異動數量
                 var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
                 changeQtyInput.prop('max', maxAllowed);
-                if(changeQty > maxAllowed) { changeQty = maxAllowed; changeQtyInput.val(changeQty); }
-                if(changeQty < 1){ changeQty = 1; changeQtyInput.val(changeQty); }
+
+                // 當庫存已滿，且是增加動作，預設異動數量為 0
+                if(isAdd && maxAllowed === 0){
+                    changeQty = 0;
+                } else {
+                    if(changeQty > maxAllowed) changeQty = maxAllowed;
+                    if(changeQty < 1) changeQty = 1;
+                }
+                changeQtyInput.val(changeQty);
 
                 var predictedStock = isAdd ? currentStock + changeQty : currentStock - changeQty;
                 if(!isAdd && predictedStock < 0) predictedStock = 0;
@@ -373,7 +476,7 @@
                 changeQtyHelp.text('異動數量上限: '+maxAllowed+(isAdd?'（可增加）':'（可減少）'));
             }
         }
-        
+
         // 初始化庫存 DataTable 與按鈕事件
         $(document).ready(function () {
 
@@ -417,11 +520,17 @@
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
                         d.expireFilter = $('#stockExpireFilter').val(); // 傳到期日篩選值
+                        d.startDate = $('#startDate').val();
+                        d.endDate = $('#endDate').val();
                     },
                     dataSrc: function(json) {
                         //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
                         return json.data;
+                    },
+                    error: function(xhr, error, thrown) {
+                        console.log(xhr.responseText); // 印出後端錯誤訊息
+                        alert("資料載入失敗，請檢查後端或 console");
                     }
                 },
                 columns: [
@@ -434,10 +543,24 @@
                             return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
                         }
                     },
-                    { data: 'skuCode', title: 'SKU', className: 'text-center'},
+                    {
+                        data: 'skuCode',
+                        title: 'SkuCode',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            //console.log(data);
+                            //console.log(row.skuId);
+                            if (!data) return '';
+                            return `<span data-bs-toggle="tooltip"
+                                            data-bs-placement="top"
+                                            title="SkuId: ${row.skuId}">
+                                        ${data}
+                                    </span>`;
+                        }
+                    },
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
                     { data: 'brandName', title: '品牌', className: 'text-center'},
-                    { data: 'productName', title: '商品名稱', className: 'text-center'},
+                    { data: 'productName', title: '商品名稱', className: 'text-center text-wrap', width: "200px"},
                     {
                         data: 'expireDate',
                         title: '到期日',
@@ -453,7 +576,7 @@
                             return formatted;
                         }
                     },
-                  {
+                    {
                     data: 'qty',
                     title: '批次庫存量',
                     className: 'text-center',
@@ -506,7 +629,7 @@
                         className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
-                            console.log(row.brandName);
+                            // console.log(row.brandName);
                             return `
                                 <button class="btn btn-sm edit-stock-btn" data-id="${data}" data-bs-toggle="tooltip" title="該筆批次異動">
                                     <i class="fa-solid fa-right-from-bracket" style="color: #977ee2;"></i>
@@ -551,11 +674,6 @@
                 }
             });
 
-            // 監聽 select 變更，重新載入 DataTable
-            $('#stockDateSort').on('change', function() {
-                stockBatchTable.ajax.reload(null, false);
-            });
-
             // ======= 初始化 2. 全站異動紀錄 DataTable =======
             var historyTable = $('#historyTable').DataTable({
                 serverSide: true,   // 用後端搜排分業
@@ -566,11 +684,17 @@
                     data: function(d) {
                         d.supplierId = selectedSupplierId; // 傳給 IndexJson
                         d.expireFilter = $('#historyExpireFilter').val(); // 傳到期日篩選值
+                        d.startDate = $('#historyStartDate').val();
+                        d.endDate = $('#historyEndDate').val();
                     },
                     dataSrc: function(json) {
                         //console.log(json);      // 印出整個 JSON
                         //console.log(json.data); // 印出每筆 row
-                       return json.data;
+                        return json.data;
+                    },
+                    error: function(xhr, error, thrown) {
+                        console.log(xhr.responseText); // 印出後端錯誤訊息
+                        alert("資料載入失敗，請檢查後端或 console");
                     }
                 },
                 columns: [
@@ -636,14 +760,12 @@
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
                 },
-                order: [[7, 'desc']], // 預設依時間新到舊
+                order: [[7, 'desc']], // 預設依異動時間新到舊
             });
 
-
-            // 下拉選單事件
-            $('#stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
-            $('#historyExpireFilter').on('change', () => historyTable.ajax.reload());
-
+            // 下拉選單切換事件
+            $('#startDate, #endDate, #stockExpireFilter').on('change', () => stockBatchTable.ajax.reload());
+            $('#historyStartDate, #historyEndDate, #historyExpireFilter').on('change', () => historyTable.ajax.reload());
 
             // 點擊按鈕切換 datatable
             $('#btnToggleStock').on('click', function () {
@@ -873,39 +995,7 @@
                 });
             });
 
-
-            // 綁定「其他庫存操作」選單事件
-            // $(document).on('click', '.otherStockOp', function (e) {
-            //     e.preventDefault();
-
-            //     var type = $(this).data('type'); Sale / Return / Expire
-            //     console.log('[OtherStockOp] 選擇異動類型:', type);
-
-            //     $.get('/SUP/StockBatches/OtherOperation', { type: type }, function (html) {
-            //         let titleMap = {
-            //             "Sale": "銷售出庫",
-            //             "Return": "退貨入庫",
-            //             "Expire": "到期報廢"
-            //         };
-
-            //         $('#stockBatchModalTitle').text("其他庫存操作 - " + (titleMap[type] || ""));
-            //         $('#stockBatchModalContent').html(html);
-            //         確保 hidden input MovementType 有值
-            //         $('#OtherSelectedMovementType').val(type);
-
-            //         初始化表單 (帶入指定異動類型)
-            //         initStockBatchForm(null, null, null, { movementType: type });
-
-            //         $('#stockBatchModal').modal('show');
-            //     });
-            // });
-
-
-
-
-
             // ===== 點擊 submit =====
-            
             $('#stockBatchModalContent')
             .off('submit', '#stockBatchForm')
             .on('submit', '#stockBatchForm', function (e) {
@@ -975,6 +1065,37 @@
                     }
                 });
             });
+
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+            // 篩選，End預設今天
+            $('#endDate, #historyEndDate').val(today);
+
+            // 起始日期：最大值不可超過今天
+            $('#startDate,#historyStartDate').attr('max', today);
+
+            // 結束日期：最小值等於起始日期，最大值不可超過今天
+            $('#endDate, #historyEndDate').attr('max', today);
+            $('#endDate, #historyEndDate').attr('min', $('#startDate,#historyStartDate').val());
+
+            // 當 startDate 改變時，動態調整 endDate 的最小值
+            $('#startDate').on('change', function () {
+                const startVal = $(this).val();
+                $('#endDate, #historyEndDate').attr('min', startVal);
+
+                // 如果 endDate 小於新的 startDate，自動調整
+                if ($('#endDate, #historyEndDate').val() < startVal) {
+                    $('#endDate, #historyEndDate').val(startVal);
+                }
+            });
+
+            // 當 endDate 改變時，若超過今天，自動修正
+            $('#endDate, #historyEndDate').on('change', function () {
+                const endVal = $(this).val();
+                if (endVal > today) {
+                    $(this).val(today);
+                }
+            });
         });
 
         // 異動後浮現批次明細表格
@@ -1011,7 +1132,6 @@
             $('#batchMovementModal').modal('show');
         }
 
-
         function getMovementTypeText(type) {
             switch(type) {
                 case 'Adjust': return '手動調整';
@@ -1043,77 +1163,123 @@
             }
         }
 
+        // 點擊下載匯入範例
+        $('#downloadTemplateExcel').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateExcel');
+        $('#downloadTemplateCsv').click(() => window.location = '/SUP/StockBatches/DownloadStockBatchTemplateCsv');
 
-        // 更新 input 的 max 與 helper，並自動修正輸入值
-        function updateChangeQtyLimitAndPredicted() {
-            // 取得當前庫存與最大庫存
-            var currentStock = parseInt($('#CurrentQty').text()) || 0;
-            var maxStock = parseInt($('#MaxStockQty').text()) || 0;
-            console.log('[UpdateStock] CurrentQty:', currentStock, 'MaxStockQty:', maxStock);
+        // 點擊匯入 → 觸發選檔
+        $('#importStockBatchExcel').click(function(e) {
+            e.preventDefault(); // 阻止下拉自動收合衝突
+            $('#fileInputExcel').click();
+        });
+        $('#importStockBatchCSV').click(function(e) {
+            e.preventDefault(); // 阻止下拉自動收合衝突
+            $('#fileInputCsv').click();
+        });
 
-            var movementType = $('#MovementTypeSelect').val() || '';
-            var isAdd = true; // 預設為增加
-            console.log('[UpdateStock] movementType:', movementType, 'isAdd (預設):', isAdd);
+        // Excel 選完檔案後上傳
+        $('#fileInputExcel').change(async function () {
+            const file = this.files[0];
+            if (!file) return alert('請選擇檔案');
 
+            const formData = new FormData();
+            formData.append('file', file);
 
-            // 判斷異動方向
-            if (movementType === 'Adjust') {
-                isAdd = $('input[name="IsAdd"]:checked').val() === 'true';  // 手動調整需要用 radio 判斷
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                isAdd = false; // 出庫 / 報廢
-            } else if (movementType === 'Return' || movementType === 'Purchase') {
-                isAdd = true;  // 入庫
-            }
-            console.log('isAdd:', isAdd);
-
-            console.log('currentStock:', $('#CurrentQty').text(), '=>', currentStock);
-            console.log('maxStock:', $('#MaxStockQty').text(), '=>', maxStock);
-            console.log('movementType:', movementType, 'isAdd:', isAdd);
-
-            // 計算最大可輸入數量
-            var maxAllowed = calcMaxAllowed(movementType, isAdd, currentStock, maxStock);
-            console.log('[UpdateStock] maxAllowed:', maxAllowed);
-
-            var $input = $('#ChangeQtyInput');
-            var curVal = parseInt($input.val()) || 0;
-
-            // 設定 html max 屬性（讓內建箭頭有上下限制）
-            $input.attr('max', maxAllowed);
-
-            // helper 顯示
-            $('#ChangeQtyHelp').text('上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
-
-            // 若輸入超過上限，直接改為上限
-            if (curVal > maxAllowed) {
-                $input.val(maxAllowed);
-                curVal = maxAllowed;
+            try {
+                const res = await fetch('/SUP/StockBatches/ImportStockBatchExcel', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('匯入完成！\n' + data.messages.join('\n'));
+                    location.reload();
+                } else {
+                    alert('匯入失敗：' + (data.message || '未知錯誤'));
+                }
+            } catch (err) {
+                alert('上傳發生錯誤，請再試一次\n' + err);
             }
 
-            // 若輸入小於 1，強制為 1（因為前端要求正整數）
-            if (curVal < 1) {
-                $input.val(1);
-                curVal = 1;
+            // 清空 input 避免重複選擇同一檔案不觸發 change
+            this.value = '';
+        });
+
+        // Csv 選擇檔案後上傳
+        $('#fileInputCsv').change(async function () {
+            const file = this.files[0];
+            if (!file) return alert('請選擇檔案');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/SUP/StockBatches/ImportStockBatchCsv', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('匯入完成！\n' + data.messages.join('\n'));
+                    location.reload();
+                } else {
+                    alert('匯入失敗：' + (data.message || '未知錯誤'));
+                }
+            } catch (err) {
+                alert('上傳發生錯誤，請再試一次\n' + err);
             }
 
-            // 計算預計庫存
-            var predicted;
-            if (movementType === 'Adjust') {
-                predicted = isAdd ? currentStock + curVal : currentStock - curVal;
-            } else if (movementType === 'Sale' || movementType === 'Expire') {
-                predicted = currentStock - curVal;
-            } else {
-                predicted = currentStock + curVal; // Purchase / Return
-            }
-            console.log('[UpdateStock] predicted:', predicted);
+            this.value = '';
+        });
 
-            // 非允許預購暫不實作 -> 如低於0則顯示 0
-            if (predicted < 0) predicted = 0;
-            $('#PredictedQty').text(predicted);
-            
-            // 更新 helper
-            $('#ChangeQtyHelp').text('異動數量上限: ' + maxAllowed + (isAdd ? '（可增加）' : '（可減少）'));
+
+        // stockBatchTable 匯出目前篩選結果
+        function exportStockFiltered(type) {
+            const table = $('#stockBatchTable').DataTable();
+
+            const params = new URLSearchParams({
+                type: type,
+                searchValue: table.search(),
+                startDate: $('#startDate').val(),
+                endDate: $('#endDate').val(),
+                expireFilter: $('#stockExpireFilter').val()
+            });
+
+            const url = `/SUP/StockBatches/ExportStockFiltered?${params.toString()}`;
+            window.open(url, '_blank'); // 新分頁下載檔案
         }
 
+        // 綁定匯出按鈕
+        $('#exportStockCsv').on('click', () => exportStockFiltered('csv'));
+        $('#exportStockExcel').on('click', () => exportStockFiltered('excel'));
+        $('#exportStockPdf').on('click', () => exportStockFiltered('pdf'));
+
+        // historyTable 匯出目前篩選結果
+        function exportHistoryFiltered(type) {
+            var table = $('#historyTable').DataTable();
+
+            // DataTables 全局搜尋
+            var searchValue = table.search();
+
+            // 篩選條件
+            var startDate = $('#historyStartDate').val();
+            var endDate = $('#historyEndDate').val();
+            var expireFilter = $('#historyExpireFilter').val();
+
+            // 組 URL
+            let url = `/SUP/StockBatches/ExportHistoryFiltered?type=${type}`;
+            if (searchValue) url += `&searchValue=${encodeURIComponent(searchValue)}`;
+            if (startDate) url += `&startDate=${startDate}`;
+            if (endDate) url += `&endDate=${endDate}`;
+            if (expireFilter) url += `&expireFilter=${expireFilter}`;
+
+            window.location = url;
+        }
+
+        // 綁定匯出按鈕
+        $('#exportHistoryCsv').click(() => exportHistoryFiltered('csv'));
+        $('#exportHistoryExcel').click(() => exportHistoryFiltered('excel'));
+        $('#exportHistoryPdf').click(() => exportHistoryFiltered('pdf'));
 
     </script>
 }

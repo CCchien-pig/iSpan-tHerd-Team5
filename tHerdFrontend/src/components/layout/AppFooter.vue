@@ -39,7 +39,9 @@
               <a href="#" class="text-light text-decoration-none">常見問題</a>
             </li>
             <li>
-              <a href="#" class="text-light text-decoration-none">運送資訊</a>
+              <router-link to="/sup/logistics-info" class="text-light text-decoration-none"
+                >運送資訊</router-link
+              >
             </li>
             <li>
               <a href="#" class="text-light text-decoration-none">退貨政策</a>
@@ -61,7 +63,9 @@
               <a href="#" class="text-light text-decoration-none">付款方式</a>
             </li>
             <li>
-              <a href="#" class="text-light text-decoration-none">運費計算</a>
+              <router-link to="/sup/logistics-fee" class="text-light text-decoration-none"
+                >運費計算</router-link
+              >
             </li>
             <li>
               <a href="#" class="text-light text-decoration-none">會員制度</a>
@@ -144,6 +148,7 @@
             <a href="#" class="text-muted text-decoration-none me-3"
               >Cookie政策</a
             >
+            <a href="#" class="text-muted text-decoration-none">網站地圖</a>
           </div>
         </div>
       </div>
@@ -166,7 +171,7 @@ export default {
   data() {
     return {
       email: '', // 電子報訂閱郵箱
-    };
+    }
   },
 
   /**
@@ -182,14 +187,14 @@ export default {
       if (this.email.trim()) {
         // 處理電子報訂閱邏輯
         // TODO: 實現電子報訂閱API
-        alert('感謝您的訂閱！');
-        this.email = '';
+        alert('感謝您的訂閱！')
+        this.email = ''
       } else {
-        alert('請輸入有效的電子郵件地址');
+        alert('請輸入有效的電子郵件地址')
       }
     },
   },
-};
+}
 </script>
 
 <style scoped>
