@@ -1,0 +1,219 @@
+.main-header {
+  /*background: linear-gradient(135deg, #28a745, #20c997) !important;*/
+  /* background: linear-gradient(90deg, rgb(0, 112, 131), rgb(0, 112, 131)) !important; */
+  background: linear-gradient(90deg, rgb(248, 249, 250), rgb(248, 249, 250)) !important; 
+  /* background: rgb(248, 249, 250) !important; */
+}
+
+.main-color-green {
+  background: linear-gradient(135deg, rgb(0, 112, 131), rgb(0, 112, 131)) !important;
+}
+.main-color-lightgreen {
+  background: rgb(77, 180, 193) !important;
+}
+.main-color-white {
+  background: linear-gradient(90deg, rgb(248, 249, 250), rgb(248, 249, 250)) !important;
+}
+
+.main-color-white-text {
+  color: rgb(248, 249, 250) !important;
+}
+
+.main-color-green-text {
+  color: rgb(0, 112, 131) !important;
+}
+
+/* 全局按鈕樣式 */
+.btn {
+  transition: all 0.2s ease;
+}
+
+/* hover底線效果 */
+.btn:hover .hover-underline {
+  text-decoration: underline;
+}
+
+/* hover無效果 */
+.btn:hover .hover-none {
+  text-decoration: none !important;
+}
+
+/* 禁用狀態樣式 */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 自定義hover效果 */
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 按鈕大小調整 */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: 0.5rem 1rem;
+  font-size: 1.25rem;
+}
+
+/* 反光按鈕效果-銀 */
+.silver-reflect-button {
+  background: linear-gradient(135deg,
+      #ffffff 0%,
+      #e6e6e6 25%,
+      #cfcfcf 50%,
+      #f5f5f5 75%,
+      #dcdcdc 100%);
+  background-size: 300% 300%;
+  color: rgb(0, 112, 131);
+  border: 1px solid #c0c0c0;
+  border-radius: 50px;
+  padding: 10px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-position 0.8s ease, box-shadow 0.4s ease;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ✨ 滑過時增加亮度與反光移動 */
+.silver-reflect-button:hover {
+  background-position: 100% 0;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.25),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 🪄 點擊時壓下效果 */
+.silver-reflect-button:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 💥 閃光掃描效果 */
+.silver-reflect-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-25deg);
+  transition: left 0.8s ease;
+}
+
+.silver-reflect-button:hover::after {
+  left: 130%;
+}
+
+
+/* 反光按鈕效果-主色綠 */
+.teal-reflect-button {
+  background: linear-gradient(135deg,
+      rgb(0, 140, 160) 0%,
+      rgb(0, 112, 131) 25%,
+      rgb(0, 90, 110) 50%,
+      rgb(0, 135, 150) 75%,
+      rgb(0, 112, 131) 100%);
+  background-size: 300% 300%;
+  color: #ffffff;
+  border: 1px solid rgb(0, 112, 131);
+  border-radius: 50px;
+  padding: 10px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-position 0.8s ease, box-shadow 0.4s ease, transform 0.2s ease;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ✨ 滑過時增加亮度與反光移動 */
+.teal-reflect-button:hover {
+  background-position: 100% 0;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 🪄 點擊時壓下效果 */
+.teal-reflect-button:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 💥 閃光掃描效果 */
+.teal-reflect-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-25deg);
+  transition: left 0.8s ease;
+}
+
+.teal-reflect-button:hover::after {
+  left: 130%;
+}
+
+
+/* 覆蓋bs的form-control(header搜尋框) */
+.form-control {
+  border-color: rgb(0, 112, 131) !important;
+}
+
+.form-control:focus {
+  border-color: rgb(0, 112, 131) !important;
+  box-shadow: 0 0 0 0.25rem rgba(0, 112, 131, 0.25) !important;
+}
+
+
+/* 覆蓋bs-primary */
+.btn-outline-primary {
+  color: rgb(0, 112, 131);
+  border-color: rgb(0, 112, 131);
+}
+
+.btn-outline-primary:hover {
+  color: #fff;
+  background-color: rgb(0, 112, 131);
+  border-color: rgb(0, 112, 131);
+}
+
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+  color: #fff;
+  background-color: rgb(0, 112, 131);
+  border-color: rgb(0, 112, 131);
+  box-shadow: 0 0 0 0.25rem rgba(0, 112, 131, 0.4);
+}
+
+.btn-outline-primary.disabled,
+.btn-outline-primary:disabled {
+  color: rgb(0, 112, 131);
+  background-color: transparent;
+}

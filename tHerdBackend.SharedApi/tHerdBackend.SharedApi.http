@@ -1,0 +1,6 @@
+@tHerdBackend.SharedApi_HostAddress = http://localhost:5196
+
+GET {{tHerdBackend.SharedApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
