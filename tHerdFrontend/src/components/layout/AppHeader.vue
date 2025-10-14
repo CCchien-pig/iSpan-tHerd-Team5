@@ -6,31 +6,34 @@
 -->
 <template>
   <!-- 主Header容器 -->
-  <header class="main-header bg-success text-white py-3">
+  <header class="main-header bg-success text-white">
     <div class="container-fluid">
-      <div class="row align-items-center">
+      <div class="row align-items-center g-0">
         <!-- Logo區域 -->
-        <div class="col-md-2">
+        <div class="col-md-2 col-lg-1 me-3">
           <router-link
             to="/"
             class="navbar-brand text-white text-decoration-none"
           >
-            <h3 class="mb-0 fw-bold">tHerd</h3>
+            <h3 class="mb-0 fw-bold">
+              <img src="../../../public/homePageIcon/tHerd-header.png" alt="" class="img-fluid w-90 h-90 ms-5">
+            </h3>
           </router-link>
         </div>
 
         <!-- 搜索欄 -->
-        <div class="col-md-6">
-          <div class="search-container position-relative">
+        <div class="col-md-6 ">
+          <div class="search-container position-relative my-2 ms-5 d-flex" style="width: 1000px;">
             <input
               type="text"
-              class="form-control form-control-lg rounded-pill pe-5"
+              class="form-control form-control-lg rounded-pill pe-5 flex-grow-1"
               placeholder="搜尋所有 tHerd 商品"
+              style="padding-left: 30px; "
               v-model="searchQuery"
               @keyup.enter="handleSearch"
             />
             <button
-              class="btn btn-outline-light position-absolute top-50 end-0 translate-middle-y me-2 rounded-circle d-flex align-items-center justify-content-center"
+              class="btn btn-outline-primary position-absolute top-50 end-0 translate-middle-y me-2 rounded-circle d-flex align-items-center justify-content-center"
               style="width: 40px; height: 40px"
               @click="handleSearch"
             >
@@ -40,17 +43,17 @@
         </div>
 
         <!-- 右側功能區 -->
-        <div class="col-md-4">
+        <div class="col-auto ms-auto">
           <div class="d-flex justify-content-end align-items-center gap-3">
             <!-- 用戶登入 -->
             <div class="dropdown">
               <button
-                class="btn btn-outline-light btn-sm dropdown-toggle"
+                class="btn btn-md dropdown-toggle main-color-green"
                 type="button"
                 data-bs-toggle="dropdown"
               >
-                <i class="bi bi-person me-1"></i>
-                登入
+                <i class="bi bi-person me-1 main-color-white-text"></i>
+                <span class="main-color-white-text">登入</span>
               </button>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#">登入</a></li>
@@ -61,14 +64,18 @@
             </div>
 
             <!-- 購物車 -->
-            <button class="btn btn-outline-light btn-sm position-relative">
-              <i class="bi bi-cart3 me-1"></i>
-              購物車
+            <button class="btn btn-md position-relative main-color-green">
+              <i class="bi bi-cart3 me-1 main-color-white-text"></i>
+              <span class="main-color-white-text">購物車</span>
               <span
                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
               >
                 {{ cartCount }}
               </span>
+            </button>
+            <button class="btn btn-md position-relative main-color-green">
+              <i class="bi bi-bag main-color-white-text"></i>
+              <span class="main-color-white-text ms-1">訂單</span>
             </button>
           </div>
         </div>
@@ -125,11 +132,15 @@ export default {
   .main-header .col-md-2,
   .main-header .col-md-6,
   .main-header .col-md-4 {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    padding-top: 0.5rem;
   }
 
   .search-container {
     margin-bottom: 1rem;
+  }
+  img{
+
   }
 }
 </style>

@@ -5,7 +5,7 @@ namespace tHerdBackend.Core.Interfaces.Products
 {
     public interface IProdProductRepository
     {
-        Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default);
+        Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(ProductFilterQueryDto query, CancellationToken ct = default);
         Task<ProdProductDto?> GetByIdAsync(int id, CancellationToken ct = default);
         Task<int> AddAsync(ProdProductDto product, CancellationToken ct = default);
         Task<bool> UpdateAsync(ProdProductDto product, CancellationToken ct = default);
@@ -17,9 +17,8 @@ namespace tHerdBackend.Core.Interfaces.Products
 
 		Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default);
 		Task<bool> GetByProductNameAsync(string name, int id, CancellationToken ct = default); // 檢查產品名稱是否重複
-																							   //Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
-
-	}
+                                                                                               //Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
+    }
 
 	// 簡化的查詢模型與分頁結果
 	public sealed class ProductQuery

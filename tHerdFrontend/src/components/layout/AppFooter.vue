@@ -6,12 +6,12 @@
 -->
 <template>
   <!-- 主Footer容器 -->
-  <footer class="main-footer bg-dark text-light py-5">
+  <footer class="main-footer main-color-darkwhite text-light py-5">
     <div class="container">
       <div class="row">
         <!-- 關於我們區塊 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="text-success mb-3">關於 tHerd</h5>
+          <h5 class="mb-3 main-color-white-text">關於 tHerd</h5>
           <ul class="list-unstyled">
             <li>
               <a href="#" class="text-light text-decoration-none">關於我們</a>
@@ -30,7 +30,7 @@
 
         <!-- 客戶服務 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="text-success mb-3">客戶服務</h5>
+          <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
             <li>
               <a href="#" class="text-light text-decoration-none">聯絡我們</a>
@@ -54,7 +54,7 @@
 
         <!-- 購物指南 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="text-success mb-3">購物指南</h5>
+          <h5 class="mb-3 main-color-white-text">購物指南</h5>
           <ul class="list-unstyled">
             <li>
               <a href="#" class="text-light text-decoration-none">如何訂購</a>
@@ -78,7 +78,7 @@
 
         <!-- 社群媒體 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="text-success mb-3">關注我們</h5>
+          <h5 class="main-color-white-text mb-3">關注我們</h5>
           <div class="social-links mb-3">
             <a href="#" class="text-light me-3">
               <i class="bi bi-facebook fs-4"></i>
@@ -96,7 +96,7 @@
 
           <!-- 電子報訂閱 -->
           <div class="newsletter">
-            <h6 class="text-success mb-2">訂閱電子報</h6>
+            <h6 class="main-color-white-text mb-2">訂閱電子報</h6>
             <div class="input-group" style="max-width: 300px">
               <input
                 type="email"
@@ -104,7 +104,11 @@
                 placeholder="輸入您的電子郵件"
                 v-model="email"
               />
-              <button class="btn btn-success" type="button" @click="subscribeNewsletter">
+              <button
+                class="btn silver-reflect-button"
+                type="button"
+                @click="subscribeNewsletter"
+              >
                 訂閱
               </button>
             </div>
@@ -118,15 +122,15 @@
       <!-- 底部資訊 -->
       <div class="row align-items-center">
         <div class="col-md-6">
-          <p class="mb-0 text-muted">© 2024 tHerd, LLC. 版權所有。</p>
+          <p class="mb-0 text-muted main-color-white-text">© 2025 tHerd, LLC. 版權所有。</p>
         </div>
         <div class="col-md-6 text-md-end">
           <div class="payment-methods">
-            <span class="text-muted me-3">付款方式:</span>
-            <i class="bi bi-credit-card me-2"></i>
-            <i class="bi bi-paypal me-2"></i>
-            <i class="bi bi-apple me-2"></i>
-            <i class="bi bi-google-pay me-2"></i>
+            <span class="main-color-white-text me-3">付款方式:</span>
+            <i class="bi bi-credit-card me-2 main-color-white-text"></i>
+            <i class="bi bi-paypal me-2 main-color-white-text"></i>
+            <i class="bi bi-apple me-2 main-color-white-text"></i>
+            <i class="bi bi-google-pay me-2 main-color-white-text"></i>
           </div>
         </div>
       </div>
@@ -134,11 +138,16 @@
       <!-- 法律條款 -->
       <div class="row mt-3">
         <div class="col-12">
-          <div class="legal-links text-center">
-            <a href="#" class="text-muted text-decoration-none me-3">隱私政策</a>
-            <a href="#" class="text-muted text-decoration-none me-3">服務條款</a>
-            <a href="#" class="text-muted text-decoration-none me-3">Cookie政策</a>
-            <a href="#" class="text-muted text-decoration-none">網站地圖</a>
+          <div class="legal-links text-center ">
+            <a href="#" class="text-muted text-decoration-none me-3"
+              >隱私政策</a
+            >
+            <a href="#" class="text-muted text-decoration-none me-3"
+              >服務條款</a
+            >
+            <a href="#" class="text-muted text-decoration-none me-3"
+              >Cookie政策</a
+            >
           </div>
         </div>
       </div>
@@ -189,7 +198,8 @@ export default {
 
 <style scoped>
 .main-footer {
-  background: linear-gradient(135deg, #343a40, #495057) !important;
+    background: rgb(15, 120, 135);
+
 }
 
 .social-links a {

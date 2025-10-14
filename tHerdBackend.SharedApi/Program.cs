@@ -1,18 +1,18 @@
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
-using tHerdBackend.Admin.Infrastructure.Auth;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
+using tHerdBackend.SharedApi.Controllers.Common;
+using tHerdBackend.SharedApi.Infrastructure.Auth;
 
 namespace tHerdBackend.SharedApi
 {
@@ -97,32 +97,52 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddDbContext<tHerdDBContext>(options =>
 				options.UseSqlServer(connectionString));
 
-			// === Identity ===
-			builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-				.AddEntityFrameworkStores<tHerdDBContext>()
-				.AddDefaultTokenProviders();
+            // 前台沒有 Identity，只註冊 CurrentUser 本體（不要掛 ICurrentUser）
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
-			// Auth Service
-			builder.Services.AddScoped<AuthService>();
-
-			// === CurrentUser ===
-			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+            // Auth Service
+            builder.Services.AddScoped<AuthService>();
 
 			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
 			builder.Services.AddFlexBackend(builder.Configuration);
 
-			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-			// Controllers & Swagger
-			builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            // Controllers & Swagger
+            builder.Services.AddControllers(options =>
+            {
+                options.Conventions.Add(new FolderBasedRouteConvention());
+            });
 
-			var app = builder.Build();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "tHerd API", Version = "v1" });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "輸入 JWT Token，格式: Bearer {token}",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                        },
+                        new string[] {}
+                    }
+                });
+            });
+
+            var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-				app.UseDeveloperExceptionPage();
 				app.UseSwagger();
                 app.UseSwaggerUI();
             }
