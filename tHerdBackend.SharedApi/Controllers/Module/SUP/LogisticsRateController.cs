@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/[folder]/[controller]")]
 	public class LogisticsRateController : ControllerBase
 	{
 		private readonly ILogisticsRateService _service;
@@ -19,6 +19,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			_antiforgery = antiforgery;
 		}
 
+		//GET /api/sup/LogisticsRate/token
 		[HttpGet("token")]
 		public IActionResult GetToken()
 		{
@@ -26,6 +27,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			return Ok(new { token = tokens.RequestToken });
 		}
 
+		//GET /api/sup/LogisticsRate/bylogistics/{logisticsId}
 		[HttpGet("bylogistics/{logisticsId}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> GetByLogisticsId(int logisticsId)

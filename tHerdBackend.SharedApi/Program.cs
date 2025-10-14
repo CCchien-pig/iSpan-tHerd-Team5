@@ -22,8 +22,8 @@ namespace tHerdBackend.SharedApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-			// JWT Authentication
-			builder.Services.AddAuthentication(options =>
+            // JWT Authentication
+            builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -53,8 +53,8 @@ namespace tHerdBackend.SharedApi
                 };
             });
 
-			// 允許 CORS
-			builder.Services.AddCors(options =>
+            // 允許 CORS
+            builder.Services.AddCors(options =>
 			{
 				options.AddPolicy("AllowAll",
 					policy => policy
@@ -104,8 +104,8 @@ namespace tHerdBackend.SharedApi
             // Auth Service
             builder.Services.AddScoped<AuthService>();
 
-			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
-			builder.Services.AddFlexBackend(builder.Configuration);
+            // 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
+            builder.Services.AddFlexBackend(builder.Configuration);
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             // Controllers & Swagger

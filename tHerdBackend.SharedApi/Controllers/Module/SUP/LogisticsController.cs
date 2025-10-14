@@ -6,7 +6,7 @@ using tHerdBackend.Core.Interfaces.SUP;
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/[folder]/[controller]")]
 	public class LogisticsController : ControllerBase
 	{
 		private readonly ILogisticsService _service;
@@ -16,6 +16,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			_service = service;
 		}
 
+		//GET /api/sup/LogisticsRate
 		[HttpGet]
 		public async Task<IActionResult> GetAll()
 		{
@@ -30,7 +31,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
-		// GET /api/Logistics/active
+		//GET /api/sup/LogisticsRate/active
 		[HttpGet("active")]
 		public async Task<IActionResult> GetActiveLogistics()
 		{
@@ -45,7 +46,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
-
+		//GET /api/sup/LogisticsRate/{id}
 		[HttpGet("{id}")]
 		public async Task<IActionResult> Get(int id)
 		{
