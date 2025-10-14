@@ -122,7 +122,7 @@
       <!-- 底部資訊 -->
       <div class="row align-items-center">
         <div class="col-md-6">
-          <p class="mb-0 text-muted main-color-white-text">© 2024 tHerd, LLC. 版權所有。</p>
+          <p class="mb-0 text-muted main-color-white-text">© 2025 tHerd, LLC. 版權所有。</p>
         </div>
         <div class="col-md-6 text-md-end">
           <div class="payment-methods">
