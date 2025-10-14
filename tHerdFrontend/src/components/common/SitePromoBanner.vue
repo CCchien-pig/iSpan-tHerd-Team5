@@ -10,8 +10,8 @@
     <div class="container">
       <!-- 促銷信息內容 - 居中顯示 -->
       <div class="text-center">
-        <strong>{{ title }}</strong>
-        <span class="ms-3">{{ description }}</span>
+        <strong class="main-color-white-text">{{ title }}</strong>
+        <span class="ms-3 main-color-white-text">{{ description }}</span>
       </div>
     </div>
   </div>

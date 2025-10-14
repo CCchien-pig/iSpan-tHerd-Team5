@@ -195,7 +195,7 @@
 /* 覆蓋bs-primary */
 .btn-outline-primary {
   color: rgb(0, 112, 131);
-  border-color: rgb(0, 112, 131);
+  border-color: rgb(255, 255, 255);
 }
 
 .btn-outline-primary:hover {
