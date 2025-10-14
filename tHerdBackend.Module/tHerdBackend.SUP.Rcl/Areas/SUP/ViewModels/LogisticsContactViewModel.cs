@@ -7,6 +7,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.ViewModels
 		/// <summary>
 		/// 物流商主鍵
 		/// </summary>
+		[Display(Name = "物流商Id")]
 		public int LogisticsId { get; set; }
 
 		/// <summary>

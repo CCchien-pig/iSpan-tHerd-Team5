@@ -1,9 +1,10 @@
-﻿using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.SUP;
-using tHerdBackend.Core.DTOs.USER;
-using tHerdBackend.Core.Interfaces.SUP;
-using tHerdBackend.Infra.Models;
-using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
+﻿using iText.IO.Font;
+using iText.IO.Font.Constants;
+using iText.Kernel.Font;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,12 @@ using OfficeOpenXml;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.Interfaces.SUP;
+using tHerdBackend.Infra.Models;
+using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using SupStockBatch = tHerdBackend.Infra.Models.SupStockBatch;
 using SupStockHistory = tHerdBackend.Infra.Models.SupStockHistory;
 
@@ -481,11 +488,12 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetBrands()
 		{
 			var brands = await _context.SupBrands
-				.Where(b => b.IsActive)
+				//.Where(b => b.IsActive)
 				.Select(b => new
 				{
 					BrandId = b.BrandId,
-					BrandName = b.BrandName
+					BrandName = b.BrandName,
+					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
 				})
 				.ToListAsync();
 			return Ok(brands);
@@ -515,7 +523,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetSkusByProduct(int productId)
 		{
 			var skus = await _context.ProdProductSkus
-				.Where(sku => sku.ProductId == productId && sku.IsActive)
+				.Where(sku => sku.ProductId == productId)
 				.Select(sku => new
 				{
 					sku.SkuId,
@@ -535,10 +543,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return Ok(skus);
 		}
 
-
 		// 取得 SKU 詳細資訊 (選完 SKU 後自動帶入底下欄位)
-		// [HttpGet("skus/{skuId}")]
-		// /api/skus/{skuId}
+		[Route("SUP/StockBatches/GetSkuInfo")]
 		[HttpGet]
 		public async Task<IActionResult> GetSkuInfo(int skuId)
 		{

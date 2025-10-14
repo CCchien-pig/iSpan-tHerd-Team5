@@ -1,8 +1,7 @@
 ﻿
 
 /* ====== 外層卡片區塊 ====== */
-.supplier-card, 
-.stockbatch-card {
+.card {
     background: #ffffff;
     border-radius: 0.75rem;
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
@@ -11,8 +10,7 @@
     border: 1px solid #e5e9f0;
 }
 
-    .supplier-card h5,
-    .stockbatch-card h5{
+    .card h5 {
         font-weight: 600;
         color: #2c3e50;
         margin-bottom: 1rem;
@@ -21,21 +19,19 @@
     }
 
 /* ====== 表格基礎 ====== */
-#supplierTable,
-#stockBatchTable,
-#historyTable {
+.table {
     border-radius: 0.5rem;
     overflow: hidden;
     font-size: 0.95rem;
     background-color: #ffffff;
+    border: 1px solid #e5e9f0;
 }
 
     /* ====== 表頭 ====== */
-    #supplierTable thead th,
-    #stockBatchTable thead th,
-    #historyTable thead th {
-        background: linear-gradient(135deg, #4a90e2, #007bff);
-        color: #fff;
+    .table thead th {
+/*        background: linear-gradient(135deg, #4a90e2, #007bff);*/
+/*        background-color:#f9fbff;*/
+        color: #2c3e50;
         font-weight: 600;
         text-align: center;
         vertical-align: middle;
@@ -46,25 +42,35 @@
     }
 
     /* ====== 奇偶行條紋 ====== */
-    #supplierTable tbody tr:nth-child(odd),
-    #stockBatchTable tbody tr:nth-child(odd),
-    #historyTable tbody tr:nth-child(odd) {
-        background-color: #f9fbff;
+    .table tbody tr:nth-child(even) td{
+        background-color: #fff;
     }
 
-    #supplierTable tbody tr:nth-child(even),
-    #stockBatchTable tbody tr:nth-child(even),
-    #historyTable tbody tr:nth-child(even) {
-        background-color: #ffffff;
+    .table tbody tr:nth-child(odd) td{
+        background-color: #f9f4fc;
     }
 
     /* ====== hover ====== */
-    #supplierTable tbody tr:hover,
-    #stockBatchTable tbody tr:hover,
-    #historyTable tbody tr:hover {
-        background-color: #e6f0ff;
+    .table tbody tr:hover td {
+        background-color: #4a87c4 !important;
+        color: #fff !important;
         transition: background-color 0.2s ease;
     }
+/*        background-color: #e6f0ff !important;*/
+
+#stockBatchTable {
+    border-collapse: separate !important;
+    border-spacing: 0;
+    border: 1px solid #e5e9f0;
+    border-top-left-radius: 0; /* 表格上方左直角 */
+    border-top-right-radius: 0; /* 表格上方右直角 */
+    border-bottom-left-radius: 0.75rem !important; /* 表格下方左圓角 */
+    border-bottom-right-radius: 0.75rem !important; /* 表格下方右圓角 */
+    overflow: hidden;
+    background-clip: padding-box;
+}
+
+
 
     /* ====== 供應商名稱 & 聯絡人 ====== */
     #supplierTable td:nth-child(1) {
@@ -225,22 +231,6 @@ button.dt-paging-button.current:not(:disabled):hover {
     border-radius: 0.375rem; /* 圓角 */
 }
 
-/* tooltip 箭頭顏色 */
-/*.tooltip.bs-tooltip-top .tooltip-arrow::before {
-    border-top-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
-    border-bottom-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-start .tooltip-arrow::before {
-    border-left-color: #4a90e2 !important;
-}
-
-.tooltip.bs-tooltip-end .tooltip-arrow::before {
-    border-right-color: #4a90e2 !important;
-}*/
 
 /* 修改 tooltip 背景色與文字顏色 */
 .tooltip {
@@ -369,16 +359,16 @@ button.dt-paging-button.current:not(:disabled):hover {
 }
 
 
-
-/* 讓中間邊框以左邊按鈕為主 */
-.btn-group .btn + .btn {
-    margin-left: -1px; /* 保持邊框連續 */
+/* 操作按鈕右邊框設藍色且細邊框 */
+.btn-group > .btn.btn-outline-success {
+    border-right: 0 !important;
 }
 
-/* 調整匯入與匯出中間線顏色 */
-#exportStockBatchBtn {
-    border-left-color: #0d6efd; /* 匯入按鈕的藍色 */
+/* 匯入按鈕左邊框設藍色且細邊框 */
+#importDropdownBtn {
+    border-left: 1px solid #0d6efd !important;
 }
+
 
 /* 指定匯出按鈕紫色 */
 #exportStockBatchBtn,

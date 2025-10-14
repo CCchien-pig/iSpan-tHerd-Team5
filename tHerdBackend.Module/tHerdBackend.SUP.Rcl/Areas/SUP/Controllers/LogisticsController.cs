@@ -1,13 +1,15 @@
-﻿using FlexBackend.Core.Abstractions;
-using FlexBackend.Core.DTOs.SUP;
-using FlexBackend.Core.DTOs.USER;
-using FlexBackend.Infra.Models;
-using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
+﻿using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Infra.Models;
+using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FlexBackend.Core.DTOs.SUP;
+using FlexBackend.SUP.Rcl.Areas.SUP.ViewModels;
 
-namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
+namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 {
 	[Area("SUP")]
 	public class LogisticsController : Controller
@@ -461,6 +463,7 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				IsActive = log.IsActive,
 			};
 
+			ViewBag.FormAction = "Edit";
 			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsFormPartial.cshtml", vm);
 		}
 
@@ -486,15 +489,29 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 
 				int currentUserId = user.UserNumberId;
 
+				// 更新欄位
 				logEntity.LogisticsName = vm.LogisticsName;
 				logEntity.ShippingMethod = vm.ShippingMethod;
 				logEntity.IsActive = vm.IsActive;
 				logEntity.Reviser = currentUserId;
 				logEntity.RevisedDate = DateTime.Now;
 
+
+				_context.Update(logEntity);
 				await _context.SaveChangesAsync();
 
-				return Json(new { success = true, isCreate = false, logistics = logEntity });
+				return Json(new
+				{
+					success = true,
+					isCreate = false,
+					logistics = new
+					{
+						logisticsId = logEntity.LogisticsId,
+						logisticsName = logEntity.LogisticsName,
+						shippingMethod = logEntity.ShippingMethod,
+						isActive = logEntity.IsActive
+					}
+				});
 			}
 			catch (DbUpdateException dbEx)
 			{
@@ -506,15 +523,32 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 		}
 
-
-
 		// GET: /SUP/Logistics/Details/1000
 		[HttpGet]
 		public async Task<IActionResult> Details(int id)
 		{
-			var log = await _context.SupLogistics.AsNoTracking().FirstOrDefaultAsync(l => l.LogisticsId == id);
+			var log = await _context.SupLogistics
+				.AsNoTracking()
+				.FirstOrDefaultAsync(l => l.LogisticsId == id);
+
 			if (log == null) return NotFound();
-			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsDetailsPartial", log);
+
+			// 將 SupLogistic 轉成 ViewModel
+			var vm = new LogisticsContactViewModel
+			{
+
+				LogisticsId = log.LogisticsId,
+				LogisticsName = log.LogisticsName,
+				ShippingMethod = log.ShippingMethod,
+				IsActive = log.IsActive,
+				Creator = log.Creator,
+				CreatedDate = log.CreatedDate,
+				Reviser = log.Reviser,
+				RevisedDate = log.RevisedDate
+			};
+
+			return PartialView("~/Areas/SUP/Views/Logistics/Partials/_LogisticsInfoPartial.cshtml", vm);
+
 		}
 
 		// POST: /SUP/Logistics/Delete
@@ -526,6 +560,17 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 				var logEntity = await _context.SupLogistics.FindAsync(id);
 				if (logEntity == null)
 					return Json(new { success = false, message = "找不到該物流商" });
+				
+				// 先檢查是否存在子資料（運費分段）
+				bool hasRates = await _context.SupLogisticsRates.AnyAsync(r => r.LogisticsId == id);
+				if (hasRates)
+				{
+					return Json(new
+					{
+						success = false,
+						message = "該物流商仍有運費分段資料，請先刪除或轉移後再刪除物流商。"
+					});
+				}
 
 				_context.SupLogistics.Remove(logEntity);
 				await _context.SaveChangesAsync();
@@ -533,7 +578,15 @@ namespace FlexBackend.SUP.Rcl.Areas.SUP.Controllers
 			}
 			catch (DbUpdateException dbEx)
 			{
-				return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+				//return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+				
+				// 外鍵違反等資料庫層異常（保險起見仍處理）
+				Console.WriteLine(dbEx);
+				return Json(new
+				{
+					success = false,
+					message = "刪除失敗：存在關聯資料（運費分段），請先刪除相關資料後再試。"
+				});
 			}
 			catch (Exception ex)
 			{

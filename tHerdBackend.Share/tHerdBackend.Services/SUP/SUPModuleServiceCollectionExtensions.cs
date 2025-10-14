@@ -1,5 +1,6 @@
-﻿using tHerdBackend.Core.Interfaces.SUP;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using tHerdBackend.Core.Interfaces.SUP;
+using tHerdBackend.Infra.Repository.SUP;
 
 namespace tHerdBackend.Services.SUP
 {
@@ -9,11 +10,14 @@ namespace tHerdBackend.Services.SUP
         {
 			// 註冊 Service
 			services.AddScoped<IStockBatchService, StockBatchService>();
-
 			services.AddScoped<IStockService, StockService>();
-			
-			// 註冊 Repository (如果有 Repository 層)
-			//services.AddScoped<IStockBatchRepository, StockBatchRepository>();
+
+			services.AddScoped<ILogisticsService, LogisticsService>();
+			services.AddScoped<ILogisticsRateService, LogisticsRateService>();
+
+			// 註冊 Repository
+			services.AddScoped<ILogisticsRepository, LogisticsRepository>();
+			services.AddScoped<ILogisticsRateRepository, LogisticsRateRepository>();
 
 			return services;
         }
