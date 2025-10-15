@@ -6,7 +6,7 @@
 -->
 <template>
   <!-- 促銷橫幅容器 -->
-  <div class="promo-banner bg-white py-2">
+  <div class="promo-banner main-color-green py-2">
     <div
       class="container-fluid d-flex justify-content-between align-items-center"
     >
@@ -17,7 +17,7 @@
           variant="light"
           size="sm"
           :show-border="false"
-          custom-class="text-white bg-primary border-0 p-2 rounded-pill"
+          custom-class="main-color-green-text main-color-white border-0 p-2 rounded-pill"
         >
           <span class="hover-underline">{{ leftText }}</span>
           <!-- 倒計時（如果有） -->
@@ -30,33 +30,24 @@
           variant="light"
           size="sm"
           :show-border="false"
-          custom-class="text-black bg-transparent border-0 p-2 rounded-pill"
+          custom-class="main-color-white-text bg-transparent border-0 p-2 rounded-pill"
         >
           <span class="hover-underline">{{ rightText }}</span>
         </AppButton>
       </div>
 
       <div class="d-flex gap-2">
-        <!-- 免運費提示按鈕 -->
-        <AppButton
-          text="歷史訂單查詢"
-          variant="light"
-          size="sm"
-          :show-border="false"
-          custom-class="d-none d-lg-block text-white bg-transparent border-0 p-2 rounded-pill"
-        >
-          <span class="hover-none text-black">歷史訂單查詢</span>
-        </AppButton>
-
+        
         <!-- 分享按鈕 -->
         <AppButton
           variant="outline-light"
           size="sm"
           :show-border="true"
           custom-class="bg-transparent py-2 px-3 rounded-pill"
+          class="main-color-white"
         >
           <span class="hover-none text-black">
-            <i class="bi bi-share"></i>
+            <i class="bi bi-share main-color-green-text"></i>
           </span>
         </AppButton>
       </div>
