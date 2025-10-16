@@ -11,16 +11,20 @@
     <PromoBanner />
 
     <!-- 主要Header - 包含Logo、搜索、用戶操作 -->
+     <header :class="{ 'header-scrolled': scroll }">
     <AppHeader />
+     </header>
 
     <!-- 導航欄 - 主要導航菜單 -->
     <AppNavigation />
+
+    <ScrollToTop />
 
     <!-- 促銷橫幅 - 特殊促銷活動展示 -->
     <SitePromoBanner />
 
     <!-- 麵包屑導航 - 頁面路徑導航 -->
-    <BreadcrumbNav />
+    <!-- <BreadcrumbNav /> -->
 
     <!-- 主要內容區域 - 頁面內容插槽 -->
     <main class="flex-fill py-4">
@@ -49,6 +53,7 @@ import SitePromoBanner from '@/components/common/SitePromoBanner.vue'; // 網站
 import BreadcrumbNav from '@/components/ui/BreadcrumbNav.vue'; // 麵包屑導航
 import AppLoading from '@/components/ui/AppLoading.vue'; // Loading組件
 
+import ScrollToTop from '@/components/common/ScrollToTop.vue'
 /**
  * Layout.vue 組件配置
  * 功能：應用主布局組件，定義整體頁面結構
@@ -68,10 +73,40 @@ export default {
     SitePromoBanner,
     BreadcrumbNav,
     AppLoading,
+    ScrollToTop,
   },
+  data(){
+    return{
+      scroll:false,
+    }
+  },
+  methods:{
+    handleHeader:function(){
+      this.scroll=window.scrollY>50
+    }
+  },
+  mounted(){
+    window.addEventListener('scroll',this.handleHeader);
+  },
+  beforeUnmount(){
+    window.removeEventListener('scroll',this.handleHeader);
+  }
 };
 </script>
 
 <style scoped>
 /* 使用Bootstrap類，無需自定義CSS */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1050;
+  transition: all 0.4s ease; /* 平滑過渡效果 */
+}
+
+header.header-scrolled {
+  transform: translateY(0);
+  opacity: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* 捲動後加陰影 */
+}
+
 </style>

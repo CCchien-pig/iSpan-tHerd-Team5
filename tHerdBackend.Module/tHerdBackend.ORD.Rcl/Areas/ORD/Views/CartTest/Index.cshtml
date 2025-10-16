@@ -1,0 +1,322 @@
+﻿@{
+    ViewData["Title"] = "購物車測試";
+}
+
+<div id="app" class="cart-container">
+    <h1 class="mb-4"><i class="fas fa-shopping-cart"></i> 購物車測試</h1>
+
+    <!-- 訂單成功提示 -->
+    <div v-if="orderSuccess" class="order-success">
+        <h4><i class="fas fa-check-circle"></i> {{ orderMessage }}</h4>
+        <p>訂單編號：<span class="order-no">{{ orderNo }}</span></p>
+        <p>訂單金額：NT$ {{ orderTotal.toLocaleString() }}</p>
+        <button class="btn btn-primary" @@click="resetCart">繼續購物</button>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div v-if="cartItems.length === 0" class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 購物車是空的
+            </div>
+
+            <div v-for="(item, index) in cartItems" :key="index" class="cart-item card-float">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="product-name">{{ item.productName }}</div>
+                        <div class="product-option">規格：{{ item.optionName }}</div>
+                        <div>
+                            <span class="original-price">NT$ {{ item.unitPrice.toLocaleString() }}</span>
+                            <span class="sale-price">NT$ {{ item.salePrice.toLocaleString() }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 text-center">
+                        <div class="quantity-control">
+                            <button @@click="decreaseQuantity(index)">-</button>
+                            <input type="number" v-model.number="item.quantity" min="1" @@change="updateQuantity(index)">
+                            <button @@click="increaseQuantity(index)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <div class="item-subtotal">NT$ {{ (item.salePrice * item.quantity).toLocaleString() }}</div>
+                    </div>
+
+                    <div class="col-md-1 text-end">
+                        <button class="btn btn-sm btn-outline-danger" @@click="removeItem(index)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="summary-card card-float">
+                <h5><i class="fas fa-file-invoice-dollar"></i> 訂單摘要</h5>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>商品數量：</span><span>{{ totalItems }} 件</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>原價小計：</span><span>NT$ {{ totalOriginalPrice.toLocaleString() }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-success">
+                    <span>折扣金額：</span><span>- NT$ {{ totalDiscount.toLocaleString() }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between summary-total">
+                    <span>應付金額：</span><span>NT$ {{ totalAmount.toLocaleString() }}</span>
+                </div>
+                <button class="btn-checkout mt-3" @@click="checkout" :disabled="cartItems.length === 0 || isProcessing">
+                    <i class="fas fa-credit-card"></i> {{ isProcessing ? '處理中...' : '立即結帳' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .cart-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+
+        .card-float {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            transition: all .25s;
+        }
+
+            .card-float:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 16px rgba(0,0,0,.15);
+            }
+
+        .cart-item {
+            padding: 20px 25px;
+            margin-bottom: 18px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .product-option {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #adb5bd;
+            margin-right: 8px;
+        }
+
+        .sale-price {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+            .quantity-control button {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: linear-gradient(135deg,#667eea 0%, #764ba2 100%);
+                color: #fff;
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .quantity-control input {
+                width: 55px;
+                text-align: center;
+                border: 2px solid #e9ecef;
+                border-radius: 6px;
+                height: 36px;
+            }
+
+        .item-subtotal {
+            font-size: 20px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .summary-card {
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        .summary-total {
+            font-size: 22px;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .btn-checkout {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            background: linear-gradient(135deg,#667eea 0%, #764ba2 100%);
+            box-shadow: 0 3px 10px rgba(102,79,200,.25);
+            transition: all .3s;
+        }
+
+            .btn-checkout:hover {
+                transform: scale(1.02);
+                background: linear-gradient(135deg,#5a67d8 0%, #6b46c1 100%);
+                box-shadow: 0 6px 15px rgba(102,79,200,.35);
+            }
+
+        .order-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+            .order-success h4 {
+                color: #155724;
+                margin-bottom: 10px;
+            }
+
+        .order-no {
+            font-size: 20px;
+            font-weight: bold;
+            color: #28a745;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+          data() {
+            return {
+              cartItems: [],
+              orderSuccess: false,
+              orderMessage: '',
+              orderNo: '',
+              orderTotal: 0,
+              isProcessing: false
+            };
+          },
+          computed: {
+            totalItems() { return this.cartItems.reduce((s,i)=>s+i.quantity,0); },
+            totalOriginalPrice() { return this.cartItems.reduce((s,i)=>s+i.unitPrice*i.quantity,0); },
+            totalAmount() { return this.cartItems.reduce((s,i)=>s+i.salePrice*i.quantity,0); },
+            totalDiscount() { return this.totalOriginalPrice - this.totalAmount; }
+          },
+          methods: {
+            async loadInitialCart(){
+              const res = await fetch('/ORD/CartTest/GetInitialCart');
+              this.cartItems = await res.json();
+            },
+            increaseQuantity(i){ this.cartItems[i].quantity++; },
+            decreaseQuantity(i){ if(this.cartItems[i].quantity>1) this.cartItems[i].quantity--; },
+            updateQuantity(i){ if(this.cartItems[i].quantity<1) this.cartItems[i].quantity=1; },
+            async removeItem(i){
+              const removed = this.cartItems[i];
+              this.cartItems.splice(i,1);
+              Swal.fire({toast:true,position:'top-end',icon:'success',title:`已移除：${removed.productName}`, showConfirmButton:false, timer:1800});
+            },
+            async checkout(){
+              this.isProcessing = true;
+              try{
+                const res = await fetch('/ORD/CartTest/Checkout',{
+                  method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ cartItems:this.cartItems })
+                });
+                const result = await res.json();
+
+                if(result.success){
+                  this.orderSuccess = true;
+                  this.orderMessage = result.message;
+                  this.orderNo = result.orderNo;
+                  this.orderTotal = result.totalAmount;
+                  this.cartItems = [];
+
+                  Swal.fire({
+                    icon:'success',
+                    title:'訂單建立成功',
+                    html:`<div style="text-align:left;font-size:15px;line-height:1.6;">
+                            <p><b style="color:#444;">訂單編號：</b>${result.orderNo}</p>
+                            <p><b style="color:#444;">金額：</b>NT$ ${result.totalAmount.toLocaleString()}</p>
+                          </div>`,
+                    confirmButtonColor:'#667eea'
+                  });
+                } else {
+                  Swal.fire({
+                    icon:'error',
+                    title:'結帳失敗',
+                    html:this.formatError(result.message),
+                    confirmButtonText:'OK',
+                    confirmButtonColor:'#667eea'
+                  });
+                }
+              } catch(err){
+                Swal.fire({icon:'error', title:'結帳失敗', text:err.message, confirmButtonColor:'#667eea'});
+              } finally {
+                this.isProcessing=false;
+              }
+            },
+            formatError(msg){
+              if(!msg) return '<span>未知錯誤</span>';
+              let html = `<div style="text-align:left;font-size:15px;">`;
+              if(msg.includes("以下商品")){
+                html += `<p style="color:#444;">${msg.split('：')[0]}：</p>`;
+                const list = msg.split('：')[1].split('|||');
+                html += list.map((entry,idx)=>{
+                  const [product, option, status] = entry.split('||');
+                  return `
+                    <div style="margin-bottom:12px;padding-left:10px;border-left:3px solid #667eea;">
+                      <div style="font-weight:700;color:#2c3e50;">${idx+1}. ${product.trim()}</div>
+                      <div style="color:#6c757d;">規格：${option.trim()}</div>
+                      <div style="color:#c0392b;font-weight:600;">狀態：${status.trim()}</div>
+                    </div>`;
+                }).join('');
+              } else {
+                html += `<div>${msg}</div>`;
+              }
+              html += `</div>`;
+              return html;
+            },
+            resetCart(){
+              this.orderSuccess=false; this.orderMessage=''; this.orderNo=''; this.orderTotal=0;
+              this.loadInitialCart();
+            }
+          },
+          mounted(){ this.loadInitialCart(); }
+        }).mount('#app');
+    </script>
+}
