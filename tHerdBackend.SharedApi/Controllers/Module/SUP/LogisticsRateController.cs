@@ -1,5 +1,4 @@
-﻿using FlexBackend.Core.DTOs.SUP;
-using Microsoft.AspNetCore.Antiforgery;
+﻿using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs.SUP;

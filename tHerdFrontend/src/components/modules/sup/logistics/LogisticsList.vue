@@ -67,11 +67,12 @@ table {
 }
 th,
 td {
-  border: 1px solid #ddd;
+  border: 1px solid rgb(77, 180, 193);
   padding: 0.5rem;
   text-align: center;
 }
 thead {
-  background: #f7f7f7;
+  background: rgb(0, 112, 131);
+  color: rgb(248, 249, 250);
 }
 </style>

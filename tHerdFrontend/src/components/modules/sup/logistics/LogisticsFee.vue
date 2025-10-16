@@ -122,7 +122,9 @@ function toggle(id) {
 }
 /* 外層表頭 */
 .tcat-table thead th {
-  background: #feec99;
+  /* background: #feec99; */
+  background: rgb(0, 112, 131);
+  color: rgb(248, 249, 250);
   font-size: 17px;
   font-weight: bold;
 }
@@ -143,7 +145,7 @@ function toggle(id) {
 }
 /* 展開行整段底色 */
 .tcat-table .expand-area {
-  background: #ddf4f9; /* 改為指定色 */
+  background: #ddf4f9; /*改為指定色*/
   padding: 0;
 }
 
@@ -161,7 +163,7 @@ function toggle(id) {
   box-sizing: border-box;
 }
 .rate-inner-table thead th {
-  background: #d3ece8;
+  background: #4db4c1;
   font-size: 15px;
   font-weight: bold;
 }

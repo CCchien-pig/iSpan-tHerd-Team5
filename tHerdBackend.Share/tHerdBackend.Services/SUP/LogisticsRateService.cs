@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using FlexBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;

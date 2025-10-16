@@ -1,5 +1,4 @@
-﻿using FlexBackend.Core.DTOs.SUP;
-using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP;
 
 public interface ILogisticsRateService
 {
