@@ -1,0 +1,668 @@
+﻿@* Logistics Index *@
+@* 可搜 配送方式/物流商名稱 *@
+
+@section Styles {  
+    <!-- Area 專用 CSS -->
+    <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
+    <style>
+    </style>
+}
+
+@{
+    ViewData["Title"] = "物流 / 運費一覽";
+}
+
+<button id="create" class="btn btn-outline-success mb-2">新增物流商</button>
+
+@* 渲染 DataTable *@
+<div class="card logistics-card">
+    <h5>物流 / 運費管理</h5>
+    <table id="logisticsTable" class="display table" style="width:100%">
+        <thead>
+            <tr>
+                <th></th> <!-- 展開列按鈕 -->
+                <th>物流Id</th>
+                <th>物流商名稱</th>
+                <th>配送方式</th>
+                <th>啟用狀態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- 新增/修改/詳情物流 Modal -->
+<div id="logisticsModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="logisticsModalTitle" class="modal-title">--物流--</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- Body -->
+            <div id="logisticsModalContent" class="modal-body p-4">
+                <!-- 透過 AJAX 載入 _LogisticsFormPartial.cshtml -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+        $(document).ready(function() {
+            
+            // ======= URL 變數 ======= // 生成正確的 URL（Razor 會替換成 /SUP/Logistics/...）
+            var indexJsonUrl = '@Url.Action("IndexJson", "Logistics", new { area = "SUP" })';
+            
+            var createUrl = '@Url.Action("Create", "Logistics", new { area = "SUP" })';
+            var detailsUrl = '@Url.Action("Details", "Logistics", new { area = "SUP" })';
+            var deleteUrl = '@Url.Action("Delete", "Logistics", new { area = "SUP" })';
+            var editUrl = '@Url.Action("Edit", "Logistics", new { area = "SUP" })';
+            var toggleActiveUrl = '@Url.Action("ToggleActive", "Logistics", new { area = "SUP" })';
+
+            var createRateUrl = '@Url.Action("CreateRate", "Logistics", new { area = "SUP" })';
+            var deleteRateUrl = '@Url.Action("DeleteRate", "Logistics", new { area = "SUP" })';
+            var getByLogisticsIdUrl = '@Url.Action("GetByLogisticsId", "Logistics", new { area = "SUP" })';
+            var getLastWeightMaxUrl  = '@Url.Action("GetLastWeightMax", "Logistics", new { area = "SUP" })';
+            var updateRateWeightMaxUrl  = '@Url.Action("UpdateRateWeightMax", "Logistics", new { area = "SUP" })';
+            var logisticsRateUrl = '@Url.Action("LogisticsRate", "Logistics", new { area = "SUP" })';
+            var toggleRateActiveUrl = '@Url.Action("ToggleRateActive", "Logistics", new { area = "SUP" })';
+
+
+            // 初始化 DataTable
+            var table = $('#logisticsTable').DataTable({
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: indexJsonUrl,
+                    type: 'POST',
+                    dataSrc: function(json) {
+                    // console.log("整個 JSON 回傳：", json);
+
+                    // if (!json || !json.data) {
+                    //     console.warn("JSON 或 JSON.data 是空的！");
+                    //     return [];
+                    // }
+
+                    // 檢查每筆資料是否都有 logisticsId
+                    // json.data.forEach((row, idx) => {
+                    //     if (row.logisticsId === undefined) {
+                    //         console.error(`第 ${idx} 筆資料缺少 logisticsId`, row);
+                    //     }
+                    // });
+
+                    // console.log("DataTables 實際讀取的資料：", json.data.map(r => ({
+                    //     logisticsId: r.logisticsId,
+                    //     logisticsName: r.logisticsName,
+                    //     shippingMethod: r.shippingMethod,
+                    //     isActive: r.isActive
+                    // })));
+
+                    return json.data;
+                },
+                    error: function(xhr, error, thrown) {
+                        console.error("AJAX 失敗：", xhr.responseText, error, thrown); // 印出後端錯誤訊息
+                        alert("資料載入失敗，請檢查後端或 console");
+                    }
+                },
+                columns: [
+                    {
+                        className: 'dt-control text-center',
+                        orderable: false,
+                        data: null,
+                        defaultContent: '<i class="fa-solid fa-plus" style="color: #6688b7;cursor:pointer"></i>'
+                    },
+                    { data: 'logisticsId', title: '物流Id', className: 'text-center', defaultContent: '' },
+                    { data: 'logisticsName', title: '物流商名稱', className: 'text-center' },
+                    { data: 'shippingMethod', title: '配送方式', className: 'text-center' },
+                    {
+                        data: 'isActive',
+                        title: '啟用狀態',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            var checked = data ? 'checked' : '';
+                            return `
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-active" type="checkbox" data-id="${row.logisticsId}" ${checked}>
+                                </div>
+                            `;
+                        },
+                    },
+                    {
+                        data: 'logisticsId',
+                        title: '操作',
+                        className: 'text-center',
+                        orderable: false,   // 禁止排序
+                        render: function(data) {
+                            return `
+                                <button class="btn btn-sm history-btn" data-id="${data}" data-bs-toggle="tooltip" title="檢視紀錄">
+                                    <i class="fa-solid fa-circle-info" style="color: #30c6c7;"></i>
+                                </button>
+                                <button class="btn btn-sm edit-btn" data-id="${data}" data-bs-toggle="tooltip" title="編輯">
+                                    <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
+                                </button>
+                                <button class="btn btn-sm delete-btn" data-id="${data}" data-bs-toggle="tooltip" title="刪除">
+                                    <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
+                order: [[1, 'asc']],
+                // fixedHeader: true,
+                scrollY: "500px",     // 表格顯示區域的高度
+                scrollCollapse: true, // 垂直滾動條，當資料少於高度時收合
+                colReorder: true,
+                columnDefs: [
+                    { targets: '_all', type: 'string' } // 所有欄位都設成文字
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',   // i18n
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'   // 自訂載入圖示，大小fa-3x
+                }
+            });
+
+            // 初始化 tooltip
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
+            });
+
+            // 每次 redraw 都要再初始化 tooltip
+            table.on('draw', function() {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (el) {
+                    return new bootstrap.Tooltip(el);
+                });
+            });
+
+
+
+            // ====== 展開列事件(含新增運費區間btn) ======
+            $('#logisticsTable tbody').off('click', 'td.dt-control').on('click', 'td.dt-control', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                if (row.child.isShown()) {
+                    // 關閉
+                    row.child.hide();
+                    tr.find('i.fa-plus').removeClass('fa-minus').addClass('fa-plus');
+                } else {
+                    // SupLogistics.LogisticsId
+                    var logisticsId = row.data().logisticsId;
+                    console.log('該列logisticsId:', logisticsId);
+
+                    $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function (data) {
+                        console.log('收到資料:', data);
+
+                        // 預設顯示「新增運費區間」按鈕
+                        var childHtml = `<div class="mb-2">
+                            <button class="btn btn-sm btn-outline-primary add-rate-btn" data-id="${logisticsId}">
+                                <i class="fa-solid fa-plus"></i> 新增運費區間
+                            </button>
+                        </div>`;
+
+                        if (data.length === 0) {
+                            childHtml += `<p class="text-muted">尚無運費區間資料</p>`;
+                        } else {
+                            childHtml += `<div class="d-flex flex-wrap gap-2 shipping-cards">`;
+                            data.forEach(function (rate) {
+                                childHtml += `
+                                    <div class="card" style="min-width:220px;">
+                                        <div class="card-body p-2">
+                                            <!-- 上半段：重量與運費 -->
+                                            <div class="mb-2">
+                                                <p class="mb-1"><strong>重量:</strong> ${rate.weightMin} ~ ${rate.weightMax || '無限大'} kg</p>
+                                                <p class="mb-1"><strong>運費:</strong> ${rate.shippingFee}</p>
+                                            </div>
+                                            <!-- 下半段：Switch + 刪除 -->
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <div class="form-check form-switch mb-0">
+                                                        <input type="checkbox" class="form-check-input toggle-rate-active" data-id="${rate.logisticsRateId}" ${rate.isActive ? 'checked' : ''}>
+                                                        <label class="form-check-label">啟用</label>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <button class="btn btn-sm btn-danger delete-rate-btn" data-id="${rate.logisticsRateId}">
+                                                        <i class="fa-solid fa-trash"></i> 刪除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            });
+                            childHtml += `</div>`;
+                        }
+
+                        // 顯示 child row
+                        row.child(childHtml).show();
+                        tr.find('i.fa-plus').removeClass('fa-plus').addClass('fa-minus');
+            
+                        // ====== 綁定 Switch 事件 ======
+                        row.child().find('.toggle-rate-active').off('change').on('change', function () {
+                            var rateId = $(this).data('id');
+                            var isActive = $(this).prop('checked');
+                            var $switch = $(this);
+                            console.log("Switch 被切換:", { rateId, isActive });
+
+                            $.ajax({
+                                url: toggleRateActiveUrl,
+                                method: "POST",
+                                data: { id: rateId, isActive: isActive },
+                                success: function (res) {
+                                    if (!res.success) {
+                                        Swal.fire("錯誤", res.message, "error");
+                                        // 還原狀態
+                                        $switch.prop('checked', !isActive);
+                                    } else {
+                                        Swal.fire({
+                                            icon: "success",
+                                            title: "更新成功",
+                                            text: `運費區間已${res.newStatus ? "啟用" : "停用"}`
+                                        });
+                                        console.log("切換成功，狀態已更新:", res.newStatus);
+                                    }
+                                },
+                                error: function (xhr, status, err) {
+                                    console.error("AJAX 發生錯誤:", { status, err, response: xhr.responseText });
+                                    Swal.fire("錯誤", "伺服器連線失敗", "error");
+                                    // 還原狀態
+                                    $switch.prop('checked', !isActive);
+                                }
+                            });
+                        });                    });
+                }
+            });
+
+            // ======= 新增運費區間 (inline input) =======
+            $('#logisticsTable tbody').off('click', '.add-rate-btn').on('click', '.add-rate-btn', function(){
+                var logisticsId = $(this).data('id');
+                var btn = $(this);
+
+                // 避免重複建立 input
+                if($(this).next('.new-rate-row').length) return;
+
+                $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function(existingRates){
+                    var lastRate = existingRates[existingRates.length - 1];
+                    var defaultWeightMin = lastRate ? parseFloat(lastRate.weightMax || 0) : 0;
+
+                    var inputHtml = `
+                        <div class="new-rate-row d-flex gap-2 mt-2 align-items-center">
+                            <input type="number" class="form-control form-control-sm weightMin" placeholder="最小重量(kg)" style="width:100px" value="${defaultWeightMin.toFixed(1)}" min="0" step="0.1">
+                            <input type="number" class="form-control form-control-sm weightMax" placeholder="最大重量(kg)" style="width:100px" min="0" step="0.1">
+                            <input type="number" class="form-control form-control-sm shippingFee" placeholder="運費" style="width:80px" min="0" step="0.01">
+                            <div class="form-check form-switch mb-0">
+                                <input type="checkbox" class="form-check-input isActive" checked>
+                                <label class="form-check-label">啟用</label>
+                            </div>
+                            <button class="btn btn-sm btn-success save-rate-btn"><i class="fa-solid fa-check"></i></button>
+                            <button class="btn btn-sm btn-secondary cancel-rate-btn"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    `;
+                    $(btn).after(inputHtml);
+
+                    // 取消按鈕
+                    $('.cancel-rate-btn').off('click').on('click', function(){
+                        $(this).closest('.new-rate-row').remove();
+                    });
+
+                    // 儲存按鈕
+                    $('.save-rate-btn').off('click').on('click', function(){
+                        var rowDiv = $(this).closest('.new-rate-row');
+                        var weightMin = parseFloat(rowDiv.find('.weightMin').val());
+                        var weightMax = parseFloat(rowDiv.find('.weightMax').val());
+                        var shippingFee = parseFloat(rowDiv.find('.shippingFee').val());
+                        var isActive = rowDiv.find('.isActive').prop('checked');
+
+                        if(isNaN(weightMin) || isNaN(weightMax) || isNaN(shippingFee)){
+                            Swal.fire('錯誤','請輸入正確的重量與運費','error');
+                            return;
+                        }
+
+                        if(weightMin < 0){
+                            Swal.fire('錯誤','最小重量不可小於 0','error');
+                            return;
+                        }
+
+                        if(weightMax <= weightMin){
+                            Swal.fire('錯誤','最大重量不可小於最小重量','error');
+                            return;
+                        }
+
+                        // 自動調整最小重量為 .1 結尾（非 0）
+                        if(weightMin !== 0){
+                            var intPart = Math.floor(weightMin);
+                            weightMin = intPart + 0.1;
+                            rowDiv.find('.weightMin').val(weightMin.toFixed(1));
+                        }
+
+                        // 呼叫 CreateRate API，後端會自動切割重疊區間
+                        $.post(`${createRateUrl}`, {
+                            logisticsId: logisticsId,
+                            weightMin: weightMin,
+                            weightMax: weightMax,
+                            shippingFee: shippingFee,
+                            isActive: isActive
+                        }).done(function(res){
+                            if(res.success){
+                                Swal.fire('新增成功','','success');
+
+                                // 刷新展開列
+                                var tr = btn.closest('tr');
+                                table.row(tr).child.hide();
+                                tr.find('td.dt-control').click();
+                            } else {
+                                Swal.fire('新增失敗', res.message || '', 'error');
+                            }
+                        }).fail(function(){
+                            Swal.fire('操作失敗','','error');
+                        });
+                    });
+                });
+            });
+
+            // ======= 刪除運費區間 ======
+            $('#logisticsTable').off('click', '.delete-rate-btn').on('click', '.delete-rate-btn', function () {
+                var rateId = $(this).data('id');
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                Swal.fire({
+                    title: '確定刪除？',
+                    text: "此動作將永久刪除此運費區間！",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post(deleteRateUrl, { rateId: rateId }, function(res){
+                            if(res.success){
+                                Swal.fire({ icon: 'success', title: '刪除成功', timer: 1500, showConfirmButton: false });
+
+                                // 重新抓該 logisticsId 的子資料
+                                var logisticsId = row.data().logisticsId;
+                                $.get(`${getByLogisticsIdUrl}?id=${logisticsId}`, function (data) {
+                                    var childHtml = `<div class="mb-2">
+                                        <button class="btn btn-sm btn-outline-primary add-rate-btn" data-id="${logisticsId}">
+                                            <i class="fa-solid fa-plus"></i> 新增運費區間
+                                        </button>
+                                    </div>`;
+
+                                    if (data.length === 0) {
+                                        childHtml += `<p class="text-muted">尚無運費區間資料</p>`;
+                                    } else {
+                                        childHtml += `<div class="d-flex flex-wrap gap-2">`;
+                                        data.forEach(function (rate) {
+                                            childHtml += `
+                                                <div class="card p-2" style="min-width: 220px;">
+                                                    <div class="card-body p-2">
+                                                        <p class="mb-1"><strong>最小重量:</strong> ${rate.weightMin}</p>
+                                                        <p class="mb-1"><strong>最大重量:</strong> ${rate.weightMax || '無限大'}</p>
+                                                        <p class="mb-1"><strong>運費:</strong> ${rate.shippingFee}</p>
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div class="form-check form-switch">
+                                                                <input type="checkbox" class="form-check-input toggle-rate-active" data-id="${rate.logisticsRateId}" ${rate.isActive ? 'checked' : ''}>
+                                                                <label class="form-check-label">啟用</label>
+                                                            </div>
+                                                            <button class="btn btn-sm btn-danger delete-rate-btn" data-id="${rate.logisticsRateId}">
+                                                                <i class="fa-solid fa-trash"></i> 刪除
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>`;
+                                        });
+                                        childHtml += `</div>`;
+                                    }
+
+                                    row.child(childHtml).show();
+                                });
+
+                            } else {
+                                Swal.fire('錯誤', res.message || '刪除失敗', 'error');
+                            }
+                        }).fail(function(){
+                            Swal.fire('錯誤','伺服器錯誤','error');
+                        });
+                    }
+                });
+            });
+
+
+
+            // ======= 新增物流商 =======
+            // 發送 GET 請求到 /SUP/Logistics/Create
+            $("#create").click(function() {
+                $.get( createUrl,  function(html) {
+                    // 動態設定 Modal 標題
+                    $("#logisticsModalTitle").text("新增物流商");
+                    // 將 Partial 載入 Modal
+                    $('#logisticsModalContent').html(html);
+                    // 重新解析 jQuery Unobtrusive Validation
+                    $.validator.unobtrusive.parse('#logisticsModalContent');
+                    $('#logisticsModal').modal('show');
+                });
+            });
+
+            // ======= 編輯物流商 =======
+            $('#logisticsTable').on('click', '.edit-btn', function () {
+                var id = $(this).data('id');
+                // 用 AJAX 把 Partial View 載入到 Modal 裡
+                $.get(`${editUrl}/${id}`, function (html) {
+                    console.log(`${editUrl}/${id}`);
+                    // console.log("PartialView html:", html);
+                    $("#logisticsModalTitle").text("修改物流商"); // 動態設定 Modal 標題
+                    $('#logisticsModalContent').html(html);  // 把表單塞進去
+                    $.validator.unobtrusive.parse('#logisticsModalContent');
+                    $('#logisticsModal').modal('show'); // 顯示 Modal
+                });
+            });
+
+            // 編輯 Modal 內 checkbox
+            $('#logisticsModalContent').on('change', 'input[name="IsActive"]', function() {
+                var checkbox = $(this);
+                var logisticsName = $('#LogisticsName').val();
+                var newStatus = checkbox.prop('checked');
+
+                Swal.fire({
+                    title: newStatus ?
+                        `確定要啟用物流商：<br>"${logisticsName}" 嗎？` :
+                        `確定要停用物流商：<br>"${logisticsName}" 嗎？`,
+                    icon: newStatus ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: newStatus ? '啟用' : '停用',
+                    cancelButtonText: '取消',
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        // 使用者取消 → 回復舊值
+                        checkbox.prop('checked', !newStatus);
+                    } else {
+                        // 使用者確認 → 更新提示 p
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態`);
+                    }
+                });
+            });
+
+            // ======= 啟用/停用物流商 =======
+            $('#logisticsTable').on('change', '.toggle-active', function() {
+                var checkbox = $(this);
+                var id = checkbox.data('id');
+                var rowData = table.row(checkbox.closest('tr')).data();
+                var logisticsName = rowData.logisticsName;
+                var newStatus = checkbox.prop('checked'); // true = 啟用
+
+                // 回復原本狀態，等待確認
+                checkbox.prop('checked', !newStatus);
+
+                Swal.fire({
+                    title: newStatus ?
+                        `確定要啟用物流商：<br>"${logisticsName}" 嗎？` :
+                        `確定要停用物流商：<br>"${logisticsName}" 嗎？`,
+                    icon: newStatus ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: newStatus ? '啟用' : '停用',
+                    cancelButtonText: '取消',
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                }).then((result) => {
+                    if(result.isConfirmed){
+                        $.post(`${toggleActiveUrl}/${id}`, { isActive: newStatus })
+                        .done(function(res){
+                            if(res.success){
+                                checkbox.prop('checked', newStatus);
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: `物流商已${newStatus ? '啟用' : '停用'}`,
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('操作失敗', res.message || '', 'error');
+                            }
+                        })
+                        .fail(function(){ Swal.fire('操作失敗', '', 'error'); });
+                    }
+                });
+            });
+
+            // ======= 刪除物流商 =======
+            $('#logisticsTable').on('click', '.delete-btn', function() {
+                var id = $(this).data('id');
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+
+                Swal.fire({
+                    title: '確定刪除？',
+                    text: "此動作將永久刪除此物流商！",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '是的，刪除',
+                    cancelButtonText: '取消',
+                    reverseButtons: true
+                }).then((result) => {
+                    if(result.isConfirmed){
+                        $.post(`${deleteUrl}/${id}`, function(res){
+                            if(res.success){
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '刪除成功',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                row.remove().draw(false);
+                            } else {
+                                Swal.fire('錯誤', res.message || '刪除失敗', 'error');
+                            }
+                        }).fail(function(){ Swal.fire('錯誤', '伺服器錯誤', 'error'); });
+                    }
+                });
+            });
+
+            // ======= 提交表單 (新增/修改) =======
+            $('#logisticsModalContent').on('submit', '#logisticsForm', function(e) {
+                e.preventDefault();
+                var form = $(this);
+
+                // 更新 checkbox 隱藏欄位值
+                var isActive = $('#IsActive').prop('checked');
+                $('input[name="IsActive"][type="hidden"]', form).val(isActive);
+
+                $.post(form.attr('action'), form.serialize())
+                .done(function(res) {
+                    // 判斷回傳結果是否為 JSON
+                    var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
+                    var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
+
+                    if (data) {
+                        if (data.success) {
+                            $('#logisticsModal').modal('hide');
+
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: data.isCreate ? '新增成功' : '修改成功',
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+
+                            // 如果後端回傳 logistics，直接新增一列到 table
+                            if (data.logistics) {
+                                if (data.isCreate) {
+                                    // 新增列
+                                    table.row.add({
+                                        logisticsId: data.logistics.logisticsId,
+                                        logisticsName: data.logistics.logisticsName,
+                                        shippingMethod: data.logistics.shippingMethod,
+                                        isActive: data.logistics.isActive
+                                    }).draw(false);
+                                } else {
+                                    // 編輯 → 更新對應 row
+                                    var row = table.row(function(idx, d, node) {
+                                        return d.logisticsId === data.logistics.logisticsId;
+                                    });
+                                    if (row.any()) {
+                                        row.data({
+                                            logisticsId: data.logistics.logisticsId,
+                                            logisticsName: data.logistics.logisticsName,
+                                            shippingMethod: data.logistics.shippingMethod,
+                                            isActive: data.logistics.isActive
+                                        }).draw(false);
+                                    } else {
+                                        // fallback 重新載入 table
+                                        table.ajax.reload(null, false);
+                                    }
+                                }
+                            }
+                        } else if (data.message === "未變更") {
+                            Swal.fire('未變更', '', 'info');
+                        } else {
+                            $('#logisticsModalContent').html(res);
+                            $.validator.unobtrusive.parse('#logisticsModalContent');
+                        }
+                    }
+                })
+                .fail(function() {
+                    Swal.fire('操作失敗', '', 'error');
+                });
+            });
+
+            // ======= 檢視紀錄 =======
+            $('#logisticsTable').on('click', '.history-btn', function() {
+                var logisticsId = $(this).data('id');
+
+                // GET 詳細資料 Partial View
+                    $.get(`${detailsUrl}/${logisticsId}`, function(html) {
+                    $('#logisticsModalTitle').text("物流資訊");
+                    $('#logisticsModalContent').html(html);  // 塞進 Modal
+                    $('#logisticsModal').modal('show');      // 顯示 Modal
+                });
+            });
+
+
+            // 自動填入
+            $(function () {
+                // 重新解析 jQuery Validation
+                $.validator.unobtrusive.parse('#logisticsForm');
+
+                // 按鈕：自動填入物流商與配送方式
+                $('#logisticsModalContent').on('click', '#fillLogistics',function () {
+                // $('#fillLogistics').click(function () {
+                    const now = new Date();
+                    const hour = now.getHours();   // 小時
+                    const minute = now.getMinutes(); // 分鐘
+
+                    $('#LogisticsName').val(`物流商${hour}點`);
+                    $('#ShippingMethod').val(`配送方式${minute}分`);
+                });
+            });
+
+        });
+    </script>
+}
