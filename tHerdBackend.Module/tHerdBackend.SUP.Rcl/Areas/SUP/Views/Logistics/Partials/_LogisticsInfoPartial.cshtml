@@ -1,0 +1,54 @@
+﻿@using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
+@* _LogisticsInfoPartial.cshtml 唯讀欄位 *@
+
+@model LogisticsContactViewModel
+
+<div class="container-fluid">
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.LogisticsId)：</div>
+        <div>@Model.LogisticsId</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.LogisticsName)：</div>
+        <div>@Model.LogisticsName</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.ShippingMethod)：</div>
+        <div>@Model.ShippingMethod</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.IsActive)：</div>
+        <div>@(Model.IsActive ? "啟用" : "停用")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Creator)：</div>
+        <div>@Model.Creator</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.CreatedDate)：</div>
+        <div>@Model.CreatedDate.ToString("yyyy/MM/dd tt hh:mm:ss")</div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Reviser)：</div>
+        <div>
+            @(Model.Reviser.HasValue? Html.DisplayFor(m => m.Reviser) : "尚無異動紀錄")
+        </div>
+    </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.RevisedDate)：</div>
+        <div>
+            @(Model.RevisedDate.HasValue? Model.RevisedDate.Value.ToString("yyyy/MM/dd tt hh:mm:ss") : "尚無異動紀錄")
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回列表</button>
+    </div>
+</div>

@@ -17,19 +17,20 @@
               class="nav-item position-relative"
             >
               <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill d-flex align-items-center gap-2"
-                :class="{ active: $route.path.startsWith(item.path) }"
-              >
+              :to="item.path"
+              class="nav-link fw-medium rounded-pill d-flex align-items-center gap-2"
+              :class="{ active: $route.path.startsWith(item.path) }"
+            >
+              <div class="nav-icon-wrapper">
                 <img v-if="item.icon" :src="item.icon" alt="" class="nav-icon" />
-                <span>{{ item.name }}</span>
-              </router-link>
+              </div>
+              <span>{{ item.name }}</span>
+            </router-link>
+
             </li>
-          </ul>
-          <ul class="nav nav-pills justify-content-center flex-wrap py-2">
             <!-- 🏷 品牌 A-Z Mega Menu -->
             <li
-              class="nav-item position-relative"
+              class="nav-item position-relative "
               @mouseenter="showBrands = true"
               @mouseleave="showBrands = false"
             >
@@ -39,7 +40,7 @@
                 :class="{ active: showBrands }"
                 @click="toggleBrands"
               >
-                <!-- <img src="" alt="" class="nav-icon" /> -->
+                <div class="nav-icon-wrapper"></div>
                 <span>品牌 A-Z</span>
               </button>
 
@@ -92,16 +93,6 @@
                 </div>
               </transition>
             </li>
-             <li v-for="item in navigationItemsWithoutIcon" :key="item.name" class="nav-item position-relative">
-                <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill d-flex align-items-center gap-2"
-                :class="{ active: $route.path.startsWith(item.path) }"
-              >
-                <!-- <img v-if="item.icon" :src="item.icon" alt="" class="nav-icon" /> -->
-                <span>{{ item.name }}</span>
-              </router-link>
-              </li>
           </ul>
         </div>
       </div>
@@ -124,8 +115,6 @@ export default {
         { name: '健康家居', path: '/healthy-home', icon: '/homePageIcon/health.png' },
         { name: '嬰童用品', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
         { name: '寵物用品', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
-      ],
-      navigationItemsWithoutIcon:[
         { name: '健康主題', path: '/health-topics' },
         { name: '特惠', path: '/specials' },
         { name: '暢銷', path: '/bestsellers' },
@@ -133,6 +122,7 @@ export default {
         { name: '新產品', path: '/new-products' },
         { name: '健康中心', path: '/health-hub' },
       ],
+      
       // 🏷 Mega Menu 狀態
       showBrands: false,
 
@@ -185,7 +175,12 @@ export default {
 .nav-link {
   color: rgb(0, 112, 131) !important;
   transition: all 0.3s ease;
-  font-size: 25px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 
 .nav-link:hover {
@@ -198,10 +193,24 @@ export default {
   color: white !important;
 }
 
-.nav-icon {
+.nav-icon-wrapper {
   width: 40px;
   height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* 避免被壓縮 */
+}
+
+.nav-icon {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+}
+
+.nav-link span {
+  line-height: 1;  /* 🔸 確保文字不撐高 */
+  display: inline-block;
 }
 
 /* 📱 RWD */
@@ -218,6 +227,7 @@ export default {
   .nav-link {
     width: 100%;
     text-align: center;
+    font-size: 1.7rem;
   }
 }
 
@@ -229,6 +239,9 @@ export default {
   .nav-item {
     flex: 0 0 auto;
     margin-bottom: 0.5rem;
+  }
+  .nav-link{
+    font-size: 1.5rem;
   }
 }
 </style>

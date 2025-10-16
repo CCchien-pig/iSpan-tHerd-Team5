@@ -11,9 +11,9 @@
 <button id="create" class="btn btn-outline-success mb-2">新增供應商</button>
 
 @* 渲染 DataTable *@
-<div class="supplier-card">
+<div class="card supplier-card">
     <h5>供應商資料</h5>
-    <table id="supplierTable" class="display" style="width:100%">
+    <table id="supplierTable" class="display table" style="width:100%">
         <thead>
             <tr>
                 <th></th>
@@ -28,7 +28,7 @@
     </table>
 </div>
 
-<!-- 新增/修改供應商 Modal -->
+<!-- 新增/修改/詳情供應商 Modal -->
 <div id="supplierModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content bg-white container">
@@ -36,10 +36,6 @@
             <div class="modal-header">
                 <h5 id="supplierModalTitle" class="modal-title">供應商</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="d-flex ">
-                <button type="button" id="fillNameContact" class="btn d-flex mt-3 me-2" style="background-color:#35afe6;color:#fff;">自動填入名稱與聯絡人</button>
-                <button type="button" id="fillEmail" class="btn d-flex mt-3" style="background-color:#35afe6;color:#fff;">自動填入電子信箱</button>
             </div>
             <!-- Body -->
             <div id="supplierModalContent" class="modal-body p-4">

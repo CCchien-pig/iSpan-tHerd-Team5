@@ -1,0 +1,182 @@
+[
+  {
+    "StoreID": "001234",
+    "StoreName": "台北信安門市",
+    "Address": "台北市信義區信安街123號",
+    "Latitude": 25.03411,
+    "Longitude": 121.564472,
+    "Type": "7-11",
+    "Phone": "02-87654321"
+  },
+  {
+    "StoreID": "005678",
+    "StoreName": "新北中和門市",
+    "Address": "新北市中和區中和路456號",
+    "Latitude": 24.996255,
+    "Longitude": 121.514971,
+    "Type": "7-11",
+    "Phone": "02-23456789"
+  },
+  {
+    "StoreID": "009012",
+    "StoreName": "桃園中壢門市",
+    "Address": "桃園市中壢區復興路789號",
+    "Latitude": 24.9536,
+    "Longitude": 121.2255,
+    "Type": "7-11",
+    "Phone": "03-12345678"
+  },
+  {
+    "StoreID": "013456",
+    "StoreName": "台中西屯門市",
+    "Address": "台中市西屯區文心路321號",
+    "Latitude": 24.1677,
+    "Longitude": 120.6408,
+    "Type": "7-11",
+    "Phone": "04-23456789"
+  },
+  {
+    "StoreID": "017890",
+    "StoreName": "台南東區門市",
+    "Address": "台南市東區中華路654號",
+    "Latitude": 22.9685,
+    "Longitude": 120.2249,
+    "Type": "7-11",
+    "Phone": "06-34567890"
+  },
+  {
+    "StoreID": "021345",
+    "StoreName": "高雄前金門市",
+    "Address": "高雄市前金區中正路987號",
+    "Latitude": 22.6273,
+    "Longitude": 120.3014,
+    "Type": "7-11",
+    "Phone": "07-45678901"
+  },
+  {
+    "StoreID": "025678",
+    "StoreName": "基隆仁愛門市",
+    "Address": "基隆市仁愛區孝二路147號",
+    "Latitude": 25.1276,
+    "Longitude": 121.7391,
+    "Type": "7-11",
+    "Phone": "02-56789012"
+  },
+  {
+    "StoreID": "029012",
+    "StoreName": "新竹東區門市",
+    "Address": "新竹市東區光復路258號",
+    "Latitude": 24.8014,
+    "Longitude": 120.9714,
+    "Type": "7-11",
+    "Phone": "03-67890123"
+  },
+  {
+    "StoreID": "033456",
+    "StoreName": "嘉義西區門市",
+    "Address": "嘉義市西區中山路369號",
+    "Latitude": 23.4801,
+    "Longitude": 120.4491,
+    "Type": "7-11",
+    "Phone": "05-78901234"
+  },
+  {
+    "StoreID": "037890",
+    "StoreName": "新竹竹東門市",
+    "Address": "新竹縣竹東鎮長春路741號",
+    "Latitude": 24.7406,
+    "Longitude": 121.0881,
+    "Type": "7-11",
+    "Phone": "03-89012345"
+  },
+  {
+    "StoreID": "041234",
+    "StoreName": "苗栗苗栗門市",
+    "Address": "苗栗縣苗栗市中正路852號",
+    "Latitude": 24.5602,
+    "Longitude": 120.8204,
+    "Type": "7-11",
+    "Phone": "037-901234"
+  },
+  {
+    "StoreID": "045678",
+    "StoreName": "彰化彰化門市",
+    "Address": "彰化縣彰化市中山路963號",
+    "Latitude": 24.0518,
+    "Longitude": 120.5161,
+    "Type": "7-11",
+    "Phone": "04-01234567"
+  },
+  {
+    "StoreID": "049012",
+    "StoreName": "南投南投門市",
+    "Address": "南投縣南投市復興路159號",
+    "Latitude": 23.9099,
+    "Longitude": 120.6841,
+    "Type": "7-11",
+    "Phone": "049-123456"
+  },
+  {
+    "StoreID": "053456",
+    "StoreName": "雲林虎尾門市",
+    "Address": "雲林縣虎尾鎮中山路753號",
+    "Latitude": 23.7081,
+    "Longitude": 120.4337,
+    "Type": "7-11",
+    "Phone": "05-12345678"
+  },
+  {
+    "StoreID": "057890",
+    "StoreName": "嘉義朴子門市",
+    "Address": "嘉義縣朴子市開元路246號",
+    "Latitude": 23.4647,
+    "Longitude": 120.2478,
+    "Type": "7-11",
+    "Phone": "05-23456789"
+  },
+  {
+    "StoreID": "061234",
+    "StoreName": "屏東屏東門市",
+    "Address": "屏東縣屏東市中山路468號",
+    "Latitude": 22.6688,
+    "Longitude": 120.4887,
+    "Type": "7-11",
+    "Phone": "08-34567890"
+  },
+  {
+    "StoreID": "065678",
+    "StoreName": "宜蘭宜蘭門市",
+    "Address": "宜蘭縣宜蘭市中山路579號",
+    "Latitude": 24.702,
+    "Longitude": 121.7375,
+    "Type": "7-11",
+    "Phone": "03-45678901"
+  },
+  {
+    "StoreID": "069012",
+    "StoreName": "花蓮花蓮門市",
+    "Address": "花蓮縣花蓮市中山路681號",
+    "Latitude": 23.9749,
+    "Longitude": 121.6015,
+    "Type": "7-11",
+    "Phone": "03-56789012"
+  },
+  {
+    "StoreID": "073456",
+    "StoreName": "台東台東門市",
+    "Address": "台東縣台東市中華路792號",
+    "Latitude": 22.7593,
+    "Longitude": 121.1444,
+    "Type": "7-11",
+    "Phone": "089-678901"
+  },
+  {
+    "StoreID": "077890",
+    "StoreName": "澎湖馬公門市",
+    "Address": "澎湖縣馬公市中正路135號",
+    "Latitude": 23.5648,
+    "Longitude": 119.5794,
+    "Type": "7-11",
+    "Phone": "06-78901234"
+  }
+]
