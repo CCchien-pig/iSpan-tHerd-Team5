@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <Folder Include="Controllers\Module\CS\" />
-    <Folder Include="Controllers\Module\CNT\" />
     <Folder Include="Controllers\Module\ORD\" />
     <Folder Include="Controllers\Module\SUP\" />
     <Folder Include="Controllers\Module\USER\" />
