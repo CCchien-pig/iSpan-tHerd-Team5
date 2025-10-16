@@ -16,7 +16,7 @@ public static class MapsterConfig
         // ========== ProdProduct ==========
 
         // Create: DTO -> Entity
-        Default.NewConfig<ProdProductDto, ProdProduct>()
+        Default.NewConfig<ProdProductDetailDto, ProdProduct>()
             .Ignore(d => d.ProductId)
             .Ignore(d => d.Creator)
             .Ignore(d => d.CreatedDate)
@@ -24,10 +24,10 @@ public static class MapsterConfig
             .Ignore(d => d.RevisedDate);
 
         // Entity -> DTO
-        Default.NewConfig<ProdProduct, ProdProductDto>();
+        Default.NewConfig<ProdProduct, ProdProductDetailDto>();
 
         // Patch: DTO -> Entity
-        Patch.NewConfig<ProdProductDto, ProdProduct>()
+        Patch.NewConfig<ProdProductDetailDto, ProdProduct>()
             .IgnoreNullValues(true)
             .Ignore(d => d.ProductId)
             .Ignore(d => d.Creator)

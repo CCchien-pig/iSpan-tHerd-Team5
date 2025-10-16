@@ -23,7 +23,7 @@
 
 <script>
 // 導入Pinia Loading狀態管理
-import { useLoadingStore } from '@/stores/loading';
+import { useLoadingStore } from '@/stores/loading'
 
 /**
  * AppLoading.vue 組件配置
@@ -39,14 +39,14 @@ export default {
    */
   setup() {
     // 獲取Loading store實例
-    const loadingStore = useLoadingStore();
+    const loadingStore = useLoadingStore()
 
     // 返回給模板使用的數據
     return {
       loadingStore,
-    };
+    }
   },
-};
+}
 </script>
 
 <style scoped>

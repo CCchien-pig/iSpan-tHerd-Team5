@@ -41,7 +41,7 @@ export default {
       default: '首次訂購可享20%或更多折扣。後續訂單均享10%折扣。',
     },
   },
-};
+}
 </script>
 
 <style scoped>

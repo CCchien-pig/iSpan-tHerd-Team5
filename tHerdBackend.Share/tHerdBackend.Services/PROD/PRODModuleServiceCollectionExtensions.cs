@@ -4,6 +4,7 @@ using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Repository.PROD;
 using tHerdBackend.Infra.Repository.SYS;
 using Microsoft.Extensions.DependencyInjection;
+using tHerdBackend.Services.PROD.API;
 
 namespace tHerdBackend.Services.PROD
 {

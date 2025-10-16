@@ -26,7 +26,7 @@
 
     <!-- 主要內容區域 - 頁面內容插槽 -->
     <main class="flex-fill py-4">
-      <slot />
+      <RouterView />
     </main>
 
     <!-- Footer - 頁腳信息和鏈接 -->
@@ -39,13 +39,13 @@
 
 <script>
 // 導入布局相關組件
-import AppHeader from './AppHeader.vue'; // 主Header組件
-import AppNavigation from './AppNavigation.vue'; // 導航組件
-import AppFooter from './AppFooter.vue'; // Footer組件
+import AppHeader from './AppHeader.vue' // 主Header組件
+import AppNavigation from './AppNavigation.vue' // 導航組件
+import AppFooter from './AppFooter.vue' // Footer組件
 
 // 導入通用組件
-import PromoBanner from '@/components/common/PromoBanner.vue'; // 促銷橫幅
-import SitePromoBanner from '@/components/common/SitePromoBanner.vue'; // 網站促銷橫幅
+import PromoBanner from '@/components/common/PromoBanner.vue' // 促銷橫幅
+import SitePromoBanner from '@/components/common/SitePromoBanner.vue' // 網站促銷橫幅
 
 // 導入UI組件
 import BreadcrumbNav from '@/components/ui/BreadcrumbNav.vue'; // 麵包屑導航
@@ -71,7 +71,7 @@ export default {
     BreadcrumbNav,
     AppLoading,
   },
-};
+}
 </script>
 
 <style scoped>
@@ -81,5 +81,4 @@ header {
   top: 0;
   z-index: 1050; /* 讓它浮在上層，不會被內容蓋住 */
 }
-
 </style>

@@ -25,7 +25,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 			// await SeedSkuDataAsync();
 			var products = await _db.ProdProducts.ToListAsync(ct);
 
-			var dtos = products.Select(p => new ProdProductDto
+			var dtos = products.Select(p => new ProdProductDetailDto
 			{
 				ProductId = p.ProductId,
 				BrandId = p.BrandId,
