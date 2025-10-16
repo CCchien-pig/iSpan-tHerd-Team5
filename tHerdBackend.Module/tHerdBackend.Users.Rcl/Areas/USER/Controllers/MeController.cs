@@ -1,7 +1,6 @@
 ﻿using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Infra.Models;
-// Areas/USER/Controllers/MeController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
