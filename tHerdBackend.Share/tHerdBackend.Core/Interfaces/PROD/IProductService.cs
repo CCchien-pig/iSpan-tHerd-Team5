@@ -5,7 +5,7 @@ namespace tHerdBackend.Core.Interfaces.PROD
 {
     public interface IProductService
     {
-        Task<IEnumerable<ProdProductDto>> GetAllAsync();
+        Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(ProductFilterQueryDto query, CancellationToken ct = default);
         Task<ProdProductDto?> GetByIdAsync(int productId);
         Task<int> CreateAsync(ProdProductDto dto);
         Task UpdateAsync(ProdProductDto dto);

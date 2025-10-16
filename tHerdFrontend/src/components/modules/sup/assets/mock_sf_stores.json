@@ -1,0 +1,200 @@
+[
+  {
+    "StoreID": "SF-TPE-001",
+    "StoreName": "順豐台北中正服務點",
+    "Address": "台北市中正區忠孝西路1段100號",
+    "Latitude": 25.034,
+    "Longitude": 121.512,
+    "Type": "順豐速運",
+    "Phone": "02-23451111"
+  },
+  {
+    "StoreID": "SF-NTP-001",
+    "StoreName": "順豐新北板橋服務點",
+    "Address": "新北市板橋區中山路二段88號",
+    "Latitude": 25.0134,
+    "Longitude": 121.4694,
+    "Type": "順豐速運",
+    "Phone": "02-33334444"
+  },
+  {
+    "StoreID": "SF-TYN-001",
+    "StoreName": "順豐桃園中壢服務點",
+    "Address": "桃園市中壢區中華路200號",
+    "Latitude": 24.9545,
+    "Longitude": 121.225,
+    "Type": "順豐速運",
+    "Phone": "03-4522111"
+  },
+  {
+    "StoreID": "SF-TXG-001",
+    "StoreName": "順豐台中西屯服務點",
+    "Address": "台中市西屯區臺中港路2段50號",
+    "Latitude": 24.1638,
+    "Longitude": 120.6379,
+    "Type": "順豐速運",
+    "Phone": "04-24667788"
+  },
+  {
+    "StoreID": "SF-TNN-001",
+    "StoreName": "順豐台南中西服務點",
+    "Address": "台南市中西區民權路一段150號",
+    "Latitude": 23.0009,
+    "Longitude": 120.2007,
+    "Type": "順豐速運",
+    "Phone": "06-2122333"
+  },
+  {
+    "StoreID": "SF-KHH-001",
+    "StoreName": "順豐高雄三民服務點",
+    "Address": "高雄市三民區鼎中路120號",
+    "Latitude": 22.647,
+    "Longitude": 120.321,
+    "Type": "順豐速運",
+    "Phone": "07-5566888"
+  },
+  {
+    "StoreID": "SF-KEL-001",
+    "StoreName": "順豐基隆服務點",
+    "Address": "基隆市中正區義二路50號",
+    "Latitude": 25.1283,
+    "Longitude": 121.741,
+    "Type": "順豐速運",
+    "Phone": "02-24556677"
+  },
+  {
+    "StoreID": "SF-HSC-001",
+    "StoreName": "順豐新竹市服務點",
+    "Address": "新竹市東區光復路一段80號",
+    "Latitude": 24.8036,
+    "Longitude": 120.9675,
+    "Type": "順豐速運",
+    "Phone": "03-5233111"
+  },
+  {
+    "StoreID": "SF-HSCC-001",
+    "StoreName": "順豐新竹縣竹北服務點",
+    "Address": "新竹縣竹北市光明一路10號",
+    "Latitude": 24.8356,
+    "Longitude": 121.0028,
+    "Type": "順豐速運",
+    "Phone": "03-6688990"
+  },
+  {
+    "StoreID": "SF-MIA-001",
+    "StoreName": "順豐苗栗服務點",
+    "Address": "苗栗縣苗栗市府前路120號",
+    "Latitude": 24.5643,
+    "Longitude": 120.82,
+    "Type": "順豐速運",
+    "Phone": "037-212345"
+  },
+  {
+    "StoreID": "SF-CHW-001",
+    "StoreName": "順豐彰化服務點",
+    "Address": "彰化縣彰化市中正路300號",
+    "Latitude": 24.071,
+    "Longitude": 120.5388,
+    "Type": "順豐速運",
+    "Phone": "04-7222333"
+  },
+  {
+    "StoreID": "SF-NTO-001",
+    "StoreName": "順豐南投服務點",
+    "Address": "南投縣南投市中興路200號",
+    "Latitude": 23.9142,
+    "Longitude": 120.6831,
+    "Type": "順豐速運",
+    "Phone": "049-2223344"
+  },
+  {
+    "StoreID": "SF-YUN-001",
+    "StoreName": "順豐雲林斗六服務點",
+    "Address": "雲林縣斗六市民生路88號",
+    "Latitude": 23.7071,
+    "Longitude": 120.543,
+    "Type": "順豐速運",
+    "Phone": "05-5522111"
+  },
+  {
+    "StoreID": "SF-CYI-001",
+    "StoreName": "順豐嘉義市服務點",
+    "Address": "嘉義市西區中山路50號",
+    "Latitude": 23.4805,
+    "Longitude": 120.4496,
+    "Type": "順豐速運",
+    "Phone": "05-2788999"
+  },
+  {
+    "StoreID": "SF-CYC-001",
+    "StoreName": "順豐嘉義縣太保服務點",
+    "Address": "嘉義縣太保市經國路150號",
+    "Latitude": 23.462,
+    "Longitude": 120.3005,
+    "Type": "順豐速運",
+    "Phone": "05-3622333"
+  },
+  {
+    "StoreID": "SF-PIF-001",
+    "StoreName": "順豐屏東服務點",
+    "Address": "屏東縣屏東市中正路20號",
+    "Latitude": 22.6735,
+    "Longitude": 120.481,
+    "Type": "順豐速運",
+    "Phone": "08-7322111"
+  },
+  {
+    "StoreID": "SF-YIL-001",
+    "StoreName": "順豐宜蘭服務點",
+    "Address": "宜蘭縣宜蘭市復興路60號",
+    "Latitude": 24.7546,
+    "Longitude": 121.749,
+    "Type": "順豐速運",
+    "Phone": "03-9255111"
+  },
+  {
+    "StoreID": "SF-HUL-001",
+    "StoreName": "順豐花蓮服務點",
+    "Address": "花蓮縣花蓮市中山路120號",
+    "Latitude": 23.9914,
+    "Longitude": 121.6015,
+    "Type": "順豐速運",
+    "Phone": "03-8355111"
+  },
+  {
+    "StoreID": "SF-TTT-001",
+    "StoreName": "順豐台東服務點",
+    "Address": "台東縣台東市更生路50號",
+    "Latitude": 22.7583,
+    "Longitude": 121.1448,
+    "Type": "順豐速運",
+    "Phone": "089-321234"
+  },
+  {
+    "StoreID": "SF-PENG-001",
+    "StoreName": "順豐澎湖服務點",
+    "Address": "澎湖縣馬公市中正路10號",
+    "Latitude": 23.5656,
+    "Longitude": 119.5661,
+    "Type": "順豊速運",
+    "Phone": "06-9277111"
+  },
+  {
+    "StoreID": "SF-KIN-001",
+    "StoreName": "順豐金門服務點",
+    "Address": "金門縣金城鎮復國路30號",
+    "Latitude": 24.4323,
+    "Longitude": 118.3188,
+    "Type": "順豐速運",
+    "Phone": "082-312345"
+  },
+  {
+    "StoreID": "SF-MAT-001",
+    "StoreName": "順豐連江馬祖服務點",
+    "Address": "連江縣南竿鄉復興路5號",
+    "Latitude": 26.1596,
+    "Longitude": 119.94,
+    "Type": "順豐速運",
+    "Phone": "0836-21234"
+  }
+]

@@ -1,0 +1,200 @@
+[
+  {
+    "StoreID": "BC90001",
+    "StoreName": "黑貓台北松山物流站",
+    "Address": "台北市松山區民生東路五段55號",
+    "Latitude": 25.055112,
+    "Longitude": 121.548623,
+    "Type": "黑貓宅急便",
+    "Phone": "02-55556666"
+  },
+  {
+    "StoreID": "BC90002",
+    "StoreName": "黑貓新北新店物流站",
+    "Address": "新北市新店區中正路300號",
+    "Latitude": 24.977112,
+    "Longitude": 121.537889,
+    "Type": "黑貓宅急便",
+    "Phone": "02-66667777"
+  },
+  {
+    "StoreID": "BC90003",
+    "StoreName": "黑貓桃園中壢物流站",
+    "Address": "桃園市中壢區中山路120號",
+    "Latitude": 24.993628,
+    "Longitude": 121.296968,
+    "Type": "黑貓宅急便",
+    "Phone": "03-77778888"
+  },
+  {
+    "StoreID": "BC90004",
+    "StoreName": "黑貓台中西區物流站",
+    "Address": "台中市西區台灣大道二段200號",
+    "Latitude": 24.147736,
+    "Longitude": 120.673648,
+    "Type": "黑貓宅急便",
+    "Phone": "04-88889999"
+  },
+  {
+    "StoreID": "BC90005",
+    "StoreName": "黑貓台南東區物流站",
+    "Address": "台南市東區崇善路50號",
+    "Latitude": 23.0,
+    "Longitude": 120.227027,
+    "Type": "黑貓宅急便",
+    "Phone": "06-11112222"
+  },
+  {
+    "StoreID": "BC90006",
+    "StoreName": "黑貓高雄前金物流站",
+    "Address": "高雄市前金區成功一路88號",
+    "Latitude": 22.6273,
+    "Longitude": 120.3014,
+    "Type": "黑貓宅急便",
+    "Phone": "07-22223333"
+  },
+  {
+    "StoreID": "BC90007",
+    "StoreName": "黑貓基隆港務物流站",
+    "Address": "基隆市中正區港西路18號",
+    "Latitude": 25.1283,
+    "Longitude": 121.7415,
+    "Type": "黑貓宅急便",
+    "Phone": "02-33334444"
+  },
+  {
+    "StoreID": "BC90008",
+    "StoreName": "黑貓新竹市物流站",
+    "Address": "新竹市北區中山路50號",
+    "Latitude": 24.8036,
+    "Longitude": 120.9686,
+    "Type": "黑貓宅急便",
+    "Phone": "03-44445555"
+  },
+  {
+    "StoreID": "BC90009",
+    "StoreName": "黑貓新竹縣竹北物流站",
+    "Address": "新竹縣竹北市光明一路120號",
+    "Latitude": 24.827,
+    "Longitude": 121.009,
+    "Type": "黑貓宅急便",
+    "Phone": "03-45454545"
+  },
+  {
+    "StoreID": "BC90010",
+    "StoreName": "黑貓苗栗物流站",
+    "Address": "苗栗縣苗栗市中山路10號",
+    "Latitude": 24.5633,
+    "Longitude": 120.8214,
+    "Type": "黑貓宅急便",
+    "Phone": "037-555566"
+  },
+  {
+    "StoreID": "BC90011",
+    "StoreName": "黑貓彰化物流站",
+    "Address": "彰化縣彰化市中山路200號",
+    "Latitude": 24.08,
+    "Longitude": 120.537,
+    "Type": "黑貓宅急便",
+    "Phone": "04-66667777"
+  },
+  {
+    "StoreID": "BC90012",
+    "StoreName": "黑貓南投物流站",
+    "Address": "南投縣南投市中興路45號",
+    "Latitude": 23.8388,
+    "Longitude": 120.9675,
+    "Type": "黑貓宅急便",
+    "Phone": "049-7777888"
+  },
+  {
+    "StoreID": "BC90013",
+    "StoreName": "黑貓雲林物流站",
+    "Address": "雲林縣斗六市民生路90號",
+    "Latitude": 23.7096,
+    "Longitude": 120.4312,
+    "Type": "黑貓宅急便",
+    "Phone": "05-88889999"
+  },
+  {
+    "StoreID": "BC90014",
+    "StoreName": "黑貓嘉義市物流站",
+    "Address": "嘉義市西區中山路150號",
+    "Latitude": 23.4806,
+    "Longitude": 120.4495,
+    "Type": "黑貓宅急便",
+    "Phone": "05-99990000"
+  },
+  {
+    "StoreID": "BC90015",
+    "StoreName": "黑貓嘉義縣物流站",
+    "Address": "嘉義縣太保市共和路20號",
+    "Latitude": 23.4628,
+    "Longitude": 120.241,
+    "Type": "黑貓宅急便",
+    "Phone": "05-12121212"
+  },
+  {
+    "StoreID": "BC90016",
+    "StoreName": "黑貓屏東物流站",
+    "Address": "屏東縣屏東市公園路5號",
+    "Latitude": 22.6733,
+    "Longitude": 120.481,
+    "Type": "黑貓宅急便",
+    "Phone": "08-22224444"
+  },
+  {
+    "StoreID": "BC90017",
+    "StoreName": "黑貓宜蘭物流站",
+    "Address": "宜蘭縣宜蘭市中山路一段60號",
+    "Latitude": 24.7021,
+    "Longitude": 121.7378,
+    "Type": "黑貓宅急便",
+    "Phone": "03-33336666"
+  },
+  {
+    "StoreID": "BC90018",
+    "StoreName": "黑貓花蓮物流站",
+    "Address": "花蓮縣花蓮市中正路250號",
+    "Latitude": 23.9875,
+    "Longitude": 121.6045,
+    "Type": "黑貓宅急便",
+    "Phone": "03-44447777"
+  },
+  {
+    "StoreID": "BC90019",
+    "StoreName": "黑貓台東物流站",
+    "Address": "台東縣台東市中華路30號",
+    "Latitude": 22.7583,
+    "Longitude": 121.144,
+    "Type": "黑貓宅急便",
+    "Phone": "089-555566"
+  },
+  {
+    "StoreID": "BC90020",
+    "StoreName": "黑貓澎湖物流站",
+    "Address": "澎湖縣馬公市中正路10號",
+    "Latitude": 23.5658,
+    "Longitude": 119.615,
+    "Type": "黑貓宅急便",
+    "Phone": "06-66669999"
+  },
+  {
+    "StoreID": "BC90021",
+    "StoreName": "黑貓金門物流站",
+    "Address": "金門縣金城鎮民生路8號",
+    "Latitude": 24.4366,
+    "Longitude": 118.317,
+    "Type": "黑貓宅急便",
+    "Phone": "082-123456"
+  },
+  {
+    "StoreID": "BC90022",
+    "StoreName": "黑貓連江馬祖物流站",
+    "Address": "連江縣南竿鄉復興路1號",
+    "Latitude": 26.1594,
+    "Longitude": 119.9572,
+    "Type": "黑貓宅急便",
+    "Phone": "0836-888888"
+  }
+]

@@ -1,17 +1,31 @@
-import './assets/main.css';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import 'bootstrap-icons/font/bootstrap-icons.css';
+import './assets/main.css'
+import 'bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 
-import App from './App.vue';
-import router from './router';
+import App from './App.vue'
+import router from './router'
 
-const app = createApp(App);
+// Google Maps
+import VueGoogleMaps from '@fawmi/vue-google-maps'
 
-app.use(createPinia());
-app.use(router);
+const app = createApp(App)
 
-app.mount('#app');
+app.use(createPinia())
+app.use(router)
+
+// Google Maps
+app.use(VueGoogleMaps, {
+  load: {
+    key: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    language: 'zh-TW',
+    v: 'weekly',
+    loading: 'async',
+    libraries: 'places',
+  },
+})
+
+app.mount('#app')

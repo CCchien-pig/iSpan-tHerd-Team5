@@ -1,17 +1,19 @@
 ﻿//using CsvHelper;
 using Dapper;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Linq;
+using System.Text;
 using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using System.Data;
 using static Dapper.SqlMapper;
-using tHerdBackend.Core.DTOs.Common;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -21,54 +23,27 @@ namespace tHerdBackend.Infra.Repository.PROD
         private readonly tHerdDBContext _db;                 // 寫入與交易來源
         private readonly ICurrentUser _currentUser;
 
-		private readonly UserManager<ApplicationUser> _userMgr;
+		private readonly UserManager<ApplicationUser>? _userMgr;
+        private readonly SignInManager<ApplicationUser>? _signInMgr;
 
 		public ProdProductRepository(ISqlConnectionFactory factory,
-			UserManager<ApplicationUser> userMgr,
-			SignInManager<ApplicationUser> signInMgr,
-			tHerdDBContext db, ICurrentUser currentUser)
+			tHerdDBContext db, ICurrentUser currentUser,
+            UserManager<ApplicationUser>? userMgr = null,
+            SignInManager<ApplicationUser>? signInMgr = null)
         {
             _factory = factory;
             _db = db;
             _currentUser = currentUser;
-			_userMgr = userMgr;
-		}
+            _userMgr = userMgr;
+            _signInMgr = signInMgr;
+        }
 
-		/// <summary>
-		/// 前台: 依傳入條件，取得產品清單
-		/// </summary>
-		/// <param name="ct"></param>
-		/// <returns></returns>
-		//public async Task<List<ProdProductDto>> GetFrontProductListAsync(CancellationToken ct = default)
-		//{
-		//	// 等待非同步結果
-		//	var list = await GetAllAsync(ct);
-
-		//	// 判斷是否有資料
-		//	if (list == null || !list.Any())
-		//		return new List<ProdProductDto>();
-
-		//	// 篩選回前台需要的欄位
-		//	return list
-		//		.Select(x => new ProdProductDto
-		//		{
-		//			ProductId = x.ProductId,
-		//			ProductName = x.ProductName,
-		//			ImageUrl = x.ImageUrl,
-		//			Badge = x.Badge, // 標籤
-		//			ListPrice = x.ListPrice, // 建議售價
-		//			UnitPrice = x.UnitPrice, // 單價
-		//			SalePrice = x.SalePrice // 特價
-		//		})
-		//		.ToList();
-		//}
-
-		/// <summary>
-		/// 取得所有有效分類
-		/// </summary>
-		/// <param name="ct"></param>
-		/// <returns></returns>
-		public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
+        /// <summary>
+        /// 取得所有有效分類
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default)
         {
             string sql = @"SELECT ProductTypeId, ParentId, ProductTypeCode, 
                             ProductTypeName
@@ -88,55 +63,129 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
-		public async Task<IEnumerable<ProdProductDto>> GetAllAsync(CancellationToken ct = default)
+        public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
+            ProductFilterQueryDto query, CancellationToken ct = default)
         {
-            string sql = @"SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
+            int skip = (query.PageIndex - 1) * query.PageSize;
+            int take = query.PageSize;
+
+            // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
+            var sql = new StringBuilder(@"SELECT 
+                p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                 p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
                 p.ShortDesc, p.FullDesc, p.IsPublished,
                 p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
-                p.CreatedDate, p.Reviser, p.RevisedDate, tc.ProductTypeName
+                p.CreatedDate, p.Reviser, p.RevisedDate,
+                tc.ProductTypeName
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId=p.BrandId 
                 LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
                 LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
                 LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
-                ORDER BY ProductId DESC;";
+                WHERE 1=1
+                ");
 
+            // === Step 2. 條件過濾 ===
+            if (!string.IsNullOrWhiteSpace(query.Keyword))
+                sql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
+            if (query.BrandId.HasValue)
+                sql.Append(" AND p.BrandId = @BrandId");
+            if (query.ProductTypeId.HasValue)
+                sql.Append(" AND t.ProductTypeId = @ProductTypeId");
+            if (query.MinPrice.HasValue)
+                sql.Append(" AND p.UnitPrice >= @MinPrice");
+            if (query.MaxPrice.HasValue)
+                sql.Append(" AND p.UnitPrice <= @MaxPrice");
+
+            // === Step 3. 排序 + 分頁 ===
+            sql.Append(query.SortBy switch
+            {
+                "price" when query.SortDesc => " ORDER BY p.UnitPrice DESC",
+                "price" => " ORDER BY p.UnitPrice ASC",
+                "name" when query.SortDesc => " ORDER BY p.ProductName DESC",
+                "name" => " ORDER BY p.ProductName ASC",
+                _ => " ORDER BY p.ProductId DESC"
+            });
+            sql.Append(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
+
+            // === Step 4. 統計筆數 ===
+            var countSql = new StringBuilder(@"
+                SELECT COUNT(DISTINCT p.ProductId)
+                FROM PROD_Product p
+                JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN SUP_Supplier su ON su.SupplierId = s.SupplierId
+                LEFT JOIN PROD_ProductType t ON t.ProductId = p.ProductId
+                WHERE 1 = 1
+            ");
+            if (!string.IsNullOrWhiteSpace(query.Keyword))
+                countSql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
+            if (query.BrandId.HasValue)
+                countSql.Append(" AND p.BrandId = @BrandId");
+            if (query.ProductTypeId.HasValue)
+                countSql.Append(" AND t.ProductTypeId = @ProductTypeId");
+            if (query.MinPrice.HasValue)
+                countSql.Append(" AND p.UnitPrice >= @MinPrice");
+            if (query.MaxPrice.HasValue)
+                countSql.Append(" AND p.UnitPrice <= @MaxPrice");
+
+            // === Step 5. 查詢執行 ===
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
-                var cmd = new CommandDefinition(sql, transaction: tx, cancellationToken: ct);
-                var repo = new AspnetusersNameRepository(_factory, _db);
-                var emp = await repo.GetAllUserNameAsync(ct);
-                // 原始查詢結果 (會有重複 ProductId)
-                var raw = conn.Query<ProdProductDto, string, ProdProductDto>(
-                    sql,
+                // 查詢參數
+                var parameters = new
+                {
+                    Skip = skip,
+                    Take = take,
+                    query.Keyword,
+                    query.BrandId,
+                    query.ProductTypeId,
+                    query.MinPrice,
+                    query.MaxPrice
+                };
+                var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
+                    sql.ToString(),
                     (p, typeName) =>
                     {
-                        p.ProductTypeDesc = new List<string>();
                         if (!string.IsNullOrEmpty(typeName))
-                            p.ProductTypeDesc.Add(typeName);
+                            p.ProductTypeDesc = new List<string> { typeName };
                         return p;
                     },
-                    splitOn: "ProductTypeName",
-                    transaction: tx);
+                    parameters,
+                    transaction: tx,
+                    splitOn: "ProductTypeName"
+                );
 
-                // GroupBy → 合併 ProductTypeNames
                 var list = raw
                     .GroupBy(p => p.ProductId)
                     .Select(g =>
                     {
                         var first = g.First();
-                        first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc).Distinct().ToList();
+                        first.ProductTypeDesc = g
+                            .SelectMany(x => x.ProductTypeDesc ?? new List<string>())
+                            .Distinct()
+                            .ToList();
                         return first;
                     })
                     .ToList();
 
-                foreach (var item in list) {
-                    item.CreatorNm = emp.FirstOrDefault(e => e.UserNumberId == item.Creator)?.FullName;
-                    item.ReviserNm = emp.FirstOrDefault(e => e.UserNumberId == item.Reviser)?.FullName;
+                // === Step 6. 計算總筆數 ===
+                int total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, transaction: tx);
+
+                // === Step 7. 補 Creator / Reviser 名稱 ===
+                var repo = new AspnetusersNameRepository(_factory, _db);
+                var empList = await repo.GetAllUserNameAsync(ct);
+                var empDict = empList.ToDictionary(e => e.UserNumberId, e => e.FullName);
+
+                foreach (var item in list)
+                {
+                    if (item.Creator != 0 && empDict.TryGetValue(item.Creator, out var cName))
+                        item.CreatorNm = cName;
+                    if (item.Reviser != null && empDict.TryGetValue(item.Reviser.Value, out var rName))
+                        item.ReviserNm = rName;
                 }
-                return list;
+
+                return (list, total);
             }
             finally
             {
@@ -293,9 +342,21 @@ namespace tHerdBackend.Infra.Repository.PROD
         // 新增
         public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
         {
-			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
+            int? userNumberId = null;
 
-			var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            if (_userMgr != null) // 後台有 Identity
+            {
+                var u = await _userMgr.Users.AsNoTracking()
+                             .FirstOrDefaultAsync(x => x.Id == _currentUser.Id, ct);
+                userNumberId = u?.UserNumberId;
+            }
+            else
+            {
+                // 前台沒有 Identity，就用 JWT 的 userId / 或 default 值
+                userNumberId = int.TryParse(_currentUser.Id, out var parsed) ? parsed : 0;
+            }
+
+            var (conn, _, _) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             using var tran = conn.BeginTransaction();
 
             try
@@ -327,8 +388,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                         dto.Weight,
                         dto.VolumeCubicMeter,
                         dto.VolumeUnit,
-                        Creator = u.UserNumberId,
-                        Reviser = u.UserNumberId,
+                        Creator = userNumberId,
+                        Reviser = userNumberId,
                         CreatedDate = now,
                         RevisedDate = now
                     }, tran);
