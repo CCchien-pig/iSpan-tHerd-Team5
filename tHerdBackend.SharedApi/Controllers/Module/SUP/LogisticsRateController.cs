@@ -44,7 +44,20 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		{
 			try
 			{
+				// 檢查資料庫中是否存在該 logisticsId
+				var exists = await _service.CheckLogisticsExistsAsync(logisticsId);
+				if (!exists)
+				{
+					return Ok(ApiResponse<List<LogisticsRateDto>>.Fail("找不到該物流商ID"));
+				}
+
 				var rates = await _service.GetByLogisticsIdAsync(logisticsId);
+
+				// 若查不到資料
+				if (rates == null || !rates.Any())
+				{
+					return Ok(ApiResponse<List<LogisticsRateDto>>.Fail("沒有找到該物流商的運費率資料"));
+				}
 				return Ok(ApiResponse<List<LogisticsRateDto>>.Ok(rates, "查詢成功"));
 			}
 			catch (Exception ex)
@@ -65,10 +78,45 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		{
 			try
 			{
+				// 檢查 request 是否為 null
+				if (request == null)
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail("請提供計算參數"));
+				}
+
+				// 建立錯誤訊息列表
+				var errorMessages = new List<string>();
+
+				if (request.SkuId <= 0)
+					errorMessages.Add("SKU Id 無效");
+
+				if (request.LogisticsId <= 0)
+					errorMessages.Add("Logistics Id 無效");
+
+				if (request.Qty <= 0)
+					errorMessages.Add("Qty 必須大於 0");
+
+				// 若有錯誤，回傳訊息
+				if (errorMessages.Any())
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail(
+						string.Join("；", errorMessages)
+					));
+				}
+
+				// 呼叫計算服務
 				var result = await _service.CalculateShippingFeeAsync(request);
 
-				// 統一用 ApiResponse 格式回傳
-				return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Ok(result, result.Message ?? "計算完成"));
+				// 如果計算結果為 null 或無效
+				if (result == null)
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail("運費計算失敗，請檢查輸入資料"));
+				}
+
+				// 成功回傳
+				return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Ok(
+					result, result.Message ?? "計算完成"
+				));
 			}
 			catch (Exception ex)
 			{

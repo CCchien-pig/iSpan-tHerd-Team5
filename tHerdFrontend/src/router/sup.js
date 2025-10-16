@@ -14,7 +14,7 @@ export default [
       // { path: '', name: 'sup-welcome', component: SupWelcome },
       // 物流首頁
       { path: 'logistics-fee', name: 'sup-logistics-fee', component: LogisticsFee },
-      // 物流商列表/運送資訊
+      // 物流商列表/配送資訊
       { path: 'logistics-list', name: 'sup-logistics-list', component: LogisticsList },
       // 門市地圖
       { path: 'store-map', name: 'sup-store-map', component: StoreMap },
@@ -26,7 +26,7 @@ export default [
     path: '/sup/logistics-info',
     name: 'SupLogisticsInfo',
     component: () => import('../pages/modules/sup/LogisticsInfo.vue'),
-    meta: { title: '運送資訊查詢' },
+    meta: { title: '配送資訊查詢' },
   },
 ]
 

@@ -16,6 +16,17 @@ namespace tHerdBackend.Infra.Repository.SUP
 			_db = db;
 		}
 
+		public async Task<bool> LogisticsExistsAsync(int logisticsId, CancellationToken ct = default)
+		{
+			using var conn = _factory.Create();
+
+			const string sql = "SELECT COUNT(1) FROM SUP_Logistics WHERE LogisticsId = @LogisticsId";
+			var count = await conn.ExecuteScalarAsync<int>(sql, new { LogisticsId = logisticsId });
+
+			return count > 0;
+		}
+
+
 		public async Task<ShippingFeeRepositoryResult> GetShippingInfoAsync(
 			int skuId,
 			decimal totalWeight,
@@ -34,7 +45,7 @@ namespace tHerdBackend.Infra.Repository.SUP
                     ON r.LogisticsId = l.LogisticsId
                     AND r.IsActive = 1
                     AND @TotalWeight >= r.WeightMin
-                    AND (@TotalWeight < r.WeightMax OR r.WeightMax IS NULL)
+                    AND (@TotalWeight <= r.WeightMax OR r.WeightMax IS NULL)
                 WHERE s.SkuId = @SkuId";
 
 			// 取得連線：依照有無 dbContext 以及用意來自動選擇連線

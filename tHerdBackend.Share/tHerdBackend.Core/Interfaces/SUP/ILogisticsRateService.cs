@@ -3,6 +3,12 @@
 public interface ILogisticsRateService
 {
 	/// <summary>
+	/// 檢查物流商是否存在
+	/// </summary>
+	Task<bool> CheckLogisticsExistsAsync(int logisticsId);
+
+
+	/// <summary>
 	/// 計算運費
 	/// </summary>
 	Task<ShippingFeeDto.ShippingFeeResponseDto> CalculateShippingFeeAsync(

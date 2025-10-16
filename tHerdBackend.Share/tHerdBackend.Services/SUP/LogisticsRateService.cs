@@ -65,6 +65,13 @@ public class LogisticsRateService : ILogisticsRateService
 		}
 	}
 
+
+	// 檢查物流商是否存在
+	public async Task<bool> CheckLogisticsExistsAsync(int logisticsId)
+	{
+		return await _repo.LogisticsExistsAsync(logisticsId);
+	}
+
 	public async Task<List<LogisticsRateDto>> GetByLogisticsIdAsync(int logisticsId, CancellationToken ct = default)
 	{
 		var sql = @"

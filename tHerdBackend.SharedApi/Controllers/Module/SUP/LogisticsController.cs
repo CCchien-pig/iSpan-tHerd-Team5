@@ -12,7 +12,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 	/// </summary>
 	[ApiController]
 	[Route("api/sup/[controller]")]
-	[Authorize] // 預設授權
+	//[Authorize] // 預設授權
+	[AllowAnonymous]
 	public class LogisticsController : ControllerBase
 	{
 		private readonly ILogisticsService _service;

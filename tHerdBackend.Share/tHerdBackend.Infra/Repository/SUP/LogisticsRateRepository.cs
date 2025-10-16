@@ -11,6 +11,15 @@ public class LogisticsRateRepository : ILogisticsRateRepository
 		_context = context;
 	}
 
+	// 檢查物流商是否存在
+	public async Task<bool> CheckLogisticsExistsAsync(int logisticsId)
+	{
+		return await _context.SupLogistics
+			.AsNoTracking()
+			.AnyAsync(l => l.LogisticsId == logisticsId);
+	}
+
+	// 取得該物流商所有運費率
 	public async Task<List<LogisticsRateDto>> GetByLogisticsIdAsync(int logisticsId)
 	{
 		return await _context.SupLogisticsRates
