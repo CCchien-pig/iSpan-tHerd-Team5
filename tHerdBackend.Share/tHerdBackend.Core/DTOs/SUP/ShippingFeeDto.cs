@@ -1,4 +1,6 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP
+﻿using System.Text.Json.Serialization;
+
+namespace tHerdBackend.Core.DTOs.SUP
 {
 	public class ShippingFeeDto
 	{
@@ -6,7 +8,7 @@
 		public class ShippingFeeRequestDto
 		{
 			public int SkuId { get; set; }
-			public int Quantity { get; set; }
+			public int Qty { get; set; }
 			public int LogisticsId { get; set; }
 		}
 

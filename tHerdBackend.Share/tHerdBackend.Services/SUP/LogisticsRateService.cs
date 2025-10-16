@@ -22,7 +22,7 @@ public class LogisticsRateService : ILogisticsRateService
 		ShippingFeeDto.ShippingFeeRequestDto req,
 		CancellationToken ct = default)
 	{
-		if (req.SkuId <= 0 || req.Quantity <= 0 || req.LogisticsId <= 0)
+		if (req.SkuId <= 0 || req.Qty <= 0 || req.LogisticsId <= 0)
 			return new ShippingFeeDto.ShippingFeeResponseDto { Success = false, Message = "參數有誤", Data = null };
 
 		// 先查 Product 重量
@@ -38,7 +38,7 @@ public class LogisticsRateService : ILogisticsRateService
 			if (productWeight == null)
 				return new ShippingFeeDto.ShippingFeeResponseDto { Success = false, Message = "SKU不存在或商品資料不存在", Data = null };
 
-			var totalWeight = productWeight.Value * req.Quantity;
+			var totalWeight = productWeight.Value * req.Qty;
 
 			// 查物流商與費率 Query 用 Repository（已支援交易）
 			var result = await _repo.GetShippingInfoAsync(req.SkuId, totalWeight, req.LogisticsId, ct);
