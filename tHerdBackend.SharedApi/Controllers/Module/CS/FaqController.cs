@@ -17,7 +17,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CS
 
 		/// <summary>取得分類＋FAQ 列表（僅啟用）</summary>
 		[HttpGet("list")]
-		[AllowAnonymous]
+		[AllowAnonymous] //表示不用登入，Vue 也能直接請求
 		public async Task<IActionResult> GetListAsync()
 		{
 			try
