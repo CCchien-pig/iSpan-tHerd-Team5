@@ -120,7 +120,7 @@ export default {
         { name: '暢銷', path: '/bestsellers' },
         { name: '試用', path: '/trials' },
         { name: '新產品', path: '/new-products' },
-        { name: '健康中心', path: '/health-hub' },
+        { name: '健康中心', path: '/cnt' },
       ],
       
       // 🏷 Mega Menu 狀態
