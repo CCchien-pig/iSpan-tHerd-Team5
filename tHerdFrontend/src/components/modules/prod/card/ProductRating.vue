@@ -38,7 +38,7 @@ export default {
     rating: {
       type: Number,
       default: 5,
-      validator: value => value >= 0 && value <= 5, // 驗證評分範圍
+      validator: (value) => value >= 0 && value <= 5, // 驗證評分範圍
     },
     // 評價數量
     reviews: {
@@ -51,7 +51,7 @@ export default {
       default: 5,
     },
   },
-};
+}
 </script>
 
 <style scoped>

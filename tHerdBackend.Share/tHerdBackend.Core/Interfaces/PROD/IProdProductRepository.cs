@@ -1,14 +1,15 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.Models;
 
 namespace tHerdBackend.Core.Interfaces.Products
 {
     public interface IProdProductRepository
     {
         Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(ProductFilterQueryDto query, CancellationToken ct = default);
-        Task<ProdProductDto?> GetByIdAsync(int id, CancellationToken ct = default);
-        Task<int> AddAsync(ProdProductDto product, CancellationToken ct = default);
-        Task<bool> UpdateAsync(ProdProductDto product, CancellationToken ct = default);
+        Task<ProdProductDetailDto?> GetByIdAsync(int id, CancellationToken ct = default);
+        Task<int> AddAsync(ProdProductDetailDto product, CancellationToken ct = default);
+        Task<bool> UpdateAsync(ProdProductDetailDto product, CancellationToken ct = default);
         Task<bool> DeleteAsync(int id, CancellationToken ct = default);
         Task<PagedResult<ProdProductDto>> QueryAsync(ProductQuery query, CancellationToken ct = default);
 

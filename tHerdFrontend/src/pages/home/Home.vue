@@ -6,21 +6,23 @@
 <script setup>
 // ===== 導入依賴 =====
 // 導入Pinia狀態管理 - 用於控制全站Loading狀態
-import { useLoadingStore } from '@/stores/loading';
+import { useLoadingStore } from '@/stores/loading'
+// 導入 Vue Router
+import { RouterLink } from 'vue-router'
 
 // 導入產品相關組件
-import ProductList from '@/components/modules/prod/list/ProductList.vue';
+import ProductList from '@/components/modules/prod/list/ProductList.vue'
 
 // 導入頁面區塊組件 - 每個區塊都是獨立的組件
-import HeroSection from '@/components/sections/HeroSection.vue'; // 英雄區塊
-import CategorySection from '@/components/sections/CategorySection.vue'; // 分類區塊
-import BrandSection from '@/components/sections/BrandSection.vue'; // 品牌展示
-import TestimonialSection from '@/components/sections/TestimonialSection.vue'; // 客戶評價
-import FeatureSection from '@/components/sections/FeatureSection.vue'; // 服務特色
+import HeroSection from '@/components/sections/HeroSection.vue' // 英雄區塊
+import CategorySection from '@/components/sections/CategorySection.vue' // 分類區塊
+import BrandSection from '@/components/sections/BrandSection.vue' // 品牌展示
+import TestimonialSection from '@/components/sections/TestimonialSection.vue' // 客戶評價
+import FeatureSection from '@/components/sections/FeatureSection.vue' // 服務特色
 
 // ===== 狀態管理 =====
 // 獲取Loading狀態管理實例
-const loadingStore = useLoadingStore();
+const loadingStore = useLoadingStore()
 
 // ===== Loading測試功能 =====
 /**
@@ -29,11 +31,11 @@ const loadingStore = useLoadingStore();
  * 時長：3秒
  */
 const testLoading = () => {
-  loadingStore.showLoading('測試載入中...');
+  loadingStore.showLoading('測試載入中...')
   setTimeout(() => {
-    loadingStore.hideLoading();
-  }, 3000);
-};
+    loadingStore.hideLoading()
+  }, 3000)
+}
 
 /**
  * 測試自定義文字Loading功能
@@ -41,19 +43,19 @@ const testLoading = () => {
  * 時長：2秒
  */
 const testLoadingWithCustomText = () => {
-  loadingStore.showLoading('正在處理您的請求...');
+  loadingStore.showLoading('正在處理您的請求...')
   setTimeout(() => {
-    loadingStore.hideLoading();
-  }, 2000);
-};
+    loadingStore.hideLoading()
+  }, 2000)
+}
 
 /**
  * 包裝函數 - 用於模板中調用自定義Loading
  * 用途：將內部函數暴露給模板使用
  */
 const handleCustomLoading = () => {
-  testLoadingWithCustomText();
-};
+  testLoadingWithCustomText()
+}
 
 // ===== 產品相關事件處理 =====
 /**
@@ -63,11 +65,11 @@ const handleCustomLoading = () => {
  * @param {number} product.price - 產品價格
  * TODO: 實際項目中需要連接到購物車API
  */
-const handleAddToCart = product => {
-  console.log('加入購物車:', product.name);
+const handleAddToCart = (product) => {
+  console.log('加入購物車:', product.name)
   // 這裡可以添加加入購物車的邏輯
   // 例如：調用購物車API、更新購物車狀態、顯示成功提示等
-};
+}
 
 /**
  * 處理收藏/取消收藏事件
@@ -76,35 +78,47 @@ const handleAddToCart = product => {
  * TODO: 實際項目中需要連接到收藏API
  */
 const handleToggleWishlist = (product, isInWishlist) => {
-  console.log('收藏狀態:', product.name, isInWishlist ? '已收藏' : '取消收藏');
+  console.log('收藏狀態:', product.name, isInWishlist ? '已收藏' : '取消收藏')
   // 這裡可以添加收藏邏輯
   // 例如：調用收藏API、更新收藏狀態、顯示提示訊息等
-};
+}
 
 /**
  * 處理快速查看事件
  * @param {Object} product - 產品對象
  * TODO: 實際項目中需要實現快速查看功能
  */
-const handleQuickView = product => {
-  console.log('快速查看:', product.name);
+const handleQuickView = (product) => {
+  console.log('快速查看:', product.name)
   // 這裡可以添加快速查看邏輯
   // 例如：打開產品詳情彈窗、導航到產品詳情頁等
-};
+}
 </script>
 
 <template>
   <!-- 首頁容器 - 使用組件化設計，每個區塊都是獨立的組件 -->
   <div class="homepage">
+    <!-- 測試商品頁面的快速連結 -->
+    <div class="container py-3">
+      <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-info-circle me-2"></i>商品頁面測試連結：</span>
+        <div>
+          <RouterLink to="/products" class="btn btn-sm btn-primary me-2">
+            <i class="bi bi-list me-1"></i>商品列表
+          </RouterLink>
+          <RouterLink to="/products/85180" class="btn btn-sm btn-success">
+            <i class="bi bi-box-seam me-1"></i>商品詳情範例
+          </RouterLink>
+        </div>
+      </div>
+    </div>
+
     <!--
       英雄區塊 - 首頁主要展示區域
       功能：展示網站主要價值主張和行動按鈕
       事件：支持Loading測試功能
     -->
-    <HeroSection
-      @test-loading="testLoading"
-      @custom-loading="handleCustomLoading"
-    />
+    <HeroSection @test-loading="testLoading" @custom-loading="handleCustomLoading" />
 
     <!--
       特色分類區塊 - 展示產品分類
@@ -328,9 +342,9 @@ export default {
           avatar: 'https://picsum.photos/60/60?random=13',
         },
       ],
-    };
+    }
   },
-};
+}
 </script>
 
 <style scoped>

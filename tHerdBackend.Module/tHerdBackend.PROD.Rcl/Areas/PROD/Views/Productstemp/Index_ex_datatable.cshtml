@@ -1,7 +1,7 @@
 ﻿@using System.Text.Json
 @using tHerdBackend.Core.DTOs.PROD
 @using tHerdBackend.UIKit.Rcl.Views.Shared.Components.DataTable
-@model IEnumerable<ProdProductDto>
+@model IEnumerable<ProdProductDetailDto>
 
 @{
     ViewData["Title"] = "商品管理";
@@ -38,7 +38,7 @@
 @{
     // 1) 資料 → JSON（保留 PascalCase）
     var dataJson = JsonSerializer.Serialize(
-        Model ?? Enumerable.Empty<ProdProductDto>(),
+        Model ?? Enumerable.Empty<ProdProductDetailDto>(),
         new JsonSerializerOptions { PropertyNamingPolicy = null }
     );
 

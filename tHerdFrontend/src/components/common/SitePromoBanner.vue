@@ -39,7 +39,7 @@ export default {
       }, 25000); // 這個時間要跟動畫時間對應
     },
   },
-};
+}
 </script>
 
 <style scoped>

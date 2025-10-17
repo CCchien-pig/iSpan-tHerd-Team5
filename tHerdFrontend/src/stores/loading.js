@@ -1,24 +1,24 @@
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
 
 export const useLoadingStore = defineStore('loading', () => {
   // 狀態
-  const isLoading = ref(false);
-  const loadingText = ref('載入中...');
+  const isLoading = ref(false)
+  const loadingText = ref('載入中...')
 
   // 動作
   const showLoading = (text = '載入中...') => {
-    loadingText.value = text;
-    isLoading.value = true;
-  };
+    loadingText.value = text
+    isLoading.value = true
+  }
 
   const hideLoading = () => {
-    isLoading.value = false;
-  };
+    isLoading.value = false
+  }
 
-  const setLoadingText = text => {
-    loadingText.value = text;
-  };
+  const setLoadingText = (text) => {
+    loadingText.value = text
+  }
 
   return {
     // 狀態
@@ -28,5 +28,5 @@ export const useLoadingStore = defineStore('loading', () => {
     showLoading,
     hideLoading,
     setLoadingText,
-  };
-});
+  }
+})
