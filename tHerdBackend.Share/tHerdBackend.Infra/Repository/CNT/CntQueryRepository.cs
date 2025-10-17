@@ -61,7 +61,7 @@ LEFT JOIN CNT_PageType pt ON pt.PageTypeId = p.PageTypeId
 LEFT JOIN SYS_SeoMeta s   ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
 WHERE p.IsDeleted = 0 
   AND p.PublishedDate IS NOT NULL
-  AND (p.Status = 2 OR p.Status = 'Published' OR p.Status = 'PUBLISHED')
+  AND (p.Status = 1)
 ");
 
 			var countSql = new StringBuilder(@"
