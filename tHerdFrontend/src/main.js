@@ -9,7 +9,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-// ªì©l¤Æ Mock ¨t²Î¡]¦pªG±Ò¥Î¡^
+// åˆå§‹åŒ– Mock ç³»çµ±ï¼ˆå¦‚æœå•Ÿç”¨ï¼‰
 import { initializeMocks } from './services/mocks'
 initializeMocks()
 

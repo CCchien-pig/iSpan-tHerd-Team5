@@ -10,7 +10,7 @@
             class="navbar-brand text-white text-decoration-none d-flex align-items-center"
           >
             <img
-              src="../../../public/homePageIcon/tHerd-header.png"
+              src="/homePageIcon/tHerd-header.png"
               alt="tHerd Logo"
               class="img-fluid ms-2 ms-md-4"
               style="max-height: 50px;"
