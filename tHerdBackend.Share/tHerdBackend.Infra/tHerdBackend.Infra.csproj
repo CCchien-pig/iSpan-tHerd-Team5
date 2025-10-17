@@ -40,6 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Repository\CNT\" />
     <Folder Include="Repository\CS\" />
     <Folder Include="Repository\MKT\" />
     <Folder Include="Repository\ORD\" />
