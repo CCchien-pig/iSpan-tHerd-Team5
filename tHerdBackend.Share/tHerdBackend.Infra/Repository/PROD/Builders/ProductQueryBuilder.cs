@@ -1,0 +1,34 @@
+﻿using System.Text;
+using tHerdBackend.Core.DTOs.PROD;
+
+namespace tHerdBackend.Infra.Repository.PROD.Builders
+{
+    /// <summary>
+    /// 組 SQL 條件、排序、分頁
+    /// </summary>
+    public static class ProductQueryBuilder
+    {
+        public static void AppendFilters(StringBuilder sql, ProductFilterQueryDto query)
+        {
+            if (!string.IsNullOrWhiteSpace(query.Keyword))
+                sql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
+            if (query.BrandId.HasValue)
+                sql.Append(" AND p.BrandId = @BrandId");
+            if (query.ProductTypeId.HasValue)
+                sql.Append(" AND t.ProductTypeId = @ProductTypeId");
+            if (query.MinPrice.HasValue)
+                sql.Append(" AND p.UnitPrice >= @MinPrice");
+            if (query.MaxPrice.HasValue)
+                sql.Append(" AND p.UnitPrice <= @MaxPrice");
+        }
+
+        public static string BuildOrderClause(ProductFilterQueryDto query) => query.SortBy switch
+        {
+            "price" when query.SortDesc => " ORDER BY p.UnitPrice DESC",
+            "price" => " ORDER BY p.UnitPrice ASC",
+            "name" when query.SortDesc => " ORDER BY p.ProductName DESC",
+            "name" => " ORDER BY p.ProductName ASC",
+            _ => " ORDER BY p.ProductId DESC"
+        };
+    }
+}

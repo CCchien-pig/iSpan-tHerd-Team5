@@ -117,7 +117,7 @@
       $(function () {
         // Razor 端輸出 → 正確 JSON 陣列
         var dataJson = @Html.Raw(JsonSerializer.Serialize(
-            Model ?? Enumerable.Empty<ProdProductDto>(),
+            Model ?? Enumerable.Empty<ProdProductDetailDto>(),
             new JsonSerializerOptions { PropertyNamingPolicy = null }
         ));
 

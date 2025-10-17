@@ -8,19 +8,25 @@ namespace tHerdBackend.Services.SUP
     {
         public static IServiceCollection AddSUPModule(this IServiceCollection services)
         {
+			services.AddAntiforgery();
+
 			// 註冊 Service
-			services.AddScoped<IStockBatchService, StockBatchService>();
 			services.AddScoped<IStockService, StockService>();
+			services.AddScoped<IStockBatchService, StockBatchService>();
 
 			services.AddScoped<ILogisticsService, LogisticsService>();
 			services.AddScoped<ILogisticsRateService, LogisticsRateService>();
-			services.AddAntiforgery();
 
+			services.AddScoped<IBrandService, BrandService>();
 
 			// 註冊 Repository
 			services.AddScoped<ILogisticsRepository, LogisticsRepository>();
 			services.AddScoped<ILogisticsRateRepository, LogisticsRateRepository>();
 
+			services.AddScoped<IShippingFeeRepository, ShippingFeeRepository>();
+			
+			services.AddScoped<IBrandRepository, BrandRepository>();
+			
 			return services;
         }
     }

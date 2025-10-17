@@ -1,6 +1,7 @@
 ﻿@using tHerdBackend.Core.DTOs.PROD
 @using System.Text.Json
-@model tHerdBackend.Core.DTOs.PROD.ProdProductDto
+@using tHerdBackend.Core.Models
+@model tHerdBackend.Core.DTOs.PROD.ProdProductDetailDto
 
 @{
     var isEdit = Model != null && Model.ProductId > 0;   // 這行用來判斷模式

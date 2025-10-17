@@ -4,7 +4,7 @@ using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Interfaces.SYS;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using tHerdBackend.Core.Models;
 
 namespace tHerdBackend.Services.PROD
 {
@@ -21,7 +21,7 @@ namespace tHerdBackend.Services.PROD
             _srepo = srepo;
         }
 
-		public async Task<(bool IsValid, string ErrorMessage)> ValidateProductAsync(ProdProductDto dto)
+		public async Task<(bool IsValid, string ErrorMessage)> ValidateProductAsync(ProdProductDetailDto dto)
 		{
 			string errorMessage = string.Empty;
 
@@ -179,7 +179,7 @@ namespace tHerdBackend.Services.PROD
             }
         }
 
-        public async Task<ProdProductDto?> GetByIdAsync(int Id)
+        public async Task<ProdProductDetailDto?> GetByIdAsync(int Id)
         {
             try
             {
@@ -195,7 +195,7 @@ namespace tHerdBackend.Services.PROD
             }
         }
 
-        public async Task<int> CreateAsync(ProdProductDto dto)
+        public async Task<int> CreateAsync(ProdProductDetailDto dto)
         {
             try
             {
@@ -211,7 +211,7 @@ namespace tHerdBackend.Services.PROD
             }
         }
 
-        public async Task UpdateAsync(ProdProductDto dto)
+        public async Task UpdateAsync(ProdProductDetailDto dto)
         {
             try
             {

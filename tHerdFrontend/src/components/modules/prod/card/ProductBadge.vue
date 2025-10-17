@@ -45,11 +45,11 @@ export default {
         新品: 'badge-new', // 綠色背景
         特價: 'badge-sale', // 黃色背景
         限量: 'badge-limited', // 紫色背景
-      };
-      return badgeMap[this.badge] || 'badge-default'; // 默認灰色背景
+      }
+      return badgeMap[this.badge] || 'badge-default' // 默認灰色背景
     },
   },
-};
+}
 </script>
 
 <style scoped>

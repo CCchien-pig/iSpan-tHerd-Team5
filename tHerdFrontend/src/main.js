@@ -9,6 +9,10 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
+// 初始化 Mock 系統（如果啟用）
+import { initializeMocks } from './services/mocks'
+initializeMocks()
+
 // Google Maps
 import VueGoogleMaps from '@fawmi/vue-google-maps'
 
