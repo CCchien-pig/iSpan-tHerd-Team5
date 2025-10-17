@@ -11,14 +11,10 @@
     <span class="current-price">NT$ {{ formatPrice(currentPrice) }}</span>
 
     <!-- 原價 - 如果有原價則顯示刪除線 -->
-    <span v-if="originalPrice" class="original-price">
-      NT$ {{ formatPrice(originalPrice) }}
-    </span>
+    <span v-if="originalPrice" class="original-price"> NT$ {{ formatPrice(originalPrice) }} </span>
 
     <!-- 折扣百分比 - 如果有折扣則顯示百分比 -->
-    <span v-if="discountPercentage" class="discount-percentage">
-      -{{ discountPercentage }}%
-    </span>
+    <span v-if="discountPercentage" class="discount-percentage"> -{{ discountPercentage }}% </span>
   </div>
 </template>
 
@@ -57,11 +53,9 @@ export default {
      */
     discountPercentage() {
       if (!this.originalPrice || this.originalPrice <= this.currentPrice) {
-        return null;
+        return null
       }
-      return Math.round(
-        ((this.originalPrice - this.currentPrice) / this.originalPrice) * 100
-      );
+      return Math.round(((this.originalPrice - this.currentPrice) / this.originalPrice) * 100)
     },
   },
 
@@ -76,10 +70,10 @@ export default {
      * @returns {string} 格式化後的價格字符串
      */
     formatPrice(price) {
-      return new Intl.NumberFormat('zh-TW').format(price);
+      return new Intl.NumberFormat('zh-TW').format(price)
     },
   },
-};
+}
 </script>
 
 <style scoped>

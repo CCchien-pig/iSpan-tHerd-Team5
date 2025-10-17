@@ -3,39 +3,46 @@ using Dapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Linq;
 using System.Text;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
+using tHerdBackend.Core.Models;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
+using tHerdBackend.Infra.Repository.Common;
+using tHerdBackend.Infra.Repository.PROD.Assemblers;
+using tHerdBackend.Infra.Repository.PROD.Builders;
+using tHerdBackend.Infra.Repository.PROD.Services;
 using static Dapper.SqlMapper;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
-    public class ProdProductRepository : IProdProductRepository
+    /// <summary>
+    /// 主查詢與維護商品資料入口
+    /// </summary>
+    public class ProdProductRepository : BaseRepository, IProdProductRepository
     {
-        private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
-        private readonly tHerdDBContext _db;                 // 寫入與交易來源
-        private readonly ICurrentUser _currentUser;
+        //private readonly ISqlConnectionFactory _factory;     // 給「純查詢」或「無交易時」使用
+        //private readonly tHerdDBContext _db;                 // 寫入與交易來源
+        private readonly ICurrentUser _currentUser;          // 目前登入使用者
 
-		private readonly UserManager<ApplicationUser>? _userMgr;
-        private readonly SignInManager<ApplicationUser>? _signInMgr;
+        private readonly UserManager<ApplicationUser>? _userMgr;    // Identity UserManager (後台有 Identity 時使用)
+        private readonly SignInManager<ApplicationUser>? _signInMgr;// Identity SignInManager (後台有 Identity 時使用)
 
-		public ProdProductRepository(ISqlConnectionFactory factory,
-			tHerdDBContext db, ICurrentUser currentUser,
-            UserManager<ApplicationUser>? userMgr = null,
-            SignInManager<ApplicationUser>? signInMgr = null)
+        private readonly ProductRelationService _relationSvc; // 商品關聯服務
+
+        public ProdProductRepository(ISqlConnectionFactory factory, tHerdDBContext db,
+            ICurrentUser currentUser, UserManager<ApplicationUser>? userMgr = null, SignInManager<ApplicationUser>? signInMgr = null)
+            : base(factory, db)
         {
-            _factory = factory;
-            _db = db;
             _currentUser = currentUser;
             _userMgr = userMgr;
             _signInMgr = signInMgr;
+            _relationSvc = new ProductRelationService();
         }
 
         /// <summary>
@@ -66,124 +73,79 @@ namespace tHerdBackend.Infra.Repository.PROD
         public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
             ProductFilterQueryDto query, CancellationToken ct = default)
         {
-            int skip = (query.PageIndex - 1) * query.PageSize;
-            int take = query.PageSize;
+            //int skip = (query.PageIndex - 1) * query.PageSize;
+            //int take = query.PageSize;
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
-            var sql = new StringBuilder(@"SELECT 
-                p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
-                p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
-                p.ShortDesc, p.FullDesc, p.IsPublished,
-                p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
-                p.CreatedDate, p.Reviser, p.RevisedDate,
-                tc.ProductTypeName
-                FROM PROD_Product p
-                JOIN SUP_Brand s ON s.BrandId=p.BrandId 
-                LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
-                LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
-                LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
-                WHERE 1=1
-                ");
+            var sql = new StringBuilder(@"
+                SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
+                       p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
+                       p.ShortDesc, p.FullDesc, p.IsPublished,
+                       p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
+                       p.CreatedDate, p.Reviser, p.RevisedDate, tc.ProductTypeName
+                  FROM PROD_Product p
+                  JOIN SUP_Brand s ON s.BrandId=p.BrandId
+                  LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
+                  LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
+                  LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
+                 WHERE 1=1");
 
             // === Step 2. 條件過濾 ===
-            if (!string.IsNullOrWhiteSpace(query.Keyword))
-                sql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
-            if (query.BrandId.HasValue)
-                sql.Append(" AND p.BrandId = @BrandId");
-            if (query.ProductTypeId.HasValue)
-                sql.Append(" AND t.ProductTypeId = @ProductTypeId");
-            if (query.MinPrice.HasValue)
-                sql.Append(" AND p.UnitPrice >= @MinPrice");
-            if (query.MaxPrice.HasValue)
-                sql.Append(" AND p.UnitPrice <= @MaxPrice");
+            ProductQueryBuilder.AppendFilters(sql, query);
 
             // === Step 3. 排序 + 分頁 ===
-            sql.Append(query.SortBy switch
-            {
-                "price" when query.SortDesc => " ORDER BY p.UnitPrice DESC",
-                "price" => " ORDER BY p.UnitPrice ASC",
-                "name" when query.SortDesc => " ORDER BY p.ProductName DESC",
-                "name" => " ORDER BY p.ProductName ASC",
-                _ => " ORDER BY p.ProductId DESC"
-            });
+            sql.Append(ProductQueryBuilder.BuildOrderClause(query));
             sql.Append(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 
             // === Step 4. 統計筆數 ===
             var countSql = new StringBuilder(@"
                 SELECT COUNT(DISTINCT p.ProductId)
-                FROM PROD_Product p
-                JOIN SUP_Brand s ON s.BrandId = p.BrandId
-                LEFT JOIN SUP_Supplier su ON su.SupplierId = s.SupplierId
-                LEFT JOIN PROD_ProductType t ON t.ProductId = p.ProductId
-                WHERE 1 = 1
-            ");
-            if (!string.IsNullOrWhiteSpace(query.Keyword))
-                countSql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
-            if (query.BrandId.HasValue)
-                countSql.Append(" AND p.BrandId = @BrandId");
-            if (query.ProductTypeId.HasValue)
-                countSql.Append(" AND t.ProductTypeId = @ProductTypeId");
-            if (query.MinPrice.HasValue)
-                countSql.Append(" AND p.UnitPrice >= @MinPrice");
-            if (query.MaxPrice.HasValue)
-                countSql.Append(" AND p.UnitPrice <= @MaxPrice");
+                  FROM PROD_Product p
+                  JOIN SUP_Brand s ON s.BrandId=p.BrandId
+                  LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
+                  LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
+                 WHERE 1=1");
+
+            ProductQueryBuilder.AppendFilters(countSql, query);
 
             // === Step 5. 查詢執行 ===
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
                 // 查詢參數
-                var parameters = new
-                {
-                    Skip = skip,
-                    Take = take,
-                    query.Keyword,
-                    query.BrandId,
-                    query.ProductTypeId,
-                    query.MinPrice,
-                    query.MaxPrice
-                };
-                var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
-                    sql.ToString(),
-                    (p, typeName) =>
-                    {
-                        if (!string.IsNullOrEmpty(typeName))
-                            p.ProductTypeDesc = new List<string> { typeName };
-                        return p;
-                    },
-                    parameters,
-                    transaction: tx,
-                    splitOn: "ProductTypeName"
-                );
+                var parameters = new { 
+                    Skip = (query.PageIndex - 1) * query.PageSize, 
+                    Take = query.PageSize, 
+                    query.Keyword, 
+                    query.BrandId, 
+                    query.ProductTypeId, 
+                    query.MinPrice, 
+                    query.MaxPrice };
 
-                var list = raw
-                    .GroupBy(p => p.ProductId)
-                    .Select(g =>
-                    {
-                        var first = g.First();
-                        first.ProductTypeDesc = g
-                            .SelectMany(x => x.ProductTypeDesc ?? new List<string>())
-                            .Distinct()
-                            .ToList();
-                        return first;
-                    })
-                    .ToList();
+                var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
+                        sql.ToString(), 
+                        (p, typeName) => { 
+                            if (!string.IsNullOrEmpty(typeName)) p.ProductTypeDesc = new() { typeName }; return p; 
+                        }, 
+                        parameters, 
+                        tx, 
+                        splitOn: "ProductTypeName"
+                    );
+
+                var list = raw.GroupBy(p => p.ProductId).Select(g =>
+                {
+                    var first = g.First();
+                    first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc ?? new()).Distinct().ToList();
+                    return first;
+                }).ToList();
 
                 // === Step 6. 計算總筆數 ===
-                int total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, transaction: tx);
+                var total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, tx);
 
                 // === Step 7. 補 Creator / Reviser 名稱 ===
-                var repo = new AspnetusersNameRepository(_factory, _db);
-                var empList = await repo.GetAllUserNameAsync(ct);
-                var empDict = empList.ToDictionary(e => e.UserNumberId, e => e.FullName);
-
-                foreach (var item in list)
-                {
-                    if (item.Creator != 0 && empDict.TryGetValue(item.Creator, out var cName))
-                        item.CreatorNm = cName;
-                    if (item.Reviser != null && empDict.TryGetValue(item.Reviser.Value, out var rName))
-                        item.ReviserNm = rName;
-                }
+                var resolver = new UserNameResolver(_factory, _db);
+                await resolver.LoadAsync(ct);
+                resolver.Apply(list);
 
                 return (list, total);
             }
@@ -193,146 +155,39 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
-		public async Task<ProdProductDto?> GetByIdAsync(int ProductId, CancellationToken ct = default)
+        /// <summary>
+        /// 查詢單筆商品完整資料
+        /// </summary>
+        /// <param name="ProductId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+		public async Task<ProdProductDetailDto?> GetByIdAsync(int productId, CancellationToken ct = default)
         {
-            var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId, 
-                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
-                            p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
-                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
-                            p.CreatedDate, p.Reviser, p.RevisedDate
-                            FROM PROD_Product p
-                            JOIN SUP_Brand b ON b.BrandId=p.BrandId
-                            JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
-                            WHERE p.ProductId=@ProductId;";
+            var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
+                           s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
+                           p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
+                           p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
+                           p.CreatedDate, p.Reviser, p.RevisedDate
+                      FROM PROD_Product p
+                      JOIN SUP_Brand b ON b.BrandId=p.BrandId
+                      JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
+                     WHERE p.ProductId=@ProductId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
-                var cmd = new CommandDefinition(sql, new { ProductId }, tx, cancellationToken: ct);
-                var item = await conn.QueryFirstOrDefaultAsync<ProdProductDto>(cmd);
-
+                var item = await conn.QueryFirstOrDefaultAsync<ProdProductDetailDto>(new CommandDefinition(sql, new { ProductId = productId }, tx, cancellationToken: ct));
                 if (item == null) return null;
 
-                var repo = new AspnetusersNameRepository(_factory, _db);
-                var emp = await repo.GetAllUserNameAsync(ct);
-                item.CreatorNm = emp.FirstOrDefault(e => e.UserNumberId == item.Creator)?.FullName;
-                item.ReviserNm = emp.FirstOrDefault(e => e.UserNumberId == item.Reviser)?.FullName;
-                
-                var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId);
+                var assembler = new ProductAssembler(_db, _factory);
+                await assembler.AssembleDetailsAsync(item, conn, tx, ct);
 
-                item.Seo = seo == null ? null : new PRODSeoConfigDto
-                {
-                    SeoId = seo.SeoId,
-                    RefTable = seo.RefTable,
-                    RefId = seo.RefId,
-                    SeoSlug = seo.SeoSlug,
-                    SeoTitle = seo.SeoTitle,
-                    SeoDesc = seo.SeoDesc,
-                    CreatedDate = seo.CreatedDate,
-                    RevisedDate = seo.RevisedDate
-                };
+                var resolver = new UserNameResolver(_factory, _db);
+                await resolver.LoadAsync(ct);
+                resolver.Apply(item);
 
-                var skus = await _db.ProdProductSkus
-                    .Include(s => s.SpecificationOptions)
-                    .Where(s => s.ProductId == item.ProductId)
-                    .ToListAsync();
-
-                if (skus != null && skus.Any())
-                {
-                    item.Skus = skus.Select(_sku => new ProdProductSkuDto
-                    {
-                        SkuId = _sku.SkuId,
-                        SpecCode = _sku.SpecCode,
-                        SkuCode = _sku.SkuCode,
-                        Barcode = _sku.Barcode,
-                        CostPrice = _sku.CostPrice,
-                        ListPrice = _sku.ListPrice,
-                        UnitPrice = _sku.UnitPrice,
-                        SalePrice = _sku.SalePrice,
-                        StockQty = _sku.StockQty,
-                        SafetyStockQty = _sku.SafetyStockQty,
-                        ReorderPoint = _sku.ReorderPoint,
-                        MaxStockQty = _sku.MaxStockQty,
-                        IsAllowBackorder = _sku.IsAllowBackorder,
-                        ShelfLifeDays = _sku.ShelfLifeDays,
-                        StartDate = _sku.StartDate,
-                        EndDate = _sku.EndDate,
-                        IsActive = _sku.IsActive,
-						SpecValues = _sku.SpecificationOptions.Select(o => new ProdSkuSpecificationValueDto
-						{
-							SkuId = _sku.SkuId,
-							SpecificationOptionId = o.SpecificationOptionId
-						}).ToList()
-					}).ToList();
-                }
-                else
-                {
-                    item.Skus = new List<ProdProductSkuDto>(); // 沒有的話給空集合，避免 null reference
-                }
-				// 找出所有該商品用到的「規格群組」
-				var specOptionIds = item.Skus
-					.SelectMany(s => s.SpecValues.Select(v => v.SpecificationOptionId))
-					.Distinct()
-					.ToList();
-
-
-				if (specOptionIds.Any())
-                {
-                    var specOptions= await _db.ProdSpecificationOptions
-                        .Where(c => specOptionIds.Contains(c.SpecificationOptionId))
-                        .ToListAsync();
-
-                    var specConfigIds = await _db.ProdSpecificationConfigs
-                        .Where(c => specOptions.Select(o => o.SpecificationConfigId).Distinct().Contains(c.SpecificationConfigId))
-                        .ToListAsync();
-
-                    item.SpecConfigs = specConfigIds.Select(c => new ProdSpecificationConfigDto
-                    {
-                        SpecificationConfigId = c.SpecificationConfigId,
-                        GroupName = c.GroupName,
-                        OrderSeq = c.OrderSeq,
-                        SpecOptions = specOptions
-                            .Where(o => o.SpecificationConfigId == c.SpecificationConfigId)
-                            .Select(o => new ProdSpecificationOptionDto
-                            {
-                                SpecificationOptionId = o.SpecificationOptionId,
-                                SpecificationConfigId = o.SpecificationConfigId,
-                                OptionName = o.OptionName,
-                                OrderSeq = o.OrderSeq,
-                                // 找對應的 SkuId
-                                SkuId = item.Skus
-                                    .FirstOrDefault(s => s.SpecValues.Any(v => v.SpecificationOptionId == o.SpecificationOptionId))
-                                    ?.SkuId ?? 0
-                            }).ToList()
-					}).ToList();
-                }
-                else
-                {
-                    item.SpecConfigs = new List<ProdSpecificationConfigDto>();
-                }
-
-                item.Types = await _db.ProdProductTypes
-                    .Where(t => t.ProductId == item.ProductId)
-                    .Select(t => new ProdProductTypeDto
-                    {
-                        ProductTypeId = t.ProductTypeId,
-                        ProductId = t.ProductId,
-                        IsPrimary = t.IsPrimary
-                    }).OrderByDescending(a=>a.IsPrimary).ToListAsync();
-
-				var img_sql = @"
-                        SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.IsMain, pi.OrderSeq,
-                               af.FileUrl, af.AltText
-                        FROM   PROD_ProductImage pi
-                        JOIN   SYS_AssetFile af ON pi.ImgId = af.FileId
-                        WHERE  pi.ProductId = @ProductId
-                        ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
-
-				var img_cmd = new CommandDefinition(img_sql, new { ProductId }, tx, cancellationToken: ct);
-				item.Images = conn.Query<ProductImageDto>(img_cmd).ToList();
-
-				return item;
-			}
+                return item;
+            }
             finally
             {
                 if (needDispose) conn.Dispose();
@@ -340,7 +195,7 @@ namespace tHerdBackend.Infra.Repository.PROD
         }
 
         // 新增
-        public async Task<int> AddAsync(ProdProductDto dto, CancellationToken ct = default)
+        public async Task<int> AddAsync(ProdProductDetailDto dto, CancellationToken ct = default)
         {
             int? userNumberId = null;
 
@@ -431,7 +286,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 		}
 
         // 修改
-        public async Task<bool> UpdateAsync(ProdProductDto dto, CancellationToken ct = default)
+        public async Task<bool> UpdateAsync(ProdProductDetailDto dto, CancellationToken ct = default)
         {
 			var u = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
 
@@ -486,7 +341,7 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
-        private async Task UpsertRelationsAsync(IDbConnection conn, IDbTransaction tran, ProdProductDto dto)
+        private async Task UpsertRelationsAsync(IDbConnection conn, IDbTransaction tran, ProdProductDetailDto dto)
         {
 			// === SKU處理邏輯 ===
 			foreach (var sku in dto.Skus ?? new())

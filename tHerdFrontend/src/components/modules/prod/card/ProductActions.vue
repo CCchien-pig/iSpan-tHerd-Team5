@@ -58,7 +58,7 @@ export default {
   data() {
     return {
       isInWishlist: false, // 是否在收藏清單中
-    };
+    }
   },
 
   /**
@@ -70,9 +70,9 @@ export default {
      * 發送add-to-cart事件給父組件
      */
     handleAddToCart() {
-      this.$emit('add-to-cart', this.product);
+      this.$emit('add-to-cart', this.product)
       // 這裡可以添加加入購物車的邏輯
-      console.log('加入購物車:', this.product.name);
+      console.log('加入購物車:', this.product.name)
     },
 
     /**
@@ -80,9 +80,9 @@ export default {
      * 切換收藏狀態並發送toggle-wishlist事件
      */
     handleAddToWishlist() {
-      this.isInWishlist = !this.isInWishlist;
-      this.$emit('toggle-wishlist', this.product, this.isInWishlist);
-      console.log('收藏狀態:', this.isInWishlist ? '已收藏' : '取消收藏');
+      this.isInWishlist = !this.isInWishlist
+      this.$emit('toggle-wishlist', this.product, this.isInWishlist)
+      console.log('收藏狀態:', this.isInWishlist ? '已收藏' : '取消收藏')
     },
 
     /**
@@ -90,11 +90,11 @@ export default {
      * 發送quick-view事件給父組件
      */
     handleQuickView() {
-      this.$emit('quick-view', this.product);
-      console.log('快速查看:', this.product.name);
+      this.$emit('quick-view', this.product)
+      console.log('快速查看:', this.product.name)
     },
   },
-};
+}
 </script>
 
 <style scoped>

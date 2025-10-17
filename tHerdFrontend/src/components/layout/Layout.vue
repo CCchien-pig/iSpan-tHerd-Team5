@@ -28,7 +28,7 @@
 
     <!-- 主要內容區域 - 頁面內容插槽 -->
     <main class="flex-fill py-4">
-      <slot />
+      <router-view />
     </main>
 
     <!-- Footer - 頁腳信息和鏈接 -->
