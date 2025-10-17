@@ -20,10 +20,7 @@
       <!-- 產品評分 -->
       <ProductRating :rating="5" :reviews="product.reviews" />
       <!-- 產品價格 -->
-      <ProductPrice
-        :current-price="product.price"
-        :original-price="product.originalPrice"
-      />
+      <ProductPrice :current-price="product.price" :original-price="product.originalPrice" />
       <!-- 產品操作按鈕 -->
       <ProductActions :product="product" />
     </div>
@@ -32,10 +29,10 @@
 
 <script>
 // 導入子組件
-import ProductBadge from './ProductBadge.vue'; // 產品標籤組件
-import ProductRating from './ProductRating.vue'; // 產品評分組件
-import ProductPrice from './ProductPrice.vue'; // 產品價格組件
-import ProductActions from './ProductActions.vue'; // 產品操作組件
+import ProductBadge from './ProductBadge.vue' // 產品標籤組件
+import ProductRating from './ProductRating.vue' // 產品評分組件
+import ProductPrice from './ProductPrice.vue' // 產品價格組件
+import ProductActions from './ProductActions.vue' // 產品操作組件
 
 /**
  * ProductCard.vue 組件配置
@@ -64,12 +61,12 @@ export default {
       type: Object,
       required: true, // 必須提供產品數據
       // 驗證產品數據的完整性
-      validator: product => {
-        return product.id && product.name && product.image && product.price;
+      validator: (product) => {
+        return product.id && product.name && product.image && product.price
       },
     },
   },
-};
+}
 </script>
 
 <style scoped>

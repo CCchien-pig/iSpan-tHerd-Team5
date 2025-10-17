@@ -6,12 +6,7 @@
 -->
 <template>
   <!-- 按鈕容器 -->
-  <button
-    :class="buttonClasses"
-    :type="type"
-    :disabled="disabled"
-    @click="handleClick"
-  >
+  <button :class="buttonClasses" :type="type" :disabled="disabled" @click="handleClick">
     <!-- 左側圖標 -->
     <i v-if="leftIcon" :class="leftIcon" class="me-2"></i>
 
@@ -40,13 +35,13 @@ export default {
     type: {
       type: String,
       default: 'button',
-      validator: value => ['button', 'submit', 'reset'].includes(value),
+      validator: (value) => ['button', 'submit', 'reset'].includes(value),
     },
     // 按鈕變體
     variant: {
       type: String,
       default: 'primary',
-      validator: value =>
+      validator: (value) =>
         [
           'primary',
           'secondary',
@@ -70,7 +65,7 @@ export default {
     size: {
       type: String,
       default: 'md',
-      validator: value => ['sm', 'md', 'lg'].includes(value),
+      validator: (value) => ['sm', 'md', 'lg'].includes(value),
     },
     // 是否禁用
     disabled: {
@@ -108,31 +103,31 @@ export default {
      * 根據props動態生成Bootstrap類名
      */
     buttonClasses() {
-      const classes = ['btn'];
+      const classes = ['btn']
 
       // 添加變體類
       if (this.variant.startsWith('outline-')) {
-        classes.push(`btn-${this.variant}`);
+        classes.push(`btn-${this.variant}`)
       } else {
-        classes.push(`btn-${this.variant}`);
+        classes.push(`btn-${this.variant}`)
       }
 
       // 添加大小類
       if (this.size !== 'md') {
-        classes.push(`btn-${this.size}`);
+        classes.push(`btn-${this.size}`)
       }
 
       // 添加邊框控制
       if (this.showBorder) {
-        classes.push('border-1 border-secondary');
+        classes.push('border-1 border-secondary')
       }
 
       // 添加自定義類
       if (this.customClass) {
-        classes.push(this.customClass);
+        classes.push(this.customClass)
       }
 
-      return classes.join(' ');
+      return classes.join(' ')
     },
   },
 
@@ -146,11 +141,11 @@ export default {
      */
     handleClick(event) {
       if (!this.disabled) {
-        this.$emit('click', event);
+        this.$emit('click', event)
       }
     },
   },
-};
+}
 </script>
 
 <style>
