@@ -13,7 +13,7 @@ onMounted(async () => {
   try {
     // 取得全部啟用中物流商資料（用 baseAddress 組成完整 API 路徑）
     const res = await axios.get(`${baseAddress}/api/sup/Logistics/active`)
-    logisticsList.value = res.data
+    logisticsList.value = res.data.data
   } catch (err) {
     error.value = '載入失敗: ' + (err?.response?.data?.message || err.message)
   } finally {
@@ -24,7 +24,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h2>運送資訊</h2>
+    <h2>配送資訊</h2>
     <div v-if="loading">載入中...</div>
     <div v-if="error">{{ error }}</div>
     <table v-if="!loading && logisticsList.length > 0">
@@ -67,11 +67,12 @@ table {
 }
 th,
 td {
-  border: 1px solid #ddd;
+  border: 1px solid rgb(77, 180, 193);
   padding: 0.5rem;
   text-align: center;
 }
 thead {
-  background: #f7f7f7;
+  background: rgb(0, 112, 131);
+  color: rgb(248, 249, 250);
 }
 </style>

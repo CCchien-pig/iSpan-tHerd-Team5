@@ -1,12 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 using tHerdBackend.Core.Interfaces.SUP;
+using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
+	/// <summary>
+	/// 物流商API
+	/// </summary>
 	[ApiController]
-	[Route("api/[folder]/[controller]")]
+	[Route("api/sup/[controller]")]
+	//[Authorize] // 預設授權
+	[AllowAnonymous]
 	public class LogisticsController : ControllerBase
 	{
 		private readonly ILogisticsService _service;
@@ -16,37 +23,46 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			_service = service;
 		}
 
-		//GET /api/sup/LogisticsRate
+		/// <summary>
+		/// 取得所有物流商
+		/// GET /api/sup/logistics
+		/// </summary>
 		[HttpGet]
 		public async Task<IActionResult> GetAll()
 		{
 			try
 			{
 				var list = await _service.GetAllAsync();
-				return Ok(list);
+				return Ok(ApiResponse<object>.Ok(list, "查詢成功"));
 			}
 			catch (Exception ex)
 			{
-				return StatusCode(500, new { success = false, message = ex.Message });
+				return Ok(ApiResponse<object>.Fail("系統錯誤：" + ex.Message));
 			}
 		}
 
-		//GET /api/sup/LogisticsRate/active
+		/// <summary>
+		/// 取得所有啟用物流商
+		/// GET /api/sup/logistics/active
+		/// </summary>
 		[HttpGet("active")]
 		public async Task<IActionResult> GetActiveLogistics()
 		{
 			try
 			{
 				var list = await _service.GetActiveAsync();
-				return Ok(list);
+				return Ok(ApiResponse<object>.Ok(list, "查詢成功"));
 			}
 			catch (Exception ex)
 			{
-				return StatusCode(500, new { success = false, message = ex.Message });
+				return Ok(ApiResponse<object>.Fail("系統錯誤：" + ex.Message));
 			}
 		}
 
-		//GET /api/sup/LogisticsRate/{id}
+		/// <summary>
+		/// 取得單一物流商
+		/// GET /api/sup/logistics/{id}
+		/// </summary>
 		[HttpGet("{id}")]
 		public async Task<IActionResult> Get(int id)
 		{
@@ -54,16 +70,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			{
 				var log = await _service.GetByIdAsync(id);
 				if (log == null)
-					return NotFound(new { success = false, message = "找不到該物流商" });
-				return Ok(log);
+					return Ok(ApiResponse<object>.Fail("找不到該物流商"));
+				return Ok(ApiResponse<object>.Ok(log, "查詢成功"));
 			}
 			catch (Exception ex)
 			{
-				return StatusCode(500, new { success = false, message = ex.Message });
+				return Ok(ApiResponse<object>.Fail("系統錯誤：" + ex.Message));
 			}
 		}
-
-
 	}
-
 }
