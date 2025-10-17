@@ -101,4 +101,20 @@ export default {
 /* .promo-banner {
   background: linear-gradient(135deg, #6f42c1, #8e44ad) !important;
 } */
+ /* 🖥️ 桌面置中對齊設定 */
+.promo-banner .container-fluid {
+  max-width: 1200px; /* 與 Header、Navigation 保持一致 */
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+/* 📱 小螢幕滿版設定 */
+@media (max-width: 900px) {
+  .promo-banner .container-fluid {
+    max-width: 100%;
+    padding-left: 15px;  /* ✅ 避免文字緊貼邊界 */
+    padding-right: 15px;
+  }
+}
+
 </style>

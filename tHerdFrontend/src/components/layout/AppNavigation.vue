@@ -636,10 +636,22 @@ export default {
   opacity: 0;
 }
 
+.main-navigation .container-fluid {
+  max-width: 1200px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+
 /* 📱 響應式 */
 @media (min-width: 992px) {
   .hamburger-btn {
     display: none;
+  }
+  .main-navigation .container-fluid {
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
