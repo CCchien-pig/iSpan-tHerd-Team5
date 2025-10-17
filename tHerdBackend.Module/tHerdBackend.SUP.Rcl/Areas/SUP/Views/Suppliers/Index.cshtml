@@ -197,7 +197,7 @@
                         checkbox.prop('checked', !newStatus);
                     } else {
                         // 使用者確認 → 更新提示 p
-                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態`);
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態，進貨權限將會一同變動`);
                     }
                 });
             });
@@ -290,9 +290,9 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
-                    icon: newStatus ? 'question' : 'warning',
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
                     cancelButtonText: '取消',
@@ -419,30 +419,27 @@
                 // 重新解析 jQuery Validation
                 $.validator.unobtrusive.parse('#supplierForm');
 
-                // 按鈕1：自動填入名稱與聯絡人
-                $('#fillNameContact').click(function () {
+                // 事件委派 - 綁定在表單容器上
+                $('#supplierModalContent').on('click', '#fillNameContact', function () {
                     const now = new Date();
-                    const hour = now.getHours();   // 小時
-                    const minute = now.getMinutes(); // 分鐘
+                    const hour = now.getHours();
+                    const minute = now.getMinutes();
 
                     $('#SupplierName').val(`供應商${hour}點`);
                     $('#ContactName').val(`聯絡人${minute}分`);
                 });
 
-                // 按鈕2：自動填入電子信箱
-                $('#fillEmail').click(function () {
+                $('#supplierModalContent').on('click', '#fillEmail', function () {
                     const now = new Date();
                     const hh = String(now.getHours()).padStart(2, '0');
                     const mm = String(now.getMinutes()).padStart(2, '0');
-                    const account = `${hh}${mm}`; // 例如 0935
+                    const account = `${hh}${mm}`;
 
-                    // 隨機選一個 domain
                     const domains = ['@@ispan.com', '@@fuen43.com', '@@gggmail.com', '@@yyymail.com'];
                     const domain = domains[Math.floor(Math.random() * domains.length)];
 
                     $('#Email').val(`${account}${domain}`);
                 });
-
             });
         });
     </script>

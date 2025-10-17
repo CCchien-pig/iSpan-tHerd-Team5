@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SUP.Data.Helpers;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
 
 [Area("SUP")]
@@ -12,15 +15,18 @@ public class BrandsController : Controller
 	private readonly tHerdDBContext _context;
 	private readonly ICurrentUser _me;
 	private readonly UserManager<ApplicationUser> _userMgr;
+	private readonly ISupplierService _supplierService;
 
 	public BrandsController(
 		tHerdDBContext context,
 		ICurrentUser me,
-		UserManager<ApplicationUser> userMgr)
+		UserManager<ApplicationUser> userMgr,
+		ISupplierService supplierService)
 	{
 		_context = context;
 		_me = me;
 		_userMgr = userMgr;
+		_supplierService = supplierService;
 	}
 
 	// GET: SUP/Brands/Index
@@ -81,7 +87,7 @@ public class BrandsController : Controller
 				: query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 			1 => sortDirection == "asc" ? query.OrderBy(x => x.BrandName) : query.OrderByDescending(x => x.BrandName),
 			2 => sortDirection == "asc" ? query.OrderBy(x => x.SupplierName) : query.OrderByDescending(x => x.SupplierName),
-			3 => sortDirection == "asc" ? query.OrderBy(x => x.IsDiscountActive) : query.OrderByDescending(x => x.IsDiscountActive),
+			3 => sortDirection == "asc" ? query.OrderBy(x => x.IsFeatured) : query.OrderByDescending(x => x.IsFeatured),
 			4 => sortDirection == "asc" ? query.OrderBy(x => x.IsActive) : query.OrderByDescending(x => x.IsActive),
 			_ => query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 		};
@@ -98,7 +104,7 @@ public class BrandsController : Controller
 				discountStatus = x.IsDiscountActive
 					? (x.DiscountRate.HasValue ? $"折扣{x.DiscountRate}%中" : "折扣中")
 					: "無折扣",
-				bannerStatus = "未設定", // 你可自行補Banner判斷欄位
+				isFeatured = x.IsFeatured,
 				isActive = x.IsActive,
 				sortDate = x.RevisedDate ?? x.CreatedDate
 			}).ToListAsync();
@@ -114,14 +120,24 @@ public class BrandsController : Controller
 
 	// GET: SUP/Brands/Create
 	[HttpGet]
-	public IActionResult Create()
+	public async Task<IActionResult> Create()
 	{
-		var viewModel = new BrandDto();
-		ViewBag.FormAction = "Create";
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandsFormPartial.cshtml", viewModel);
+		var dto = new BrandDto();
+
+		// 取得所有供應商
+		var suppliers = await _supplierService.GetAllSuppliersAsync();
+
+		// 將供應商做成下拉選單，未啟用的加 disabled 屬性
+		ViewBag.Suppliers = suppliers.Select(s => new SelectListItem
+		{
+			Value = s.SupplierId.ToString(),
+			Text = s.SupplierName,
+			Disabled = !s.IsActive
+		}).ToList();
+
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandFormPartial.cshtml", dto);
 	}
 
-	// POST: SUP/Brands/Create
 	[HttpPost]
 	[ValidateAntiForgeryToken]
 	public async Task<IActionResult> Create([Bind("BrandName,BrandCode,SupplierId,IsActive,IsFeatured")] BrandDto dto)
@@ -130,6 +146,7 @@ public class BrandsController : Controller
 		var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 		if (user == null)
 			return Json(new { success = false, message = "找不到使用者資料" });
+
 		int currentUserId = user.UserNumberId;
 
 		if (ModelState.IsValid)
@@ -146,6 +163,7 @@ public class BrandsController : Controller
 			};
 			_context.SupBrands.Add(entity);
 			await _context.SaveChangesAsync();
+
 			return Json(new
 			{
 				success = true,
@@ -159,7 +177,17 @@ public class BrandsController : Controller
 				}
 			});
 		}
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandsFormPartial.cshtml", dto);
+
+		// ModelState 驗證失敗時要重新載入下拉選單
+		var suppliers = await _supplierService.GetAllSuppliersAsync();
+		ViewBag.Suppliers = suppliers.Select(s => new SelectListItem
+		{
+			Value = s.SupplierId.ToString(),
+			Text = s.SupplierName,
+			Disabled = !s.IsActive
+		}).ToList();
+
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandFormPartial.cshtml", dto);
 	}
 
 	// GET: SUP/Brands/Edit/5
@@ -167,9 +195,12 @@ public class BrandsController : Controller
 	public async Task<IActionResult> Edit(int? id)
 	{
 		if (id == null) return NotFound();
+
 		var entity = await _context.SupBrands.FindAsync(id);
 		if (entity == null) return NotFound();
+
 		var supplier = await _context.SupSuppliers.FindAsync(entity.SupplierId);
+
 		var dto = new BrandDto
 		{
 			BrandId = entity.BrandId,
@@ -180,8 +211,19 @@ public class BrandsController : Controller
 			IsActive = entity.IsActive,
 			IsFeatured = entity.IsFeatured
 		};
+
+		// 設定下拉選單，指定 selectedValue 為品牌的 SupplierId
+		ViewBag.Suppliers = new SelectList(
+			await _context.SupSuppliers
+				.OrderBy(s => s.SupplierName)
+				.ToListAsync(),
+			"SupplierId",
+			"SupplierName",
+			dto.SupplierId // 這裡指定選中值
+		);
+
 		ViewBag.FormAction = "Edit";
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandsFormPartial.cshtml", dto);
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandFormPartial.cshtml", dto);
 	}
 
 	// POST: SUP/Brands/Edit/5
@@ -198,7 +240,16 @@ public class BrandsController : Controller
 				if (entity == null)
 					return Json(new { success = false, message = "找不到資料" });
 
-				// TODO: 檢查 entity 屬性是否有異動，可用 EntityComparer 判斷（如供應商版本）
+				// 檢查是否未變更
+				if (EntityComparer.IsUnchanged(
+						entity, dto,
+						nameof(SupBrand.BrandName),
+						nameof(SupBrand.IsDiscountActive),
+						nameof(SupBrand.IsFeatured),
+						nameof(SupBrand.IsActive)))
+				{
+					return Json(new { success = false, message = "未變更" });
+				}
 
 				var userId = _me.Id;
 				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
@@ -242,30 +293,35 @@ public class BrandsController : Controller
 				return Json(new { success = false, message = "發生錯誤: " + ex.Message });
 			}
 		}
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandsFormPartial.cshtml", dto);
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandFormPartial.cshtml", dto);
 	}
 
 	// POST: SUP/Brands/ToggleActive/5
 	[HttpPost]
-	public async Task<IActionResult> ToggleActive(int id, bool isActive)
+	public async Task<IActionResult> ToggleStatus(int brandId, string type, bool status)
 	{
 		try
 		{
-			var entity = await _context.SupBrands.FindAsync(id);
+			var entity = await _context.SupBrands.FindAsync(brandId);
 			if (entity == null)
 				return Json(new { success = false, message = "找不到該品牌" });
 
-			var userId = _me.Id;
-			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-			if (user == null)
-				return Json(new { success = false, message = "找不到使用者資料" });
-			int currentUserId = user.UserNumberId;
+			//var userId = _me.Id;
+			//var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+			//if (user == null)
+			//	return Json(new { success = false, message = "找不到使用者資料" });
+			//int currentUserId = user.UserNumberId;
 
-			entity.IsActive = isActive;
-			entity.Reviser = currentUserId;
-			entity.RevisedDate = DateTime.Now;
+			switch (type)
+			{
+				case "featured":
+					entity.IsFeatured = status; break;
+				case "active":
+					entity.IsActive = status; break;
+			}
+
 			await _context.SaveChangesAsync();
-			return Json(new { success = true, newStatus = isActive });
+			return Json(new { success = true });
 		}
 		catch (DbUpdateException dbEx)
 		{

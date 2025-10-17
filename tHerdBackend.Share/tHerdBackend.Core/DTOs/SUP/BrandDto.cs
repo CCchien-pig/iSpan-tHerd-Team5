@@ -35,7 +35,7 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// <summary>
 		/// Seo 設定
 		/// </summary>
-		[Display(Name = "SEO設定ID")]
+		[Display(Name = "設定SeoId")]
 		public int? SeoId { get; set; }
 
 		/// <summary>
