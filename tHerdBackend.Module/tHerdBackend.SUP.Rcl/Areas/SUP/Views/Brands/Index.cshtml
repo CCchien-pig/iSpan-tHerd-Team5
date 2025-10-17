@@ -7,21 +7,341 @@
     </style>
 }
 
+<button id="create" class="btn btn-outline-success mb-2">新增品牌</button>
 
+@* 渲染 DataTable *@
+<div class="card brand-card">
+    <h5>品牌資料</h5>
+    <table id="brandTable" class="display table" style="width:100%">
+        <thead>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- 新增/修改/詳情品牌 Modal -->
+<div id="brandModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="brandModalTitle" class="modal-title">品牌</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- Body -->
+            <div id="brandModalContent" class="modal-body p-4">
+                <!-- 透過 AJAX 載入 *Partial.cshtml -->
+            </div>
+        </div>
+    </div>
+</div>
 
 
 
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    @* <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> *@
 
     <script>
+        $(document).ready(function() {
+            // ======= URL 變數 ======= //
+            var indexJsonUrl = '@Url.Action("IndexJson", "Brands", new { area = "SUP" })';
+            var createUrl    = '@Url.Action("Create", "Brands", new { area = "SUP" })';
+            var editUrl      = '@Url.Action("Edit", "Brands", new { area = "SUP" })';
+            var detailsUrl   = '@Url.Action("Details", "Brands", new { area = "SUP" })';
+            var deleteUrl    = '@Url.Action("DeleteAjax", "Brands", new { area = "SUP" })';
+            var toggleActiveUrl = '@Url.Action("ToggleActive", "Brands", new { area = "SUP" })';
 
+            // 初始化 DataTable
+            var table = $('#brandTable').DataTable({
+            serverSide: true,
+            processing: true,
+            ajax: {
+                url: indexJsonUrl,
+                type: 'POST',
+                dataSrc: 'data'
+            },
+            columns: [
+                {
+                    data: 'sortDate',
+                    title: '#',
+                    className: 'text-center',
+                    orderable: true,
+                    render: function(data, type, row, meta) {
+                        return meta.row + 1 + meta.settings._iDisplayStart;
+                    }
+                },
+                {
+                    data: 'brandName',
+                    title: '品牌名稱'
+                },
+                {
+                    data: 'supplierName',
+                    title: '供應商名稱'
+                },
+                {
+                    data: 'discountStatus',
+                    title: '優惠狀態',
+                    className: 'text-center',
+                    render: function(data, type, row) {
+                        var checked = row.isDiscountActive ? 'checked' : '';
+                        return `
+                            <div class="form-check form-switch">
+                                <input class="form-check-input toggle-discount" type="checkbox" data-id="${row.brandId}" ${checked}>
+                            </div>
+                        `;
+                    }
+                },
+                {
+                    data: 'bannerStatus',
+                    title: 'Banner啟用狀態',
+                    className: 'text-center',
+                    render: function(data, type, row) {
+                        var checked = row.isBannerActive ? 'checked' : '';
+                        return `
+                            <div class="form-check form-switch">
+                                <input class="form-check-input toggle-banner" type="checkbox" data-id="${row.brandId}" ${checked}>
+                            </div>
+                        `;
+                    }
+                },
+                {
+                    data: 'isActive',
+                    title: '品牌啟用狀態',
+                    className: 'text-center',
+                    render: function(data, type, row) {
+                        var checked = data ? 'checked' : '';
+                        return `
+                            <div class="form-check form-switch">
+                                <input class="form-check-input toggle-active" type="checkbox" data-id="${row.brandId}" ${checked}>
+                            </div>
+                        `;
+                    }
+                },
+                {
+                    data: 'brandId',
+                    title: '操作',
+                    className: 'text-center',
+                    orderable: false,
+                    render: function(data) {
+                        return `
+                            <button class="btn btn-sm edit-btn" data-id="${data}" title="編輯" data-bs-toggle="tooltip">
+                                <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
+                            </button>
+                            <button class="btn btn-sm banner-btn" data-id="${data}" title="Banner" data-bs-toggle="tooltip">
+                                <i class="fa-solid fa-image" style="color: #3095c8;"></i> Banner
+                            </button>
+                            <button class="btn btn-sm discount-btn" data-id="${data}" title="折扣" data-bs-toggle="tooltip">
+                                <i class="fa-solid fa-tags" style="color: #e87439;"></i> 折扣
+                            </button>
+                            <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除" data-bs-toggle="tooltip">
+                                <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
+                            </button>
+                        `;
+                    }
+                }
+            ],
+            scrollY: "500px",
+            scrollCollapse: true,
+            colReorder: true,
+            columnDefs: [
+                { targets: '_all', type: 'string' }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+            }
+            });
 
+            // tooltip 初始化與 redraw
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+            table.on('draw', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+            });
 
+            // 新增品牌
+            $("#createBrand").click(function() {
+            $.get(createUrl,  function(html) {
+                $("#brandModalTitle").text("新增品牌");
+                $('#brandModalContent').html(html);
+                $.validator.unobtrusive.parse('#brandModalContent');
+                $('#brandModal').modal('show');
+            });
+            });
 
+            // 編輯品牌
+            $('#brandTable').on('click', '.edit-btn', function () {
+            var id = $(this).data('id');
+            $.get(`${editUrl}/${id}`, function (html) {
+                $("#brandModalTitle").text("修改品牌");
+                $('#brandModalContent').html(html);
+                $.validator.unobtrusive.parse('#brandModalContent');
+                $('#brandModal').modal('show');
+            });
+            });
+
+            // Banner設定
+            $('#brandTable').on('click', '.banner-btn', function () {
+            var id = $(this).data('id');
+            $.get(`/SUP/Brands/Banner/${id}`, function (html) {
+                $("#brandModalTitle").text("品牌Banner設定");
+                $('#brandModalContent').html(html);
+                $('#brandModal').modal('show');
+            });
+            });
+
+            // 折扣設定
+            $('#brandTable').on('click', '.discount-btn', function () {
+            var id = $(this).data('id');
+            $.get(`/SUP/Brands/Discount/${id}`, function (html) {
+                $("#brandModalTitle").text("品牌折扣設定");
+                $('#brandModalContent').html(html);
+                $('#brandModal').modal('show');
+            });
+            });
+
+            // 啟用/停用品牌
+            $('#brandTable').on('change', '.toggle-active', function() {
+            var checkbox = $(this);
+            var id = checkbox.data('id');
+            var rowData = table.row(checkbox.closest('tr')).data();
+            var brandName = rowData.brandName;
+            var newStatus = checkbox.prop('checked');
+            checkbox.prop('checked', !newStatus);
+
+            Swal.fire({
+                title: newStatus ?
+                    `確定啟用品牌：<br>"${brandName}" 嗎？` :
+                    `確定停用品牌：<br>"${brandName}" 嗎？`,
+                icon: newStatus ? 'question' : 'warning',
+                showCancelButton: true,
+                confirmButtonText: newStatus ? '啟用' : '停用',
+                cancelButtonText: '取消',
+                confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+            }).then((result) => {
+                if(result.isConfirmed){
+                    $.post(`${toggleActiveUrl}/${id}`, { isActive: newStatus })
+                    .done(function(res){
+                        if(res.success){
+                            checkbox.prop('checked', newStatus);
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: `品牌已${newStatus ? '啟用' : '停用'}`,
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+                            table.ajax.reload(null, false);
+                        } else {
+                            Swal.fire('操作失敗', res.message || '', 'error');
+                        }
+                    })
+                    .fail(function(){ Swal.fire('操作失敗', '', 'error'); });
+                }
+            });
+            });
+
+            // 詳細資料
+            $('#brandTable').on('click', '.details-btn', function() {
+            var id = $(this).data('id');
+            $.get(`${detailsUrl}/${id}`, function(html) {
+                $("#brandModalTitle").text("品牌詳細資料");
+                $('#brandModalContent').html(html);
+                $('#brandModal').modal('show');
+            });
+            });
+
+            // 刪除品牌
+            $('#brandTable').on('click', '.delete-btn', function() {
+            var id = $(this).data('id');
+            var rowData = table.row($(this).closest('tr')).data();
+            var brandName = rowData.brandName;
+
+            Swal.fire({
+                title: `確定要刪除品牌："${brandName}" 嗎？`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '刪除',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `${deleteUrl}/${id}`,
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire('刪除成功', '', 'success');
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('刪除失敗', res.message || '', 'error');
+                            }
+                        },
+                        error: function(xhr) {
+                            var msg = xhr.responseJSON?.message || '刪除失敗';
+                            Swal.fire('刪除失敗', msg, 'error');
+                        }
+                    });
+                }
+            });
+            });
+
+            // jQuery Validation 解析
+            $(function () {
+            $.validator.unobtrusive.parse('#brandForm');
+            });
+
+            // ========== Switch 統一事件 ========== //
+            function bindSwitch(selector, statusName, msgTarget) {
+                $(selector).on('change', function(){
+                    var checkbox = $(this);
+                    var brandName = $('#BrandName').val() || '';
+                    var newStatus = checkbox.prop('checked');
+                    // 回復成原狀，等待確認
+                    checkbox.prop('checked', !newStatus);
+
+                    Swal.fire({
+                        title: newStatus ?
+                            `確定啟用${statusName}：「${brandName}」嗎？` :
+                            `確定停用${statusName}：「${brandName}」嗎？`,
+                        icon: newStatus ? 'question' : 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: newStatus ? '啟用' : '停用',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                    }).then((result) => {
+                        if (!result.isConfirmed) {
+                            // 使用者取消 → 回復舊值
+                            checkbox.prop('checked', !newStatus);
+                        } else {
+                            // 使用者確認 → 更新文字
+                            $(msgTarget).text(`已切換至${newStatus ? "「啟用」" : "「停用」"}狀態`);
+                            checkbox.prop('checked', newStatus);
+                        }
+                    });
+                });
+            }
+
+            // 註冊所有需要 switch統一效果的區塊
+            bindSwitch('#IsDiscountActive', '折扣狀態', '#IsDiscountActiveStatusMsg');
+            bindSwitch('#IsFeatured', '精選品牌狀態', '#IsFeaturedStatusMsg');
+            bindSwitch('#IsActive', '啟用狀態', '#IsActiveStatusMsg');
+        });
     </script>
+
 
 }
