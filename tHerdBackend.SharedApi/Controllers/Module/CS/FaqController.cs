@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using tHerdBackend.Core.DTOs.CS;
+﻿using Microsoft.AspNetCore.Authorization;//匯入授權相關的標註與型別
+using Microsoft.AspNetCore.Mvc;//匯入 ASP.NET Core MVC 相關的標註與型別
+using tHerdBackend.Core.DTOs.CS;//
 using tHerdBackend.Core.Interfaces.CS;
 using tHerdBackend.Core.ValueObjects;
 

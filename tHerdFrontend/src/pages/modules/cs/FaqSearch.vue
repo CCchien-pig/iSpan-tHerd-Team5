@@ -6,7 +6,7 @@
       <div class="input-group mb-5">
         <input v-model.trim="q" @keyup.enter="doSearch" class="form-control"
                placeholder="請輸入關鍵字（例：退款、取消訂單、付款失敗）"/>
-        <button class="btn btn-primary" @click="doSearch">搜尋</button>
+        <button class="btn btn-search" @click="doSearch">搜尋</button>
       </div>
     </div>
 
@@ -107,6 +107,18 @@ export default {
 </script>
 
 <style scoped>
+.btn-search {
+  background-color: rgb(0, 112, 131);       /* 主色：藍綠 */
+  color: rgb(248, 249, 250);               /* 字色：白 */
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.btn-search:hover {
+  background-color: rgb(77, 180, 193);     /* 輔色：淺藍綠 */
+  color: rgb(248, 249, 250);
+}
+
 /* 整體寬度控制：中間置中 */
 .center-narrow { max-width: 880px; margin: 0 auto; }
 /* 區塊標題（水平置中、小分隔線） */
@@ -133,8 +145,8 @@ export default {
 .qcard:hover{ transform: translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.06); }
 .qicon{
   width:72px; height:72px; margin:0 auto 8px; border:1px solid #e8ece8; border-radius:50%;
-  display:flex; align-items:center; justify-content:center; color:#0c8a4b;
+  display:flex; align-items:center; justify-content:center; color:rgb(0, 112, 131);
 }
-.qcard a{ display:block; font-weight:600; color:#0f5132; text-decoration:none; }
+.qcard a{ display:block; font-weight:600; color:rgb(0, 112, 131); text-decoration:none; }
 .qcard a:hover{ text-decoration:underline; }
 </style>
