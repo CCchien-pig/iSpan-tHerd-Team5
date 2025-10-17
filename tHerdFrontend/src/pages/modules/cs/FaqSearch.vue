@@ -15,18 +15,25 @@
       <!-- ... -->
     </div>
       <!-- ❶ 快捷卡片：移到幫助文章上方 -->
-    <div class="quick-area">
-      <div class="center-narrow">
-        <div class="row g-3 justify-content-center text-center">
-          <div v-for="a in quickActions" :key="a.text" class="col-6 col-sm-3">
-            <div class="qcard">
-              <div class="qicon" v-html="a.svg"></div>
-              <a :href="a.href" class="stretched-link">{{ a.text }}</a>
-            </div>
+<div class="quick-area">
+  <div class="center-narrow">
+    <div class="row g-3 justify-content-center text-center">
+
+      <!-- 每張卡片 -->
+      <div v-for="a in quickActions" :key="a.text" class="col-6 col-sm-3">
+
+        <!-- 把整張卡包成 RouterLink，不會影響 SVG -->
+        <RouterLink :to="a.to" class="qcard text-decoration-none d-block">
+          <div class="qicon" v-html="a.svg"></div>
+          <div class="fw-semibold" style="color:rgb(0, 112, 131)">
+            {{ a.text }}
           </div>
-        </div>
+        </RouterLink>
+
       </div>
     </div>
+  </div>
+</div>
 
     <!-- ❷ 幫助文章（右側 + / −） -->
     <div class="center-narrow">
@@ -38,7 +45,7 @@
             <button class="accordion-button collapsed cat-btn" type="button"
                     data-bs-toggle="collapse" :data-bs-target="`#cat-${c.categoryId}`">
               {{ c.categoryName }}
-              <span class="pm" aria-hidden="true"></span>
+             <span class="plus" aria-hidden="true"></span>
             </button>
           </h2>
           <div :id="`cat-${c.categoryId}`" class="accordion-collapse collapse"
@@ -75,11 +82,40 @@ export default {
       loading: false,
       categories: [],
       quickActions: [
-        { text: '追蹤我的訂單', href: '/orders/track', svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h13l3 5v5h-3"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>` },
-        { text: '修改或取消訂單', href: '/orders/manage', svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>` },
-        { text: '忘記密碼', href: '/account/forgot', svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>` },
-        { text: '客服服務', href: '/cs/contact', svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4h-3l-4 3v-3H7a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>` }
-      ]
+  {
+    text: '追蹤我的訂單',
+    to: '/orders/track',
+    svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 7h13l3 5v5h-3"></path>
+            <circle cx="7.5" cy="18.5" r="1.5"></circle>
+            <circle cx="17.5" cy="18.5" r="1.5"></circle>
+          </svg>`
+  },
+  {
+    text: '修改或取消訂單',
+    to: '/orders/manage',
+    svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="18" height="14" rx="2"></rect>
+            <path d="M3 9h18"></path>
+          </svg>`
+  },
+  {
+    text: '忘記密碼',
+    to: '/account/forgot',
+    svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>`
+  },
+  {
+    text: '客服服務',
+    to: '/cs/faq',
+    svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15a4 4 0 0 1-4 4h-3l-4 3v-3H7a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+          </svg>`
+  }
+]
+
     }
   },
   mounted() { this.loadCategories() },
