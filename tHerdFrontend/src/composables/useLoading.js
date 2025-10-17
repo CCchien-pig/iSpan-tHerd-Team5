@@ -35,7 +35,7 @@ export function useLoading() {
    * @returns {Promise} 異步函數的結果
    * @example
    * const result = await withLoading(
-   *   () => productApi.getProductDetail(id),
+   *   () => ProductsApi.getProductDetail(id),
    *   '載入商品資料中...'
    * )
    */

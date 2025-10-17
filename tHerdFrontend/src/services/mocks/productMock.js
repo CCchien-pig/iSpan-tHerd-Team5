@@ -4,7 +4,7 @@
  */
 
 import MockAdapter from 'axios-mock-adapter'
-import apiClient from '../api'
+import apiClient from '../../core/api/api'
 import { isMockEnabled } from './mockConfig'
 
 // 建立 Mock Adapter 實例

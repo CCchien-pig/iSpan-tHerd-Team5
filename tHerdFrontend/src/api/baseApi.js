@@ -4,7 +4,7 @@
  * 特色：統一錯誤處理、請求配置、回應格式化
  */
 
-import apiClient from './api'
+import apiClient from '../core/api/api'
 
 /**
  * 基礎 API 類別

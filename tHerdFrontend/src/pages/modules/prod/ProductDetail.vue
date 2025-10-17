@@ -82,7 +82,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoading } from '@/composables/useLoading'
-import productApi from '@/services/modules/productApi'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 import { warning, error as showError, toast } from '@/utils/sweetalert'
 import { calculateDiscount } from '@/utils/productUtils'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
@@ -150,7 +150,7 @@ const loadProduct = async () => {
     error.value = null
 
     const productId = route.params.id
-    const response = await productApi.getProductDetail(productId)
+    const response = await ProductsApi.getProductDetail(productId)
 
     if (response.success) {
       product.value = response.data
@@ -174,7 +174,7 @@ const loadProduct = async () => {
  */
 const loadRelatedProducts = async () => {
   try {
-    const response = await productApi.getProductList({
+    const response = await ProductsApi.getProductList({
       page: 1,
       pageSize: 4,
     })
@@ -227,10 +227,10 @@ const handleToggleFavorite = async () => {
     const isFavorited = false // 假設目前未收藏
 
     if (isFavorited) {
-      await productApi.removeFavorite(product.value.productId)
+      await ProductsApi.removeFavorite(product.value.productId)
       toast('已取消收藏', 'info')
     } else {
-      await productApi.addFavorite({ productId: product.value.productId })
+      await ProductsApi.addFavorite({ productId: product.value.productId })
       toast('已加入我的最愛', 'success')
     }
   } catch (err) {
@@ -248,10 +248,10 @@ const handleToggleLike = async () => {
     const isLiked = false // 假設目前未按讚
 
     if (isLiked) {
-      await productApi.unlikeProduct(product.value.productId)
+      await ProductsApi.unlikeProduct(product.value.productId)
       toast('已取消按讚', 'info')
     } else {
-      await productApi.likeProduct({ productId: product.value.productId })
+      await ProductsApi.likeProduct({ productId: product.value.productId })
       toast('已按讚', 'success')
     }
   } catch (err) {

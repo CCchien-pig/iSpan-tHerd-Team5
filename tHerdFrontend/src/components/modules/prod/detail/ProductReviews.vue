@@ -261,7 +261,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import productApi from '@/services/modules/productApi'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 import { toast, success, error as showError } from '@/utils/sweetalert'
 
 const props = defineProps({
@@ -374,7 +374,7 @@ const isReviewValid = computed(() => {
 const loadReviews = async () => {
   try {
     loading.value = true
-    const response = await productApi.getReviews(props.productId)
+    const response = await ProductsApi.getReviews(props.productId)
 
     if (response.success) {
       reviews.value = response.data || []
@@ -394,7 +394,7 @@ const handleSubmitReview = async () => {
 
   try {
     submitting.value = true
-    const response = await productApi.submitReview({
+    const response = await ProductsApi.submitReview({
       productId: props.productId,
       skuId: 1, // TODO: 從選中的規格獲取
       rating: newReview.value.rating,
