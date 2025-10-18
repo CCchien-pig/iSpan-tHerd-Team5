@@ -1,26 +1,30 @@
 // src/pages/modules/cnt/api/cntService.js
 import axios from 'axios'
 
-// 後端 CNT API 根路徑（依你後端埠號調整）
+// ✅ 使用你的後端路徑 (與 Swagger 一致)
 const API_BASE = 'https://localhost:7103/api/cnt'
 
 /**
  * 取得文章列表
- * @param {Number} page 頁碼
- * @param {Number} pageSize 每頁筆數
+ * 支援：分類(categoryId)、關鍵字(q)、分頁(page, pageSize)
  */
-export async function getArticleList(page = 1, pageSize = 12) {
-    const res = await axios.get(`${API_BASE}/list`, {
-        params: { page, pageSize }
-    })
-    return res.data // { items, total, page, pageSize }
+export async function getArticleList({ categoryId = null, q = "", page = 1, pageSize = 12 } = {}) {
+
+    const params = {}
+    if (categoryId) params.categoryId = categoryId;
+    if (q && q.trim()) params.q = q.trim();
+    params.page = page;
+    params.pageSize = pageSize;
+
+    const res = await axios.get(`${API_BASE}/list`, { params })
+    return res.data  // { items, total, page, pageSize }
 }
 
 /**
  * 取得文章詳細
  * @param {Number} pageId 文章 ID
  */
-export async function getArticleDetail(pageId) {
-    const res = await axios.get(`${API_BASE}/detail/${pageId}`)
-    return res.data // { canViewFullContent, data }
+export async function getArticleDetail(id) {
+    const res = await axios.get(`${API_BASE}/articles/${id}`)
+    return res.data  // { canViewFullContent, data }
 }

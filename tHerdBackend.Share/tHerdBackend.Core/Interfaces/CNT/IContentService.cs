@@ -18,8 +18,16 @@ namespace tHerdBackend.Core.Interfaces.CNT
 		/// <summary>
 		/// 取得文章詳細（含 SEO、Blocks、Tags、付費預覽判斷）
 		/// </summary>
-		/// <param name="pageId">文章 PageId</param>
+		/// <param name="id">文章 PageId</param>
 		/// <param name="userNumberId">登入會員編號（JWT 解析；訪客可為 null）</param>
-		Task<ArticleDetailDto?> GetArticleDetailAsync(int pageId, int? userNumberId);
+		Task<ArticleDetailDto?> GetArticleDetailAsync(int id, int? userNumberId);
+
+		/// <summary>
+		/// 取得文章詳細＋同分類推薦清單（一次回傳，給前端直接渲染）
+		/// </summary>
+		/// <param name="id">文章 PageId</param>
+		/// <param name="userNumberId">登入會員編號（JWT 解析；訪客可為 null）</param>
+		Task<(ArticleDetailDto? Data, IReadOnlyList<ArticleListDto> Recommended)>
+			GetArticleDetailWithRecommendedAsync(int id, int? userNumberId);
 	}
 }
