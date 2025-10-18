@@ -1,12 +1,28 @@
 <template>
   <div class="container py-4" v-if="article">
+    <!-- 返回列表 + 分享 -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <button class="btn btn-link p-0 main-color-green-text text-decoration-none" @click="goBack">
+        ← 返回文章列表
+      </button>
+      <div class="d-flex align-items-center gap-3">
+        <span class="text-muted small d-none d-sm-inline">分享：</span>
+        <button class="btn btn-sm btn-outline-secondary" @click="shareFacebook" title="分享到 Facebook">
+          <i class="bi bi-facebook"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" @click="shareLine" title="分享到 LINE">
+          <i class="bi bi-line"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- Banner / Title -->
-    <div class="rounded-3 p-4 mb-3" style="background: #e9f6f6;">
+    <div class="rounded-3 p-4 mb-3" style="background:#e9f6f6;">
       <h1 class="m-0 main-color-green-text">{{ article.title }}</h1>
       <p class="text-muted mb-0">{{ formatDate(article.publishedDate) }}</p>
     </div>
 
-    <!-- TOC：頂部橫向（可折疊，類 Medium） -->
+    <!-- TOC：頂部橫向（可收合；非 sticky；顯示節數） -->
     <div class="toc-bar bg-light rounded-3 p-2 mb-3">
       <button
         class="btn btn-sm teal-reflect-button text-white"
@@ -15,7 +31,7 @@
         aria-controls="tocPanel"
         :aria-expanded="toc.open ? 'true' : 'false'"
       >
-        📖 {{ toc.open ? '收起目錄' : '顯示目錄' }}
+        📖 {{ toc.open ? `收起目錄（共 ${toc.headings.length} 節）` : `顯示目錄（共 ${toc.headings.length} 節）` }}
       </button>
 
       <transition name="fade">
@@ -24,12 +40,13 @@
             <button
               v-for="(h, idx) in toc.headings"
               :key="idx"
-              class="btn btn-sm btn-outline-secondary main-color-green-text bg-white"
+              class="btn btn-sm toc-item"
+              :class="{ active: h.id === toc.activeId }"
               @click="scrollToAnchor(h.id)"
             >
-              <span v-if="h.level===2">H2｜</span>
-              <span v-else>H3｜</span>
-              {{ h.text }}
+              <span class="me-1" v-if="h.level===2">H2｜</span>
+              <span class="me-1" v-else>H3｜</span>
+              <span class="text-truncate d-inline-block" style="max-width:220px">{{ h.text }}</span>
             </button>
           </div>
         </div>
@@ -79,6 +96,26 @@
         </router-link>
       </div>
     </div>
+
+    <!-- 推薦文章：同分類 + Tag 混合（iHerb 風格卡片） -->
+    <div v-if="recommended.length" class="mt-5">
+      <h4 class="main-color-green-text mb-3">你可能還想看</h4>
+      <div class="row g-3">
+        <div class="col-12 col-md-6 col-lg-4" v-for="p in recommended" :key="p.pageId">
+          <div class="card h-100 shadow-sm">
+            <img :src="p.coverImage" class="card-img-top" :alt="p.title" />
+            <div class="card-body d-flex flex-column">
+              <h6 class="mb-2 main-color-green-text">{{ p.title }}</h6>
+              <div class="mt-auto">
+                <router-link :to="{ name:'cnt-article-detail', params:{ id: p.pageId }}" class="btn btn-sm teal-reflect-button text-white">
+                  閱讀更多 →
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 載入中 / 無資料 -->
@@ -88,9 +125,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from "vue";
+import { ref, onMounted, nextTick, computed, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getArticleDetail } from "./api/cntService";
+import { getArticleDetail, getArticleList } from "./api/cntService";
 
 // ==== state ====
 const route = useRoute();
@@ -103,14 +140,28 @@ const contentRef = ref(null);
 // TOC 狀態
 const toc = ref({
   open: false,
-  headings: [] // [{ id, level, text }]
+  headings: [], // [{ id, level, text }]
+  activeId: null
 });
+let observer = null;
+
+// 推薦文章
+const recommended = ref([]);
 
 // ==== lifecycle ====
 onMounted(async () => {
+  // ✅ 只在本頁動態載入 Bootstrap Icons（避免全站汙染；重複判斷）
+  const existing = document.head.querySelector('link[href*="bootstrap-icons"]');
+  if (!existing) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css";
+    document.head.appendChild(link);
+  }
+
   const pageId = route.params.id;
   const res = await getArticleDetail(pageId);
-  // console.log("detail api:", res);
+  console.log("[Detail] API 返回：", res);
 
   if (res) {
     canViewFullContent.value = res.canViewFullContent ?? true;
@@ -121,38 +172,66 @@ onMounted(async () => {
   }
 
   await nextTick();
-  buildHeadings(); // 解析 H2/H3 建立 TOC
+  buildHeadings();     // 解析 H2/H3 建立 TOC
+  setupObserver();     // 啟動 ScrollSpy
+  await loadRecommended();
+});
+
+onBeforeUnmount(() => {
+  if (observer) observer.disconnect();
 });
 
 // ==== computed：依權限切換顯示的 blocks（未解鎖顯示前幾段）====
 const displayBlocks = computed(() => {
   if (canViewFullContent.value) return blocks.value;
-
-  // 取前 N 個 richtext 區塊（或合併成片段）
   const MAX_RICHTEXT = 2;
   const out = [];
-  let count = 0;
+  let richCount = 0;
   for (const b of blocks.value) {
-    if (b.blockType === "richtext" && b.content && count < MAX_RICHTEXT) {
+    if (b.blockType === "richtext" && b.content) {
       out.push(b);
-      count++;
-    } else if (b.blockType === "image") {
-      // 預覽可選擇顯示/不顯示圖片；這裡先顯示一張
-      if (out.length && out[out.length - 1].blockType === "image") continue;
+      richCount++;
+      if (richCount >= MAX_RICHTEXT) break;
+    } else if (b.blockType === "image" && b.content) {
       out.push(b);
-      if (count >= MAX_RICHTEXT) break;
     }
   }
   return out.length ? out : blocks.value.slice(0, 1);
 });
 
 // ==== methods ====
+// 返回列表
+function goBack() {
+  if (window.history.length > 1) {
+    router.back();
+  } else {
+    router.push({ name: "cnt-articles" });
+  }
+}
+
+// 分享
+function currentUrl() {
+  try {
+    return window.location.href;
+  } catch { return ""; }
+}
+function shareFacebook() {
+  const url = encodeURIComponent(currentUrl());
+  const t = encodeURIComponent(article.value?.title || "");
+  const share = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${t}`;
+  window.open(share, "_blank", "noopener,noreferrer");
+}
+function shareLine() {
+  const url = encodeURIComponent(currentUrl());
+  const t = encodeURIComponent(article.value?.title || "");
+  const share = `https://social-plugins.line.me/lineit/share?url=${url}&text=${t}`;
+  window.open(share, "_blank", "noopener,noreferrer");
+}
+
 // 修正 RichText 中的 img 路徑（../../file?id= → 絕對路徑）
 function safeHtml(html) {
   if (!html) return "";
-  // 替換 ../../file?id= 開頭為後端完整路徑
   let fixed = html.replace(/src=["']..\/..\/file\?id=/g, 'src="https://localhost:7103/file?id=');
-  // 也處理 /uploads/xxxx.jpg 這種相對路徑
   fixed = fixed.replace(/src=["']\/uploads\//g, 'src="https://localhost:7103/uploads/');
   return fixed;
 }
@@ -174,13 +253,11 @@ function buildHeadings() {
   const root = contentRef.value;
   if (!root) return;
 
-  // 先給所有 H2/H3 建立 id（若 richtext 區塊含 h2/h3）
   const hs = root.querySelectorAll("h2, h3");
   let i = 0;
   hs.forEach((el) => {
     const text = (el.textContent || "").trim();
     if (!text) return;
-    // 產生穩定 id
     let id = el.getAttribute("id");
     if (!id) {
       id = `h-${slugify(text)}-${i++}`;
@@ -192,6 +269,7 @@ function buildHeadings() {
       text
     });
   });
+  console.log("[TOC] Headings:", toc.value.headings);
 }
 
 function toggleToc() {
@@ -207,6 +285,74 @@ function scrollToAnchor(id) {
   }
 }
 
+// ScrollSpy：監控目前所在章節，套用 active 樣式
+function setupObserver() {
+  if (observer) observer.disconnect();
+  const root = contentRef.value;
+  if (!root) return;
+
+  const options = {
+    root: null,
+    rootMargin: "0px 0px -65% 0px", // 提前切換 active
+    threshold: 0
+  };
+  observer = new IntersectionObserver(handleIntersect, options);
+  const hs = root.querySelectorAll("h2, h3");
+  hs.forEach(el => observer.observe(el));
+}
+
+function handleIntersect(entries) {
+  let topMost = null;
+  for (const entry of entries) {
+    if (entry.isIntersecting) {
+      if (!topMost || entry.boundingClientRect.top < topMost.boundingClientRect.top) {
+        topMost = entry;
+      }
+    }
+  }
+  if (topMost) {
+    const id = topMost.target.id;
+    toc.value.activeId = id;
+    // console.log("[TOC] Active:", id);
+  }
+}
+
+// 推薦文章：同分類 + Tag 混合
+async function loadRecommended() {
+  try {
+    const cat = article.value?.categoryName || "";
+    the_tag: {
+      const tag = (article.value?.tags || [])[0] || "";
+      const keyword = tag || cat || "";
+
+      // 先用關鍵字抓 10 筆候選
+      const res = await getArticleList({ q: keyword, page: 1, pageSize: 10 });
+      let pool = (res.items || []).map(wireToCamel);
+      // 排除自己
+      pool = pool.filter(x => x.pageId !== article.value?.pageId);
+
+      // 優先：同分類
+      let pick = pool.filter(x => x.categoryName === cat);
+      // 補齊：相同第一個 tag
+      if (pick.length < 3 && tag) {
+        pick = pick.concat(pool.filter(x => (x.tags || []).includes(tag) && !pick.find(p => p.pageId === x.pageId)));
+      }
+      // 仍不足：補最新
+      if (pick.length < 3) {
+        for (const x of pool) {
+          if (!pick.find(p => p.pageId === x.pageId)) pick.push(x);
+          if (pick.length >= 3) break;
+        }
+      }
+      recommended.value = pick.slice(0, 3);
+    }
+    console.log("[Recommend] Candidates:", recommended.value);
+  } catch (e) {
+    console.warn("[Recommend] 無法載入推薦文章：", e);
+    recommended.value = [];
+  }
+}
+
 // 小工具：字串轉 slug
 function slugify(s) {
   return s
@@ -219,15 +365,27 @@ function slugify(s) {
 
 // CTA（先留空，之後可串登入/購買）
 function onLogin() {
-  // router.push({ name: 'login' })
   alert("請登入以解鎖內容");
 }
 function onPurchase() {
-  // router.push({ name: 'purchase' })
   alert("購買流程尚未設計，先以 DB 設定為全免費");
 }
 
 // ==== utils ====
+function wireToCamel(x) {
+  return {
+    pageId: x.pageId ?? x.PageId,
+    title: x.title ?? x.Title,
+    slug: x.slug ?? x.Slug,
+    excerpt: x.excerpt ?? x.Excerpt,
+    coverImage: absoluteImageUrl(x.coverImage ?? x.CoverImage),
+    categoryName: x.categoryName ?? x.CategoryName,
+    publishedDate: x.publishedDate ?? x.PublishedDate,
+    isPaidContent: x.isPaidContent ?? x.IsPaidContent,
+    tags: x.tags ?? x.Tags ?? []
+  };
+}
+
 function formatDate(d) {
   try {
     const dt = new Date(d);
@@ -240,7 +398,7 @@ function formatDate(d) {
 </script>
 
 <style scoped>
-/* TOC 動畫 */
+/* 動畫 */
 .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
@@ -264,6 +422,17 @@ function formatDate(d) {
 
 /* TOC 外觀 */
 .toc-bar { border: 1px solid #e6e6e6; }
+.toc-item {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  color: #007078;
+}
+.toc-item.active {
+  background: #e9f6f6; /* 底色高亮 */
+  border-color: #9bd5d5;
+  color: #005a60;
+  font-weight: 600;
+}
 
 /* 付費遮罩 */
 .content-mask {
@@ -271,9 +440,12 @@ function formatDate(d) {
   inset: 0;
   background: linear-gradient(180deg, rgba(255,255,255,0) 10%, rgba(255,255,255,.92) 40%, rgba(255,255,255,1) 70%);
   backdrop-filter: blur(1px);
+  pointer-events: auto;
 }
 
-/* RWD 微調（手機 TOC 更好點） */
+/* 分享 icon 大小微調（使用 Bootstrap Icons 時適用） */
+.bi { font-size: 1.05rem; }
+
 @media (max-width: 576px) {
   .toc-bar button { font-size: .85rem; }
 }

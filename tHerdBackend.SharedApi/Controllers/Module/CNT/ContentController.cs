@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using tHerdBackend.Core.Interfaces.CNT;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 {
 	/// <summary>
-	/// CNT 前台內容 API
+	/// CNT 前台內容 API（RESTful）
+	/// - /api/cnt/list                  文章清單
+	/// - /api/cnt/articles/{id}         文章詳情 + 推薦
 	/// </summary>
 	[ApiController]
 	[Route("api/cnt")]
@@ -34,15 +37,16 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 		}
 
 		/// <summary>
-		/// 單篇文章（含 SEO / Blocks / Tags / 付費檢查）
-		/// GET /api/cnt/detail/1006
+		/// 單篇文章（含 SEO / Blocks / Tags / 付費檢查 / 同分類推薦）
+		/// GET /api/cnt/articles/{id}
 		/// </summary>
-		[HttpGet("detail/{pageId:int}")]
-		public async Task<IActionResult> GetDetail([FromRoute] int pageId)
+		[HttpGet("articles/{id:int}")]
+		public async Task<IActionResult> GetArticle([FromRoute] int id)
 		{
-			// 自動偵測 JWT 可能的使用者編號 Claim
+			// 自動偵測 JWT 的可能使用者編號 Claim（user_number_id/sub/uid/NameIdentifier）
 			int? userNumberId = TryGetUserNumberIdFromClaims(User);
-			var dto = await _svc.GetArticleDetailAsync(pageId, userNumberId);
+
+			var (dto, rec) = await _svc.GetArticleDetailWithRecommendedAsync(id, userNumberId);
 			if (dto == null) return NotFound();
 
 			// 方便前端判斷是否顯示全文 / 遮罩
@@ -51,10 +55,12 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 			return Ok(new
 			{
 				canViewFullContent,
-				data = dto
+				data = dto,
+				recommended = rec
 			});
 		}
 
+		// ===== Helpers =====
 		private static int? TryGetUserNumberIdFromClaims(ClaimsPrincipal user)
 		{
 			var claim = user.FindFirst("user_number_id")

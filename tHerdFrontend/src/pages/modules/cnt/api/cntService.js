@@ -24,7 +24,7 @@ export async function getArticleList({ categoryId = null, q = "", page = 1, page
  * 取得文章詳細
  * @param {Number} pageId 文章 ID
  */
-export async function getArticleDetail(pageId) {
-    const res = await axios.get(`${API_BASE}/detail/${pageId}`)
+export async function getArticleDetail(id) {
+    const res = await axios.get(`${API_BASE}/articles/${id}`)
     return res.data  // { canViewFullContent, data }
 }
