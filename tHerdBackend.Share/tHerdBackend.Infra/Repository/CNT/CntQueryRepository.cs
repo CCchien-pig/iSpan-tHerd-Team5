@@ -11,12 +11,7 @@ using tHerdBackend.Share.DTOs.CNT;
 namespace tHerdBackend.Infra.Repository.CNT
 {
 	/// <summary>
-	/// CNT 前台查詢 Repository（Dapper + EF 混合）
-	/// A階段修正版：
-	/// - 修正只顯示一篇問題（COUNT 與主查詢條件一致、分頁正確）
-	/// - 僅 Status=1（已發佈）會顯示，排序 PublishedDate DESC（NULL 置底）
-	/// - 列表回傳 CategoryName + Tags[]，詳細頁包含 SEO 欄位
-	/// - 內建「同分類推薦文章」查詢，交由 Service 合併回傳
+	/// CNT 前台查詢 Repository（Dapper 為主 + EF 供連線管理）
 	/// </summary>
 	public class CntQueryRepository : ICntQueryRepository
 	{
@@ -29,12 +24,7 @@ namespace tHerdBackend.Infra.Repository.CNT
 			_db = db;
 		}
 
-		/// <summary>
-		/// 文章清單（支援分類、關鍵字、分頁）
-		/// - Status = 1（已發佈）
-		/// - 排序：PublishedDate DESC（NULL 最後）
-		/// - 回傳：CategoryName、Tags[]
-		/// </summary>
+		// ===== List =====
 		public async Task<(IReadOnlyList<ArticleListDto> Items, int Total)> GetArticleListAsync(
 			int? pageTypeId, string? keyword, int page, int pageSize, CancellationToken ct = default)
 		{
@@ -79,7 +69,6 @@ LEFT JOIN SYS_SeoMeta  s  ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
 WHERE p.IsDeleted = 0
   AND p.Status    = 1
 ");
-
 			var countSql = new StringBuilder(@"
 SELECT COUNT(1)
 FROM CNT_Page p
@@ -89,7 +78,6 @@ WHERE p.IsDeleted = 0
 
 			var param = new DynamicParameters();
 
-			// 🔍 關鍵字（先鎖定 Title；B 階段可擴充全文/內容）
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				sql.Append(" AND p.Title LIKE CONCAT('%', @Keyword, '%')");
@@ -97,7 +85,6 @@ WHERE p.IsDeleted = 0
 				param.Add("Keyword", keyword.Trim());
 			}
 
-			// 🗂 分類（pageTypeId）
 			if (pageTypeId.HasValue)
 			{
 				sql.Append(" AND p.PageTypeId = @PageTypeId");
@@ -105,7 +92,6 @@ WHERE p.IsDeleted = 0
 				param.Add("PageTypeId", pageTypeId.Value);
 			}
 
-			// ✅ 最新文章優先；PublishedDate 為 NULL 時排最後
 			sql.Append(@"
 ORDER BY 
     CASE WHEN p.PublishedDate IS NULL THEN 1 ELSE 0 END,
@@ -130,14 +116,9 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 					string cover = (r.FirstImage as string) ?? "/images/placeholder-article.jpg";
 					DateTime pub = r.PublishedDate ?? DateTime.MinValue;
 
-					// Tags：以逗號字串轉陣列；移除空白與重複
 					string[] tags = Array.Empty<string>();
 					if (r.TagList is string tagCsv && !string.IsNullOrWhiteSpace(tagCsv))
-						tags = tagCsv.Split(',')
-							.Select(s => s.Trim())
-							.Where(s => s.Length > 0)
-							.Distinct()
-							.ToArray();
+						tags = tagCsv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).Distinct().ToArray();
 
 					return new ArticleListDto
 					{
@@ -161,18 +142,13 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 			}
 		}
 
-		/// <summary>
-		/// 文章詳細（含 SEO 與 Tags；Blocks 依付費狀態回傳）
-		/// - 免費或已購：回傳 Blocks
-		/// - 未購：不回 Blocks（交由前端顯示遮罩；或 Service 塞預覽片段）
-		/// </summary>
+		// ===== Detail =====
 		public async Task<ArticleDetailDto?> GetArticleDetailAsync(
 			int pageId, int? userNumberId, CancellationToken ct = default)
 		{
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try
 			{
-				// 主檔 + SEO（帶 PageTypeId 以便推薦用）
 				const string mainSql = @"
 SELECT 
     p.PageId, p.Title, p.PublishedDate, p.PageTypeId,
@@ -184,7 +160,6 @@ WHERE p.PageId = @PageId AND p.IsDeleted = 0;";
 				var main = await conn.QueryFirstOrDefaultAsync(mainSql, new { PageId = pageId }, tx);
 				if (main == null) return null;
 
-				// Tags
 				const string tagSql = @"
 SELECT t.TagName
 FROM CNT_PageTag pt
@@ -193,7 +168,6 @@ WHERE pt.PageId = @PageId
 ORDER BY t.TagName;";
 				var tags = (await conn.QueryAsync<string>(tagSql, new { PageId = pageId }, tx)).ToList();
 
-				// 付費狀態判斷（目前你會先全部設0，但邏輯入口保留）
 				bool hasPurchased = false;
 				if ((bool)main.IsPaidContent && userNumberId.HasValue)
 				{
@@ -215,10 +189,11 @@ WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
 					IsPaidContent = main.IsPaidContent,
 					HasPurchased = hasPurchased,
 					PreviewLength = (int)main.PreviewLength,
-					Tags = tags
+					Tags = tags,
+					// ★ 關鍵：把 PageTypeId 塞進 DTO，給 Service 作推薦使用
+					PageTypeId = (int)main.PageTypeId
 				};
 
-				// Blocks：免費或已購 → 回傳全文；未購買 → 不回 Blocks
 				if (!dto.IsPaidContent || dto.HasPurchased)
 				{
 					const string blockSql = @"
@@ -240,11 +215,7 @@ ORDER BY OrderSeq;";
 			}
 		}
 
-		/// <summary>
-		/// 取得「同分類推薦文章」（不含自己；最新發佈優先）
-		/// - 用於詳細頁右側／底部推薦卡
-		/// - 建議由 ContentService 呼叫並合併到對外 ViewModel 返回
-		/// </summary>
+		// ===== Recommended =====
 		public async Task<IReadOnlyList<ArticleListDto>> GetRecommendedByCategoryAsync(
 			int currentPageId, int pageTypeId, int topN = 6, CancellationToken ct = default)
 		{
@@ -285,7 +256,7 @@ ORDER BY
 					PageId = r.PageId,
 					Title = r.Title,
 					Slug = (r.Slug as string) ?? r.PageId.ToString(),
-					Excerpt = string.Empty, // 推薦卡不需要摘要
+					Excerpt = string.Empty,
 					CoverImage = (r.FirstImage as string) ?? "/images/placeholder-article.jpg",
 					CategoryName = string.Empty,
 					PublishedDate = r.PublishedDate ?? DateTime.MinValue,
@@ -301,7 +272,7 @@ ORDER BY
 			}
 		}
 
-		// ========= Helpers =========
+		// ===== Helpers =====
 		private static string TrimToPreview(string raw, int limit)
 		{
 			if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
@@ -320,17 +291,6 @@ ORDER BY
 				if (!inside) sb.Append(ch);
 			}
 			return sb.ToString();
-		}
-
-		/// <summary>
-		/// 產生「標籤導購商品」的前端 URL。
-		/// 規範：/prod/search?q={tag}  （前端 router 依 SEO 規範處理）
-		/// </summary>
-		private static string BuildProductSearchUrl(string tag)
-		{
-			// 後端僅提供規範示例；實際導購連結可由前端在渲染 Tag 時組合
-			// 參考：/prod/search?q=vitamin+c
-			return $"/prod/search?q={Uri.EscapeDataString(tag ?? string.Empty)}";
 		}
 	}
 }

@@ -7,8 +7,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 {
 	/// <summary>
 	/// CNT 前台內容 API（RESTful）
-	/// - /api/cnt/list                  文章清單
-	/// - /api/cnt/articles/{id}         文章詳情 + 推薦
+	/// - GET /api/cnt/list                 文章清單（含分類 / 搜尋 / 分頁）
+	/// - GET /api/cnt/articles/{id}        單篇文章 + 推薦文章
 	/// </summary>
 	[ApiController]
 	[Route("api/cnt")]
@@ -23,7 +23,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 
 		/// <summary>
 		/// 文章清單（支援分類、關鍵字、分頁）
-		/// GET /api/cnt/list?categoryId=1&q=魚油&page=1&pageSize=12
+		/// 範例：/api/cnt/list?categoryId=1&q=魚油&page=1&pageSize=12
 		/// </summary>
 		[HttpGet("list")]
 		public async Task<IActionResult> GetList(
@@ -33,23 +33,31 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 			[FromQuery] int pageSize = 12)
 		{
 			var (items, total) = await _svc.GetArticleListAsync(categoryId, q, page, pageSize);
-			return Ok(new { items, total, page, pageSize });
+			return Ok(new
+			{
+				items,
+				total,
+				page,
+				pageSize
+			});
 		}
 
 		/// <summary>
-		/// 單篇文章（含 SEO / Blocks / Tags / 付費檢查 / 同分類推薦）
-		/// GET /api/cnt/articles/{id}
+		/// 單篇文章詳情 + 同分類推薦
+		/// 範例：/api/cnt/articles/1007
 		/// </summary>
 		[HttpGet("articles/{id:int}")]
 		public async Task<IActionResult> GetArticle([FromRoute] int id)
 		{
-			// 自動偵測 JWT 的可能使用者編號 Claim（user_number_id/sub/uid/NameIdentifier）
+			// 取得使用者會員編號（JWT Token 解析，未登入則為 null）
 			int? userNumberId = TryGetUserNumberIdFromClaims(User);
 
+			// 呼叫 Service（含推薦文章）
 			var (dto, rec) = await _svc.GetArticleDetailWithRecommendedAsync(id, userNumberId);
-			if (dto == null) return NotFound();
+			if (dto == null)
+				return NotFound();
 
-			// 方便前端判斷是否顯示全文 / 遮罩
+			// canViewFullContent = 前端用於決定是否顯示全文 or 局部預覽
 			var canViewFullContent = !dto.IsPaidContent || dto.HasPurchased;
 
 			return Ok(new
@@ -60,7 +68,12 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 			});
 		}
 
-		// ===== Helpers =====
+		// ===== Helper Method =====
+
+		/// <summary>
+		/// 嘗試從 JWT Token Claims 取得使用者編號（UserNumberId）
+		/// 若找不到則回傳 null（代表訪客或未登入）
+		/// </summary>
 		private static int? TryGetUserNumberIdFromClaims(ClaimsPrincipal user)
 		{
 			var claim = user.FindFirst("user_number_id")
