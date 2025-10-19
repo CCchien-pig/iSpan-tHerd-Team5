@@ -96,6 +96,7 @@
     <router-view></router-view>
   </div>
 </template>
+
 <script setup>
 import { onMounted, ref } from 'vue'
 import { getArticleList } from './api/cntService' // 依你的專案實際路徑
