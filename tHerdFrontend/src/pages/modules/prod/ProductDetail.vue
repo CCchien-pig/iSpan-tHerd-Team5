@@ -152,6 +152,9 @@ const loadProduct = async () => {
     const productId = route.params.id
     const response = await ProductsApi.getProductDetail(productId)
 
+    // console.log(response);
+    product.value = response
+    
     if (response.success) {
       product.value = response.data
       // 預設選擇第一個規格
@@ -214,7 +217,7 @@ const handleAddToCart = (data) => {
   toast(
     `已加入購物車：${product.value.productName} - ${selectedSpec.value.OptionName} x ${data.quantity}`,
     'success',
-    2000
+    2000,
   )
 }
 

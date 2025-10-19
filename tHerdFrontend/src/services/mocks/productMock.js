@@ -247,7 +247,7 @@ const mockProductListData = {
  * 模擬商品詳細資料
  */
 const mockProductDetailData = {
-  productId: 85180,
+  productId: 14600,
   productName: 'California Gold Nutrition, Omega 800 超高濃縮魚油',
   brandName: 'California Gold Nutrition',
   badge: '熱銷',
@@ -262,6 +262,12 @@ const mockProductDetailData = {
   packageQuantity: '90 顆',
   dimensions: '11.3 x 6.2 x 6.2 cm',
   images: [
+    {
+      imageId: 1004,
+      fileUrl:
+        'https://cloudinary.images-iherb.com/image/upload/f_auto,q_auto:eco/images/cgn/cgn01251/l/159.jpg',
+      isMain: false,
+    },
     { imageId: 1001, fileUrl: 'https://picsum.photos/600/600?random=1', isMain: true },
     { imageId: 1002, fileUrl: 'https://picsum.photos/600/600?random=2', isMain: false },
     { imageId: 1003, fileUrl: 'https://picsum.photos/600/600?random=3', isMain: false },
@@ -291,10 +297,8 @@ const mockProductDetailData = {
     { ingredientName: '魚油', percentage: 1000, note: 'EPA 480mg, DHA 320mg' },
     { ingredientName: '維生素E', percentage: 5, note: '抗氧化劑' },
   ],
-  reviewsSummary: {
-    avgRating: 4.8,
-    reviewCount: 132,
-  },
+  avgRating: 4.8,
+  reviewCount: 132,
 }
 
 /**
@@ -809,14 +813,14 @@ const mockReviewsData = [
 export function setupProductMock() {
   // ==================== 商品列表 ====================
   if (isMockEnabled('product', 'getProductList')) {
-    mock.onGet(/\/prod\/products(\?.*)?$/).reply((config) => {
+    mock.onGet(/\/prod\/Products(\?.*)?$/).reply((config) => {
       // 根據參數篩選資料（簡單示範）
       let items = [...mockProductListData.items]
       const { keyword, page = 1, pageSize = 20 } = config.params || {}
 
       if (keyword) {
         items = items.filter(
-          (item) => item.productName.includes(keyword) || item.brandName.includes(keyword)
+          (item) => item.productName.includes(keyword) || item.brandName.includes(keyword),
         )
       }
 
@@ -839,9 +843,9 @@ export function setupProductMock() {
 
   // ==================== 商品詳細 ====================
   if (isMockEnabled('product', 'getProductDetail')) {
-    mock.onGet(/\/prod\/products\/\d+$/).reply((config) => {
-      const productId = parseInt(config.url.split('/').pop())
-
+    mock.onGet(/\/prod\/Products\/\d+$/).reply((config) => {
+      const productId = Number((config.url.match(/\d+$/) || [0])[0])
+      // console.log(mockProductDetailData)
       return [
         200,
         {

@@ -36,7 +36,7 @@ class productsApi {
    * })
    */
   async getProductList(params = {}) {
-    return await baseApi.get(`${this.path}/products`, params)
+    return await baseApi.get(`${this.path}/Products`, params)
   }
 
   /**
@@ -47,7 +47,9 @@ class productsApi {
    * const result = await productsApi.getProductDetail(85180)
    */
   async getProductDetail(productId) {
-    return await baseApi.get(`${this.path}/products/${productId}`)
+    // console.log(await baseApi.get(`${this.path}/Products/${productId}`))
+
+    return await baseApi.get(`${this.path}/Products/${productId}`)
   }
 
   // ==================== 屬性與成分 ====================

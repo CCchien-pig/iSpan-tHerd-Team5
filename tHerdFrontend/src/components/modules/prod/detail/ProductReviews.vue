@@ -12,20 +12,20 @@
       <div class="col-lg-4 col-md-12 mb-4">
         <div class="rating-overview p-4 border rounded bg-light text-center">
           <div class="average-rating mb-3">
-            <div class="score display-3 fw-bold">{{ avgRating }}</div>
+            <div class="score display-3 fw-bold">{{ avgRating || 0 }}</div>
             <div class="stars mb-2">
               <span v-for="i in 5" :key="i" class="star">
                 <i
                   class="bi fs-4"
                   :class="
-                    i <= Math.floor(avgRating)
+                    i <= Math.floor(avgRating || 0)
                       ? 'bi-star-fill text-warning'
                       : 'bi-star text-warning'
                   "
                 ></i>
               </span>
             </div>
-            <div class="text-muted">基於 {{ reviewCount.toLocaleString() }} 評分</div>
+            <div class="text-muted">基於 {{ reviewCount?.toLocaleString() }} 評分</div>
           </div>
 
           <!-- 評分分布 -->

@@ -4,16 +4,16 @@ using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
 
-namespace tHerdBackend.Services.PROD
+namespace tHerdBackend.Services.PROD.API
 {
-    public class ProductListForApiService : IProductListForApiService
+    public class ProductsForApiService : IProductsForApiService
 	{
         private readonly IProdProductRepository _repo;
 
         // 伺服器端「單頁最大筆數」卡控
         private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
 
-        public ProductListForApiService(IProdProductRepository repo)
+        public ProductsForApiService(IProdProductRepository repo)
         {
             _repo = repo;
         }
@@ -44,6 +44,30 @@ namespace tHerdBackend.Services.PROD
                     PageSize = query.PageSize,
                     Items = list?.ToList() ?? [] // 若 list 是 null，就給空集合
                 };
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 查詢商品詳細
+        /// </summary>
+        /// <param name="id">商品編號</param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<ProdProductDetailDto?> GetFrontProductListAsync(int id, CancellationToken ct = default)
+        {
+            try
+            {
+                // 查詢商品詳細
+                var item = await _repo.GetByIdAsync(id, ct);
+
+                // 回傳分頁結果
+                return item;
             }
             catch (Exception ex)
             {
