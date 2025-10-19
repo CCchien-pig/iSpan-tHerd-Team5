@@ -1,11 +1,13 @@
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
@@ -22,8 +24,14 @@ namespace tHerdBackend.SharedApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // JWT Authentication
-            builder.Services.AddAuthentication(options =>
+			//與後台管理系統共用 Identity 使用者資料庫
+			builder.Services.AddDbContext<ApplicationDbContext>(...); // 與 Admin 同一個使用者資料庫
+			builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
+				.AddEntityFrameworkStores<ApplicationDbContext>()
+				.AddDefaultTokenProviders();
+
+			// JWT Authentication
+			builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
