@@ -36,55 +36,45 @@
                 </div>
 
                 <!-- 商品資訊 -->
-                <div class="col-md-5 col-9">
-                  <h5 class="mb-2 fw-bold">{{ item.productName }}</h5>
+                <div class="col-md-4 col-9">
+                  <h6 class="mb-2 fw-bold">{{ item.productName }}</h6>
                   <p class="text-muted mb-2">
                     <small><i class="bi bi-tag"></i> 規格: {{ item.optionName }}</small>
                   </p>
-                  <div class="price-info">
-                    <span class="text-danger fw-bold fs-5">${{ item.salePrice.toLocaleString() }}</span>
-                    <span
-                      v-if="item.unitPrice > item.salePrice"
-                      class="text-muted text-decoration-line-through ms-2"
-                    >
-                      ${{ item.unitPrice.toLocaleString() }}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-danger fw-bold">${{ item.salePrice.toLocaleString() }}</span>
+                    <span v-if="item.unitPrice > item.salePrice" class="text-muted text-decoration-line-through">
+                      <small>${{ item.unitPrice.toLocaleString() }}</small>
                     </span>
                   </div>
                 </div>
 
-                <!-- 數量調整 -->
-                <div class="col-md-3 col-6 mt-3 mt-md-0">
-                  <div class="input-group">
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      @click="decreaseQuantity(item)"
-                      :disabled="item.quantity <= 1"
-                    >
-                      <i class="bi bi-dash"></i>
+                <!-- 數量調整（置中對齊） -->
+                <div class="col-md-3 col-6 d-flex justify-content-center">
+                  <div class="quantity-control">
+                    <button 
+                      class="quantity-btn quantity-minus" 
+                      type="button" 
+                      @click="decreaseQuantity(item)">
+                      -
                     </button>
                     <input
-                      type="number"
-                      class="form-control text-center"
-                      v-model.number="item.quantity"
-                      @change="updateQuantity(item)"
-                      min="1"
-                      max="99"
-                      style="max-width: 70px;"
+                      type="text"
+                      class="quantity-input"
+                      :value="item.quantity"
+                      readonly
                     />
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      @click="increaseQuantity(item)"
-                      :disabled="item.quantity >= 99"
-                    >
-                      <i class="bi bi-plus"></i>
+                    <button 
+                      class="quantity-btn quantity-plus" 
+                      type="button" 
+                      @click="increaseQuantity(item)">
+                      +
                     </button>
                   </div>
                 </div>
 
-                <!-- 小計與刪除 -->
-                <div class="col-md-2 col-6 mt-3 mt-md-0 text-end">
+                <!-- 價格與刪除 -->
+                <div class="col-md-3 col-6 text-end">
                   <div class="fw-bold main-color-green-text fs-5 mb-2">
                     ${{ item.subtotal.toLocaleString() }}
                   </div>
@@ -103,38 +93,114 @@
 
         <!-- 右側：結帳摘要 -->
         <div class="col-lg-4">
-          <div class="card shadow border-0 position-sticky" style="top: 20px;">
-            <div class="card-header main-color-green">
-              <h5 class="mb-0 main-color-white-text">
+          <!-- 優惠券折扣碼 -->
+          <div class="card shadow-sm border-0 mb-3 coupon-card">
+            <div class="card-body p-4">
+              <h6 class="mb-3 d-flex align-items-center">
+                <i class="bi bi-ticket-perforated-fill text-warning me-2" style="font-size: 1.2rem;"></i>
+                <span class="fw-bold">優惠券折扣碼</span>
+              </h6>
+              <div class="input-group mb-2">
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="請輸入優惠碼"
+                  v-model="couponCode"
+                  :disabled="isCouponApplied"
+                  @keyup.enter="applyCoupon"
+                />
+                <button
+                  class="btn main-color-green"
+                  type="button"
+                  @click="applyCoupon"
+                  :disabled="!couponCode || isCouponApplied || isProcessing"
+                >
+                  <i class="bi bi-check-circle me-1"></i>
+                  <span class="main-color-white-text">{{ isCouponApplied ? '已套用' : '套用' }}</span>
+                </button>
+              </div>
+              
+              <!-- 優惠券套用成功訊息 -->
+              <div v-if="isCouponApplied" class="alert alert-success d-flex align-items-center mb-0 py-2 px-3">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <small class="flex-grow-1">
+                  優惠券已套用: <strong>{{ couponCode }}</strong>
+                </small>
+                <button
+                  type="button"
+                  class="btn-close btn-close-sm"
+                  @click="removeCoupon"
+                  aria-label="移除優惠券"
+                ></button>
+              </div>
+              
+              <!-- 錯誤訊息 -->
+              <div v-if="couponError" class="alert alert-danger d-flex align-items-center mb-0 py-2 px-3 mt-2">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <small>{{ couponError }}</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 購物車摘要 -->
+          <div class="card shadow-sm border-0">
+            <div class="card-header main-color-green text-white">
+              <h5 class="mb-0">
                 <i class="bi bi-receipt"></i> 購物車摘要
               </h5>
             </div>
             <div class="card-body p-4">
+              <!-- 商品件數 -->
               <div class="d-flex justify-content-between mb-3">
                 <span class="text-muted">商品件數:</span>
                 <span class="fw-bold">{{ totalItems }} 件</span>
               </div>
+
+              <!-- 商品小計 -->
               <div class="d-flex justify-content-between mb-3">
                 <span class="text-muted">商品小計:</span>
-                <span class="fw-bold">${{ totalAmount.toLocaleString() }}</span>
+                <span class="fw-bold fs-5">${{ subtotalBeforeDiscount.toLocaleString() }}</span>
               </div>
-              <div class="d-flex justify-content-between mb-3">
+
+              <!-- 優惠折扣 -->
+              <div v-if="totalDiscount > 0" class="d-flex justify-content-between mb-3">
+                <span class="text-danger">
+                  <i class="bi bi-tag-fill me-1"></i>優惠折扣:
+                </span>
+                <span class="text-danger fw-bold fs-5">-${{ totalDiscount.toLocaleString() }}</span>
+              </div>
+
+              <!-- 運費 -->
+              <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
                 <span class="text-muted">運費:</span>
                 <span class="text-success fw-bold">免運費</span>
               </div>
-              <hr class="my-3" />
-              <div class="d-flex justify-content-between mb-4">
-                <span class="fs-5 fw-bold">總計:</span>
-                <span class="fs-4 fw-bold text-danger">${{ totalAmount.toLocaleString() }}</span>
+
+              <!-- 總計 -->
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">總計:</h5>
+                <div class="text-end">
+                  <h3 class="mb-0 main-color-green-text fw-bold">
+                    ${{ finalTotal.toLocaleString() }}
+                  </h3>
+                  <small v-if="totalDiscount > 0" class="text-muted">
+                    <del>${{ subtotalBeforeDiscount.toLocaleString() }}</del>
+                  </small>
+                </div>
               </div>
-              
+
+              <!-- 前往結帳按鈕 -->
               <button
-                class="btn teal-reflect-button w-100 mb-2 py-3"
+                class="btn main-color-green btn-lg w-100 mb-3 text-white"
                 @click="checkout"
                 :disabled="isProcessing"
               >
                 <i class="bi bi-credit-card me-2"></i>
-                {{ isProcessing ? '處理中...' : '前往結帳' }}
+                <span v-if="isProcessing">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  處理中...
+                </span>
+                <span v-else>前往結帳</span>
               </button>
               
               <button
@@ -150,34 +216,21 @@
     </div>
 
     <!-- 錯誤訊息 Modal -->
-    <div
-      class="modal fade"
-      id="errorModal"
-      tabindex="-1"
-      ref="errorModal"
-    >
+    <div class="modal fade" id="errorModal" tabindex="-1" ref="errorModal">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header bg-danger text-white">
             <h5 class="modal-title">
               <i class="bi bi-exclamation-triangle"></i> 結帳失敗
             </h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <p>{{ errorMessage }}</p>
             <div v-if="checkoutErrors.length > 0">
               <h6 class="fw-bold">商品問題:</h6>
               <ul class="list-group">
-                <li
-                  v-for="(error, index) in checkoutErrors"
-                  :key="index"
-                  class="list-group-item"
-                >
+                <li v-for="(error, index) in checkoutErrors" :key="index" class="list-group-item">
                   <strong>{{ error.productName }}</strong>
                   <span v-if="error.optionName"> - {{ error.optionName }}</span>
                   <br />
@@ -190,9 +243,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-              關閉
-            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
           </div>
         </div>
       </div>
@@ -204,32 +255,10 @@
 import { Modal } from 'bootstrap';
 
 export default {
-  name: 'Cart',
+  name: 'CartComponent',
   data() {
     return {
-      cartItems: [],
-      isProcessing: false,
-      errorMessage: '',
-      checkoutErrors: [],
-      errorModal: null
-    };
-  },
-  computed: {
-    totalItems() {
-      return this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    },
-    totalAmount() {
-      return this.cartItems.reduce((sum, item) => sum + item.subtotal, 0);
-    }
-  },
-  mounted() {
-    this.loadCart();
-    this.errorModal = new Modal(this.$refs.errorModal);
-  },
-  methods: {
-    async loadCart() {
-      // 🔥 暫時使用寫死的 Mock 資料,避免 API 串接問題
-      this.cartItems = [
+      cartItems: [
         {
           productId: 14246,
           skuId: 2680,
@@ -253,7 +282,7 @@ export default {
         {
           productId: 14600,
           skuId: 2869,
-          productName: "Optimum Nutrition, Opti-Women®，針對活躍 女性的多維生素，60 粒膠囊",
+          productName: "Optimum Nutrition, Opti-Women®，針對活躍女性的多維生素，60 粒膠囊",
           optionName: "60 粒",
           unitPrice: 800.00,
           salePrice: 656.00,
@@ -263,69 +292,142 @@ export default {
         {
           productId: 14600,
           skuId: 3387,
-          productName: "Optimum Nutrition, Opti-Women®，針對活躍 女性的多維生素，120 粒膠囊",
+          productName: "Optimum Nutrition, Opti-Women®，針對活躍女性的多維生素，120 粒膠囊",
           optionName: "120 粒",
           unitPrice: 1300.00,
           salePrice: 1188.00,
           quantity: 1,
           subtotal: 1188.00
         }
-      ];
-      
-      console.log('✅ 購物車資料載入成功 (Mock):', this.cartItems);
-      
-      /* 🔧 之後要串接真實 API 時,取消註解這段:
-      try {
-        const response = await fetch('/api/ord/Cart/items');
-        if (!response.ok) throw new Error('載入購物車失敗');
-        
-        const data = await response.json();
-        this.cartItems = data.map(item => ({
-          ...item,
-          subtotal: item.salePrice * item.quantity
-        }));
-      } catch (error) {
-        console.error('載入購物車錯誤:', error);
-      }
-      */
+      ],
+      couponCode: '',
+      isCouponApplied: false,
+      couponDiscountAmount: 0,
+      couponError: '',
+      isProcessing: false,
+      errorMessage: '',
+      checkoutErrors: [],
+      errorModal: null
+    };
+  },
+  computed: {
+    subtotalBeforeDiscount() {
+      return this.cartItems.reduce((sum, item) => {
+        return sum + (item.unitPrice * item.quantity);
+      }, 0);
+    },
+    subtotal() {
+      return this.cartItems.reduce((sum, item) => {
+        return sum + item.subtotal;
+      }, 0);
+    },
+    productDiscount() {
+      return this.cartItems.reduce((sum, item) => {
+        return sum + ((item.unitPrice - item.salePrice) * item.quantity);
+      }, 0);
+    },
+    totalDiscount() {
+      return this.productDiscount + this.couponDiscountAmount;
+    },
+    totalItems() {
+      return this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    },
+    finalTotal() {
+      const total = this.subtotal - this.couponDiscountAmount;
+      return Math.max(0, total);
+    }
+  },
+  mounted() {
+    if (this.$refs.errorModal) {
+      this.errorModal = new Modal(this.$refs.errorModal);
+    }
+  },
+  methods: {
+    updateQuantity(item) {
+      if (item.quantity < 1) item.quantity = 1;
+      if (item.quantity > 99) item.quantity = 99;
+      item.subtotal = item.salePrice * item.quantity;
     },
 
     increaseQuantity(item) {
       if (item.quantity < 99) {
         item.quantity++;
-        this.updateItemSubtotal(item);
+        this.updateQuantity(item);
       }
     },
 
     decreaseQuantity(item) {
+      // 數量為 1 時按減號不做任何動作
       if (item.quantity > 1) {
         item.quantity--;
-        this.updateItemSubtotal(item);
+        this.updateQuantity(item);
       }
     },
 
-    updateQuantity(item) {
-      if (item.quantity < 1) {
-        item.quantity = 1;
-      } else if (item.quantity > 99) {
-        item.quantity = 99;
-      }
-      this.updateItemSubtotal(item);
-    },
-
-    updateItemSubtotal(item) {
-      item.subtotal = item.salePrice * item.quantity;
-    },
-
-    async removeItem(item) {
-      if (confirm(`確定要從購物車移除 ${item.productName}?`)) {
+    removeItem(item) {
+      if (confirm(`確定要移除「${item.productName}」嗎？`)) {
         const index = this.cartItems.findIndex(
-          i => i.productId === item.productId && i.skuId === item.skuId
+          (i) => i.productId === item.productId && i.skuId === item.skuId
         );
         if (index > -1) {
           this.cartItems.splice(index, 1);
         }
       }
+    },
+
+    async applyCoupon() {
+      if (!this.couponCode.trim()) {
+        this.couponError = '請輸入優惠碼';
+        return;
+      }
+
+      this.isProcessing = true;
+      this.couponError = '';
+
+      try {
+        if (this.couponCode.toUpperCase() === 'SAVE100') {
+          this.couponDiscountAmount = 100;
+          this.isCouponApplied = true;
+          this.couponError = '';
+          this.isProcessing = false;
+          return;
+        }
+
+        const response = await fetch('/api/ord/Cart/validate-coupon', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            couponCode: this.couponCode,
+            subtotal: this.subtotal
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          this.couponDiscountAmount = result.data.discountAmount;
+          this.isCouponApplied = true;
+          this.couponError = '';
+        } else {
+          this.couponError = result.message || '優惠券無效';
+          this.couponDiscountAmount = 0;
+          this.isCouponApplied = false;
+        }
+      } catch (error) {
+        console.error('驗證優惠券失敗:', error);
+        this.couponError = '系統發生錯誤，請稍後再試';
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+
+    removeCoupon() {
+      this.couponCode = '';
+      this.couponDiscountAmount = 0;
+      this.isCouponApplied = false;
+      this.couponError = '';
     },
 
     async checkout() {
@@ -336,13 +438,24 @@ export default {
       this.checkoutErrors = [];
 
       try {
-        const response = await fetch('/ORD/CartTest/Checkout', {
+        const response = await fetch('/api/ord/Cart/checkout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            cartItems: this.cartItems
+            sessionId: 'test-session',
+            userNumberId: null,
+            cartItems: this.cartItems.map(item => ({
+              productId: item.productId,
+              skuId: item.skuId,
+              productName: item.productName,
+              optionName: item.optionName,
+              salePrice: item.salePrice,
+              quantity: item.quantity
+            })),
+            couponCode: this.isCouponApplied ? this.couponCode : null,
+            discountAmount: this.couponDiscountAmount
           })
         });
 
@@ -351,7 +464,7 @@ export default {
         if (result.success) {
           alert(`結帳成功!\n訂單編號: ${result.orderNo}\n訂單金額: $${result.totalAmount.toLocaleString()}`);
           this.cartItems = [];
-          this.$router.push(`/order/${result.orderNo}`);
+          this.removeCoupon();
         } else {
           this.errorMessage = result.message || '結帳時發生錯誤';
           
@@ -359,7 +472,9 @@ export default {
             this.checkoutErrors = result.errors;
           }
           
-          this.errorModal.show();
+          if (this.errorModal) {
+            this.errorModal.show();
+          }
         }
       } catch (error) {
         console.error('結帳錯誤:', error);
@@ -370,60 +485,131 @@ export default {
     },
 
     continueShopping() {
-      this.$router.push('/products');
+      window.location.href = '/';
     },
 
     goToProducts() {
-      this.$router.push('/products');
+      window.location.href = '/';
     },
 
     getProductImage(productId) {
-      return `/images/products/${productId}.jpg`;
+      return 'https://via.placeholder.com/150x150/007083/FFFFFF?text=Product';
     },
 
     handleImageError(event) {
-      event.target.src = '/images/products/placeholder.jpg';
+      if (!event.target.dataset.errorHandled) {
+        event.target.dataset.errorHandled = 'true';
+        event.target.src = 'https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* 使用 main.css 的公用樣式,這裡只加入購物車特定樣式 */
-
-.card {
-  transition: all 0.3s ease;
+.coupon-card {
+  border: 2px dashed #ffc107 !important;
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.main-color-green {
+  background-color: #007083;
+  border-color: #007083;
 }
 
-/* 數量控制按鈕樣式調整 */
-.input-group .btn-outline-secondary {
-  border-color: rgb(0, 112, 131);
-  color: rgb(0, 112, 131);
+.main-color-green:hover {
+  background-color: #005a6a;
+  border-color: #005a6a;
 }
 
-.input-group .btn-outline-secondary:hover:not(:disabled) {
-  background-color: rgb(0, 112, 131);
+.main-color-green-text {
+  color: #007083;
+}
+
+.main-color-white-text {
   color: white;
 }
 
-.input-group .btn-outline-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.btn-close-sm {
+  font-size: 0.7rem;
+  padding: 0.25rem;
 }
 
-/* 響應式調整 */
-@media (max-width: 768px) {
-  .card-body {
-    padding: 1rem !important;
-  }
-  
-  .input-group {
-    max-width: 100%;
-  }
+.teal-reflect-button {
+  background-color: #007083;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+}
+
+.teal-reflect-button:hover {
+  background-color: #005a6a;
+  color: white;
+}
+
+.silver-reflect-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.silver-reflect-button:hover {
+  background-color: #5a6268;
+  color: white;
+}
+
+/* 數量控制器樣式（模擬購物車風格） */
+.quantity-control {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.quantity-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background-color: white;
+  color: #6c757d;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantity-btn:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.quantity-btn:active {
+  background-color: #e9ecef;
+}
+
+.quantity-minus {
+  border-right: 1px solid #dee2e6;
+}
+
+.quantity-plus {
+  border-left: 1px solid #dee2e6;
+}
+
+.quantity-input {
+  width: 60px;
+  height: 40px;
+  border: none;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
+  background-color: white;
+  color: #212529;
+}
+
+.quantity-input:focus {
+  outline: none;
 }
 </style>

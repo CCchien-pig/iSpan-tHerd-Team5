@@ -42,20 +42,21 @@
           <!-- 用戶登入 -->
           <div class="dropdown">
             <button
-              class="btn btn-md dropdown-toggle main-color-green"
+              class="btn btn-md dropdown-toggle main-color-green main-color-white-text"
               type="button"
               id="userDropdown"
               data-bs-toggle="dropdown"
+              data-bs-auto-close="true"
               aria-expanded="false"
             >
-              <i class="bi bi-person me-1 main-color-white-text"></i>
-              <span class="main-color-white-text">登入</span>
+              <i class="bi bi-person me-1"></i>
+              <span>登入</span>
             </button>
-            <ul class="dropdown-menu" aria-labelledby="userDropdown">
-              <li><a class="dropdown-item" href="#">登入</a></li>
-              <li><a class="dropdown-item" href="#">註冊</a></li>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li><a class="dropdown-item" href="/login"><i class="bi bi-box-arrow-in-right me-2"></i>登入</a></li>
+              <li><a class="dropdown-item" href="/register"><i class="bi bi-person-plus me-2"></i>註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
+              <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i>我的帳戶</a></li>
             </ul>
           </div>
           
@@ -121,14 +122,29 @@
       <!-- ✅ 手機選單 -->
       <div class="collapse mt-2 d-md-none" id="mobileMenu">
         <div class="d-flex flex-column gap-2 align-items-start px-2">
-          <button class="btn btn-md w-100 main-color-green text-start">
-            <i class="bi bi-person me-2"></i> 登入 / 註冊
-          </button>
+          <div class="dropdown w-100">
+            <button 
+              class="btn btn-md w-100 main-color-green main-color-white-text text-start dropdown-toggle"
+              type="button"
+              id="mobileUserDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              <i class="bi bi-person me-2"></i> 登入 / 註冊
+            </button>
+            <ul class="dropdown-menu w-100" aria-labelledby="mobileUserDropdown">
+              <li><a class="dropdown-item" href="/login">登入</a></li>
+              <li><a class="dropdown-item" href="/register">註冊</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a class="dropdown-item" href="/profile">我的帳戶</a></li>
+            </ul>
+          </div>
           <button 
             @click="goToCart"
             class="btn btn-md w-100 main-color-green text-start position-relative"
           >
-            <i class="bi bi-cart3 me-2"></i> 購物車
+            <i class="bi bi-cart3 me-2 main-color-white-text"></i>
+            <span class="main-color-white-text">購物車</span>
             <span
               v-if="cartCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -137,7 +153,8 @@
             </span>
           </button>
           <button class="btn btn-md w-100 main-color-green text-start">
-            <i class="bi bi-bag me-2"></i> 訂單
+            <i class="bi bi-bag me-2 main-color-white-text"></i>
+            <span class="main-color-white-text">訂單</span>
           </button>
         </div>
       </div>
@@ -179,6 +196,17 @@ export default {
   },
   mounted() {
     this.loadCartCount();
+    
+    // 確保 Bootstrap Dropdown 初始化
+    this.$nextTick(() => {
+      // 強制初始化所有 dropdown
+      const dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+      if (window.bootstrap && window.bootstrap.Dropdown) {
+        dropdownElementList.forEach(dropdownToggleEl => {
+          new window.bootstrap.Dropdown(dropdownToggleEl);
+        });
+      }
+    });
   }
 };
 </script>
