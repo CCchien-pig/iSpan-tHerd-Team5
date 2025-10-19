@@ -4,7 +4,6 @@
       <div class="row align-items-center g-2">
         <!-- ✅ Logo區 -->
         <div class="col-6 col-md-2 col-lg-2 d-flex align-items-center flex-shrink-0">
-
           <router-link
             to="/"
             class="navbar-brand text-white text-decoration-none d-flex align-items-center"
@@ -45,28 +44,36 @@
             <button
               class="btn btn-md dropdown-toggle main-color-green"
               type="button"
+              id="userDropdown"
               data-bs-toggle="dropdown"
+              aria-expanded="false"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
               <span class="main-color-white-text">登入</span>
             </button>
-            <ul class="dropdown-menu">
+            <ul class="dropdown-menu" aria-labelledby="userDropdown">
               <li><a class="dropdown-item" href="#">登入</a></li>
               <li><a class="dropdown-item" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a class="dropdown-item" href="#">我的帳戶</a></li>
             </ul>
           </div>
+          
           <!-- 訂單 -->
           <button class="btn btn-md position-relative main-color-green">
             <i class="bi bi-bag main-color-white-text"></i>
             <span class="main-color-white-text ms-1">訂單</span>
           </button>
+          
           <!-- 購物車 -->
-          <button class="btn btn-md position-relative main-color-green">
+          <button 
+            @click="goToCart" 
+            class="btn btn-md position-relative main-color-green"
+          >
             <i class="bi bi-cart3 me-1 main-color-white-text"></i>
             <span class="main-color-white-text">購物車</span>
             <span
+              v-if="cartCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
               {{ cartCount }}
@@ -117,9 +124,13 @@
           <button class="btn btn-md w-100 main-color-green text-start">
             <i class="bi bi-person me-2"></i> 登入 / 註冊
           </button>
-          <button class="btn btn-md w-100 main-color-green text-start position-relative">
+          <button 
+            @click="goToCart"
+            class="btn btn-md w-100 main-color-green text-start position-relative"
+          >
             <i class="bi bi-cart3 me-2"></i> 購物車
             <span
+              v-if="cartCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
               {{ cartCount }}
@@ -152,7 +163,23 @@ export default {
         });
       }
     },
+    goToCart() {
+      this.$router.push('/cart');
+    },
+    async loadCartCount() {
+      try {
+        const response = await fetch('/ORD/CartTest/GetCartCount');
+        if (response.ok) {
+          this.cartCount = await response.json();
+        }
+      } catch (error) {
+        console.error('載入購物車數量失敗:', error);
+      }
+    }
   },
+  mounted() {
+    this.loadCartCount();
+  }
 };
 </script>
 
@@ -171,7 +198,6 @@ export default {
   min-width: 120px; /* ✅ 避免被壓扁 */
 }
 
-
 .search-container {
   max-width: 800px;      /* 限制搜尋欄最長不超過 800px */
   width: 100%;           /* 小螢幕時可彈性縮小 */
@@ -180,6 +206,7 @@ export default {
   min-width: 200px;  /* 👉 給它下限 */
   flex: 1 1 auto;
 }
+
 @media (max-width: 1250px) {
   .main-header .row {
     display: flex;
@@ -209,7 +236,6 @@ export default {
     max-width: 500px; /* 更小螢幕再縮短 */
   }
 }
-
 
 /* ✅ 小螢幕調整 */
 @media (max-width: 768px) {
