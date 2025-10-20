@@ -1,4 +1,247 @@
-﻿@page
-@model tHerdBackend.SYS.Rcl.Areas.SYS.Views.Images.IndexModel
-@{
+﻿@using tHerdBackend.Core.DTOs.SYS
+@model IEnumerable<FolderItemDto>
+
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        .file-browser {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+        }
+
+        .breadcrumb {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+        }
+
+        .file-row:hover {
+            background-color: #f1f5ff !important;
+            cursor: pointer;
+        }
+
+        .thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .img-preview {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+
+        /* ✅ 表格凍結窗格樣式 */
+        .dataTables_scrollHead {
+            background-color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+    </style>
+}
+
+<div class="container py-4 file-browser">
+    <div class="d-flex justify-content-between align-items-center mb-3 sticky-top bg-white pb-2" style="z-index:10;">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-3" id="breadcrumb">
+                <li class="breadcrumb-item"><a href="#" class="crumb" data-id="">根目錄</a></li>
+            </ol>
+        </nav>
+
+        <div class="d-flex align-items-center">
+            <input id="searchBox" class="form-control form-control-sm" placeholder="搜尋檔名或關鍵字..." style="width:250px;">
+            <button id="btnSearch" class="btn btn-primary btn-sm ms-2"><i class="bi bi-search"></i> 搜尋</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="fileTable" class="table table-hover align-middle w-100">
+            <thead class="table-light">
+                <tr>
+                    <th>名稱</th>
+                    <th>修改日期</th>
+                    <th>類型</th>
+                    <th>大小</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 🔍 圖片預覽 Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-center">
+            <div class="modal-body">
+                <img id="previewImg"
+                     src=""
+                     alt="preview"
+                     class="img-preview"
+                     onerror="this.onerror=null; this.src='/images/No-Image.svg';" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+
+    <script>
+        let breadcrumbStack = [{ id: null, name: "根目錄" }];
+
+        // DataTable 初始化（含固定表頭 + 分頁）
+        const table = $('#fileTable').DataTable({
+            paging: true,
+            searching: false,
+            info: true,
+            pageLength: 10,
+            lengthChange: false,
+            scrollY: "60vh",
+            scrollCollapse: true,
+            fixedHeader: true,
+            order: [[0, "asc"]],
+            columns: [
+                { data: "name", render: renderName },
+                { data: "modifiedDate", render: d => d ? new Date(d).toLocaleString() : "-" },
+                { data: "mimeType", render: r => r || "-" },
+                { data: "size", render: s => s ? (s / 1024).toFixed(1) + " KB" : "-" }
+            ],
+            // ✅ 中文化設定
+            language: {
+                decimal: "",
+                emptyTable: "目前沒有任何資料",
+                info: "顯示第 _START_ 筆到第 _END_ 筆，共 _TOTAL_ 筆資料",
+                infoEmpty: "顯示第 0 筆到第 0 筆，共 0 筆",
+                infoFiltered: "(從 _MAX_ 筆資料中篩選)",
+                infoPostFix: "",
+                thousands: ",",
+                lengthMenu: "顯示 _MENU_ 筆資料",
+                loadingRecords: "載入中...",
+                processing: "處理中...",
+                search: "搜尋：",
+                zeroRecords: "找不到符合的資料",
+                paginate: {
+                    first: "第一頁",
+                    last: "最後一頁",
+                    next: "下一頁",
+                    previous: "上一頁"
+                },
+                aria: {
+                    sortAscending: ": 升冪排列",
+                    sortDescending: ": 降冪排列"
+                }
+            }
+        });
+
+        function renderName(data, type, row) {
+            if (row.isFolder)
+                return `<i class="bi bi-folder-fill text-warning me-2"></i>
+                        <a href="#" class="folder-link text-decoration-none" data-id="${row.id}">${data}</a>`;
+            else if (row.mimeType?.startsWith("image/")) {
+                const safeUrl = row.url && row.url.trim() !== "" ? row.url : "/images/No-Image.svg";
+                return `<img src="${safeUrl}"
+                             class="thumb me-2 image-thumb"
+                             data-url="${safeUrl}"
+                             onerror="this.onerror=null; this.src='/images/No-Image.svg';" />
+                        ${data}`;
+            } else
+                return `<i class="bi bi-file-earmark text-secondary me-2"></i>${data}`;
+        }
+
+        async function loadFolder(folderId = null, keyword = "") {
+            const res = await fetch(`/SYS/Images/GetFolderItems?parentId=${folderId ?? ''}&keyword=${keyword}`);
+            const data = await res.json();
+
+            const folders = data.items.filter(x => x.isFolder);
+            const files = data.items.filter(x => !x.isFolder);
+            const combined = [...folders, ...files];
+
+            table.clear().rows.add(combined).draw();
+            renderBreadcrumb(data.breadcrumb);
+        }
+
+        function renderBreadcrumb(list) {
+            const $bc = $('#breadcrumb').empty();
+
+            // 根目錄
+            $bc.append(`<li class="breadcrumb-item">
+                <a href="#" class="crumb" data-id="">根目錄</a>
+            </li>`);
+
+            list.forEach((p, i) => {
+                if (p === "根目錄") return;
+                const isLast = i === list.length - 1;
+                $bc.append(`<li class="breadcrumb-item ${isLast ? 'active' : ''}">
+                    ${isLast ? p : `<a href="#" class="crumb" data-id="${p.id || ''}">${p}</a>`}
+                </li>`);
+            });
+
+            if (list.length > 1) {
+                $bc.prepend(`<li class="breadcrumb-item"><a href="#" id="goBack"><i class="bi bi-arrow-left-short"></i> 回上一層</a></li>`);
+            }
+        }
+
+        // 📂 點擊資料夾
+        $(document).on("click", ".folder-link", async function (e) {
+            e.preventDefault();
+            const id = $(this).data("id");
+            breadcrumbStack.push({ id: id, name: $(this).text() });
+            await loadFolder(id);
+        });
+
+        // 🍞 點擊麵包屑（含根目錄）
+        $(document).on("click", ".crumb", async function (e) {
+            e.preventDefault();
+            const id = $(this).data("id") || null;
+
+            if (!id) {
+                breadcrumbStack = [{ id: null, name: "根目錄" }];
+            } else {
+                const name = $(this).text();
+                const index = breadcrumbStack.findIndex(x => x.name === name);
+                breadcrumbStack = breadcrumbStack.slice(0, index + 1);
+            }
+
+            await loadFolder(id);
+        });
+
+        // 🔙 回上一層
+        $(document).on("click", "#goBack", async function (e) {
+            e.preventDefault();
+            if (breadcrumbStack.length > 1) breadcrumbStack.pop();
+            const last = breadcrumbStack[breadcrumbStack.length - 1];
+            await loadFolder(last.id);
+        });
+
+        // 🖼 圖片預覽
+        $(document).on("click", ".image-thumb", function () {
+            $("#previewImg").attr("src", $(this).data("url"));
+            $("#imagePreviewModal").modal("show");
+        });
+
+        $("#previewImg").on("error", function () {
+            $(this).attr("src", "/images/No-Image.svg");
+        });
+
+        // 🔍 搜尋
+        $("#btnSearch").click(() => {
+            const keyword = $("#searchBox").val();
+            const last = breadcrumbStack[breadcrumbStack.length - 1];
+            loadFolder(last.id, keyword);
+        });
+
+        // ✅ 初始化
+        loadFolder();
+    </script>
 }

@@ -23,7 +23,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
             {
                 ViewBag.Message = "請至少選擇一個檔案";
-                var files = await _frepo.GetFiles("SYS", "UploadTest");
+                var files = await _frepo.GetFilesByProg("SYS", "UploadTest");
                 return View(files);
             }
 
@@ -49,7 +49,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var files = await _frepo.GetFiles("SYS", "UploadTest");
+            var files = await _frepo.GetFilesByProg("SYS", "UploadTest");
             return View(files);
         }
 

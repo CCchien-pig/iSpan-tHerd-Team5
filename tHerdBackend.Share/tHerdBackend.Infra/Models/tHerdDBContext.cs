@@ -179,6 +179,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<SysCode> SysCodes { get; set; }
 
+    public virtual DbSet<SysFolder> SysFolders { get; set; }
+
     public virtual DbSet<SysProgramConfig> SysProgramConfigs { get; set; }
 
     public virtual DbSet<SysSeoMetaAsset> SysSeoMetaAssets { get; set; }
@@ -3170,10 +3172,6 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasComment("image/jpeg, image/png, video/mp4");
-            entity.Property(e => e.ModuleId)
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasComment("模組代號");
             entity.Property(e => e.Width).HasComment("影像寬度（非影像類型可為 NULL）");
         });
 
@@ -3218,6 +3216,31 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasComment("程式代號");
+        });
+
+        modelBuilder.Entity<SysFolder>(entity =>
+        {
+            entity.HasKey(e => e.FolderId).HasName("PK__SYS_Fold__ACD7107F476EEB66");
+
+            entity.ToTable("SYS_Folders", tb => tb.HasComment("資料夾管理"));
+
+            entity.HasIndex(e => e.ParentId, "IX_SYS_Folders_ParentId");
+
+            entity.HasIndex(e => new { e.ParentId, e.FolderName }, "UQ_SYS_Folders_Parent_FolderName").IsUnique();
+
+            entity.Property(e => e.FolderId).HasComment("資料夾 ID");
+            entity.Property(e => e.FolderName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("資料夾名稱");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（1=啟用，0=停用）");
+            entity.Property(e => e.ParentId).HasComment("上層資料夾 ID（自關聯）");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+                .HasForeignKey(d => d.ParentId)
+                .HasConstraintName("FK_SYS_Folders_Parent");
         });
 
         modelBuilder.Entity<SysProgramConfig>(entity =>

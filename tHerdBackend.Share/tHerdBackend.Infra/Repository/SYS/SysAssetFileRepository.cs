@@ -1,12 +1,14 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.DTOs;
+using tHerdBackend.Core.DTOs.Common;
+using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace tHerdBackend.Infra.Repository.SYS
 {
@@ -24,6 +26,79 @@ namespace tHerdBackend.Infra.Repository.SYS
             _db = db;
         }
 
+        public async Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId)
+        {
+            return await _db.SysFolders
+                .Where(f => f.ParentId == parentId && f.IsActive)
+                .OrderBy(f => f.FolderName)
+                .Select(f => new SysFolderDto
+                {
+                    FolderId = f.FolderId,
+                    FolderName = f.FolderName,
+                    ParentId = f.ParentId,
+                })
+                .ToListAsync();
+        }
+
+        public async Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId)
+        {
+            var parent = await _db.SysFolders.FindAsync(parentId);
+
+            var folder = new SysFolder
+            {
+                FolderName = folderName,
+                ParentId = parentId,
+            };
+
+            _db.SysFolders.Add(folder);
+            await _db.SaveChangesAsync();
+
+            return new SysFolderDto
+            {
+                FolderId = folder.FolderId,
+                FolderName = folder.FolderName,
+            };
+        }
+
+        /// <summary>
+        /// 圖片管理工具，取得所有圖片
+        /// </summary>
+        /// <param name="moduleId"></param>
+        /// <param name="progId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default)
+        {
+            var q = _db.SysAssetFiles.AsQueryable();
+
+            if (!string.IsNullOrEmpty(query.Keyword))
+                q = q.Where(f => f.AltText.Contains(query.Keyword) ||
+                                 f.Caption.Contains(query.Keyword));
+
+            var totalCount = await q.CountAsync();
+
+            var items = await q
+                .OrderByDescending(f => f.CreatedDate)
+                .Skip((query.PageIndex - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .Select(f => new SysAssetFileDto
+                {
+                    FileId = f.FileId,
+                    FileUrl = f.FileUrl,
+                    AltText = f.AltText,
+                    CreatedDate = f.CreatedDate
+                })
+                .ToListAsync();
+
+            return new PagedResult<SysAssetFileDto>
+            {
+                TotalCount = totalCount,
+                PageIndex = query.PageIndex,
+                PageSize = query.PageSize,
+                Items = items
+            };
+        }
+
         /// <summary>
         /// 取得圖片
         /// </summary>
@@ -31,7 +106,7 @@ namespace tHerdBackend.Infra.Repository.SYS
         /// <param name="progId"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public async Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default)
+        public async Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
         {
             return await _db.SysAssetFiles
                 .Where(f => f.FileKey.StartsWith($"{moduleId}/{progId}"))
@@ -48,6 +123,54 @@ namespace tHerdBackend.Infra.Repository.SYS
                 })
                 .ToListAsync(ct);
         }
+
+        /// <summary>
+        /// 圖片管理工具，取得所有圖片
+        /// </summary>
+        /// <param name="moduleId"></param>
+        /// <param name="progId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        //public async Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default)
+        //{
+        //    var folder = query.FolderPath ?? "";
+        //    var q = _db.SysAssetFiles
+        //        .Where(f => f.IsActive && f.FolderPath.StartsWith(folder))
+        //        .OrderByDescending(f => f.CreatedDate);
+
+        //    var totalCount = await q.CountAsync();
+        //    var items = await q
+        //        .Skip((query.PageIndex - 1) * query.PageSize)
+        //        .Take(query.PageSize)
+        //        .Select(f => new SysAssetFileDto
+        //        {
+        //            FileId = f.FileId,
+        //            FileKey = f.FileKey,
+        //            IsExternal = f.IsExternal,
+        //            FileUrl = f.FileUrl,
+        //            FileExt = f.FileExt,
+        //            MimeType = f.MimeType,
+        //            Width = f.Width,
+        //            Height = f.Height,
+        //            FileSizeBytes = f.FileSizeBytes,
+        //            AltText = f.AltText,
+        //            Caption = f.Caption,
+        //            CreatedDate = f.CreatedDate,
+        //            IsActive = f.IsActive,
+        //            ModuleId = f.ModuleId,
+        //            FolderPath = f.FolderPath
+        //        })
+        //        .OrderByDescending(f => f.CreatedDate)
+        //        .ToListAsync();
+
+        //    return new PagedResult<SysAssetFileDto>
+        //    {
+        //        TotalCount = totalCount,
+        //        PageIndex = query.PageIndex,
+        //        PageSize = query.PageSize,
+        //        Items = items
+        //    };
+        //}
 
         /// <summary>
         /// 新增相片至 Cloudinary 並存入資料庫
@@ -122,7 +245,6 @@ namespace tHerdBackend.Infra.Repository.SYS
                             : fileDto.Caption,
                         CreatedDate = now,
                         IsActive = fileDto.IsActive,
-                        ModuleId = uploadDto.ModuleId,
                     });
 
                     fileDto.FileUrl = uploadResult.SecureUrl.ToString();

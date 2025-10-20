@@ -1,4 +1,6 @@
 ﻿using tHerdBackend.Core.DTOs;
+using tHerdBackend.Core.DTOs.Common;
+using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
 
 namespace tHerdBackend.Services.Common.SYS
@@ -12,9 +14,26 @@ namespace tHerdBackend.Services.Common.SYS
             _frepo = frepo;
         }
 
-        public Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default)
+        /// <summary>
+        /// 圖片管理用
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default)
         {
-            return _frepo.GetFiles(moduleId, progId, ct);
+            return _frepo.GetPagedFilesAsync(query, ct);
+        }
+
+        /// <summary>
+        /// 依模組與程式取得圖片檔案
+        /// </summary>
+        /// <param name="moduleId">模組代號</param>
+        /// <param name="progId">程式代號</param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
+        {
+            return _frepo.GetFilesByProg(moduleId, progId, ct);
         }
 
         /// <summary>

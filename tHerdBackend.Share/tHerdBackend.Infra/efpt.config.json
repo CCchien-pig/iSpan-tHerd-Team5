@@ -356,6 +356,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[SYS_Folders]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[SYS_ProgramConfig]",
          "ObjectType": 0
       },
