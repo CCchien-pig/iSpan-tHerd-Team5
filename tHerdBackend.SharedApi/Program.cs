@@ -24,8 +24,15 @@ namespace tHerdBackend.SharedApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
+			//建立連線字串
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 			//與後台管理系統共用 Identity 使用者資料庫
-			builder.Services.AddDbContext<ApplicationDbContext>(...); // 與 Admin 同一個使用者資料庫
+			// === Identity 使用者資料庫（與後台共用） ===
+			builder.Services.AddDbContext<ApplicationDbContext>(options =>
+				options.UseSqlServer(connectionString));
+
 			builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
 				.AddEntityFrameworkStores<ApplicationDbContext>()
 				.AddDefaultTokenProviders();
@@ -47,7 +54,7 @@ namespace tHerdBackend.SharedApi
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty))
+                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? string.Empty))
                 };
                 options.Events = new JwtBearerEvents // 自訂未授權回應，避免 401 回 HTML
                 {
@@ -61,8 +68,25 @@ namespace tHerdBackend.SharedApi
                 };
             });
 
-            // 允許 CORS
-            builder.Services.AddCors(options =>
+			// === SQL Connection Factory ===
+			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
+
+			// === DbContext (EF Core) ===
+			builder.Services.AddDbContext<tHerdDBContext>(options =>
+				options.UseSqlServer(connectionString));
+
+			// === Session（訪客用） ===
+			builder.Services.AddDistributedMemoryCache();
+			builder.Services.AddSession(o =>
+			{
+				o.Cookie.Name = ".tHerd.Session";
+				o.IdleTimeout = TimeSpan.FromDays(7);
+				o.Cookie.HttpOnly = true;
+				o.Cookie.SameSite = SameSiteMode.Lax;
+			});
+
+			// 允許 CORS
+			builder.Services.AddCors(options =>
 			{
 				options.AddPolicy("AllowAll",
 					policy => policy
@@ -70,6 +94,16 @@ namespace tHerdBackend.SharedApi
 						.AllowAnyMethod()
 						.AllowAnyHeader());
 			});
+
+			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
+			builder.Services.AddHttpContextAccessor();
+			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
+			// Auth Service
+			builder.Services.AddScoped<AuthService>();
+
+			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
+			builder.Services.AddtHerdBackend(builder.Configuration);
 
 			// Cloudinary
 			builder.Services.Configure<CloudinarySettings>(
@@ -97,23 +131,9 @@ namespace tHerdBackend.SharedApi
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
 
-			// === SQL Connection Factory ===
-			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
+            
 
-			// === DbContext (EF Core) ===
-			builder.Services.AddDbContext<tHerdDBContext>(options =>
-				options.UseSqlServer(connectionString));
-
-            // 前台沒有 Identity，只註冊 CurrentUser 本體（不要掛 ICurrentUser）
-            builder.Services.AddHttpContextAccessor();
-            builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-
-            // Auth Service
-            builder.Services.AddScoped<AuthService>();
-
-            // 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
-            builder.Services.AddtHerdBackend(builder.Configuration);
+            
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             // Controllers & Swagger
@@ -141,7 +161,7 @@ namespace tHerdBackend.SharedApi
                         {
                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                         },
-                        new string[] {}
+                        new string[]{}
                     }
                 });
             });
