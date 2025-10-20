@@ -1303,12 +1303,23 @@
                 return;
             }
 
-            // 存入 sessionStorage
-            sessionStorage.setItem('selectedBrandName', brandName);
-            console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
+            Swal.fire({
+                title: `確認要前往品牌頁面：<br>"${brandName}"？`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '前往',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // 存入 sessionStorage
+                    sessionStorage.setItem('selectedBrandName', brandName);
+                    console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
 
-            // 跳轉到品牌頁
-            window.location.href = '/SUP/Brands/Index';
+                    // 跳轉到供應商頁面
+                    window.location.href = '/SUP/Brands/Index';
+                }
+            });
+
         });
 
     </script>

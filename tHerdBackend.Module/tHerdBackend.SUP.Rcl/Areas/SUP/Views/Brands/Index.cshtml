@@ -99,7 +99,7 @@
                         title: '品牌名稱',
                         className: 'text-center',
                         render: function (data, type, row) {
-                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.brandId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
+                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.brandId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #15b49f;"></i></button>`;
                         }
                     },
                     {
@@ -107,7 +107,12 @@
                         title: '供應商名稱',
                         className: 'text-center',
                         render: function (data, type, row) {
-                            return `${data} <button class="btn btn-link btn-sm supplier-btn" data-name="${row.supplierName}" title="跳轉供應商頁" data-bs-toggle="tooltip"><i class="fa-regular fa-copyright" style="color: #96b8f3;"></i></button>`;
+                            if (!data) {
+                                return '<span class="no-supplier">尚未指定供應商</span>';
+                            }
+                            return `${data} <button class="btn btn-link btn-sm supplier-btn" data-name="${row.supplierName}" title="跳轉供應商頁" data-bs-toggle="tooltip">
+                                        <i class="fa-regular fa-copyright" style="color: #176afa;"></i>
+                                    </button>`;
                         }
                     },
                     {
@@ -283,23 +288,23 @@
 
             // ======= 提交品牌表單 (新增/修改) =======
             $('#brandModalContent').on('submit', '#BrandForm', function (e) {
-                console.log('submit event triggered');
+                // console.log('submit event triggered');
                 e.preventDefault();
 
                 var form = $(this);
-                console.log('form found:', form.length);
+                // console.log('form found:', form.length);
 
                 var isActive = $('#IsActive').prop('checked');
                 $('input[name="IsActive"][type="hidden"]', form).val(isActive);
                 var isFeatured = $('#IsFeatured').prop('checked');
                 $('input[name="IsFeatured"][type="hidden"]', form).val(isFeatured);
 
-                console.log('form serialized:', form.serialize());
-                console.log('form action:', form.attr('action'));
+                // console.log('form serialized:', form.serialize());
+                // console.log('form action:', form.attr('action'));
 
                 $.post(form.attr('action'), form.serialize())
                     .done(function (res) {
-                        console.log('AJAX .done triggered');
+                        // console.log('AJAX .done triggered');
                         var isJson = false;
                         try {
                             if (typeof res === "string" && res.trim().startsWith("{")) {
@@ -309,7 +314,7 @@
                                 isJson = true;
                             }
                         } catch (e) { }
-                        console.log('AJAX response type isJson:', isJson, res);
+                        // console.log('AJAX response type isJson:', isJson, res);
 
                         if (isJson && res.success) {
                             $('#brandModal').modal('hide');
@@ -322,7 +327,7 @@
                             });
 
                             if (res.brand) {
-                                console.log('Add row: ', res.brand);
+                                // console.log('Add row: ', res.brand);
                                 table.row.add({
                                     brandId: res.brand.brandId,
                                     brandName: res.brand.brandName,
@@ -459,13 +464,24 @@
                     return;
                 }
 
-                // 存入 sessionStorage
-                sessionStorage.setItem('selectedSupplierName', supplierName);
-                console.log('✅ 存入 sessionStorage: selectedSupplierName =', sessionStorage.getItem('selectedSupplierName'));
+                Swal.fire({
+                    title: `確認要前往供應商頁面：<br>"${supplierName}"？`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '前往',
+                    cancelButtonText: '取消'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 存入 sessionStorage
+                        sessionStorage.setItem('selectedSupplierName', supplierName);
+                        console.log('✅ 存入 sessionStorage: selectedSupplierName =', sessionStorage.getItem('selectedSupplierName'));
 
-                // 跳轉到供應商頁面
-                window.location.href = '/SUP/Suppliers/Index';
+                        // 跳轉到供應商頁面
+                        window.location.href = '/SUP/Suppliers/Index';
+                    }
+                });
             });
+
 
 
 
