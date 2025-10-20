@@ -244,80 +244,72 @@
                 });
             });
 
+
             // ======= 提交品牌表單 (新增/修改) =======
-            $('#brandModalContent').on('submit', '#BrandForm', function(e) {
+            $('#brandModalContent').on('submit', '#BrandForm', function (e) {
+                console.log('submit event triggered');
                 e.preventDefault();
+
                 var form = $(this);
+                console.log('form found:', form.length);
 
-                // 手動把 checkbox 值更新到 hidden input（IsActive / IsFeatured / IsDiscountActive）
                 var isActive = $('#IsActive').prop('checked');
-                var isFeatured = $('#IsFeatured').prop('checked');
-                var isDiscountActive = $('#IsDiscountActive').prop('checked');
-
                 $('input[name="IsActive"][type="hidden"]', form).val(isActive);
+                var isFeatured = $('#IsFeatured').prop('checked');
                 $('input[name="IsFeatured"][type="hidden"]', form).val(isFeatured);
-                $('input[name="IsDiscountActive"][type="hidden"]', form).val(isDiscountActive);
+
+                console.log('form serialized:', form.serialize());
+                console.log('form action:', form.attr('action'));
 
                 $.post(form.attr('action'), form.serialize())
-                .done(function(res) {
-                    // 判斷回傳結果是否為 JSON
-                    var isJson = res && (typeof res === "object" || res[0] === '{' || res[0] === '[');
-                    var data = isJson ? (typeof res === "string" ? JSON.parse(res) : res) : null;
+                    .done(function (res) {
+                        console.log('AJAX .done triggered');
+                        var isJson = false;
+                        try {
+                            if (typeof res === "string" && res.trim().startsWith("{")) {
+                                res = JSON.parse(res);
+                                isJson = true;
+                            } else if (typeof res === "object") {
+                                isJson = true;
+                            }
+                        } catch (e) { }
+                        console.log('AJAX response type isJson:', isJson, res);
 
-                    if (data) {
-                        if (data.success) {
+                        if (isJson && res.success) {
                             $('#brandModal').modal('hide');
-
                             Swal.fire({
                                 position: 'center',
                                 icon: 'success',
-                                title: data.isCreate ? '新增成功' : '修改成功',
+                                title: res.isCreate ? '新增成功' : '修改成功',
                                 showConfirmButton: false,
                                 timer: 1200
                             });
 
-                            // 如果後端回傳 brand，直接新增或更新 table
-                            if (data.brand) {
-                                if (data.isCreate) {
-                                    // 新增列
-                                    table.row.add({
-                                        brandId: data.brand.brandId,
-                                        brandName: data.brand.brandName,
-                                        supplierName: data.brand.supplierName,
-                                        isActive: data.brand.isActive,
-                                        isFeatured: data.brand.isFeatured
-                                    }).draw(false);
-                                } else {
-                                    // 編輯 → 更新對應 row
-                                    var row = table.row(function(idx, d, node) {
-                                        return d.brandId === data.brand.brandId;
-                                    });
-                                    if (row.any()) {
-                                        row.data({
-                                            brandId: data.brand.brandId,
-                                            brandName: data.brand.brandName,
-                                            supplierName: data.brand.supplierName,
-                                            isActive: data.brand.isActive,
-                                            isFeatured: data.brand.isFeatured
-                                        }).draw(false);
-                                    } else {
-                                        // fallback 重新載入 table
-                                        table.ajax.reload(null, false);
-                                    }
-                                }
+                            if (res.brand) {
+                                console.log('Add row: ', res.brand);
+                                table.row.add({
+                                    brandId: res.brand.brandId,
+                                    brandName: res.brand.brandName,
+                                    supplierName: res.brand.supplierName,
+                                    isActive: res.brand.isActive
+                                }).draw(false);
                             }
-
-                        } else if (data.message === "未變更") {
-                            Swal.fire('未變更', '', 'info');
-                        } else {
+                        }
+                        else if (typeof res === "string") {
+                            console.log('res is string, putting into #brandModalContent');
                             $('#brandModalContent').html(res);
                             $.validator.unobtrusive.parse('#brandModalContent');
                         }
-                    }
-                })
-                .fail(function() {
-                    Swal.fire('操作失敗', '', 'error');
-                });
+                        else {
+                            console.log('Unhandled error branch');
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function (jqXHR, textStatus, errorThrown) {
+                        console.log('AJAX failed:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('操作失敗', '', 'error');
+                    });
             });
 
             // toggle 事件
@@ -390,6 +382,7 @@
             $(function () {
                 $.validator.unobtrusive.parse('#brandForm');
             });
+
             // 自動填入
             $(function () {
                 // 重新解析 jQuery Validation
@@ -398,11 +391,16 @@
                 // 事件委派 - 綁定在表單容器上（確保 partial 載入後仍有效）
                 $('#brandModalContent').on('click', '#fillNameContact', function () {
                     const brands = [
-                        { name: 'Aura Cacia', shortCode: 'AC', seoId: 'aura-cacia' },
-                        { name: 'Davinci Laboratories', shortCode: 'DL', seoId: 'davinci-laboratories' },
-                        { name: 'Happy Family Organics', shortCode: 'HFO', seoId: 'happy-family-organics' },
-                        { name: "Oregon's Wild Harvest", shortCode: 'OWH', seoId: 'oregons-wild-harvest' },
-                        { name: 'Physicians Formula', shortCode: 'PF', seoId: 'physicians-formula' }
+                        //{ name: 'Aura Cacia', shortCode: 'AC', seoId: 'aura-cacia' },
+                        //{ name: 'Davinci Laboratories', shortCode: 'DL', seoId: 'davinci-laboratories' },
+                        //{ name: 'Happy Family Organics', shortCode: 'HFO', seoId: 'happy-family-organics' },
+                        //{ name: "Oregon's Wild Harvest", shortCode: 'OWH', seoId: 'oregons-wild-harvest' },
+                        //{ name: 'Physicians Formula', shortCode: 'PF', seoId: 'physicians-formula' }
+                        { name: 'Aura Cacia', shortCode: 'AC' },
+                        { name: 'Davinci Laboratories', shortCode: 'DL' },
+                        { name: 'Happy Family Organics', shortCode: 'HFO' },
+                        { name: "Oregon's Wild Harvest", shortCode: 'OWH' },
+                        { name: 'Physicians Formula', shortCode: 'PF' }
                     ];
 
                     // 隨機選取一組品牌資料

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SUP.Data.Helpers;
+using System.Diagnostics;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.DTOs.USER;
@@ -140,54 +141,88 @@ public class BrandsController : Controller
 
 	[HttpPost]
 	[ValidateAntiForgeryToken]
+	//public async Task<IActionResult> Create([Bind("BrandName,BrandCode,SupplierId,SeoId,IsActive,IsFeatured")] BrandDto dto)
 	public async Task<IActionResult> Create([Bind("BrandName,BrandCode,SupplierId,IsActive,IsFeatured")] BrandDto dto)
 	{
-		var userId = _me.Id;
-		var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-		if (user == null)
-			return Json(new { success = false, message = "找不到使用者資料" });
-
-		int currentUserId = user.UserNumberId;
-
-		if (ModelState.IsValid)
+		try
 		{
-			var entity = new SupBrand
-			{
-				BrandName = dto.BrandName,
-				BrandCode = dto.BrandCode,
-				SupplierId = dto.SupplierId,
-				IsActive = dto.IsActive,
-				IsFeatured = dto.IsFeatured,
-				Creator = currentUserId,
-				CreatedDate = DateTime.Now
-			};
-			_context.SupBrands.Add(entity);
-			await _context.SaveChangesAsync();
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 
-			return Json(new
+			if (user == null)
 			{
-				success = true,
-				isCreate = true,
-				brand = new
+				Debug.WriteLine("User not found");
+				return Json(new { success = false, message = "找不到使用者資料" });
+			}
+
+			int currentUserId = user.UserNumberId;
+			Debug.WriteLine($"UserId: {currentUserId}, BrandName: {dto.BrandName}, SupplierId: {dto.SupplierId}");
+
+			//int? seoIdInt = null;
+			//if (!string.IsNullOrWhiteSpace(dto.SeoId))
+			//{
+			//	if (int.TryParse(dto.SeoId, out int parsedId))
+			//	{
+			//		seoIdInt = parsedId;
+			//		Debug.WriteLine($"SeoId parsed as {seoIdInt}");
+			//	}
+			//	else
+			//	{
+			//		Debug.WriteLine("SeoId parse failed");
+			//	}
+			//}
+
+			if (ModelState.IsValid)
+			{
+				var entity = new SupBrand
 				{
-					brandId = entity.BrandId,
-					brandName = entity.BrandName,
-					supplierName = _context.SupSuppliers.FirstOrDefault(s => s.SupplierId == entity.SupplierId)?.SupplierName ?? "",
-					isActive = entity.IsActive
-				}
-			});
+					BrandName = dto.BrandName,
+					BrandCode = dto.BrandCode,
+					SupplierId = dto.SupplierId,
+					//SeoId = seoIdInt,
+					IsActive = dto.IsActive,
+					IsFeatured = dto.IsFeatured,
+					Creator = currentUserId,
+					CreatedDate = DateTime.Now
+				};
+
+				_context.SupBrands.Add(entity);
+				await _context.SaveChangesAsync();
+
+				Debug.WriteLine($"Brand created: {entity.BrandId}");
+
+				return Json(new
+				{
+					success = true,
+					isCreate = true,
+					brand = new
+					{
+						brandId = entity.BrandId,
+						brandName = entity.BrandName,
+						brandCode = entity.BrandCode,
+						supplierId = entity.SupplierId,
+						supplierName = entity.SupplierId.HasValue
+							? (_context.SupSuppliers.FirstOrDefault(s => s.SupplierId == entity.SupplierId)?.SupplierName ?? "")
+							: "",
+						//seoId = dto.SeoId,
+						isActive = entity.IsActive,
+						isFeatured = entity.IsFeatured
+					}
+				});
+			}
+			else
+			{
+				var errors = ModelState.Values.SelectMany(v => v.Errors)
+									.Select(e => e.ErrorMessage).ToList();
+				Debug.WriteLine("ModelState invalid: " + string.Join(", ", errors));
+				return Json(new { success = false, errors });
+			}
 		}
-
-		// ModelState 驗證失敗時要重新載入下拉選單
-		var suppliers = await _supplierService.GetAllSuppliersAsync();
-		ViewBag.Suppliers = suppliers.Select(s => new SelectListItem
+		catch (Exception ex)
 		{
-			Value = s.SupplierId.ToString(),
-			Text = s.SupplierName,
-			Disabled = !s.IsActive
-		}).ToList();
-
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandFormPartial.cshtml", dto);
+			Debug.WriteLine("Exception: " + ex.ToString());
+			return Json(new { success = false, message = "發生錯誤，請聯絡管理員。" });
+		}
 	}
 
 	// GET: SUP/Brands/Edit/5

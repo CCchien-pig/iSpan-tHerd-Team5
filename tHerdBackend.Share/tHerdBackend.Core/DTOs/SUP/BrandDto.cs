@@ -30,13 +30,14 @@ namespace tHerdBackend.Core.DTOs.SUP
 		public int? SupplierId { get; set; }
 
 		[Display(Name = "供應商名稱")]
-		public string SupplierName { get; set; } // 顯示用途，查詢JOIN SUP_Supplier時填入用
+		public string? SupplierName { get; set; } // 顯示用途，查詢JOIN SUP_Supplier時填入用
 
 		/// <summary>
 		/// Seo 設定
 		/// </summary>
 		[Display(Name = "設定SeoId")]
 		public int? SeoId { get; set; }
+		//public string? SeoId { get; set; }
 
 		/// <summary>
 		/// 折扣率 (0 ~ 100%)
