@@ -47,7 +47,7 @@
           type="button"
           role="tab"
         >
-          顧客評價 ({{ product.reviewsSummary?.reviewCount || 0 }})
+          顧客評價 ({{ product.reviewCount || 0 }})
         </button>
       </li>
       <li class="nav-item" role="presentation">
@@ -125,8 +125,8 @@
         <div class="p-4">
           <ProductReviews
             :product-id="product.productId"
-            :avg-rating="product.reviewsSummary?.avgRating || 0"
-            :review-count="product.reviewsSummary?.reviewCount || 0"
+            :avg-rating="product.avgRating || 0"
+            :review-count="product.reviewCount || 0"
           />
         </div>
       </div>

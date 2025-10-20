@@ -22,7 +22,7 @@ namespace tHerdBackend.Core.DTOs.PROD
 
 		public bool IsPublished { get; set; } = false;
 
-		public int Creator { get; set; }
+        public int Creator { get; set; }
 
 		public string CreatorNm { get; set; } = string.Empty;
 
@@ -34,7 +34,45 @@ namespace tHerdBackend.Core.DTOs.PROD
 
 		public string ReviserNm { get; set; } = string.Empty;
 
-		// =====
+		/// <summary>
+		/// 商品標籤
+		/// </summary>
 		public string Badge { get; set; } = string.Empty;
-	}
+
+        /// <summary>
+        /// 評價星數
+        /// </summary>
+        public decimal? AvgRating { get; set; }
+
+        /// <summary>
+        /// 評價總數
+        /// </summary>
+        public int? ReviewCount { get; set; }
+
+        /// <summary>
+        /// 商品主圖
+        /// </summary>
+        public string? ImageUrl { get; set; }
+
+        /// <summary>
+        /// 主商品SkuId
+        /// </summary>
+        public int MainSkuId { get; set; }
+
+        /// <summary>
+        /// 主商品原價
+        /// </summary>
+        public decimal? ListPrice { get; set; }
+
+
+        /// <summary>
+        /// 主商品單價
+        /// </summary>
+        public decimal? UnitPrice { get; set; }
+
+        /// <summary>
+        /// 主商品優惠價
+        /// </summary>
+        public decimal? SalePrice { get; set; }
+    }
 }

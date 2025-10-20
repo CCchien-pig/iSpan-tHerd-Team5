@@ -1,5 +1,5 @@
 /**
- * productApi.js - 商品相關 API
+ * ProductsApi.js - 商品相關 API
  * 功能：封裝所有商品相關的 API 請求
  * 模組：prod（產品模組）
  *
@@ -7,13 +7,13 @@
  * 已移至 @/utils/productUtils.js
  */
 
-import baseApi from '../baseApi'
+import baseApi from '../../baseApi'
 
 /**
  * 商品 API 類別
  * 提供商品查詢、評價、問答、收藏等功能
  */
-class ProductApi {
+class productsApi {
   path = '/prod'
   // ==================== 商品查詢 ====================
 
@@ -28,7 +28,7 @@ class ProductApi {
    * @param {number} params.pageSize - 每頁筆數（預設：20）
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.getProductList({
+   * const result = await productsApi.getProductList({
    *   keyword: '魚油',
    *   brandId: 5,
    *   page: 1,
@@ -36,7 +36,7 @@ class ProductApi {
    * })
    */
   async getProductList(params = {}) {
-    return await baseApi.get(`${this.path}/products`, params)
+    return await baseApi.get(`${this.path}/Products`, params)
   }
 
   /**
@@ -44,10 +44,12 @@ class ProductApi {
    * @param {number} productId - 商品 ID
    * @returns {Promise} API 回應，包含完整商品資訊
    * @example
-   * const result = await productApi.getProductDetail(85180)
+   * const result = await productsApi.getProductDetail(85180)
    */
   async getProductDetail(productId) {
-    return await baseApi.get(`${this.path}/products/${productId}`)
+    // console.log(await baseApi.get(`${this.path}/Products/${productId}`))
+
+    return await baseApi.get(`${this.path}/Products/${productId}`)
   }
 
   // ==================== 屬性與成分 ====================
@@ -56,7 +58,7 @@ class ProductApi {
    * 查詢商品屬性清單
    * @returns {Promise} API 回應，包含所有屬性分類（功效、性別、年齡等）
    * @example
-   * const result = await productApi.getAttributes()
+   * const result = await productsApi.getAttributes()
    */
   async getAttributes() {
     return await baseApi.get(`${this.path}/attributes`)
@@ -66,7 +68,7 @@ class ProductApi {
    * 查詢成分清單
    * @returns {Promise} API 回應，包含所有成分資料
    * @example
-   * const result = await productApi.getIngredients()
+   * const result = await productsApi.getIngredients()
    */
   async getIngredients() {
     return await baseApi.get(`${this.path}/ingredients`)
@@ -79,7 +81,7 @@ class ProductApi {
    * @param {number} productId - 商品 ID
    * @returns {Promise} API 回應，包含該商品的所有問答
    * @example
-   * const result = await productApi.getQuestions(85180)
+   * const result = await productsApi.getQuestions(85180)
    */
   async getQuestions(productId) {
     return await baseApi.get(`${this.path}/questions/${productId}`)
@@ -92,7 +94,7 @@ class ProductApi {
    * @param {string} data.questionContent - 問題內容
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.submitQuestion({
+   * const result = await productsApi.submitQuestion({
    *   productId: 85180,
    *   questionContent: '請問保存期限是多久？'
    * })
@@ -108,7 +110,7 @@ class ProductApi {
    * @param {string} data.answerContent - 回覆內容
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.submitAnswer({
+   * const result = await productsApi.submitAnswer({
    *   questionId: 3001,
    *   answerContent: '保存期限標示在瓶身上，通常為 2 年。'
    * })
@@ -127,7 +129,7 @@ class ProductApi {
    * @param {number} params.pageSize - 每頁筆數
    * @returns {Promise} API 回應，包含評價列表
    * @example
-   * const result = await productApi.getReviews(85180, { page: 1, pageSize: 10 })
+   * const result = await productsApi.getReviews(85180, { page: 1, pageSize: 10 })
    */
   async getReviews(productId, params = {}) {
     return await baseApi.get(`${this.path}/reviews/${productId}`, params)
@@ -144,7 +146,7 @@ class ProductApi {
    * @param {Array<File>} data.images - 評價圖片（選填）
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.submitReview({
+   * const result = await productsApi.submitReview({
    *   productId: 85180,
    *   skuId: 9001,
    *   rating: 5,
@@ -164,7 +166,7 @@ class ProductApi {
    * @param {number} data.productId - 商品 ID
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.addFavorite({ productId: 85180 })
+   * const result = await productsApi.addFavorite({ productId: 85180 })
    */
   async addFavorite(data) {
     return await baseApi.post(`${this.path}/favorite`, data)
@@ -175,7 +177,7 @@ class ProductApi {
    * @param {number} productId - 商品 ID
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.removeFavorite(85180)
+   * const result = await productsApi.removeFavorite(85180)
    */
   async removeFavorite(productId) {
     return await baseApi.delete(`${this.path}/favorite/${productId}`)
@@ -188,7 +190,7 @@ class ProductApi {
    * @param {number} params.pageSize - 每頁筆數
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.getFavoriteList({ page: 1, pageSize: 20 })
+   * const result = await productsApi.getFavoriteList({ page: 1, pageSize: 20 })
    */
   async getFavoriteList(params = {}) {
     return await baseApi.get(`${this.path}/favorite`, params)
@@ -202,7 +204,7 @@ class ProductApi {
    * @param {number} data.productId - 商品 ID
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.likeProduct({ productId: 85180 })
+   * const result = await productsApi.likeProduct({ productId: 85180 })
    */
   async likeProduct(data) {
     return await baseApi.post(`${this.path}/like`, data)
@@ -213,19 +215,19 @@ class ProductApi {
    * @param {number} productId - 商品 ID
    * @returns {Promise} API 回應
    * @example
-   * const result = await productApi.unlikeProduct(85180)
+   * const result = await productsApi.unlikeProduct(85180)
    */
   async unlikeProduct(productId) {
     return await baseApi.delete(`${this.path}/like/${productId}`)
   }
 }
 
-// 建立並匯出 ProductApi 實例
-const productApi = new ProductApi()
+// 建立並匯出 productsApi 實例
+const ProductsApi = new productsApi()
 
-export default productApi
+export default ProductsApi
 
 /**
  * 也可以匯出類別，讓使用者自行建立實例
  */
-export { ProductApi }
+export { productsApi }

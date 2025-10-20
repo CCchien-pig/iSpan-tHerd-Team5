@@ -1,4 +1,4 @@
-using CloudinaryDotNet;
+ï»¿using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -31,7 +31,7 @@ namespace tHerdBackend.SharedApi
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
-                { // ³]©wÅçÃÒ°Ñ¼Æ
+                { // è¨­å®šé©—è­‰åƒæ•¸
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidateLifetime = true,
@@ -41,7 +41,7 @@ namespace tHerdBackend.SharedApi
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty))
                 };
-                options.Events = new JwtBearerEvents // ¦Û­q¥¼±ÂÅv¦^À³¡AÁ×§K 401 ¦^ HTML
+                options.Events = new JwtBearerEvents // è‡ªè¨‚æœªæˆæ¬Šå›æ‡‰ï¼Œé¿å… 401 å› HTML
                 {
                     OnChallenge = context =>
                     {
@@ -53,7 +53,7 @@ namespace tHerdBackend.SharedApi
                 };
             });
 
-            // ¤¹³\ CORS
+            // å…è¨± CORS
             builder.Services.AddCors(options =>
 			{
 				options.AddPolicy("AllowAll",
@@ -67,14 +67,14 @@ namespace tHerdBackend.SharedApi
 			builder.Services.Configure<CloudinarySettings>(
                 builder.Configuration.GetSection("CloudinarySettings"));
 
-			// Åª¨ú³]©w­È¡A«Ø¥ß Cloudinary ¹ê¨Ò
+			// è®€å–è¨­å®šå€¼ï¼Œå»ºç«‹ Cloudinary å¯¦ä¾‹
 			var cloudinaryConfig = builder.Configuration.GetSection("CloudinarySettings").Get<CloudinarySettings>();
 			if (cloudinaryConfig == null ||
 				string.IsNullOrEmpty(cloudinaryConfig.CloudName) ||
 				string.IsNullOrEmpty(cloudinaryConfig.ApiKey) ||
 				string.IsNullOrEmpty(cloudinaryConfig.ApiSecret))
 			{
-				throw new InvalidOperationException("CloudinarySettings ¥¼¥¿½T³]©w©ó appsettings.json");
+				throw new InvalidOperationException("CloudinarySettings æœªæ­£ç¢ºè¨­å®šæ–¼ appsettings.json");
 			}
 
 			var account = new Account(
@@ -83,7 +83,7 @@ namespace tHerdBackend.SharedApi
 				cloudinaryConfig.ApiSecret
 			);
 
-			// µù¥U Cloudinary ¬° Singleton
+			// è¨»å†Š Cloudinary ç‚º Singleton
 			var cloudinary = new Cloudinary(account);
 			builder.Services.AddSingleton(cloudinary);
 
@@ -97,21 +97,27 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddDbContext<tHerdDBContext>(options =>
 				options.UseSqlServer(connectionString));
 
-            // «e¥x¨S¦³ Identity¡A¥uµù¥U CurrentUser ¥»Åé¡]¤£­n±¾ ICurrentUser¡^
+            // å‰å°æ²’æœ‰ Identityï¼Œåªè¨»å†Š CurrentUser æœ¬é«”ï¼ˆä¸è¦æ› ICurrentUserï¼‰
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
             // Auth Service
             builder.Services.AddScoped<AuthService>();
 
-            // ¥[¤J DI µù¥U¡]³o¦æ·|¦Û°Ê§â Infra¡BService ³£¸j¦n¡^
+            // åŠ å…¥ DI è¨»å†Šï¼ˆé€™è¡Œæœƒè‡ªå‹•æŠŠ Infraã€Service éƒ½ç¶å¥½ï¼‰
             builder.Services.AddtHerdBackend(builder.Configuration);
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             // Controllers & Swagger
             builder.Services.AddControllers(options =>
             {
+                // âœ è¨­å®šå…¨åŸŸ Controller è¡Œç‚ºï¼Œä¾‹å¦‚åŠ å…¥è‡ªè¨‚è·¯ç”±è¦å‰‡
                 options.Conventions.Add(new FolderBasedRouteConvention());
+            })
+            .AddJsonOptions(o =>
+            {
+                // âœ è¨­å®š JSON åºåˆ—åŒ–è¦å‰‡ï¼Œä¾‹å¦‚å¿½ç•¥å±¬æ€§å¤§å°å¯«
+                o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             });
 
             builder.Services.AddEndpointsApiExplorer();
@@ -120,7 +126,7 @@ namespace tHerdBackend.SharedApi
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "tHerd API", Version = "v1" });
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = "¿é¤J JWT Token¡A®æ¦¡: Bearer {token}",
+                    Description = "è¼¸å…¥ JWT Tokenï¼Œæ ¼å¼: Bearer {token}",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.ApiKey,
@@ -151,7 +157,7 @@ namespace tHerdBackend.SharedApi
 
 			app.UseCors("AllowAll");
 
-			// ±Ò¥Î JWT ÅçÃÒ
+			// å•Ÿç”¨ JWT é©—è­‰
 			app.UseAuthentication();
 			app.UseAuthorization();
 
