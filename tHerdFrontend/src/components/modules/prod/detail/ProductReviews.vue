@@ -12,20 +12,20 @@
       <div class="col-lg-4 col-md-12 mb-4">
         <div class="rating-overview p-4 border rounded bg-light text-center">
           <div class="average-rating mb-3">
-            <div class="score display-3 fw-bold">{{ avgRating }}</div>
+            <div class="score display-3 fw-bold">{{ avgRating || 0 }}</div>
             <div class="stars mb-2">
               <span v-for="i in 5" :key="i" class="star">
                 <i
                   class="bi fs-4"
                   :class="
-                    i <= Math.floor(avgRating)
+                    i <= Math.floor(avgRating || 0)
                       ? 'bi-star-fill text-warning'
                       : 'bi-star text-warning'
                   "
                 ></i>
               </span>
             </div>
-            <div class="text-muted">基於 {{ reviewCount.toLocaleString() }} 評分</div>
+            <div class="text-muted">基於 {{ reviewCount?.toLocaleString() }} 評分</div>
           </div>
 
           <!-- 評分分布 -->
@@ -261,7 +261,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import productApi from '@/services/modules/productApi'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 import { toast, success, error as showError } from '@/utils/sweetalert'
 
 const props = defineProps({
@@ -374,7 +374,7 @@ const isReviewValid = computed(() => {
 const loadReviews = async () => {
   try {
     loading.value = true
-    const response = await productApi.getReviews(props.productId)
+    const response = await ProductsApi.getReviews(props.productId)
 
     if (response.success) {
       reviews.value = response.data || []
@@ -394,7 +394,7 @@ const handleSubmitReview = async () => {
 
   try {
     submitting.value = true
-    const response = await productApi.submitReview({
+    const response = await ProductsApi.submitReview({
       productId: props.productId,
       skuId: 1, // TODO: 從選中的規格獲取
       rating: newReview.value.rating,

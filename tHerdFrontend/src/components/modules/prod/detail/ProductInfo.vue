@@ -4,9 +4,9 @@
 -->
 <template>
   <div class="product-info">
-    <!-- tHerd 標誌 -->
+    <!-- 商品標籤 -->
     <div class="brand-badge mb-3">
-      <span class="badge bg-success">tHerd 自選品牌商品</span>
+      <span class="badge bg-success">{{ product.badge }}</span>
     </div>
 
     <!-- 商品標題 -->
@@ -17,13 +17,13 @@
 
     <!-- 評分與評價 -->
     <div class="rating-section mb-3">
-      <span class="rating-value">{{ product.reviewsSummary?.avgRating || 0 }}</span>
+      <span class="rating-value">{{ product.avgRating || 0 }}</span>
       <div class="stars">
         <span v-for="i in 5" :key="i" class="star">
           <i
             class="bi"
             :class="
-              i <= Math.floor(product.reviewsSummary?.avgRating || 0)
+              i <= Math.floor(product.avgRating || 0)
                 ? 'bi-star-fill text-warning'
                 : 'bi-star text-warning'
             "
@@ -31,7 +31,7 @@
         </span>
       </div>
       <a href="#reviews" class="reviews-link"
-        >{{ product.reviewsSummary?.reviewCount || 0 }} 則評價</a
+        >{{ product.reviewCount || 0 }} 則評價</a
       >
     </div>
 
@@ -68,15 +68,13 @@
     <!-- 商品基本資訊 -->
     <div class="product-meta mb-4">
       <ul class="list-unstyled small">
-        <li>
-          <strong>包裝規格：</strong>{{ selectedSpec?.OptionName || product.packageQuantity }}
-        </li>
+        <li><strong>包裝規格：</strong>{{ selectedSpec?.OptionName || product.PackageType }}</li>
         <li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li>
         <li v-if="product.dimensions">
           <strong>約尺寸：</strong>{{ product.weight }}公斤，{{ product.dimensions }}
         </li>
-        <li><strong>商品編號：</strong>CGN-{{ product.productId }}</li>
-        <li><strong>產品代碼：</strong>{{ product.upcCode }}</li>
+        <li><strong>商品編號：</strong>{{ product.productId }}</li>
+        <li><strong>產品代碼：</strong>{{ product.productCode }}</li>
         <li><strong>UPC 代碼：</strong>{{ product.upcCode }}</li>
       </ul>
     </div>

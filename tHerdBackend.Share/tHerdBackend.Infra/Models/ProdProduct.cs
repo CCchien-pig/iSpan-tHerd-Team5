@@ -85,6 +85,16 @@ public partial class ProdProduct
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    /// <summary>
+    /// 商品標籤
+    /// </summary>
+    public string Badge { get; set; }
+
+    /// <summary>
+    /// 主規格
+    /// </summary>
+    public int? MainSkuId { get; set; }
+
     public virtual SupBrand Brand { get; set; }
 
     public virtual ICollection<OrdOrderItem> OrdOrderItems { get; set; } = new List<OrdOrderItem>();
