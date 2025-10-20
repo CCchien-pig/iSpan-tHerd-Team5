@@ -75,6 +75,11 @@ public partial class SysAssetFile
     /// </summary>
     public bool IsActive { get; set; }
 
+    /// <summary>
+    /// 模組代號
+    /// </summary>
+    public string ModuleId { get; set; }
+
     public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
 
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();

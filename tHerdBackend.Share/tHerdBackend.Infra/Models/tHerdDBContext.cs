@@ -3170,6 +3170,10 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasComment("image/jpeg, image/png, video/mp4");
+            entity.Property(e => e.ModuleId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("模組代號");
             entity.Property(e => e.Width).HasComment("影像寬度（非影像類型可為 NULL）");
         });
 

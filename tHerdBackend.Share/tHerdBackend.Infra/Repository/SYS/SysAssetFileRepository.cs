@@ -83,7 +83,7 @@ namespace tHerdBackend.Infra.Repository.SYS
                     var folderPath = $"{uploadDto.ModuleId}/{uploadDto.ProgId}/";
 
                     // PublicId → 存在 Cloudinary（不含副檔名，Cloudinary 會自動加回去）
-                    var publicId = $"{folderPath}{Path.GetFileNameWithoutExtension(uniqueName)}";
+                    var publicId = $"{Path.GetFileNameWithoutExtension(uniqueName)}";
 
                     // 1. 上傳到 Cloudinary
                     var uploadParams = new ImageUploadParams
@@ -121,7 +121,8 @@ namespace tHerdBackend.Infra.Repository.SYS
                             ? $"上傳於 {now:yyyy-MM-dd HH:mm}"
                             : fileDto.Caption,
                         CreatedDate = now,
-                        IsActive = fileDto.IsActive
+                        IsActive = fileDto.IsActive,
+                        ModuleId = uploadDto.ModuleId,
                     });
 
                     fileDto.FileUrl = uploadResult.SecureUrl.ToString();

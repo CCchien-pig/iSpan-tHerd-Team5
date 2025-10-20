@@ -453,6 +453,91 @@
                 });
             });
 
+            // === 點擊 Modal 內的圖片 → 直接另開原圖網址 ===
+            modalImg.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const imgUrl = this.src;
+                if (!imgUrl) return;
+
+                // 🟢 新開 viewer 頁
+                const viewer = window.open("", "_blank");
+                viewer.document.write(`
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>查看原圖</title>
+                                <style>
+                                    html, body {
+                                        margin: 0;
+                                        padding: 0;
+                                        height: 100%;
+                                        overflow: auto;
+                                        background: #111;
+                                        cursor: grab;
+                                    }
+                                    img {
+                                        display: block;
+                                        max-width: none;  /* 不限制寬高 */
+                                        max-height: none;
+                                        user-select: none;
+                                        -webkit-user-drag: none;
+                                        margin: auto;
+                                        position: absolute;
+                                        top: 0; left: 0;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <img src="${imgUrl}" id="draggableImg" draggable="false" />
+                                <script>
+                                    const img = document.getElementById('draggableImg');
+                                    let isDragging = false;
+                                    let startX, startY, scrollLeft, scrollTop;
+
+                                    document.body.addEventListener('mousedown', (e) => {
+                                        isDragging = true;
+                                        document.body.style.cursor = 'grabbing';
+                                        startX = e.pageX;
+                                        startY = e.pageY;
+                                        scrollLeft = window.scrollX;
+                                        scrollTop = window.scrollY;
+                                    });
+
+                                    document.body.addEventListener('mouseup', () => {
+                                        isDragging = false;
+                                        document.body.style.cursor = 'grab';
+                                    });
+
+                                    document.body.addEventListener('mouseleave', () => {
+                                        isDragging = false;
+                                        document.body.style.cursor = 'grab';
+                                    });
+
+                                    document.body.addEventListener('mousemove', (e) => {
+                                        if (!isDragging) return;
+                                        e.preventDefault();
+                                        const x = e.pageX - startX;
+                                        const y = e.pageY - startY;
+                                        window.scrollTo(scrollLeft - x, scrollTop - y);
+                                    });
+
+                                    // 支援滾輪縮放
+                                    document.body.addEventListener('wheel', (e) => {
+                                        e.preventDefault();
+                                        const scale = e.deltaY < 0 ? 1.1 : 0.9;
+                                        img.width *= scale;
+                                        img.height *= scale;
+                                    }, { passive: false });
+                <\/script>
+                </body>
+                </html>
+                    `);
+            }
+            );
+
+
             // === 確認更新 (Modal 確定) ===
             if (confirmBtn) {
                 confirmBtn.addEventListener("click", async function () {
@@ -466,7 +551,7 @@
                     }
 
                     try {
-                        const isActive = modalIsActive.checked; // 這行放在 try 前面或裡面都可以
+                        const isActive = modalIsActive.checked;
 
                         const res = await fetch(`${window.location.origin}/SYS/UploadTest/UpdateMeta`, {
                             method: "POST",
@@ -475,7 +560,7 @@
                                 FileId: parseInt(fileId),
                                 AltText: altText,
                                 Caption: caption,
-                                IsActive: isActive   // 注意：這裡「前一行」一定要有逗號！
+                                IsActive: isActive
                             })
                         });
 
@@ -484,18 +569,8 @@
                         if (data.success) {
                             Swal.fire("✅ 更新成功", "", "success");
 
-                            // 更新前端顯示
-                            const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
-                            if (img) {
-                                img.alt = altText;
-                                img.dataset.alt = altText;
-                                img.dataset.caption = caption;
-                                img.dataset.isActive = isActive.toString();
-
-                                // 動態標記出啟用／停用狀態
-                                const parent = img.closest(".img-item");
-                                parent.classList.toggle("inactive", !isActive);
-                            }
+                            // ✅ 傳進所有需要更新的資料
+                            updateImageState(fileId, altText, caption, isActive);
 
                             modal.hide();
                         } else {
@@ -506,6 +581,27 @@
                         console.error("更新錯誤：", err);
                     }
                 });
+            }
+
+            // ✅ 共用更新函式（可供 Modal 與 toggleActive 共用）
+            function updateImageState(fileId, altText, caption, isActive) {
+                const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
+                if (!img) return;
+
+                img.alt = altText;
+                img.dataset.alt = altText;
+                img.dataset.caption = caption;
+                img.dataset.isActive = isActive.toString();
+
+                // 動態標記出啟用／停用狀態
+                const parent = img.closest(".img-item");
+                parent.classList.toggle("inactive", !isActive);
+
+                // 更新按鈕文字
+                const toggleBtn = parent.querySelector(".toggle-active-btn");
+                if (toggleBtn) {
+                    toggleBtn.textContent = isActive ? "停用" : "啟用";
+                }
             }
 
             // === 刪除圖片 ===
