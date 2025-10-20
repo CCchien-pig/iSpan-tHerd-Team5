@@ -1,18 +1,15 @@
 ﻿using tHerdBackend.CNT.Rcl.Areas.CNT.Services;
 using tHerdBackend.CNT.Rcl.Areas.CNT.ViewModels;
 using tHerdBackend.CNT.Rcl.Areas.CNT.ViewModels.Enums;
-using tHerdBackend.CNT.Rcl.Helpers;// ⭐ 引用共用下拉 Helper//尚未實作修改程式碼引用
+using tHerdBackend.CNT.Rcl.Helpers;
 using tHerdBackend.Infra.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.Linq;
 using X.PagedList;
 using X.PagedList.Extensions;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 {
@@ -26,29 +23,24 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 		public PagesController(tHerdDBContext db)
 		{
 			_db = db;
-			_pageDeletionService = new PageDeletionService(_db); // ⭐ 直接 new
+			_pageDeletionService = new PageDeletionService(_db);
 		}
 
-		// ================================
-		// 共用方法：產生 PageType 下拉清單
-		// ================================
-		private SelectList GetPageTypeSelectList(int pageTypeId)
+		// ======================================
+		// ✅ 共用：處理 PublishedDate (發佈 / 草稿)
+		// ======================================
+		private void HandlePublishedDate(CntPage pageEntity, PageEditVM model)
 		{
-			if (pageTypeId == HomePageTypeId)
+			// 如果設定為「已發佈」，且之前未發佈 → 設為現在
+			if (model.Status == PageStatus.Published)
 			{
-				// 如果是首頁 → 只顯示首頁
-				return new SelectList(
-					new[] { new { PageTypeId = HomePageTypeId, TypeName = "首頁" } },
-					"PageTypeId", "TypeName", HomePageTypeId
-				);
+				if (pageEntity.PublishedDate == null)
+					pageEntity.PublishedDate = DateTime.Now;
 			}
-			else
+			// 如果改為「草稿」 → 清空 PublishedDate (依你選擇)
+			else if (model.Status == PageStatus.Draft)
 			{
-				// 如果不是首頁 → 顯示其他類別（排除首頁）
-				return new SelectList(
-					_db.CntPageTypes.Where(pt => pt.PageTypeId != HomePageTypeId),
-					"PageTypeId", "TypeName", pageTypeId
-				);
+				pageEntity.PublishedDate = null;
 			}
 		}
 
@@ -59,7 +51,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 		{
 			var items = Enum.GetValues(typeof(PageStatus))
 				.Cast<PageStatus>()
-				 .Where(s => includeDeleted || s != PageStatus.Deleted) // ⭐ 排除刪除
+				.Where(s => includeDeleted || s != PageStatus.Deleted)
 				.Select(s => new SelectListItem
 				{
 					Text = s switch
@@ -75,13 +67,13 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				}).ToList();
 
 			if (includeAll)
-			{
 				items.Insert(0, new SelectListItem("全部狀態", "", selected == null));
-			}
+
 			return items;
 		}
+
 		// ================================
-		// 共用方法：狀態下拉選單
+		// 共用方法：分類下拉選單
 		// ================================
 		private IEnumerable<SelectListItem> GetPageTypeSelectList(int? selected = null, bool includeAll = false)
 		{
@@ -92,53 +84,43 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					Text = pt.TypeName,
 					Value = pt.PageTypeId.ToString(),
 					Selected = selected.HasValue && pt.PageTypeId == selected.Value
-				})
-				.ToList();
+				}).ToList();
 
-			// ⭐ 如果要包含「全部分類」
 			if (includeAll)
-			{
 				items.Insert(0, new SelectListItem("全部分類", "", !selected.HasValue));
-			}
 
 			return items;
 		}
 
 		// ================================
-		// 共用方法：讀 QueryString 列表狀態（含分類 pageTypeId）
+		// 共用方法：保留 QueryString 狀態
 		// ================================
 		private (int? page, int pageSize, string? keyword, string? status, int? pageTypeId)
 			GetListState(int defaultPageSize = 10)
 		{
 			var q = Request?.Query;
-
-			// 頁碼
 			int? page = null;
+
 			if (int.TryParse(q?["page"], out var pageParsed) && pageParsed > 0)
 				page = pageParsed;
 
-			// 每頁筆數
 			var pageSize = defaultPageSize;
 			if (int.TryParse(q?["pageSize"], out var sizeParsed) && sizeParsed > 0)
 				pageSize = sizeParsed;
 
-			// 關鍵字
 			var keyword = q?["keyword"].ToString();
-
-			// 狀態
 			var status = q?["status"].ToString();
 
-			// 分類
 			int? pageTypeId = null;
 			if (int.TryParse(q?["pageTypeId"], out var typeParsed) && typeParsed > 0)
 				pageTypeId = typeParsed;
 
 			return (page, pageSize, keyword, status, pageTypeId);
 		}
-		//index
-		// ================================
+
+		// ======================================
 		// 文章列表 (Index)
-		// ================================
+		// ======================================
 		public IActionResult Index(int? page, string keyword, string status, int pageSize = 10, int? pageTypeId = null)
 		{
 			int pageNumber = page ?? 1;
@@ -146,7 +128,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			var query = _db.CntPages.Where(p => p.Status != ((int)PageStatus.Deleted).ToString());
 
-			// 🔍 關鍵字搜尋
+			// 🔍 關鍵字
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				if (int.TryParse(keyword, out int idValue))
@@ -155,17 +137,13 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					query = query.Where(p => p.Title.Contains(keyword));
 			}
 
-			// 📌 狀態篩選
+			// 🎯 狀態
 			if (!string.IsNullOrWhiteSpace(status))
-			{
 				query = query.Where(p => p.Status == status);
-			}
 
-			// 📂 分類篩選
+			// 🗂 分類
 			if (pageTypeId.HasValue && pageTypeId.Value > 0)
-			{
 				query = query.Where(p => p.PageTypeId == pageTypeId.Value);
-			}
 
 			var pages = query
 				.OrderByDescending(p => p.CreatedDate)
@@ -182,86 +160,37 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 								.FirstOrDefault() ?? "未知類別"
 				});
 
-			// 下拉選單資料
-			ViewBag.StatusList = new SelectList(
-				GetStatusSelectList(null, includeAll: true, includeDeleted: false),
-				"Value", "Text", status);
-
-			ViewBag.PageTypeList = new SelectList(
-				GetPageTypeSelectList(pageTypeId, includeAll: true),
-				"Value", "Text", pageTypeId);
-
+			// ViewBag for 篩選 UI
+			ViewBag.StatusList = new SelectList(GetStatusSelectList(null, includeAll: true), "Value", "Text", status);
+			ViewBag.PageTypeList = new SelectList(GetPageTypeSelectList(pageTypeId, includeAll: true), "Value", "Text", pageTypeId);
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100 }, pageSize);
-
-			// 顯示用：目前篩選條件
-			if (!string.IsNullOrEmpty(status) && int.TryParse(status, out int statusInt))
-			{
-				var statusEnum = (PageStatus)statusInt;
-				ViewBag.StatusName = statusEnum switch
-				{
-					PageStatus.Draft => "草稿",
-					PageStatus.Published => "已發佈",
-					PageStatus.Archived => "封存",
-					PageStatus.Deleted => "刪除",
-					_ => "未知"
-				};
-			}
-			else
-			{
-				ViewBag.StatusName = null;
-			}
-
-			if (pageTypeId.HasValue && pageTypeId.Value > 0)
-			{
-				ViewBag.PageTypeName = _db.CntPageTypes
-					.Where(pt => pt.PageTypeId == pageTypeId.Value)
-					.Select(pt => pt.TypeName)
-					.FirstOrDefault();
-			}
-			else
-			{
-				ViewBag.PageTypeName = null;
-			}
-
-			// ================================
-			// 給前端保留條件
-			// ================================
-			ViewBag.Keyword = keyword;
-			ViewBag.Status = status;
-			ViewBag.PageTypeId = pageTypeId;
 
 			return View(pages.ToPagedList(pageNumber, pageSize));
 		}
-
-		// ================================
-		// 新增 (Create)
-		// ================================
+		// ======================================
+		// 新增 (Create) GET
+		// ======================================
 		public IActionResult Create()
 		{
 			var vm = new PageEditVM
 			{
 				Status = PageStatus.Draft,
 				StatusList = GetStatusSelectList(PageStatus.Draft),
-
-				// ⭐ 提供所有可選標籤（剛新增所以沒有已選）
 				TagOptions = new MultiSelectList(
 					_db.CntTags.Where(t => t.IsActive).ToList(),
 					"TagId", "TagName"
 				),
 				Blocks = new List<CntPageBlock>(),
-
-				// ✅ 新增 → 預設不設定排程
 				HasSchedule = false
 			};
 
-			// ✅ 共用方法
 			PreparePageEditVM(vm);
-
 			return View(vm);
 		}
-		// ================================
-		// 新增 (Create) - POST (使用 Transaction)
-		// ================================
+
+		// ======================================
+		// 新增 (Create) POST
+		// ======================================
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Create(PageEditVM model, int? page, int pageSize = 10)
@@ -299,10 +228,13 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					RevisedDate = null
 				};
 
+				// ✅ 發佈日期處理
+				HandlePublishedDate(pageEntity, model);
+
 				_db.CntPages.Add(pageEntity);
 				_db.SaveChanges();
 
-				// 處理排程
+				// 處理排程 (Schedule)
 				if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
 				{
 					var scheduleService = new ScheduleService(_db);
@@ -358,9 +290,9 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			}
 		}
 
-		// ================================
-		// 編輯 (Edit)
-		// ================================
+		// ======================================
+		// 編輯 (Edit) GET
+		// ======================================
 		public IActionResult Edit(int id)
 		{
 			var page = _db.CntPages
@@ -369,7 +301,6 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			if (page == null) return NotFound();
 
-			// 查找該 Page 已有的 TagId
 			var selectedTagIds = _db.CntPageTags
 				.Where(pt => pt.PageId == id)
 				.Select(pt => pt.TagId)
@@ -391,7 +322,6 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				PageTypeId = page.PageTypeId
 			};
 
-			// ⭐ 撈取該 Page 的排程（只帶最新一筆，或全部都可）
 			var existingSchedule = _db.CntSchedules
 				.Where(s => s.PageId == id)
 				.OrderByDescending(s => s.ScheduledDate)
@@ -410,17 +340,13 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				vm.HasSchedule = false;
 			}
 
-			// ✅ 共用方法
 			PreparePageEditVM(vm);
 			return View(vm);
 		}
 
-		// ================================
-		// 編輯 (Edit) - POST
-		// ================================
-		// ================================
-		// 編輯 (Edit) - POST (使用 Transaction)
-		// ================================
+		// ======================================
+		// 編輯 (Edit) POST
+		// ======================================
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Edit(PageEditVM model, int? page, int pageSize = 10)
@@ -456,14 +382,15 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				pageEntity.PageTypeId = model.PageTypeId == HomePageTypeId ? HomePageTypeId : model.PageTypeId;
 				pageEntity.RevisedDate = DateTime.Now;
 
+				// ✅ 處理 PublishedDate
+				HandlePublishedDate(pageEntity, model);
+
 				// 更新排程
 				if (model.HasSchedule && model.ActionType.HasValue && model.ScheduledDate.HasValue)
 				{
 					var scheduleService = new ScheduleService(_db);
 					if (!scheduleService.TryUpsert(model, out var error))
-					{
 						throw new InvalidOperationException(error);
-					}
 				}
 				else
 				{
@@ -511,9 +438,9 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			}
 		}
 
-		// ================================
-		// 共用方法：重建下拉 & 標籤 & Blocks
-		// ================================
+		// ======================================
+		// 重建下拉選單 & 區塊
+		// ======================================
 		private void PreparePageEditVM(PageEditVM model)
 		{
 			model.StatusList = GetStatusSelectList(model.Status);
@@ -527,10 +454,14 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				.Where(b => b.PageId == model.PageId)
 				.OrderBy(b => b.OrderSeq).ToList();
 
-			// ✅ PageType 下拉
-			ViewBag.PageTypeList = GetPageTypeSelectList(model.PageTypeId);
+			ViewBag.PageTypeList = new SelectList(
+										GetPageTypeSelectList(model.PageTypeId),
+										"Value",
+										"Text",
+										model.PageTypeId
+									);
 
-			// ✅ ActionType 下拉（中文顯示）
+
 			ViewBag.ActionTypeList = new SelectList(
 				Enum.GetValues(typeof(ActionType))
 					.Cast<ActionType>()
@@ -539,24 +470,22 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			);
 		}
 
-		// ================================
-		// 詳細頁面 (Details)
-		// ================================
+		// ======================================
+		// 詳細頁 Details
+		// ======================================
 		public IActionResult Details(int id, int? page, int pageSize = 10, string? keyword = null, string? status = null)
 		{
 			var pageEntity = _db.CntPages
-				.Include(p => p.CntPageBlocks) // 撈文章區塊
-				.FirstOrDefault(p => p.PageId == id && p.Status != "9"); // ⭐ 排除已刪除
+				.Include(p => p.CntPageBlocks)
+				.FirstOrDefault(p => p.PageId == id && p.Status != "9");
 
 			if (pageEntity == null) return NotFound();
 
-			// ⭐ 撈取標籤
 			var tagNames = (from pt in _db.CntPageTags
 							join t in _db.CntTags on pt.TagId equals t.TagId
 							where pt.PageId == id
 							select t.TagName).ToList();
 
-			// ⭐ 撈取排程
 			var schedules = _db.CntSchedules
 				.Where(s => s.PageId == id)
 				.OrderBy(s => s.ScheduledDate)
@@ -593,9 +522,9 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			return View(vm);
 		}
 
-		// ================================
-		// 刪除 (軟刪除 → 回收桶)
-		// ================================
+		// ======================================
+		// 軟刪除 (Delete)
+		// ======================================
 		public IActionResult Delete(int id)
 		{
 			var page = _db.CntPages
@@ -607,16 +536,14 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					p.Status,
 					p.RevisedDate,
 					p.PageTypeId,
-					PageTypeName = p.PageType.TypeName // ⚡ 如果有外鍵關聯 CNT_PageType
+					PageTypeName = p.PageType.TypeName
 				})
 				.FirstOrDefault();
 
 			if (page == null) return NotFound();
 
 			if (page.PageTypeId == HomePageTypeId)
-			{
 				return BadRequest("首頁不能刪除");
-			}
 
 			var vm = new PageEditVM
 			{
@@ -625,7 +552,7 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				Status = (PageStatus)int.Parse(page.Status),
 				RevisedDate = page.RevisedDate,
 				PageTypeId = page.PageTypeId,
-				PageTypeName = page.PageTypeName ?? "未分類" // ⚡ 加上名稱
+				PageTypeName = page.PageTypeName ?? "未分類"
 			};
 
 			return View(vm);
@@ -644,13 +571,11 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			pageEntity.Status = ((int)PageStatus.Deleted).ToString();
 			pageEntity.RevisedDate = DateTime.Now;
 
-			// ✅ 同步清空排程
 			new ScheduleService(_db).ClearAll(pageEntity.PageId);
-
 			_db.SaveChanges();
+
 			TempData["Msg"] = "文章已移到回收桶";
 
-			// ✅ 讀取查詢狀態
 			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
 
 			return RedirectToAction(nameof(Index), new
@@ -663,10 +588,9 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			});
 		}
 
-
-		// ================================
-		// 回收桶列表 (RecycleBin)
-		// ================================
+		// ======================================
+		// 回收桶 (RecycleBin)
+		// ======================================
 		public IActionResult RecycleBin(
 			int? page,
 			string? keyword,
@@ -677,11 +601,9 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			int pageNumber = Math.Max(page ?? 1, 1);
 			pageSize = pageSize > 0 ? pageSize : 10;
 
-			// ✅ 固定只顯示已刪除文章
 			var query = _db.CntPages
 				.Where(p => p.Status == ((int)PageStatus.Deleted).ToString());
 
-			// 🔍 關鍵字搜尋
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				keyword = keyword.Trim();
@@ -691,11 +613,8 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					query = query.Where(p => p.Title.Contains(keyword));
 			}
 
-			// 🔍 分類 (PageType) 篩選
 			if (pageTypeId.HasValue && pageTypeId > 0)
-			{
 				query = query.Where(p => p.PageTypeId == pageTypeId.Value);
-			}
 
 			var deletedPages = query
 				.OrderByDescending(p => p.RevisedDate ?? p.CreatedDate)
@@ -709,15 +628,11 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 					PageTypeName = p.PageType.TypeName
 				});
 
-			// ✅ 保留條件到 ViewBag，方便 UI 回填
 			ViewBag.Keyword = keyword;
 			ViewBag.Status = status;
 			ViewBag.PageTypeId = pageTypeId;
-
-			// 頁數選單
 			ViewBag.PageSizeList = new SelectList(new[] { 5, 10, 20, 50, 100 }, pageSize);
 
-			// 分類下拉（加「全部分類」選項）
 			var pageTypeOptions = _db.CntPageTypes
 				.Select(pt => new { pt.PageTypeId, pt.TypeName })
 				.ToList();
@@ -726,19 +641,18 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			ViewBag.PageTypeList = new SelectList(pageTypeOptions, "PageTypeId", "TypeName", pageTypeId ?? 0);
 
-			// ✅ 狀態下拉：提供「全部」和「已刪除」
 			ViewBag.StatusList = new SelectList(new[]
 			{
-		new { Value = "", Text = "全部" },
-		new { Value = "deleted", Text = "已刪除" }
-	}, "Value", "Text", status);
+				new { Value = "", Text = "全部" },
+				new { Value = "deleted", Text = "已刪除" }
+			}, "Value", "Text", status);
 
 			return View(deletedPages.ToPagedList(pageNumber, pageSize));
 		}
 
-		// ================================
+		// ======================================
 		// 復原 (Restore)
-		// ================================
+		// ======================================
 		public IActionResult Restore(int id, int? page, int pageSize = 10, string? keyword = null, string? status = null)
 		{
 			var pageEntity = _db.CntPages.Find(id);
@@ -746,11 +660,11 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 
 			pageEntity.Status = ((int)PageStatus.Draft).ToString();
 			pageEntity.RevisedDate = DateTime.Now;
+			pageEntity.PublishedDate = null; // ✅ 草稿 → 清空日期
 
 			_db.SaveChanges();
 			TempData["Msg"] = "文章已復原";
 
-			// 讀取 QueryString 狀態
 			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
 
 			return RedirectToAction(nameof(RecycleBin), new
@@ -762,16 +676,17 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 			});
 		}
 
+		// ======================================
+		// 永久刪除 (Destroy)
+		// ======================================
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public IActionResult Destroy(int id, int? page, int pageSize = 10, string? keyword = null, string? status = null)
 		{
-			// 先取得目前 QueryString 狀態
 			var (qPage, qSize, qKeyword, qStatus, qPageTypeId) = GetListState();
 
 			if (!_pageDeletionService.PermanentlyDeletePage(id, out var error))
 			{
-				// ❌ 有錯誤：放進 TempData → 回列表頁顯示
 				TempData["Error"] = error;
 				return RedirectToAction(nameof(RecycleBin), new
 				{
@@ -782,7 +697,6 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 				});
 			}
 
-			// ✅ 改這裡：成功刪除後 → 回 RecycleBin，而不是 Index
 			return RedirectToAction(nameof(RecycleBin), new
 			{
 				page = page ?? qPage,
@@ -793,3 +707,4 @@ namespace tHerdBackend.CNT.Rcl.Areas.CNT.Controllers
 		}
 	}
 }
+
