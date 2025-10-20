@@ -59,6 +59,13 @@
             var deleteUrl    = '@Url.Action("DeleteAjax", "Brands", new { area = "SUP" })';
             var toggleStatusUrl = '@Url.Action("ToggleStatus", "Brands", new { area = "SUP" })';
 
+            // ======= 從 sessionStorage 拿到初始品牌名稱 =======
+            var initialBrandName = sessionStorage.getItem('selectedBrandName') || '';
+
+            // 初始化完就清掉，避免刷新又填入
+            sessionStorage.removeItem('selectedBrandName');
+
+
             // 初始化 DataTable
             var table = $('#brandTable').DataTable({
                 serverSide: true,
@@ -67,12 +74,12 @@
                     url: indexJsonUrl,
                     type: 'POST',
                     // dataSrc: 'data',
-                    dataSrc: function(json) {
+                    dataSrc: function (json) {
                         //console.log(json);      // 印出整個 JSON
                         console.log(json.data); // 印出每筆 row
                         return json.data;
                     },
-                    error: function(xhr, error, thrown) {
+                    error: function (xhr, error, thrown) {
                         console.log(xhr.responseText); // 印出後端錯誤訊息
                         alert("資料載入失敗，請檢查後端或 console");
                     }
@@ -83,24 +90,31 @@
                         title: '#',
                         className: 'text-center',
                         orderable: true,
-                        render: function(data, type, row, meta) {
+                        render: function (data, type, row, meta) {
                             return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
                         }
                     },
-                    { 
-                        data: 'brandName', 
+                    {
+                        data: 'brandName',
                         title: '品牌名稱',
                         className: 'text-center',
-                        render: function(data, type, row) {
+                        render: function (data, type, row) {
                             return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.brandId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
-                        }                
+                        }
                     },
-                    { data: 'supplierName', title: '供應商名稱', className: 'text-center' },
+                    {
+                        data: 'supplierName',
+                        title: '供應商名稱',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            return `${data} <button class="btn btn-link btn-sm supplier-btn" data-name="${row.supplierName}" title="跳轉供應商頁" data-bs-toggle="tooltip"><i class="fa-regular fa-copyright" style="color: #96b8f3;"></i></button>`;
+                        }
+                    },
                     {
                         data: 'isFeatured',
                         title: '精選品牌',
                         className: 'text-center',
-                        render: function(data, type, row) {
+                        render: function (data, type, row) {
                             return `
                                 <div class="form-check form-switch">
                                     <input class="form-check-input toggle-status" type="checkbox"
@@ -113,7 +127,7 @@
                         data: 'isActive',
                         title: '品牌啟用狀態',
                         className: 'text-center',
-                        render: function(data, type, row) {
+                        render: function (data, type, row) {
                             return `
                                 <div class="form-check form-switch">
                                     <input class="form-check-input toggle-status" type="checkbox"
@@ -127,7 +141,7 @@
                         title: '操作',
                         className: 'text-center',
                         orderable: false,
-                        render: function(data) {
+                        render: function (data) {
                             return `
                                 <button class="btn btn-sm edit-btn" data-id="${data}" title="品牌編輯" data-bs-toggle="tooltip">
                                     <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
@@ -151,9 +165,31 @@
                 language: {
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                },
+                initComplete: function (settings, json) {
+                    // 從 sessionStorage 取初始品牌
+                    // ===== 自動填入搜尋品牌名稱 =====
+                    var api = this.api(); // DataTable 內建方法取得當前表格實例
+                    if (initialBrandName) {
+                        var searchInput = $('#dt-search-0');
+                        searchInput.val(initialBrandName).trigger('input');
+                        api.search(initialBrandName).draw();
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: '已篩選',
+                            text: `目前顯示供應商 "${initialBrandName}" 的品牌`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+
+                    // 初始化 tooltip
+                    $('[data-bs-toggle="tooltip"]').each(function () {
+                        new bootstrap.Tooltip(this);
+                    });
                 }
             });
-
             // tooltip 初始化與 redraw
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
@@ -412,6 +448,26 @@
                     $('#SeoId').val(randomBrand.seoId);
                 });
             });
+
+            // ======= 點品牌欄位的供應商按鈕 =======
+            $('#brandTable').on('click', '.supplier-btn', function () {
+                var supplierName = $(this).data('name');
+                console.log('點擊供應商按鈕，取得 supplierName:', supplierName);
+
+                if (!supplierName) {
+                    console.error('❌ supplierName 為空，無法跳轉');
+                    return;
+                }
+
+                // 存入 sessionStorage
+                sessionStorage.setItem('selectedSupplierName', supplierName);
+                console.log('✅ 存入 sessionStorage: selectedSupplierName =', sessionStorage.getItem('selectedSupplierName'));
+
+                // 跳轉到供應商頁面
+                window.location.href = '/SUP/Suppliers/Index';
+            });
+
+
 
         });
     </script>

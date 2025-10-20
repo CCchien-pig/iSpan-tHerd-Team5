@@ -180,21 +180,40 @@ input[type='radio']:focus {
             color: #d644c5 !important;
         }
 
+#supplierTable .brand-btn,
 #supplierTable .delete-btn,
 #brandTable .delete-btn {
     background-color: #f8f9fa;
     border: 1px solid #adb5bd;
-    color: #6688b7;
+    color: #084496;
 }
 
+    #supplierTable .brand-btn:hover,
     #supplierTable .delete-btn:hover,
     #brandTable .delete-btn:hover {
         background-color: #cee1f4;
         border: 1px solid #007bff;
     }
+
+    #supplierTable .delete-btn svg {
+        color: #084496;
+    }
+
+        #supplierTable .brand-btn:hover svg,
+        #supplierTable .delete-btn:hover svg,
         #brandTable .delete-btn:hover svg {
             color: #1c0e88 !important;
         }
+
+#brandListContainer .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+    #brandListContainer .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+    }
+
 
 /* ====== 控制元件: 顯示筆數 dropdown ====== */
 .dataTables_length select {

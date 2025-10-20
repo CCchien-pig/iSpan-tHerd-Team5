@@ -559,7 +559,18 @@
                         }
                     },
                     { data: 'batchNumber', title: '批號', className: 'text-center'},
-                    { data: 'brandName', title: '品牌', className: 'text-center'},
+                    {
+                        data: 'brandName',
+                        title: '品牌', 
+                        className: 'text-center',
+                        render: function(data) {
+                            return `
+                                ${data} <button class="btn btn-sm brand-btn" data-id="${data}" title="前往品牌頁" data-bs-toggle="tooltip">
+                                    <i class="fa-regular fa-copyright" style="color: #96b8f3;"></i>
+                                </button>
+                            `;
+                        }
+                    },
                     { data: 'productName', title: '商品名稱', className: 'text-center text-wrap', width: "200px"},
                     {
                         data: 'expireDate',
@@ -1280,6 +1291,25 @@
         $('#exportHistoryCsv').click(() => exportHistoryFiltered('csv'));
         $('#exportHistoryExcel').click(() => exportHistoryFiltered('excel'));
         $('#exportHistoryPdf').click(() => exportHistoryFiltered('pdf'));
+
+
+        // ======= 點品牌欄位按鈕跳轉品牌頁 =======
+        $('#stockBatchTable').on('click', '.brand-btn', function () {
+            var brandName = $(this).data('id'); // 這裡存放 brandName
+            console.log('點擊品牌按鈕，brandName:', brandName);
+
+            if (!brandName) {
+                console.error('❌ brandName 為空，無法跳轉');
+                return;
+            }
+
+            // 存入 sessionStorage
+            sessionStorage.setItem('selectedBrandName', brandName);
+            console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
+
+            // 跳轉到品牌頁
+            window.location.href = '/SUP/Brands/Index';
+        });
 
     </script>
 }

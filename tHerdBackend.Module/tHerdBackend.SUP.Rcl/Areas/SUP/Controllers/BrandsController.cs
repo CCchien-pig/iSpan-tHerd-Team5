@@ -49,24 +49,24 @@ public class BrandsController : Controller
 		var sortColumnIndex = Convert.ToInt32(Request.Form["order[0][column]"].FirstOrDefault() ?? "0");
 		var sortDirection = Request.Form["order[0][dir]"].FirstOrDefault() ?? "asc";
 
-		var query = _context.SupBrands
-			.Join(_context.SupSuppliers, b => b.SupplierId, s => s.SupplierId, (b, s) => new { b, s })
-			.Select(x => new
-			{
-				x.b.BrandId,
-				x.b.BrandName,
-				x.b.BrandCode,
-				x.b.DiscountRate,
-				x.b.IsDiscountActive,
-				x.b.IsFeatured,
-				x.b.IsActive,
-				x.b.LikeCount,
-				x.b.RevisedDate,
-				x.b.CreatedDate,
-				SupplierName = x.s != null ? x.s.SupplierName : "",
-				// Banner、折扣狀態等如需複雜顯示可在這裡加欄位運算
-			})
-			.AsQueryable();
+		var query = from b in _context.SupBrands
+					join s in _context.SupSuppliers on b.SupplierId equals s.SupplierId into bs
+					from s in bs.DefaultIfEmpty() // 左外連接，避免無供應商導致 null
+					select new
+					{
+						b.BrandId,
+						b.BrandName,
+						b.BrandCode,
+						b.DiscountRate,
+						b.IsDiscountActive,
+						b.IsFeatured,
+						b.IsActive,
+						b.LikeCount,
+						b.RevisedDate,
+						b.CreatedDate,
+						SupplierId = s != null ? s.SupplierId : 0,
+						SupplierName = s != null ? s.SupplierName : ""
+					};
 
 		// 搜尋（品牌、供應商）
 		if (!string.IsNullOrEmpty(searchValue))
@@ -101,6 +101,7 @@ public class BrandsController : Controller
 			{
 				brandId = x.BrandId,
 				brandName = x.BrandName,
+				supplierId = x.SupplierId,
 				supplierName = x.SupplierName,
 				discountStatus = x.IsDiscountActive
 					? (x.DiscountRate.HasValue ? $"折扣{x.DiscountRate}%中" : "折扣中")
@@ -419,4 +420,26 @@ public class BrandsController : Controller
 	{
 		return _context.SupBrands.Any(e => e.BrandId == id);
 	}
+
+	// /SUP/Brands/GetBrandNameBySupplier?supplierId=1001
+	[HttpGet]
+	public async Task<IActionResult> GetBrandNameBySupplier(int supplierId)
+	{
+		// 全部回傳，即使未啟用
+		var brandNames = await _context.SupBrands
+			.Where(b => b.SupplierId == supplierId)
+			.Select(b => new
+			{
+				b.BrandId,
+				b.BrandName,
+				b.IsActive // 回傳啟用狀態
+			})
+			.ToListAsync();
+
+		//if (brandNames == null || !brandNames.Any())
+		//	return NotFound("找不到對應的品牌");
+
+		return Ok(brandNames);
+	}
+
 }
