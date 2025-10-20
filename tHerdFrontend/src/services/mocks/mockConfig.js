@@ -19,8 +19,8 @@ export const mockConfig = {
 
   // ==================== 商品相關 API ====================
   product: {
-    getProductList: true, // 查詢商品列表
-    getProductDetail: true, // 查詢商品詳細
+    getProductList: false, // 查詢商品列表
+    getProductDetail: false, // 查詢商品詳細
     getAttributes: true, // 查詢屬性清單
     getIngredients: true, // 查詢成分清單
     getQuestions: true, // 查詢問答列表
@@ -42,7 +42,12 @@ export const mockConfig = {
  * @param {string} api - API 名稱（如：'getProductList'）
  * @returns {boolean} 是否啟用 Mock
  */
-export function isMockEnabled(module, api) {
+export function isMockEnabled(module, api, forceMock = false) {
+  // 單支強制 mock（即使全域關閉）
+  if (forceMock === true) {
+    return true
+  }
+
   // 如果全域未啟用，直接返回 false
   if (!mockConfig.enabled) {
     return false

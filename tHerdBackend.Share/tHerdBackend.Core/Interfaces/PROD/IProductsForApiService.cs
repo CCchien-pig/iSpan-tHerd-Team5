@@ -3,8 +3,9 @@ using tHerdBackend.Core.DTOs.PROD;
 
 namespace tHerdBackend.Core.Interfaces.PROD
 {
-    public interface IProductListForApiService
+    public interface IProductsForApiService
 	{
 		Task<PagedResult<ProdProductDto>> GetFrontProductListAsync(ProductFilterQueryDto query, CancellationToken ct = default);
-	}
+        Task<ProdProductDetailDto?> GetFrontProductListAsync(int productId, CancellationToken ct = default);
+    }
 }
