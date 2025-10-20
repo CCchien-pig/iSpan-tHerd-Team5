@@ -1,105 +1,132 @@
 <template>
-  <div class="container py-4">
+  <div class="p-4 space-y-4">
+    <!-- 🔍 搜尋與條件 -->
+    <el-card>
+      <div class="flex flex-wrap items-end gap-3">
+        <el-input
+          v-model="q.keyword"
+          placeholder="關鍵字（例如：小麥、牛肉、豆腐）"
+          clearable
+          class="w-80"
+        />
 
-    <!-- 🏷 頁面標題 -->
-    <h2 class="mb-4 main-color-green-text">營養資料庫</h2>
+        <el-input
+          v-model.number="q.categoryId"
+          placeholder="分類ID（可留空）"
+          clearable
+          class="w-40"
+        />
 
-    <!-- 🔍 搜尋區 -->
-    <div class="mb-4">
-      <input
-        type="text"
-        class="form-control"
-        placeholder="搜尋食材名稱（例如：雞胸肉、鮭魚、蘋果）"
-        v-model="searchQuery"
-      />
-    </div>
+        <el-select v-model="q.sort" class="w-56" placeholder="排序方式">
+          <el-option label="名稱 A → Z" value="name" />
+          <el-option label="最新資料" value="newest" />
+          <el-option label="依分類" value="category" />
+          <el-option label="熱門（保留）" value="popular" />
+          <!-- Example: Special nutrient sorting -->
+          <el-option label="依營養成分 (α-維生素E)" value="nutrient:1105" />
+        </el-select>
 
-    <!-- 🔽 滾動定位起點（新增） -->
-    <div id="nutrition-list-start"></div>
+        <el-button type="primary" :loading="loading" @click="fetchData">
+          搜尋
+        </el-button>
 
-    <!-- 🧾 食材清單 -->
-    <div v-for="food in filteredFoods" :key="food.id" class="row py-3 border-bottom align-items-center">
-      <!-- 食材名稱與描述 -->
-      <div class="col-md-8">
-        <h5 class="fw-bold">{{ food.name }}</h5>
-        <p class="text-muted small">{{ food.description }}</p>
+        <div class="ml-auto text-sm text-gray-500">
+          共 {{ total }} 筆
+        </div>
       </div>
+    </el-card>
 
-      <!-- 操作按鈕 -->
-      <div class="col-md-4 text-md-end text-start">
-        <router-link
-          :to="`/cnt/nutrition/${food.slug}-${food.id}`"
-          class="btn btn-outline-primary btn-sm me-2"
-        >
-          查看營養 ➜
-        </router-link>
-        <button class="btn btn-outline-success btn-sm" @click="addToCompare(food)">
-          加入比較
-        </button>
+    <!-- 📋 資料表格 -->
+    <el-card>
+      <el-table
+        :data="items"
+        border
+        stripe
+        height="60vh"
+        @row-click="toDetail"
+      >
+        <el-table-column prop="sampleId" label="ID" width="90" />
+        <el-table-column prop="sampleName" label="食材名稱" min-width="200" />
+        <el-table-column prop="categoryName" label="分類" width="180" />
+        <el-table-column prop="aliasName" label="別名" min-width="200" />
+
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              size="small"
+              type="primary"
+              @click.stop="toDetail(row)"
+            >
+              查看
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 📄 分頁 -->
+      <div class="flex justify-end mt-4">
+        <el-pagination
+          background
+          layout="prev, pager, next, jumper, ->, sizes, total"
+          :total="total"
+          :current-page="q.page"
+          :page-sizes="[10, 12, 20, 30, 50]"
+          :page-size="q.pageSize"
+          @current-change="(p) => { q.page = p; fetchData() }"
+          @size-change="(s) => { q.pageSize = s; q.page = 1; fetchData() }"
+        />
       </div>
-    </div>
-
-    <!-- ⛔ 無資料 -->
-    <div v-if="filteredFoods.length === 0" class="text-center text-muted py-5">
-      找不到相關食材
-    </div>
+    </el-card>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'NutritionList',
-  data() {
-    return {
-      searchQuery: '',
-      // 🧪 假資料
-      foods: [
-        { id: 1, name: '鮭魚', slug: 'salmon', description: '富含 Omega-3 的高營養食材' },
-        { id: 2, name: '蘋果', slug: 'apple', description: '含膳食纖維與抗氧化物的常見水果' },
-        { id: 3, name: '西蘭花', slug: 'broccoli', description: '維生素C與葉酸的優質來源' }
-      ],
-      compareList: []
-    }
-  },
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getNutritionList } from './api/cntService'
 
-  mounted() {
-    // ✅ 從首頁跳轉時自動定位到清單區
-    if (this.$route.query.scroll === 'nutrition') {
-      setTimeout(() => {
-        const target = document.getElementById('nutrition-list-start')
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-      }, 300)
-    }
-  },
+const router = useRouter()
 
-  computed: {
-    filteredFoods() {
-      if (!this.searchQuery) {
-        return this.foods
-      }
-      return this.foods.filter(food =>
-        food.name.includes(this.searchQuery) ||
-        food.description.includes(this.searchQuery)
-      )
-    }
-  },
+// 🔍 查詢參數
+const q = ref({
+  keyword: '',
+  categoryId: null,
+  sort: 'name',
+  page: 1,
+  pageSize: 12
+})
 
-  methods: {
-    addToCompare(food) {
-      if (!this.compareList.some(f => f.id === food.id)) {
-        this.compareList.push(food)
-        alert(`已加入比較：${food.name}`)
-      } else {
-        alert(`此食材已在比較清單中`)
-      }
-      console.log('目前比較清單：', this.compareList)
-    }
+// 📦 資料與狀態
+const items = ref([])
+const total = ref(0)
+const loading = ref(false)
+
+// 📡 拉資料
+async function fetchData() {
+  loading.value = true
+  try {
+    const { items: list, total: tt } = await getNutritionList(q.value)
+    items.value = list ?? []
+    total.value = tt ?? 0
+  } finally {
+    loading.value = false
   }
 }
+
+// 🔁 跳轉詳細頁
+function toDetail(row) {
+  const id = row?.sampleId ?? row
+  router.push({ name: 'cnt-nutrition-detail', params: { id } })
+}
+
+// 🚀 初次載入
+onMounted(fetchData)
 </script>
 
 <style scoped>
-/* 可以補充細節樣式 */
+.p-4 { padding: 1rem; }
+.w-80 { width: 20rem; }
+.w-56 { width: 14rem; }
+.w-40 { width: 10rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
 </style>
