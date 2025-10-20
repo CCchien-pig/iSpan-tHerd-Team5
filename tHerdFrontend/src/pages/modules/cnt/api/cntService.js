@@ -75,3 +75,9 @@ export async function getNutritionDetail(id) {
     const res = await axios.get(`${API_BASE}/nutrition/${id}`)
     return res.data  // { sample: {...}, nutrients: [...] }
 }
+
+/** 取得食物分類清單（for 下拉） */
+export async function getFoodCategories() {
+    const res = await axios.get(`${API_BASE}/nutrition/foodcategories`)
+    return res.data // [{ id, name }]
+}

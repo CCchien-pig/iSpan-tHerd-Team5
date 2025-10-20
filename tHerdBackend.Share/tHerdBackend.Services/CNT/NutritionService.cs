@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using tHerdBackend.Core.Dtos;
 using tHerdBackend.Core.DTOs.Nutrition;
 using tHerdBackend.Core.Interfaces.Nutrition;
 
@@ -110,5 +111,10 @@ namespace tHerdBackend.Services.CNT
 			if (decimal.TryParse(value.ToString(), out var d)) return d;
 			return 0;
 		}
+
+		// 既有：GetSampleListAsync / GetSampleDetailAsync ...
+
+		public Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
+			=> _repo.GetFoodCategoriesAsync(ct);
 	}
 }

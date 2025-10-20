@@ -1,6 +1,7 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using tHerdBackend.Core.Dtos;
 using tHerdBackend.Core.DTOs.Nutrition;
 
 namespace tHerdBackend.Core.Interfaces.Nutrition
@@ -24,5 +25,8 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 		Task<NutritionDetailDto?> GetSampleDetailAsync(
 			int sampleId,
 			CancellationToken ct = default);
+
+		// 既有：GetSampleListAsync / GetSampleDetailAsync ...
+		Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default);
 	}
 }

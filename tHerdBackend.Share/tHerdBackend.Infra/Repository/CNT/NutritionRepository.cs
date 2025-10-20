@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -6,8 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Dapper;
-using Microsoft.EntityFrameworkCore;
+using tHerdBackend.Core.Dtos;
 using tHerdBackend.Core.Interfaces.Nutrition; // INutritionRepository
 using tHerdBackend.Infra.DBSetting;           // ISqlConnectionFactory
 using tHerdBackend.Infra.Helpers;             // DbConnectionHelper
@@ -209,6 +210,27 @@ ORDER BY
 			{
 				var rows = (await conn.QueryAsync(sql, new { SampleId = sampleId }, tx)).ToList();
 				return rows;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		public async Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
+		{
+			const string sql = @"
+SELECT
+    c.CategoryId AS [Id],
+    c.CategoryName AS [Name]
+FROM dbo.CNT_FoodCategory c
+ORDER BY c.CategoryId ASC;";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = await conn.QueryAsync<FoodCategoryDto>(sql, transaction: tx);
+				return rows.ToList();
 			}
 			finally
 			{

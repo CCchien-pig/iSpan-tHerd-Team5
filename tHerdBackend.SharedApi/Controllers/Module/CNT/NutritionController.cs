@@ -79,5 +79,15 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 				nutrients = dto.Nutrients
 			});
 		}
+
+		/// <summary>
+		/// 取得食物分類清單（for 前端下拉）
+		/// </summary>
+		[HttpGet("foodcategories")]
+		public async Task<IActionResult> GetFoodCategories(CancellationToken ct)
+		{
+			var data = await _service.GetFoodCategoriesAsync(ct);
+			return Ok(data); // [{ id, name }, ...]
+		}
 	}
 }
