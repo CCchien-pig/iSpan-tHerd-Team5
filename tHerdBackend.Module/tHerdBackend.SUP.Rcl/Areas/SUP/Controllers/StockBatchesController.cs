@@ -494,7 +494,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					BrandId = b.BrandId,
 					BrandName = b.BrandName,
-					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
+
+					IsSupplierActive = b.Supplier != null ? b.Supplier.IsActive : (bool?)null  // 取得供應商狀態
 				})
 				.ToListAsync();
 			return Ok(brands);

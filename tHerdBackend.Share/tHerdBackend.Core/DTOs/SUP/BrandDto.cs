@@ -42,7 +42,8 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// <summary>
 		/// 折扣率 (0 ~ 100%)
 		/// </summary>
-		[Display(Name = "折扣率")]
+		[Display(Name = "品牌折扣率")]
+		[Range(0.01, 0.99, ErrorMessage = "品牌折扣率必須在0.01~0.99之間")]
 		public decimal? DiscountRate { get; set; }
 
 		/// <summary>
@@ -50,6 +51,8 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// </summary>
 		[Display(Name = "折扣狀態")]
 		public bool IsDiscountActive { get; set; }
+
+		public string DiscountStatus { get; set; } // 新增給前端用
 
 		/// <summary>
 		/// 折扣開始日期
@@ -78,7 +81,7 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// <summary>
 		/// 品牌是否啟用
 		/// </summary>
-		[Display(Name = "啟用狀態")]
+		[Display(Name = "品牌啟用狀態")]
 		public bool IsActive { get; set; }
 
 		/// <summary>

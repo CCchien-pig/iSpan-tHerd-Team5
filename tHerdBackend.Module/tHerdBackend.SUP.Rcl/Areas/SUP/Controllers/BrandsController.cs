@@ -58,6 +58,8 @@ public class BrandsController : Controller
 						b.BrandName,
 						b.BrandCode,
 						b.DiscountRate,
+						b.StartDate,          // 加上折扣開始日期
+						b.EndDate,            // 加上折扣結束日期
 						b.IsDiscountActive,
 						b.IsFeatured,
 						b.IsActive,
@@ -89,27 +91,29 @@ public class BrandsController : Controller
 			1 => sortDirection == "asc" ? query.OrderBy(x => x.BrandName) : query.OrderByDescending(x => x.BrandName),
 			2 => sortDirection == "asc" ? query.OrderBy(x => x.SupplierName) : query.OrderByDescending(x => x.SupplierName),
 			3 => sortDirection == "asc" ? query.OrderBy(x => x.IsFeatured) : query.OrderByDescending(x => x.IsFeatured),
-			4 => sortDirection == "asc" ? query.OrderBy(x => x.IsActive) : query.OrderByDescending(x => x.IsActive),
+			// 4 折扣狀態
+			5 => sortDirection == "asc" ? query.OrderBy(x => x.IsActive) : query.OrderByDescending(x => x.IsActive),
 			_ => query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 		};
 
-		// 分頁/欄位
-		var data = await query
+		// 分頁 + 折扣狀態計算
+		var dataRaw = await query
 			.Skip(start)
 			.Take(length)
-			.Select(x => new
-			{
-				brandId = x.BrandId,
-				brandName = x.BrandName,
-				supplierId = x.SupplierId,
-				supplierName = x.SupplierName,
-				discountStatus = x.IsDiscountActive
-					? (x.DiscountRate.HasValue ? $"折扣{x.DiscountRate}%中" : "折扣中")
-					: "無折扣",
-				isFeatured = x.IsFeatured,
-				isActive = x.IsActive,
-				sortDate = x.RevisedDate ?? x.CreatedDate
-			}).ToListAsync();
+			.ToListAsync();
+
+		// 計算折扣狀態
+		var data = dataRaw.Select(x => new
+		{
+			brandId = x.BrandId,
+			brandName = x.BrandName,
+			supplierId = x.SupplierId,
+			supplierName = x.SupplierName,
+			discountStatus = GetBrandDiscountStatus(x.StartDate, x.EndDate, x.DiscountRate, x.IsActive), // 關鍵！全部後端算好
+			isFeatured = x.IsFeatured,
+			isActive = x.IsActive,
+			sortDate = x.RevisedDate ?? x.CreatedDate
+		}).ToList();
 
 		return Ok(new
 		{
@@ -440,6 +444,150 @@ public class BrandsController : Controller
 		//	return NotFound("找不到對應的品牌");
 
 		return Ok(brandNames);
+	}
+
+
+	// GET: SUP/Brand/CreateDiscount
+	[HttpGet]
+	public async Task<IActionResult> CreateDiscount()
+	{
+		var brands = await _context.SupBrands
+			.Include(b => b.Supplier)
+			.Select(b => new {
+				b.BrandId,
+				b.BrandName,
+				SupplierActive = b.Supplier != null ? (bool?)b.Supplier.IsActive : null
+			}).ToListAsync();
+
+		var items = brands.Select(b =>
+			new SelectListItem
+			{
+				Value = b.BrandId.ToString(),
+				Text = (b.SupplierActive == true)
+					? b.BrandName
+					: $"{b.BrandName} (其供應商未啟用)",
+				//Disabled = b.SupplierActive != true // 未啟用則禁用
+				Disabled = false // 全部可選
+			}
+		).ToList();
+
+		ViewBag.BrandSelect = items;
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", new BrandDto());
+	}
+
+	// POST: SUP/Brand/CreateDiscount
+	[HttpPost]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> CreateDiscount(BrandDto dto)
+	{
+		if (!ModelState.IsValid)
+		{
+			// 若驗證失敗，直接回傳原 partial view 方便前端重載
+			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
+		}
+
+		try
+		{
+			// 如有需要異動人員資訊
+			var userId = _me.Id;
+			var user = await _userMgr.Users
+				.AsNoTracking()
+				.FirstOrDefaultAsync(u => u.Id == userId);
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+
+			int currentUserId = user.UserNumberId;
+
+			// 找到品牌
+			var brand = await _context.SupBrands.FindAsync(dto.BrandId);
+			if (brand == null)
+				return Json(new { success = false, message = "找不到品牌" });
+
+			// 驗證日期
+			var today = DateOnly.FromDateTime(DateTime.Today);
+			if (dto.StartDate < today)
+				ModelState.AddModelError("StartDate", "折扣開始日不可早於今天");
+			if (!dto.EndDate.HasValue || !dto.StartDate.HasValue || dto.EndDate < dto.StartDate)
+				ModelState.AddModelError("EndDate", "折扣結束日不可早於開始日期");
+
+			// 驗證折扣率
+			if (!dto.DiscountRate.HasValue || dto.DiscountRate < 0.01m || dto.DiscountRate > 0.99m)
+				ModelState.AddModelError("DiscountRate", "折扣率必須介於0.01-0.99之間");
+
+			if (!ModelState.IsValid)
+			{
+				var errorList = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+				Debug.WriteLine("Discount Create *** ModelState Errors: " + string.Join(" | ", errorList));
+
+				return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
+			}
+
+			// 更新品牌折扣資訊
+			brand.DiscountRate = dto.DiscountRate;
+			brand.StartDate = dto.StartDate;
+			brand.EndDate = dto.EndDate;
+			brand.Reviser = currentUserId;
+			brand.RevisedDate = DateTime.Now;
+
+			await _context.SaveChangesAsync();
+
+			// 回傳成功狀態
+			return Json(new { success = true });
+		}
+		catch (DbUpdateException dbEx)
+		{
+			return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+		}
+		catch (Exception ex)
+		{
+			return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+		}
+	}
+
+	// 「計算折扣狀態」API
+	// GET: SUP/Brand/GetBrandDiscountStatus
+	[HttpGet]
+	public string GetBrandDiscountStatus(DateOnly? startDate, DateOnly? endDate, decimal? discountRate, bool isActive)
+	{
+		var today = DateOnly.FromDateTime(DateTime.Today);
+
+		if (!startDate.HasValue || !endDate.HasValue || !discountRate.HasValue || discountRate.Value <= 0)
+			return "尚未設定折扣";
+
+		if (!isActive) return "未進行（品牌停用）";
+		if (today < startDate.Value) return "尚未開始";
+		if (today > endDate.Value) return "折扣已結束";
+		return $"進行中（{discountRate.Value:0.#}%，至 {endDate.Value:yyyy-MM-dd}）";
+	}
+
+	// 批次「刷新折扣狀態」API
+	// POST: SUP/Brand/RefreshAllBrandDiscountStatus
+	[HttpPost]
+	public async Task<IActionResult> RefreshAllBrandDiscountStatus()
+	{
+		var today = DateOnly.FromDateTime(DateTime.Today);
+		var brands = await _context.SupBrands.ToListAsync();
+
+		foreach (var b in brands)
+		{
+			if (!b.StartDate.HasValue || !b.EndDate.HasValue || !b.DiscountRate.HasValue || b.DiscountRate.Value <= 0)
+			{
+				b.IsDiscountActive = false; // 沒有折扣資訊
+				continue;
+			}
+
+			// 只有日期在區間，且品牌啟用才算有效折扣
+			if (b.IsActive && today >= b.StartDate.Value && today <= b.EndDate.Value)
+			{
+				b.IsDiscountActive = true;
+			}
+			else
+			{
+				b.IsDiscountActive = false;
+			}
+		}
+		await _context.SaveChangesAsync();
+		return Ok(new { success = true });
 	}
 
 }

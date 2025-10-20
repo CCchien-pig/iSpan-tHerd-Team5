@@ -7,14 +7,21 @@
     </style>
 }
 
+@* 按鈕 *@
 <button id="create" class="btn btn-outline-success mb-2">新增品牌</button>
+<button id="createBrandDiscount" class="btn btn-outline-warning mb-2">新增全館品牌折扣</button>
+<button id="refreshDiscountStatusBtn" class="btn btn-outline-primary btn-sm" title="批次刷新全部品牌折扣狀態">
+    <i class="fa-solid fa-arrows-rotate"></i>
+</button>
 
-@* 渲染 DataTable *@
+
+@* 渲染 DataTable：#brandTable *@
 <div class="card brand-card">
     <h5>品牌資料</h5>
     <table id="brandTable" class="display table" style="width:100%">
         <thead>
             <tr>
+                <th></th>
                 <th></th>
                 <th></th>
                 <th></th>
@@ -43,6 +50,21 @@
     </div>
 </div>
 
+<!-- 新增全館折扣 Modal -->
+<div id="brandDiscountModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="brandDiscountModalTitle" class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandDiscountModalContent" class="modal-body p-4">
+                <!-- AJAX 載入 Partial View -->
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @section Scripts {
     @* <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -58,6 +80,7 @@
             var detailsUrl   = '@Url.Action("Details", "Brands", new { area = "SUP" })';
             var deleteUrl    = '@Url.Action("DeleteAjax", "Brands", new { area = "SUP" })';
             var toggleStatusUrl = '@Url.Action("ToggleStatus", "Brands", new { area = "SUP" })';
+            var createDiscountUrl = '@Url.Action("CreateDiscount", "Brands", new { area = "SUP" })';
 
             // ======= 從 sessionStorage 拿到初始品牌名稱 =======
             var initialBrandName = sessionStorage.getItem('selectedBrandName') || '';
@@ -114,6 +137,23 @@
                                         <i class="fa-regular fa-copyright" style="color: #176afa;"></i>
                                     </button>`;
                         }
+                    },
+                    {
+                        data: 'discountStatus',
+                        title: '折扣狀態',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            if (data.startsWith('進行中')) {
+                                return `<span class="text-success">${data}</span>`;
+                            } else if (data.includes('尚未')) {
+                                return `<span class="text-warning">${data}</span>`;
+                            } else if (data.includes('結束')) {
+                                return `<span class="text-danger">${data}</span>`;
+                            } else {
+                                return `<span>${data}</span>`;
+                            }
+                        },
+                        orderable: false
                     },
                     {
                         data: 'isFeatured',
@@ -285,6 +325,16 @@
                 });
             });
 
+            // ======= 點新增全館折扣 =======
+            $("#createBrandDiscount").click(function() {
+              $.get(createDiscountUrl, function(html) {
+                $("#brandDiscountModalTitle").text("新增全館品牌折扣");
+                $('#brandDiscountModalContent').html(html);
+                $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                $('#brandDiscountModal').modal('show');
+                setupDateLogic();
+              });
+            });
 
             // ======= 提交品牌表單 (新增/修改) =======
             $('#brandModalContent').on('submit', '#BrandForm', function (e) {
@@ -454,7 +504,7 @@
                 });
             });
 
-            // ======= 點品牌欄位的供應商按鈕 =======
+            // ======= 點品牌欄位的供應商按鈕跳轉 =======
             $('#brandTable').on('click', '.supplier-btn', function () {
                 var supplierName = $(this).data('name');
                 console.log('點擊供應商按鈕，取得 supplierName:', supplierName);
@@ -482,9 +532,130 @@
                 });
             });
 
+            // 批次刷新所有品牌的折扣狀態
+            $('#refreshDiscountStatusBtn').on('click', function() {
+                $.post('/SUP/Brands/RefreshAllBrandDiscountStatus', function(result) {
+                    if (result.success) {
+                        $('#brandTable').DataTable().ajax.reload(); // 刷新表格
+                    } else {
+                        alert('品牌折扣狀態刷新失敗');
+                    }
+                });
+            });
+
+            // ======= 新增全館折扣 submit 事件 =======            
+            $('#brandDiscountModalContent').on('submit', '#brandDiscountForm', function (e) {
+                e.preventDefault();
+
+                var form = $(this);
+                console.log("送出折扣欄位", form.serializeArray());
+
+                $.post('/SUP/Brands/CreateDiscount', form.serialize())
+                    .done(function(res) {
+                        // 判斷是否 HTML
+                        var isHtml = typeof res === "string" && res.trim().startsWith("<form");
+                        var isJson = typeof res === "object" || (typeof res === "string" && res.trim().startsWith("{"));
+
+                        console.log("CreateDiscount response:", res);
+
+                        if (isHtml) {
+                            // 這是 partial view，覆蓋 modal 內容
+                            $('#brandDiscountModalContent').html(res);
+                            $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                            setupDateLogic();
+                        }
+                        else if (isJson) {
+                            // JSON情境（解析為object後處理）
+                            if (typeof res === "string") {
+                                res = JSON.parse(res);
+                            }
+                            if (res.success) {
+                                $('#brandDiscountModal').modal('hide');
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: '新增折扣成功',
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload();
+                            } else if (res.errors) {
+                                console.log("Model errors:", res.errors);
+                                // 也可彈窗顯示錯誤
+                                Swal.fire('表單錯誤', res.errors.join('<br>'), 'error');
+                            } else {
+                                Swal.fire('新增折扣失敗', '', 'error');
+                            }
+                        }
+                        else {
+                            console.log('AJAX回傳非預期型態');
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('新增折扣 AJAX fail:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('新增折扣失敗', '', 'error');
+                    });
 
 
+            });
 
         });
+
+        // ======= 新增全館折扣 品牌下拉 =======
+        function loadBrandsBySupplier(supplierId, selectedBrandId) {
+            $.get('/SUP/Brand/GetBrandNameBySupplier?supplierId=' + supplierId, function(brands) {
+                var brandSelect = $('#brandSelect');
+                brandSelect.empty().append('<option value="">請選擇品牌</option>');
+                brands.forEach(function(b) {
+                    if(b.isActive) {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.brandName}
+                            </option>`
+                        );
+                    } else {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.supplierActive ? b.brandName : b.brandName + ' (其供應商目前未啟用)'}
+                            </option>`
+                        );
+                    }
+                });
+                if(selectedBrandId) brandSelect.trigger('change');
+            });
+        }
+
+        // ======= 新增全館折扣 日期設定 =======
+        function setupDateLogic() {
+            const today = new Date().toISOString().split('T')[0];
+
+            const $startDate = $('#StartDate');
+            const $endDate = $('#EndDate');
+
+            // 預設起始日為今天，如果沒填
+            if (!$startDate.val()) $startDate.val(today);
+            $startDate.attr('min', today);
+
+            // 結束日 min/預設，同步起始日
+            let startVal = $startDate.val() || today;
+            $endDate.attr('min', startVal);
+            // 只有當 EndDate 早於 startDate 才要自動設為 startDate
+            if (!$endDate.val() || $endDate.val() < startVal) {
+                $endDate.val(startVal);
+            }
+
+            // 只調整 min，不自動覆蓋當前 endDate（使用者可自由設定日）
+            $startDate.off('change').on('change', function() {
+                const val = $(this).val();
+                $endDate.attr('min', val);
+                // 若 endDate 早於新起始日才改掉，否則不動
+                if ($endDate.val() < val) $endDate.val(val);
+            });
+        }
+
+
+
     </script>
 }
