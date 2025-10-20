@@ -43,7 +43,6 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// 折扣率 (0 ~ 100%)
 		/// </summary>
 		[Display(Name = "品牌折扣率")]
-		[Range(0.01, 0.99, ErrorMessage = "品牌折扣率必須在0.01~0.99之間")]
 		public decimal? DiscountRate { get; set; }
 
 		/// <summary>

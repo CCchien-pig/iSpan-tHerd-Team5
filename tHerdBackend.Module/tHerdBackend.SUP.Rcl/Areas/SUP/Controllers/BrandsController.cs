@@ -478,10 +478,13 @@ public class BrandsController : Controller
 	// POST: SUP/Brand/CreateDiscount
 	[HttpPost]
 	[ValidateAntiForgeryToken]
-	public async Task<IActionResult> CreateDiscount(BrandDto dto)
+	public async Task<IActionResult> CreateDiscount(BrandDiscountDto dto)
 	{
 		if (!ModelState.IsValid)
 		{
+			var errors = ModelState.SelectMany(kvp => kvp.Value.Errors.Select(e => $"{kvp.Key} : {e.ErrorMessage}")).ToList();
+			Debug.WriteLine("ModelState錯誤 => " + string.Join(" | ", errors));
+
 			// 若驗證失敗，直接回傳原 partial view 方便前端重載
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
 		}
@@ -514,6 +517,7 @@ public class BrandsController : Controller
 			if (!dto.DiscountRate.HasValue || dto.DiscountRate < 0.01m || dto.DiscountRate > 0.99m)
 				ModelState.AddModelError("DiscountRate", "折扣率必須介於0.01-0.99之間");
 
+			// 若有驗證錯誤，回傳 partial view 方便前端重載
 			if (!ModelState.IsValid)
 			{
 				var errorList = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -522,12 +526,19 @@ public class BrandsController : Controller
 				return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
 			}
 
+			var isActive =
+				brand.IsActive &&                                         // 必須品牌啟用
+				brand.DiscountRate.HasValue && brand.DiscountRate > 0 &&
+				brand.StartDate.HasValue && brand.EndDate.HasValue &&
+				today >= brand.StartDate.Value && today <= brand.EndDate.Value;
+
 			// 更新品牌折扣資訊
 			brand.DiscountRate = dto.DiscountRate;
 			brand.StartDate = dto.StartDate;
 			brand.EndDate = dto.EndDate;
 			brand.Reviser = currentUserId;
 			brand.RevisedDate = DateTime.Now;
+			brand.IsDiscountActive = isActive;
 
 			await _context.SaveChangesAsync();
 
