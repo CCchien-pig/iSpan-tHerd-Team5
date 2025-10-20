@@ -204,8 +204,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
             return $"{prefix}{next:D7}";
         }
-
-
     }
 
     // ✅ Request 模型

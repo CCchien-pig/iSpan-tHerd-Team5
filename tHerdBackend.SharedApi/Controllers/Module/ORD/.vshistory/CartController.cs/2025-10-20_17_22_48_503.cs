@@ -92,17 +92,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     DiscountTotal = request.DiscountAmount ?? 0,
                     ShippingFee = 0,
                     PaymentConfigId = 1000,
-
-                    // ✅ 預設收件人資訊
-                    ReceiverName = "測試收件人",
-                    ReceiverPhone = "0912345678",
-                    ReceiverAddress = "台北市中正區測試路 1 號",
-
+                    ReceiverName = null,
+                    ReceiverPhone = null,
+                    ReceiverAddress = null,
                     HasShippingLabel = false,
                     IsVisibleToMember = true,
                     CreatedDate = DateTime.Now
                 };
-
 
 
                 _context.OrdOrders.Add(order);
@@ -204,8 +200,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
             return $"{prefix}{next:D7}";
         }
-
-
     }
 
     // ✅ Request 模型

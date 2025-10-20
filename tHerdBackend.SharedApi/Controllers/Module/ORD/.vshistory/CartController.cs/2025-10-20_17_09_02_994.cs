@@ -84,26 +84,21 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 var order = new OrdOrder
                 {
                     OrderNo = orderNo,
-                    UserNumberId = request.UserNumberId ?? 1,
-                    OrderStatusId = "pending",       // SYS_Code (ORD,07)
-                    PaymentStatus = "pending",       // SYS_Code (ORD,04)
-                    ShippingStatusId = "unshipped",  // SYS_Code (ORD,05)
+                    UserNumberId = request.UserNumberId ?? 1056,
+                    OrderStatusId = "pending",
+                    PaymentStatus = "unpaid",
+                    ShippingStatusId = "unshipped",
                     Subtotal = subtotal,
                     DiscountTotal = request.DiscountAmount ?? 0,
                     ShippingFee = 0,
                     PaymentConfigId = 1000,
-
-                    // ✅ 預設收件人資訊
-                    ReceiverName = "測試收件人",
-                    ReceiverPhone = "0912345678",
-                    ReceiverAddress = "台北市中正區測試路 1 號",
-
+                    ReceiverName = null,
+                    ReceiverPhone = null,
+                    ReceiverAddress = null,
                     HasShippingLabel = false,
                     IsVisibleToMember = true,
                     CreatedDate = DateTime.Now
                 };
-
-
 
                 _context.OrdOrders.Add(order);
                 await _context.SaveChangesAsync();
@@ -180,12 +175,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                string inner = ex.InnerException?.Message ?? "(無內層例外)";
-                return Ok(new
-                {
-                    success = false,
-                    message = $"❌ 結帳失敗: {ex.Message} | Inner: {inner}"
-                });
+                return Ok(new { success = false, message = $"❌ 結帳失敗: {ex.Message}" });
             }
         }
 
@@ -204,8 +194,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
             return $"{prefix}{next:D7}";
         }
-
-
     }
 
     // ✅ Request 模型
