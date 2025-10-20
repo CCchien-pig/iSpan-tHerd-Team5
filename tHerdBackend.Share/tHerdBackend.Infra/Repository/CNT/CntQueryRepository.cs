@@ -11,7 +11,7 @@ using tHerdBackend.Share.DTOs.CNT;
 namespace tHerdBackend.Infra.Repository.CNT
 {
 	/// <summary>
-	/// CNT 前台查詢 Repository（Dapper + EF 混合）
+	/// CNT 前台查詢 Repository（Dapper 為主 + EF 供連線管理）
 	/// </summary>
 	public class CntQueryRepository : ICntQueryRepository
 	{
@@ -24,6 +24,7 @@ namespace tHerdBackend.Infra.Repository.CNT
 			_db = db;
 		}
 
+		// ===== List =====
 		public async Task<(IReadOnlyList<ArticleListDto> Items, int Total)> GetArticleListAsync(
 			int? pageTypeId, string? keyword, int page, int pageSize, CancellationToken ct = default)
 		{
@@ -33,53 +34,50 @@ namespace tHerdBackend.Infra.Repository.CNT
 			int skip = (page - 1) * pageSize;
 			int take = pageSize;
 
-			// === 基礎 SQL ===
 			var sql = new StringBuilder(@"
 SELECT 
     p.PageId,
     p.Title,
     p.PageTypeId,
-    pt.TypeName        AS CategoryName,
+    pt.TypeName                                        AS CategoryName,
     p.PublishedDate,
     p.IsPaidContent,
-    ISNULL(p.PreviewLength, 150) AS PreviewLength,
-    s.SeoSlug          AS Slug,
+    ISNULL(p.PreviewLength, 150)                       AS PreviewLength,
+    s.SeoSlug                                          AS Slug,
     (
         SELECT TOP 1 b.Content
         FROM CNT_PageBlock b
-        WHERE b.PageId = p.PageId AND (b.BlockType = 'paragraph' OR b.BlockType = 'text')
+        WHERE b.PageId = p.PageId 
+          AND (b.BlockType IN ('paragraph','richtext','text'))
         ORDER BY b.OrderSeq
-    ) AS FirstText,
+    )                                                  AS FirstText,
     (
         SELECT TOP 1 b.Content
         FROM CNT_PageBlock b
         WHERE b.PageId = p.PageId AND b.BlockType = 'image'
         ORDER BY b.OrderSeq
-    ) AS FirstImage
+    )                                                  AS FirstImage,
+    (
+        SELECT STRING_AGG(t.TagName, ',')
+        FROM CNT_PageTag pt2
+        JOIN CNT_Tag     t   ON t.TagId = pt2.TagId
+        WHERE pt2.PageId = p.PageId
+    )                                                  AS TagList
 FROM CNT_Page p
 LEFT JOIN CNT_PageType pt ON pt.PageTypeId = p.PageTypeId
-LEFT JOIN SYS_SeoMeta s   ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
-WHERE p.IsDeleted = 0 
-  AND p.PublishedDate IS NOT NULL
-  AND (p.Status = 2 OR p.Status = 'Published' OR p.Status = 'PUBLISHED')
+LEFT JOIN SYS_SeoMeta  s  ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
+WHERE p.IsDeleted = 0
+  AND p.Status    = 1
 ");
-
 			var countSql = new StringBuilder(@"
 SELECT COUNT(1)
 FROM CNT_Page p
-WHERE p.IsDeleted = 0 
-  AND p.PublishedDate IS NOT NULL
-  AND (p.Status = 'Published' OR p.Status = 'PUBLISHED')
+WHERE p.IsDeleted = 0
+  AND p.Status    = 1
 ");
 
-			// === 條件 ===
 			var param = new DynamicParameters();
-			if (pageTypeId.HasValue)
-			{
-				sql.Append(" AND p.PageTypeId = @PageTypeId");
-				countSql.Append(" AND p.PageTypeId = @PageTypeId");
-				param.Add("PageTypeId", pageTypeId.Value);
-			}
+
 			if (!string.IsNullOrWhiteSpace(keyword))
 			{
 				sql.Append(" AND p.Title LIKE CONCAT('%', @Keyword, '%')");
@@ -87,27 +85,40 @@ WHERE p.IsDeleted = 0
 				param.Add("Keyword", keyword.Trim());
 			}
 
-			// === 排序 + 分頁 ===
-			sql.Append(" ORDER BY p.PublishedDate DESC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
+			if (pageTypeId.HasValue)
+			{
+				sql.Append(" AND p.PageTypeId = @PageTypeId");
+				countSql.Append(" AND p.PageTypeId = @PageTypeId");
+				param.Add("PageTypeId", pageTypeId.Value);
+			}
+
+			sql.Append(@"
+ORDER BY 
+    CASE WHEN p.PublishedDate IS NULL THEN 1 ELSE 0 END,
+    p.PublishedDate DESC
+OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
+
 			param.Add("Skip", skip);
 			param.Add("Take", take);
 
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try
 			{
-				// 查列表 + Count
 				var rows = (await conn.QueryAsync(sql.ToString(), param, tx)).ToList();
 				var total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), param, tx);
 
 				var items = rows.Select(r =>
 				{
-					// 轉型動態 Row → DTO
 					int previewLen = (int)r.PreviewLength;
 					string firstText = (r.FirstText as string) ?? string.Empty;
 					var excerpt = TrimToPreview(firstText, previewLen);
 
 					string cover = (r.FirstImage as string) ?? "/images/placeholder-article.jpg";
 					DateTime pub = r.PublishedDate ?? DateTime.MinValue;
+
+					string[] tags = Array.Empty<string>();
+					if (r.TagList is string tagCsv && !string.IsNullOrWhiteSpace(tagCsv))
+						tags = tagCsv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).Distinct().ToArray();
 
 					return new ArticleListDto
 					{
@@ -117,7 +128,9 @@ WHERE p.IsDeleted = 0
 						Excerpt = excerpt,
 						CoverImage = cover,
 						CategoryName = r.CategoryName ?? "未分類",
-						PublishedDate = pub
+						PublishedDate = pub,
+						IsPaidContent = (bool)r.IsPaidContent,
+						Tags = tags
 					};
 				}).ToList();
 
@@ -129,26 +142,24 @@ WHERE p.IsDeleted = 0
 			}
 		}
 
+		// ===== Detail =====
 		public async Task<ArticleDetailDto?> GetArticleDetailAsync(
 			int pageId, int? userNumberId, CancellationToken ct = default)
 		{
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try
 			{
-				// 主檔 + SEO
 				const string mainSql = @"
 SELECT 
-    p.PageId, p.Title, p.PublishedDate,
+    p.PageId, p.Title, p.PublishedDate, p.PageTypeId,
     p.IsPaidContent, ISNULL(p.PreviewLength,150) AS PreviewLength,
     s.SeoSlug AS Slug, s.SeoTitle, s.SeoDesc
 FROM CNT_Page p
 LEFT JOIN SYS_SeoMeta s ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
-WHERE p.PageId = @PageId AND p.IsDeleted = 0;
-";
+WHERE p.PageId = @PageId AND p.IsDeleted = 0;";
 				var main = await conn.QueryFirstOrDefaultAsync(mainSql, new { PageId = pageId }, tx);
 				if (main == null) return null;
 
-				// Tags
 				const string tagSql = @"
 SELECT t.TagName
 FROM CNT_PageTag pt
@@ -157,7 +168,6 @@ WHERE pt.PageId = @PageId
 ORDER BY t.TagName;";
 				var tags = (await conn.QueryAsync<string>(tagSql, new { PageId = pageId }, tx)).ToList();
 
-				// 付費狀態判斷
 				bool hasPurchased = false;
 				if ((bool)main.IsPaidContent && userNumberId.HasValue)
 				{
@@ -179,10 +189,11 @@ WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
 					IsPaidContent = main.IsPaidContent,
 					HasPurchased = hasPurchased,
 					PreviewLength = (int)main.PreviewLength,
-					Tags = tags
+					Tags = tags,
+					// ★ 關鍵：把 PageTypeId 塞進 DTO，給 Service 作推薦使用
+					PageTypeId = (int)main.PageTypeId
 				};
 
-				// Blocks：若為免費或已購 → 回傳全文；未購買 → 不回 Blocks
 				if (!dto.IsPaidContent || dto.HasPurchased)
 				{
 					const string blockSql = @"
@@ -197,6 +208,63 @@ ORDER BY OrderSeq;";
 				}
 
 				return dto;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		// ===== Recommended =====
+		public async Task<IReadOnlyList<ArticleListDto>> GetRecommendedByCategoryAsync(
+			int currentPageId, int pageTypeId, int topN = 6, CancellationToken ct = default)
+		{
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				const string recSql = @"
+SELECT TOP (@TopN)
+    p.PageId,
+    p.Title,
+    p.PublishedDate,
+    s.SeoSlug AS Slug,
+    (
+        SELECT TOP 1 b.Content
+        FROM CNT_PageBlock b
+        WHERE b.PageId = p.PageId AND b.BlockType = 'image'
+        ORDER BY b.OrderSeq
+    ) AS FirstImage
+FROM CNT_Page p
+LEFT JOIN SYS_SeoMeta s ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
+WHERE p.IsDeleted = 0
+  AND p.Status    = 1
+  AND p.PageTypeId = @PageTypeId
+  AND p.PageId    <> @CurrentId
+ORDER BY 
+    CASE WHEN p.PublishedDate IS NULL THEN 1 ELSE 0 END,
+    p.PublishedDate DESC;";
+
+				var rows = (await conn.QueryAsync(recSql, new
+				{
+					TopN = topN,
+					PageTypeId = pageTypeId,
+					CurrentId = currentPageId
+				}, tx)).ToList();
+
+				var list = rows.Select(r => new ArticleListDto
+				{
+					PageId = r.PageId,
+					Title = r.Title,
+					Slug = (r.Slug as string) ?? r.PageId.ToString(),
+					Excerpt = string.Empty,
+					CoverImage = (r.FirstImage as string) ?? "/images/placeholder-article.jpg",
+					CategoryName = string.Empty,
+					PublishedDate = r.PublishedDate ?? DateTime.MinValue,
+					IsPaidContent = false,
+					Tags = Array.Empty<string>()
+				}).ToList();
+
+				return list;
 			}
 			finally
 			{
