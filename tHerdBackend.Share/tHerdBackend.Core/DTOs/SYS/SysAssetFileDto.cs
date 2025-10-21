@@ -84,7 +84,7 @@ public class AssetFileUploadDto
 {
     public string ModuleId { get; set; } // 模組代號
     public string ProgId { get; set; } // 程式代號
-    public List<AssetFileDetailsDto> Files { get; set; } = new();
+    public List<AssetFileDetailsDto> Meta { get; set; } = new();
 }
 
 /// <summary>

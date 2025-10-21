@@ -70,7 +70,7 @@ namespace tHerdBackend.Core.DTOs.PROD
         [Required(ErrorMessage = "{0} 必填")]
         [Display(Name = "優惠價")]
         [Range(0, 9999999, ErrorMessage = "{0} 必須大於等於 {1}")]
-        public decimal SalePrice { get; set; } = 0;
+        public decimal? SalePrice { get; set; } = 0;
 
         /// <summary>
         /// 目前庫存

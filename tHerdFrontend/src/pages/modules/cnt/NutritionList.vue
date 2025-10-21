@@ -4,7 +4,7 @@
     <!-- 🏷 頁面標題 -->
     <h2 class="mb-4 main-color-green-text">營養資料庫</h2>
 
-    <!-- 🔍 搜尋區（未來可啟用） -->
+    <!-- 🔍 搜尋區 -->
     <div class="mb-4">
       <input
         type="text"
@@ -13,6 +13,9 @@
         v-model="searchQuery"
       />
     </div>
+
+    <!-- 🔽 滾動定位起點（新增） -->
+    <div id="nutrition-list-start"></div>
 
     <!-- 🧾 食材清單 -->
     <div v-for="food in filteredFoods" :key="food.id" class="row py-3 border-bottom align-items-center">
@@ -36,7 +39,7 @@
       </div>
     </div>
 
-    <!-- ⛔ 無資料狀態 -->
+    <!-- ⛔ 無資料 -->
     <div v-if="filteredFoods.length === 0" class="text-center text-muted py-5">
       找不到相關食材
     </div>
@@ -49,7 +52,7 @@ export default {
   data() {
     return {
       searchQuery: '',
-      // 🧪 假資料（未來改為 API）
+      // 🧪 假資料
       foods: [
         { id: 1, name: '鮭魚', slug: 'salmon', description: '富含 Omega-3 的高營養食材' },
         { id: 2, name: '蘋果', slug: 'apple', description: '含膳食纖維與抗氧化物的常見水果' },
@@ -58,6 +61,19 @@ export default {
       compareList: []
     }
   },
+
+  mounted() {
+    // ✅ 從首頁跳轉時自動定位到清單區
+    if (this.$route.query.scroll === 'nutrition') {
+      setTimeout(() => {
+        const target = document.getElementById('nutrition-list-start')
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 300)
+    }
+  },
+
   computed: {
     filteredFoods() {
       if (!this.searchQuery) {
@@ -69,6 +85,7 @@ export default {
       )
     }
   },
+
   methods: {
     addToCompare(food) {
       if (!this.compareList.some(f => f.id === food.id)) {
@@ -84,5 +101,5 @@ export default {
 </script>
 
 <style scoped>
-/* 可加入細部樣式 */
+/* 可以補充細節樣式 */
 </style>

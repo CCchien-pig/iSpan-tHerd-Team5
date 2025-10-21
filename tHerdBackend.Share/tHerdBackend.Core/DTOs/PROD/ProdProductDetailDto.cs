@@ -13,21 +13,21 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// 商品ID
 	/// </summary>
 	[Display(Name = "商品編號")]
-	public int ProductId { get; set; }
+	public new int ProductId { get; set; }
 
 	/// <summary>
 	/// 商品名稱
 	/// </summary>
 	[Display(Name = "商品名稱")]
 	[Required(ErrorMessage = "{0}為必填")]
-	public string ProductName { get; set; }
+	public new string ProductName { get; set; }
 
 	/// <summary>
 	/// 商品簡碼
 	/// </summary>
 	[Display(Name = "商品簡碼")]
 	[Required(ErrorMessage = "{0}為必填")]
-	public string ProductCode { get; set; }
+	public new string ProductCode { get; set; }
 
 	/// <summary>
 	/// 供應商ID(FK)
@@ -37,7 +37,7 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// <summary>
 	/// 供應商名稱
 	/// </summary>
-	public string SupplierName { get; set; }
+	public new string SupplierName { get; set; }
 
 	/// <summary>
 	/// 品牌ID
@@ -49,7 +49,7 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// <summary>
 	/// 品牌名稱
 	/// </summary>
-	public string BrandName { get; set; }
+	public new string BrandName { get; set; }
 
     /// <summary>
     /// 品牌簡碼，唯一，非空，英文
@@ -79,7 +79,7 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 是否上架（0=否，1=是）
     /// </summary>
     [Display(Name = "是否上架")]
-    public bool IsPublished { get; set; }
+    public new bool IsPublished { get; set; }
 
 	/// <summary>
 	/// 重量（公斤）
@@ -106,34 +106,34 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 建檔人員
     /// </summary>
     [Display(Name = "建檔人員")]
-    public int Creator { get; set; }
+    public new int Creator { get; set; }
 
 	/// <summary>
 	/// 建檔姓名
 	/// </summary>
 	[BindNever]
-	public string CreatorNm { get; set; }
+	public new string? CreatorNm { get; set; }
 
 	/// <summary>
 	/// 建立時間
 	/// </summary>
 	[BindNever]
-	public DateTime CreatedDate { get; set; }
+	public new DateTime CreatedDate { get; set; }
 
-	public string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
+	public new string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
 
 	/// <summary>
 	/// 異動人員
 	/// </summary>
 	[BindNever]
     [Display(Name = "異動人員")]
-    public int? Reviser { get; set; }
+    public new int? Reviser { get; set; }
 
 	/// <summary>
 	/// 異動姓名
 	/// </summary>
 	[BindNever]
-	public string ReviserNm { get; set; }
+	public new string ReviserNm { get; set; }
 
 	/// <summary>
 	/// 異動時間
@@ -152,42 +152,16 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// </summary>
     public string ProductTypeCode { get; set; } = string.Empty;
 
-	/// <summary>
-	/// 商品狀態標籤
-	/// </summary>
-	public string Badge { get; set; } = string.Empty;
-
-
-	/// <summary>
-	/// 商品主圖
-	/// </summary>
-	public string ImageUrl { get; set; } = string.Empty;
-
-	/// <summary>
-	/// 主商品SkuId
-	/// </summary>
-	public string MainSkuId { get; set; } = string.Empty;
-
-	/// <summary>
-	/// 主商品原價
-	/// </summary>
-	public decimal? ListPrice { get; set; }
-
-
-	/// <summary>
-	/// 主商品單價
-	/// </summary>
-	public decimal? UnitPrice { get; set; }
-
-	/// <summary>
-	/// 主商品優惠價
-	/// </summary>
-	public decimal? SalePrice { get; set; }
+    /// <summary>
+    /// 商品狀態標籤
+    /// </summary>
+    [Display(Name = "商品標籤")]
+    public new string Badge { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 分類敘述
 	/// </summary>
-	public List<string> ProductTypeDesc { get; set; }
+	public new List<string> ProductTypeDesc { get; set; }
 
     /// <summary>
     /// 分類敘述
@@ -205,4 +179,55 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 計算總數
     /// </summary>
     public int TotalCount { get; set; }
+
+    /// <summary>
+    /// UPC 代碼
+    /// </summary>
+    public string UpcCode => $"BC{ProductId.ToString().PadLeft(6, '0')}";
+
+    /// <summary>
+    /// 產品尺寸
+    /// </summary>
+    public string Dimensions => $"11.3 x 6.2 x 6.2 cm";
+
+    /// <summary>
+    /// 包裝規格
+    /// </summary>
+    public string? PackageType { get; set; }
+
+    /// <summary>
+    /// 評價星數
+    /// </summary>
+    public new decimal? AvgRating { get; set; }
+
+    /// <summary>
+    /// 評價總數
+    /// </summary>
+    public new int? ReviewCount { get; set; }
+
+    /// <summary>
+    /// 商品主圖
+    /// </summary>
+    public new string ImageUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 主商品SkuId
+    /// </summary>
+    public new string MainSkuId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 主商品原價
+    /// </summary>
+    public new decimal? ListPrice { get; set; }
+
+
+    /// <summary>
+    /// 主商品單價
+    /// </summary>
+    public new decimal? UnitPrice { get; set; }
+
+    /// <summary>
+    /// 主商品優惠價
+    /// </summary>
+    public new decimal? SalePrice { get; set; }
 }
