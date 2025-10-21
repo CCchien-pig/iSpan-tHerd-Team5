@@ -53,8 +53,8 @@
             <!-- 固定寬度 224px，避免中文被擠壓 -->
             <el-select v-model="sortOrder" class="w-56" placeholder="排序方式">
               <el-option label="原始順序" value="none" />
-              <el-option label="由大到小" value="desc" />
-              <el-option label="由小到大" value="asc" />
+              <el-option label="由小到大" value="desc" />
+              <el-option label="由大到小" value="asc" />
             </el-select>
           </div>
 

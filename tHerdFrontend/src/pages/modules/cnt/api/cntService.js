@@ -81,3 +81,15 @@ export async function getFoodCategories() {
     const res = await axios.get(`${API_BASE}/nutrition/foodcategories`)
     return res.data // [{ id, name }]
 }
+
+/** 食材營養比較分析 */
+export async function getNutritionCompare(sampleIds, analyteIds) {
+    const res = await axios.get(`${API_BASE}/nutrition/compare`, {
+        params: {
+            sampleIds: sampleIds.join(','),
+            analyteIds: analyteIds.join(',')
+        }
+    });
+    return res.data;
+}
+

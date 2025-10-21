@@ -28,5 +28,15 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 
 		// 既有：GetSampleListAsync / GetSampleDetailAsync ...
 		Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default);
+
+		/// <summary>
+		/// 多食材 × 多營養素 比較查詢（給前端圖表使用）
+		/// </summary>
+		/// <param name="sampleIds">以逗號分隔的 SampleId 清單，例如 "1001,1002,1003"</param>
+		/// <param name="analyteIds">以逗號分隔的 AnalyteId 清單，例如 "1105,1107"</param>
+		/// <param name="ct">取消 Token</param>
+		/// <returns>每個營養素的各食材數值（供 Chart 使用）</returns>
+		Task<object> CompareAsync(string sampleIds, string analyteIds, CancellationToken ct = default);
+
 	}
 }

@@ -217,6 +217,53 @@ ORDER BY
 			}
 		}
 
+		public async Task<IReadOnlyList<dynamic>> CompareNutritionAsync(
+	IEnumerable<int> sampleIds,
+	IEnumerable<int> analyteIds,
+	CancellationToken ct = default)
+		{
+			const string sql = @"
+WITH sid AS (
+  SELECT TRY_CAST(value AS int) AS SampleId
+  FROM STRING_SPLIT(@SampleIds, ',')
+),
+aid AS (
+  SELECT TRY_CAST(value AS int) AS AnalyteId
+  FROM STRING_SPLIT(@AnalyteIds, ',')
+)
+SELECT 
+    s.SampleId,
+    sm.SampleName,
+    a.AnalyteId,
+    a.AnalyteName,
+    ISNULL(m.Unit, a.DefaultUnit) AS Unit,
+    ISNULL(m.ValuePer100g, 0) AS ValuePer100g
+FROM sid s
+JOIN CNT_Sample sm ON sm.SampleId = s.SampleId
+JOIN aid aa ON 1=1
+JOIN CNT_Analyte a ON a.AnalyteId = aa.AnalyteId
+LEFT JOIN CNT_Measurement m 
+       ON m.SampleId = s.SampleId AND m.AnalyteId = aa.AnalyteId
+ORDER BY a.AnalyteCategoryId, a.AnalyteName;
+";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = await conn.QueryAsync(sql, new
+				{
+					SampleIds = string.Join(",", sampleIds),
+					AnalyteIds = string.Join(",", analyteIds)
+				}, tx);
+				return rows.ToList();
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+
 		public async Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
 		{
 			const string sql = @"
