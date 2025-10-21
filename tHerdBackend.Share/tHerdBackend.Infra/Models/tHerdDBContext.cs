@@ -2249,6 +2249,11 @@ public partial class tHerdDBContext : DbContext
             entity.HasIndex(e => e.ProductName, "UQ_PROD_Product_ProductName").IsUnique();
 
             entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.Badge)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("商品標籤")
+                .HasColumnName("badge");
             entity.Property(e => e.BrandId).HasComment("品牌ID");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -2256,6 +2261,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Creator).HasComment("建檔人員");
             entity.Property(e => e.FullDesc).HasComment("商品完整描述，用於詳細頁");
             entity.Property(e => e.IsPublished).HasComment("是否上架（0=否，1=是）");
+            entity.Property(e => e.MainSkuId).HasComment("主規格");
             entity.Property(e => e.ProductCode)
                 .IsRequired()
                 .HasMaxLength(10)

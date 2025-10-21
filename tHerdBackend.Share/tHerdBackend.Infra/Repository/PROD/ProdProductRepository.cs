@@ -80,15 +80,28 @@ namespace tHerdBackend.Infra.Repository.PROD
             var sql = new StringBuilder(@"
                 SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                        p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
-                       p.ShortDesc, p.FullDesc, p.IsPublished,
+                       p.ShortDesc, p.FullDesc, p.IsPublished, p.badge,
                        p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
-                       p.CreatedDate, p.Reviser, p.RevisedDate, tc.ProductTypeName
+                       p.CreatedDate, p.Reviser, p.RevisedDate, 
+                       p.mainSkuId, af.FileUrl ImageUrl,
+                       ps.ListPrice, ps.UnitPrice, ps.SalePrice, tc.ProductTypeName
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
                   LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
                   LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
                   LEFT JOIN PROD_ProductTypeConfig tc ON tc.ProductTypeId=t.ProductTypeId
-                 WHERE 1=1");
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
+                  LEFT JOIN (
+                      SELECT ProductId, 
+                             MIN(COALESCE(SalePrice, UnitPrice)) AS MinSkuPrice,
+                             MAX(COALESCE(SalePrice, UnitPrice)) AS MaxSkuPrice
+                        FROM PROD_ProductSku
+                       WHERE IsActive = 1
+                       GROUP BY ProductId
+                  ) sp ON sp.ProductId = p.ProductId
+                  LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
+                  LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
+                 WHERE p.IsPublished=1 ");
 
             // === Step 2. 條件過濾 ===
             ProductQueryBuilder.AppendFilters(sql, query);
@@ -104,7 +117,16 @@ namespace tHerdBackend.Infra.Repository.PROD
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
                   LEFT JOIN SUP_Supplier su ON su.SupplierId=s.SupplierId
                   LEFT JOIN PROD_ProductType t ON t.ProductId=p.ProductId
-                 WHERE 1=1");
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
+                  LEFT JOIN (
+                      SELECT ProductId, 
+                             MIN(COALESCE(SalePrice, UnitPrice)) AS MinSkuPrice,
+                             MAX(COALESCE(SalePrice, UnitPrice)) AS MaxSkuPrice
+                        FROM PROD_ProductSku
+                       WHERE IsActive = 1
+                       GROUP BY ProductId
+                  ) sp ON sp.ProductId = p.ProductId
+                 WHERE p.IsPublished=1");
 
             ProductQueryBuilder.AppendFilters(countSql, query);
 

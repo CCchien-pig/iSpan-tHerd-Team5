@@ -34,7 +34,7 @@ namespace tHerdBackend.Infra.Repository.SYS
         public async Task<List<SysAssetFileDto>> GetFiles(string moduleId, string progId, CancellationToken ct = default)
         {
             return await _db.SysAssetFiles
-                .Where(f => f.IsActive && f.FileKey.StartsWith($"{moduleId}/{progId}"))
+                .Where(f => f.FileKey.StartsWith($"{moduleId}/{progId}"))
                 .OrderByDescending(f => f.CreatedDate)
                 .Select(f => new SysAssetFileDto
                 {
@@ -60,12 +60,12 @@ namespace tHerdBackend.Infra.Repository.SYS
             {
                 var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 
-                if (uploadDto.Files == null || uploadDto.Files.Count == 0) return uploadDto;
+                if (uploadDto.Meta == null || uploadDto.Meta.Count == 0) return uploadDto;
 
                 var now = DateTime.Now;
                 var entities = new List<SysAssetFile>();
 
-                foreach (var fileDto in uploadDto.Files)
+                foreach (var fileDto in uploadDto.Meta)
                 {
                     var file = fileDto.File;
                     if (file == null || file.Length <= 0) continue;
@@ -141,6 +141,96 @@ namespace tHerdBackend.Infra.Repository.SYS
                 ErrorHandler.HandleErrorMsg(ex);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 修改圖片中繼資料 (AltText, Caption, IsActive)
+        /// </summary>
+        public async Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
+        {
+            try
+            {
+                var file = await _db.SysAssetFiles
+                    .FirstOrDefaultAsync(f => f.FileId == dto.FileId, ct);
+
+                if (file == null)
+                    throw new Exception($"找不到 FileId={dto.FileId} 的圖片");
+
+                // 修改中繼資料
+                file.AltText = dto.AltText ?? file.AltText;
+                file.Caption = dto.Caption ?? file.Caption;
+                file.IsActive = dto.IsActive;
+
+                await _db.SaveChangesAsync(ct);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 刪除圖片（同步刪除 Cloudinary 與 DB）
+        /// </summary>
+        public async Task<bool> DeleteImage(int fileId, CancellationToken ct = default)
+        {
+            try
+            {
+                var file = await _db.SysAssetFiles
+                    .FirstOrDefaultAsync(f => f.FileId == fileId, ct);
+
+                if (file == null)
+                    throw new Exception($"找不到 FileId={fileId} 的圖片");
+
+                // === 1️ 刪除 Cloudinary 檔案 ===
+                if (!string.IsNullOrWhiteSpace(file.FileKey))
+                {
+                    try
+                    {
+                        var delParams = new DeletionParams(file.FileKey)
+                        {
+                            ResourceType = ResourceType.Image
+                        };
+                        var delResult = await _cloudinary.DestroyAsync(delParams);
+
+                        if (delResult.Result != "ok" && delResult.Result != "not found")
+                        {
+                            Console.WriteLine($"⚠️ Cloudinary 刪除失敗：{file.FileKey}, Result={delResult.Result}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Cloudinary 連線異常：{ex.Message}");
+                    }
+                }
+
+                // === 2️ 刪除資料庫記錄 ===
+                _db.SysAssetFiles.Remove(file);
+                await _db.SaveChangesAsync(ct);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 批次刪除多筆圖片
+        /// </summary>
+        public async Task<int> DeleteImages(List<int> fileIds, CancellationToken ct = default)
+        {
+            int successCount = 0;
+            foreach (var id in fileIds)
+            {
+                if (await DeleteImage(id, ct))
+                    successCount++;
+            }
+            return successCount;
         }
     }
 }
