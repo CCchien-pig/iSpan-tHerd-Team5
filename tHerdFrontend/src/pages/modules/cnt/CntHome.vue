@@ -97,7 +97,6 @@
         <router-link
           :to="{ name: 'cnt-nutrition', query: { from: 'home', scroll: 'nutrition' } }"
           class="btn teal-reflect-button btn-hero-teal"
-          title="營養分析模組"
         >
           前往營養分析 →
         </router-link>

@@ -75,13 +75,13 @@
     <nav v-if="state.totalDisplay > state.pageSize" class="mt-4">
       <ul class="pagination justify-content-center">
         <li :class="['page-item', { disabled: state.page === 1 }]">
-          <a class="page-link" href="javascript:;" @click="goPage(state.page - 1)">上一頁</a>
+          <a class="page-link silver-reflect-button" href="javascript:;" @click="goPage(state.page - 1)">上一頁</a>
         </li>
         <li class="page-item disabled">
           <span class="page-link">第 {{ state.page }} / {{ totalPages }} 頁（共 {{ state.totalDisplay }} 筆）</span>
         </li>
         <li :class="['page-item', { disabled: state.page >= totalPages }]">
-          <a class="page-link" href="javascript:;" @click="goPage(state.page + 1)">下一頁</a>
+          <a class="page-link silver-reflect-button" href="javascript:;" @click="goPage(state.page + 1)">下一頁</a>
         </li>
       </ul>
     </nav>
@@ -102,7 +102,7 @@ const state = reactive({
   totalDisplay: 0,
   categories: [],
   page: Number(route.query.page || 1),
-  pageSize: 12,
+  pageSize: 9,
   q: route.query.q ? String(route.query.q) : "",
   loading: false
 });
@@ -139,7 +139,7 @@ async function fetchList() {
     }
 
     state.page = page || 1;
-    state.pageSize = pageSize || 12;
+    state.pageSize = pageSize || 9;
 
     const map = new Map();
     state.items.forEach(a => {
