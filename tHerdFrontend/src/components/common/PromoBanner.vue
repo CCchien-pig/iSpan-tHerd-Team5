@@ -86,7 +86,7 @@ export default {
     // 右側促銷文字
     rightText: {
       type: String,
-      default: '29週年慶特惠',
+      default: '週年慶特惠',
     },
     // 倒計時文字
     countdown: {

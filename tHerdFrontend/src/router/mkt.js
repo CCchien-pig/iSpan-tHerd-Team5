@@ -1,7 +1,8 @@
 export default [
-  // {
-  //   path: '/cnt',
-  //   component: () => import('../pages/mkt/couple.vue'),
-  //   meta: { title: '活動頁面' }
-  // }
-];
+  {
+    path: '/mkt/marquee',
+    name: 'marquee',
+    component: () => import('@/components/modules/mkt/Marquee.vue'),
+    meta: { title: '跑馬燈' },
+  },
+]
