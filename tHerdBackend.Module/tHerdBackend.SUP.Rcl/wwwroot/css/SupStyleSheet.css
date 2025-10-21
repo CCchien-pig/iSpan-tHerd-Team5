@@ -248,7 +248,8 @@ input[type='radio']:focus {
         color: #1c0e88 !important;
     }
 
-/* ====== 跳轉品牌選擇btn動畫 ====== */
+
+/* ====== 跳轉品牌btn動畫 ====== */
 #brandListContainer .btn {
     transition: all 0.2s ease-in-out;
 }
@@ -258,10 +259,27 @@ input[type='radio']:focus {
         box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
     }
 
-/* ====== 品牌表格無供應商字體 ====== */
+/* ====== 品牌表格 無供應商文字 ====== */
 #brandTable .no-supplier {
     color: #ff6b6b;
     font-weight: 600;
+}
+#brandTable tr:hover .no-supplier {
+    color: #ffc4c4;
+}
+
+/* ====== 品牌表格 折扣狀態文字 ====== */
+#brandTable tr:hover .text-success {
+    color: #6dff79 !important;
+}
+#brandTable tr:hover .text-warning {
+    color: #ffd061 !important;
+}
+#brandTable tr:hover .text-danger {
+    color: #ffc4e1 !important;
+}
+#brandTable .text-warning {
+    color: #ff8108 !important;
 }
 
 

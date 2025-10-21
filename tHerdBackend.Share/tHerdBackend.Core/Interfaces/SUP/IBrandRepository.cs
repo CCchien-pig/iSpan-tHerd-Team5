@@ -13,6 +13,11 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		Task<List<BrandDto>> GetFilteredAsync(bool? active = null, bool? discountOnly = null, bool? featuredOnly = null);
 
 		Task<int?> GetLikeCountAsync(int id);
+
+
+		Task<bool> CheckBrandExistsAsync(int brandId);
+		Task<List<BrandDiscountDto>> GetAllDiscountsAsync();
+		Task<BrandDiscountDto?> GetDiscountByBrandIdAsync(int brandId);
 	}
 
 }

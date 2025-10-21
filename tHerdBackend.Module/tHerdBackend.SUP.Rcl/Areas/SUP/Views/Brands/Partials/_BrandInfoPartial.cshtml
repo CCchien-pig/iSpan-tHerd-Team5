@@ -23,7 +23,9 @@
     </div>
     <div class="d-flex mb-2">
         <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.IsDiscountActive)：</div>
-        <div>@(Model.IsDiscountActive ? "折扣啟用" : "無折扣")</div>
+        <div>
+            @(Model.IsDiscountActive.GetValueOrDefault() ? "折扣啟用" : "無折扣")
+        </div>
     </div>
     <div class="d-flex mb-2">
         <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.IsFeatured)：</div>

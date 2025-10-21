@@ -81,8 +81,10 @@ public class BrandsController : Controller
 
 		var totalRecords = await _context.SupBrands.CountAsync();
 		var filteredRecords = await query.CountAsync();
+		var today = DateOnly.FromDateTime(DateTime.Today);
 
 		// 排序（0=#, 1=品牌名稱, 2=供應商名稱 ...需對應前端DataTable的欄位索引）
+		// 3:「依折扣狀態」先分『0進行中→1尚未開始→2已結束→3其他非折扣→4尚未設定』再依折扣率排序
 		query = sortColumnIndex switch
 		{
 			0 => sortDirection == "asc"
@@ -90,8 +92,22 @@ public class BrandsController : Controller
 				: query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 			1 => sortDirection == "asc" ? query.OrderBy(x => x.BrandName) : query.OrderByDescending(x => x.BrandName),
 			2 => sortDirection == "asc" ? query.OrderBy(x => x.SupplierName) : query.OrderByDescending(x => x.SupplierName),
-			3 => sortDirection == "asc" ? query.OrderBy(x => x.IsFeatured) : query.OrderByDescending(x => x.IsFeatured),
-			// 4 折扣狀態
+			3 => sortDirection == "asc"
+				? query.OrderBy(x =>
+					!x.DiscountRate.HasValue || x.DiscountRate.Value <= 0 ? 4           // 尚未設定折扣（沒折扣率/null/<=0）
+					: x.StartDate > today ? 1                                           // 尚未開始
+					: x.EndDate < today ? 2                                             // 已結束
+					: !x.IsDiscountActive ? 3                                           // 其他非折扣（例如品牌停用）
+					: 0                                                                 // 進行中
+				).ThenBy(x => x.DiscountRate)
+				: query.OrderByDescending(x =>
+					!x.DiscountRate.HasValue || x.DiscountRate.Value <= 0 ? 4
+					: x.StartDate > today ? 1
+					: x.EndDate < today ? 2
+					: !x.IsDiscountActive ? 3
+					: 0
+				).ThenByDescending(x => x.DiscountRate),
+			4 => sortDirection == "asc" ? query.OrderBy(x => x.IsFeatured) : query.OrderByDescending(x => x.IsFeatured),
 			5 => sortDirection == "asc" ? query.OrderBy(x => x.IsActive) : query.OrderByDescending(x => x.IsActive),
 			_ => query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 		};
@@ -109,7 +125,7 @@ public class BrandsController : Controller
 			brandName = x.BrandName,
 			supplierId = x.SupplierId,
 			supplierName = x.SupplierName,
-			discountStatus = GetBrandDiscountStatus(x.StartDate, x.EndDate, x.DiscountRate, x.IsActive), // 關鍵！全部後端算好
+			discountStatus = GetBrandDiscountStatus(x.StartDate, x.EndDate, x.DiscountRate, x.IsActive),
 			isFeatured = x.IsFeatured,
 			isActive = x.IsActive,
 			sortDate = x.RevisedDate ?? x.CreatedDate
@@ -123,6 +139,8 @@ public class BrandsController : Controller
 			data
 		});
 	}
+
+	#region 品牌
 
 	// GET: SUP/Brands/Create
 	[HttpGet]
@@ -425,6 +443,10 @@ public class BrandsController : Controller
 		return _context.SupBrands.Any(e => e.BrandId == id);
 	}
 
+	#endregion
+
+	#region 品牌折扣
+
 	// /SUP/Brands/GetBrandNameBySupplier?supplierId=1001
 	[HttpGet]
 	public async Task<IActionResult> GetBrandNameBySupplier(int supplierId)
@@ -445,7 +467,6 @@ public class BrandsController : Controller
 
 		return Ok(brandNames);
 	}
-
 
 	// GET: SUP/Brand/CreateDiscount
 	[HttpGet]
@@ -555,6 +576,41 @@ public class BrandsController : Controller
 		}
 	}
 
+	// GET: /SUP/Brands/EditDiscount?brandId={id}
+	[HttpGet]
+	public async Task<IActionResult> EditDiscount(int brandId)
+	{
+		// 查詢當前品牌
+		var entity = await _context.SupBrands
+								  .AsNoTracking()
+								  .FirstOrDefaultAsync(b => b.BrandId == brandId);
+		if (entity == null)
+			return NotFound("找不到品牌");
+
+		// 組 DTO
+		var dto = new BrandDto
+		{
+			BrandId = entity.BrandId,
+			BrandName = entity.BrandName,
+			DiscountRate = entity.DiscountRate,
+			StartDate = entity.StartDate,
+			EndDate = entity.EndDate,
+			IsDiscountActive = entity.IsDiscountActive,
+			IsActive = entity.IsActive,
+			IsFeatured = entity.IsFeatured,
+			SupplierId = entity.SupplierId,
+			BrandCode = entity.BrandCode
+			// ...其他必要欄位
+		};
+
+		// 回傳 PartialView
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
+
+	}
+
+	#endregion
+
+	#region 折扣 API
 	// 「計算折扣狀態」API
 	// GET: SUP/Brand/GetBrandDiscountStatus
 	[HttpGet]
@@ -568,7 +624,7 @@ public class BrandsController : Controller
 		if (!isActive) return "未進行（品牌停用）";
 		if (today < startDate.Value) return "尚未開始";
 		if (today > endDate.Value) return "折扣已結束";
-		return $"進行中（{discountRate.Value:0.#}%，至 {endDate.Value:yyyy-MM-dd}）";
+		return $"進行中（{(discountRate.Value * 10):0.#}折，至 {endDate.Value:yyyy-MM-dd}）";
 	}
 
 	// 批次「刷新折扣狀態」API
@@ -600,5 +656,27 @@ public class BrandsController : Controller
 		await _context.SaveChangesAsync();
 		return Ok(new { success = true });
 	}
+
+	// GetBrandDiscountDetail API
+	// GET: SUP/Brand/GetBrandDiscountDetail
+	[HttpGet]
+	public async Task<IActionResult> GetBrandDiscountDetail(int brandId)
+	{
+		var brand = await _context.SupBrands.FirstOrDefaultAsync(b => b.BrandId == brandId);
+		if (brand == null)
+			return NotFound();
+
+		var dto = new
+		{
+			brandName = brand.BrandName,
+			discountRate = brand.DiscountRate,
+			isDiscountActive = brand.IsDiscountActive,
+			startDate = brand.StartDate,
+			endDate = brand.EndDate
+		};
+		return Json(dto);
+	}
+
+	#endregion
 
 }

@@ -113,4 +113,44 @@ public class BrandRepository : IBrandRepository
 			.Select(b => (int?)b.LikeCount)
 			.FirstOrDefaultAsync();
 	}
+
+
+	public async Task<bool> CheckBrandExistsAsync(int brandId)
+	{
+		return await _context.Set<SupBrand>()
+			.AsNoTracking()
+			.AnyAsync(b => b.BrandId == brandId);
+	}
+
+	public async Task<List<BrandDiscountDto>> GetAllDiscountsAsync()
+	{
+		return await _context.Set<SupBrand>().AsNoTracking()
+			.Select(b => new BrandDiscountDto
+			{
+				BrandId = b.BrandId,
+				BrandName = b.BrandName,
+				DiscountRate = b.DiscountRate,
+				IsDiscountActive = b.IsDiscountActive,
+				StartDate = b.StartDate,
+				EndDate = b.EndDate
+			})
+			.ToListAsync();
+	}
+
+	public async Task<BrandDiscountDto?> GetDiscountByBrandIdAsync(int brandId)
+	{
+		return await _context.SupBrands.AsNoTracking()
+			.Where(b => b.BrandId == brandId)
+			.Select(b => new BrandDiscountDto
+			{
+				BrandId = b.BrandId,
+				BrandName = b.BrandName,
+				DiscountRate = b.DiscountRate,
+				IsDiscountActive = b.IsDiscountActive,
+				StartDate = b.StartDate,
+				EndDate = b.EndDate
+			})
+			.FirstOrDefaultAsync();
+	}
+
 }

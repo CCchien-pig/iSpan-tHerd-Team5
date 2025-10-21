@@ -46,12 +46,12 @@ namespace tHerdBackend.Core.DTOs.SUP
 		public decimal? DiscountRate { get; set; }
 
 		/// <summary>
-		/// 品牌折扣狀態，1=有效、0=結束（排程更新）
+		/// 品牌折扣狀態，1=有效、0=結束
 		/// </summary>
 		[Display(Name = "折扣狀態")]
-		public bool IsDiscountActive { get; set; }
+		public bool? IsDiscountActive { get; set; }
 
-		public string DiscountStatus { get; set; } // 新增給前端用
+		public string? DiscountStatus { get; set; } // 新增給前端用
 
 		/// <summary>
 		/// 折扣開始日期

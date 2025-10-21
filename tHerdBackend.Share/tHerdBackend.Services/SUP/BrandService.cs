@@ -21,9 +21,16 @@ public class BrandService : IBrandService
 	{
 		return await _repo.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
 	}
-
-
-
+	public async Task<bool> CheckBrandExistsAsync(int brandId)
+	{
+		return await _repo.CheckBrandExistsAsync(brandId);
+	}
 	public async Task<int?> GetLikeCountAsync(int brandId) => await _repo.GetLikeCountAsync(brandId);
+
+	public async Task<List<BrandDiscountDto>> GetAllDiscountsAsync()
+	=> await _repo.GetAllDiscountsAsync();
+
+	public async Task<BrandDiscountDto?> GetDiscountByBrandIdAsync(int brandId)
+		=> await _repo.GetDiscountByBrandIdAsync(brandId);
 }
 

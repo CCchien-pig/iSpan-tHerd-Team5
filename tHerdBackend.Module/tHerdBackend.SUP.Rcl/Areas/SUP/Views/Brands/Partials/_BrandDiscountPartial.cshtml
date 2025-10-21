@@ -12,9 +12,17 @@
     @if (ViewBag.FormAction == "Edit")
     {
         <input type="hidden" asp-for="BrandId" />
+        <div class="form-floating mb-2">
+            <input class="form-control" value="@Model.BrandId" readonly />
+            <label class="form-label">品牌ID</label>
+        </div>
+        <div class="form-floating mb-2">
+            <input class="form-control" value="@Model.BrandName" readonly />
+            <label class="form-label">品牌名稱</label>
+        </div>
     }
-
-    <div class="container-fluid">
+    else
+    {
         <div class="form-floating mb-2">
             <select asp-for="BrandId" class="form-select" asp-items="ViewBag.BrandSelect">
                 <option value="">請選擇品牌</option>
@@ -22,6 +30,17 @@
             <label asp-for="BrandId" class="form-label">@Html.DisplayNameFor(m => m.BrandId)</label>
             <span asp-validation-for="BrandId" class="text-danger mt-1 d-block ms-2"></span>
         </div>
+    }
+
+
+    <div class="container-fluid">
+        @* <div class="form-floating mb-2">
+            <select asp-for="BrandId" class="form-select" asp-items="ViewBag.BrandSelect">
+                <option value="">請選擇品牌</option>
+            </select>
+            <label asp-for="BrandId" class="form-label">@Html.DisplayNameFor(m => m.BrandId)</label>
+            <span asp-validation-for="BrandId" class="text-danger mt-1 d-block ms-2"></span>
+        </div> *@
 
         <div class="form-floating mb-2">
             <input asp-for="DiscountRate" class="form-control" type="number" step="0.01" />

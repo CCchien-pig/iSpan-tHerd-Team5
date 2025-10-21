@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
@@ -119,5 +121,63 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				return StatusCode(500, new { success = false, message = ex.Message });
 			}
 		}
+
+
+		/// <summary>
+		/// 查詢所有品牌的折扣資料
+		/// </summary>
+		/// <returns>所有品牌折扣資訊及期間</returns>
+		[HttpGet("discounts")]
+		public async Task<ActionResult<ApiResponse<List<BrandDiscountDto>>>> GetAllBrandDiscounts()
+		{
+			try
+			{
+				var list = await _service.GetAllDiscountsAsync();
+				return Ok(ApiResponse<List<BrandDiscountDto>>.Ok(list));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<List<BrandDiscountDto>>.Fail("查詢品牌折扣失敗：" + ex.Message));
+			}
+		}
+
+		/// <summary>
+		/// 依品牌ID查詢該品牌的折扣資料（可匿名）
+		/// </summary>
+		/// <param name="brandId">品牌ID</param>
+		/// <returns>ApiResponse: 品牌折扣資訊</returns>
+		[HttpGet("discount/bybrand/{brandId}")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetDiscountByBrandId(int brandId)
+		{
+			try
+			{
+				// 檢查資料庫中是否存在該品牌ID
+				var brandExists = await _service.CheckBrandExistsAsync(brandId);
+				if (!brandExists)
+				{
+					return Ok(ApiResponse<BrandDiscountDto>.Fail("找不到該品牌ID"));
+				}
+
+				var discount = await _service.GetDiscountByBrandIdAsync(brandId);
+
+				// 若查不到資料（品牌存在但沒折扣）
+				if (discount == null || discount.DiscountRate is null)
+				{
+					return Ok(ApiResponse<BrandDiscountDto>.Fail("沒有找到該品牌的折扣資料"));
+				}
+
+				return Ok(ApiResponse<BrandDiscountDto>.Ok(discount, "查詢成功"));
+			}
+			catch (Exception ex)
+			{
+				// 統一回傳失敗格式
+				return Ok(ApiResponse<BrandDiscountDto>.Fail("系統錯誤：" + ex.Message));
+			}
+		}
+
+
+
+
 	}
 }

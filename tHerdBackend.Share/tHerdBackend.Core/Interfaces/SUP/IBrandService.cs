@@ -21,5 +21,10 @@ public interface IBrandService
 	/// 取得指定品牌的按讚數
 	/// </summary>
 	Task<int?> GetLikeCountAsync(int brandId);
+
+
+	Task<bool> CheckBrandExistsAsync(int brandId);
+	Task<List<BrandDiscountDto>> GetAllDiscountsAsync();
+	Task<BrandDiscountDto?> GetDiscountByBrandIdAsync(int brandId);
 }
 
