@@ -44,5 +44,12 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 			IEnumerable<int> analyteIds,
 			CancellationToken ct = default);
 
+		Task<IReadOnlyList<dynamic>> GetAllSamplesAsync(
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default);
+
+
 	}
 }

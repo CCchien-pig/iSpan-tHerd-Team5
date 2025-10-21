@@ -188,6 +188,23 @@ namespace tHerdBackend.Services.CNT
 			};
 		}
 
+		public async Task<List<NutritionListDto>> GetAllSamplesAsync(
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default)
+		{
+			var rows = await _repo.GetAllSamplesAsync(keyword, categoryId, sort, ct);  // ⬅️ 呼叫新的 Repo 方法
+			return rows.Select(r => new NutritionListDto
+			{
+				SampleId = r.SampleId,
+				SampleName = (r.DisplayName ?? "-").ToString(),
+				AliasName = r.AliasName,
+				CategoryName = r.CategoryName
+			}).ToList();
+		}
+
+
 
 	}
 }

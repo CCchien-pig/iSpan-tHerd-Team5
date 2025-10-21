@@ -285,6 +285,95 @@ ORDER BY c.CategoryId ASC;";
 			}
 		}
 
+		public async Task<IReadOnlyList<dynamic>> GetAllSamplesAsync(
+	string? keyword,
+	int? categoryId,
+	string? sort,
+	CancellationToken ct = default)
+		{
+			int? nutrientAnalyteId = TryParseNutrientSort(sort);
+
+			var sb = new StringBuilder(@"
+SELECT
+    s.SampleId,
+    CASE 
+        WHEN NULLIF(LTRIM(RTRIM(s.SampleNameEn)),'') IS NOT NULL 
+             THEN CONCAT(s.SampleName, ' (', s.SampleNameEn, ')')
+        ELSE s.SampleName
+    END                 AS DisplayName,
+    NULLIF(LTRIM(RTRIM(s.AliasName)),'')   AS AliasName,
+    s.CategoryId,
+    c.CategoryName,
+    NULLIF(LTRIM(RTRIM(s.ContentDesc)),'') AS ContentDesc");
+
+			if (nutrientAnalyteId.HasValue)
+			{
+				sb.Append(@",
+    MAX(CASE WHEN m.AnalyteId = @NutrientAid THEN m.ValuePer100g END) AS NutrientValue");
+			}
+
+			sb.Append(@"
+FROM dbo.CNT_Sample s
+JOIN dbo.CNT_FoodCategory c ON c.CategoryId = s.CategoryId
+");
+
+			if (nutrientAnalyteId.HasValue)
+			{
+				sb.Append(@"
+LEFT JOIN dbo.CNT_Measurement m 
+       ON m.SampleId = s.SampleId 
+      AND m.AnalyteId = @NutrientAid
+");
+			}
+
+			sb.Append(@"
+WHERE 1=1
+");
+
+			var param = new DynamicParameters();
+
+			if (!string.IsNullOrWhiteSpace(keyword))
+			{
+				param.Add("Keyword", keyword.Trim());
+				sb.Append(@"
+  AND (
+        s.SampleName      LIKE CONCAT('%', @Keyword, '%') OR
+        s.SampleNameEn    LIKE CONCAT('%', @Keyword, '%') OR
+        s.AliasName       LIKE CONCAT('%', @Keyword, '%')
+      )
+");
+			}
+
+			if (categoryId.HasValue)
+			{
+				param.Add("CategoryId", categoryId.Value);
+				sb.Append("  AND s.CategoryId = @CategoryId\n");
+			}
+
+			if (nutrientAnalyteId.HasValue)
+				param.Add("NutrientAid", nutrientAnalyteId.Value);
+
+			sb.Append(@"
+GROUP BY 
+    s.SampleId, s.SampleName, s.SampleNameEn, s.AliasName, s.CategoryId, c.CategoryName, s.ContentDesc
+");
+
+			// ⬅️ 不加 OFFSET/FETCH（不分頁）
+			AppendOrderBy(sb, sort, nutrientAnalyteId.HasValue);
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = (await conn.QueryAsync(sb.ToString(), param, tx)).ToList();
+				return rows;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+
 		private static int? TryParseNutrientSort(string? sort)
 		{
 			if (string.IsNullOrWhiteSpace(sort)) return null;

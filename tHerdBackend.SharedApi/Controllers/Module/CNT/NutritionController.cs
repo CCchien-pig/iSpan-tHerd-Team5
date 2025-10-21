@@ -24,7 +24,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 
 		// =========================================================================
 		// GET: /api/cnt/nutrition/list
-		// 參數：keyword, categoryId, sort, page, pageSize
+		// 參數：keyword, categoryId, sort, page, pageSize, all
 		// 回傳：{ items, total, page, pageSize }
 		// =========================================================================
 		[HttpGet("list")]
@@ -34,25 +34,29 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 			[FromQuery] string? sort,
 			[FromQuery] int page = 1,
 			[FromQuery] int pageSize = 12,
+			[FromQuery] bool all = false,             // ⬅️ 新增
 			CancellationToken ct = default)
 		{
-			var (items, total) = await _nutritionService.GetSampleListAsync(
-				keyword,
-				categoryId,
-				sort,
-				page,
-				pageSize,
-				ct
-			);
-
-			return Ok(new
+			try
 			{
-				items,
-				total,
-				page,
-				pageSize
-			});
+				// ⬅️ 新增：一次回傳全部（給前端下拉）
+				if (all)
+				{
+					var allItems = await _nutritionService.GetAllSamplesAsync(keyword, categoryId, sort, ct);
+					return Ok(new { items = allItems, total = allItems.Count });
+				}
+
+				var (items, total) = await _nutritionService.GetSampleListAsync(
+					keyword, categoryId, sort, page, pageSize, ct);
+
+				return Ok(new { items, total, page, pageSize });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { error = "伺服器內部錯誤", detail = ex.Message });
+			}
 		}
+
 
 		// =========================================================================
 		// GET: /api/cnt/nutrition/{id}
@@ -113,9 +117,5 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 				return StatusCode(500, new { error = "伺服器內部錯誤", detail = ex.Message });
 			}
 		}
-
-
-
-
 	}
 }

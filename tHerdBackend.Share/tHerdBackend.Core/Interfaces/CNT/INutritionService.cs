@@ -38,5 +38,11 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 		/// <returns>每個營養素的各食材數值（供 Chart 使用）</returns>
 		Task<object> CompareAsync(string sampleIds, string analyteIds, CancellationToken ct = default);
 
+		Task<List<NutritionListDto>> GetAllSamplesAsync(
+				string? keyword,
+				int? categoryId,
+				string? sort,
+				CancellationToken ct = default);
+
 	}
 }

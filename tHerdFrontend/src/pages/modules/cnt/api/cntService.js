@@ -1,95 +1,118 @@
-import axios from 'axios'
+// src/pages/modules/cnt/api/cntService.js
+import axios from "axios";
 
-// ✅ 與 Swagger 一致的後端基底路徑
-const API_BASE = 'https://localhost:7103/api/cnt'
+// 📌 統一 API 基底位址
+const API_BASE = "https://localhost:7103/api/cnt";
 
 /* ----------------------------------------------------
  * 📰 文章 Article API
- * --------------------------------------------------*/
+ * -------------------------------------------------- */
 
 /**
- * 取得文章列表
- * 支援：分類(categoryId)、關鍵字(q)、分頁(page, pageSize)
+ * 取得文章清單
+ * 對應後端：GET /api/cnt/list
+ * 可傳參數：
+ * { q, categoryId, page, pageSize }
  */
 export async function getArticleList({
-    categoryId = null,
     q = "",
+    categoryId = null,
     page = 1,
-    pageSize = 12
+    pageSize = 9,
 } = {}) {
-
-    const params = {}
-    if (categoryId) params.categoryId = categoryId
-    if (q && q.trim()) params.q = q.trim()
-    params.page = page
-    params.pageSize = pageSize
-
-    const res = await axios.get(`${API_BASE}/list`, { params })
-    return res.data  // { items, total, page, pageSize }
+    try {
+        const params = { q, page, pageSize };
+        if (categoryId) params.categoryId = categoryId;
+        const { data } = await axios.get(`${API_BASE}/list`, { params });
+        return data; // { items, total, page, pageSize }
+    } catch (err) {
+        console.error("getArticleList 錯誤:", err);
+        return { items: [], total: 0, page: 1, pageSize: 0 };
+    }
 }
 
 /**
- * 取得文章詳細
- * @param {Number} id 文章 ID
+ * 取得單篇文章詳細 + 同分類推薦
+ * 對應後端：GET /api/cnt/articles/{id}
  */
 export async function getArticleDetail(id) {
-    const res = await axios.get(`${API_BASE}/articles/${id}`)
-    return res.data  // { canViewFullContent, data }
+    try {
+        const { data } = await axios.get(`${API_BASE}/articles/${id}`);
+        return data; // { canViewFullContent, data, recommended }
+    } catch (err) {
+        console.error("getArticleDetail 錯誤:", err);
+        return null;
+    }
 }
-
 
 /* ----------------------------------------------------
  * 🧪 營養 Nutrition API
- * Base: /api/cnt/nutrition
- * --------------------------------------------------*/
+ * -------------------------------------------------- */
 
 /**
- * 取得食材列表
- * @param {Object} param0
- * keyword: 關鍵字, categoryId: 類別,
- * sort: name/newest/category/popular/nutrient:1104
- * page, pageSize
+ * 取得營養清單
+ * 對應後端：GET /api/cnt/nutrition/list
  */
 export async function getNutritionList({
-    keyword = '',
+    all = false,
+    keyword = "",
     categoryId = null,
-    sort = 'name',
+    sort = "name",
     page = 1,
-    pageSize = 12
+    pageSize = 12,
 } = {}) {
-
-    const params = { page, pageSize }
-    if (keyword && keyword.trim()) params.keyword = keyword.trim()
-    if (categoryId) params.categoryId = categoryId
-    if (sort) params.sort = sort
-
-    const res = await axios.get(`${API_BASE}/nutrition/list`, { params })
-    return res.data  // { items, total, page, pageSize }
+    try {
+        const params = { page, pageSize, keyword, categoryId, sort, all };
+        const { data } = await axios.get(`${API_BASE}/nutrition/list`, { params });
+        return data; // { items, total, page, pageSize }
+    } catch (err) {
+        console.error("getNutritionList 錯誤:", err);
+        return { items: [], total: 0 };
+    }
 }
 
 /**
- * 取得單筆食材營養明細
- * @param {Number} id SampleId
+ * 取得單筆營養詳情
+ * 對應後端：GET /api/cnt/nutrition/{id}
  */
 export async function getNutritionDetail(id) {
-    const res = await axios.get(`${API_BASE}/nutrition/${id}`)
-    return res.data  // { sample: {...}, nutrients: [...] }
+    try {
+        const { data } = await axios.get(`${API_BASE}/nutrition/${id}`);
+        return data;
+    } catch (err) {
+        console.error("getNutritionDetail 錯誤:", err);
+        return null;
+    }
 }
 
-/** 取得食物分類清單（for 下拉） */
+/**
+ * 取得食物分類
+ * 對應後端：GET /api/cnt/nutrition/foodcategories
+ */
 export async function getFoodCategories() {
-    const res = await axios.get(`${API_BASE}/nutrition/foodcategories`)
-    return res.data // [{ id, name }]
+    try {
+        const { data } = await axios.get(`${API_BASE}/nutrition/foodcategories`);
+        return data;
+    } catch (err) {
+        console.error("getFoodCategories 錯誤:", err);
+        return [];
+    }
 }
 
-/** 食材營養比較分析 */
-// export async function getNutritionCompare(sampleIds, analyteIds) {
-//     const res = await axios.get(`${API_BASE}/nutrition/compare`, {
-//         params: {
-//             sampleIds: sampleIds.join(','),
-//             analyteIds: analyteIds.join(',')
-//         }
-//     });
-//     return res.data;
-// }
-
+/**
+ * 營養比較
+ * 對應後端：GET /api/cnt/nutrition/compare
+ * @param {string} sampleIds 逗號分隔的 SampleId 清單
+ * @param {string} analyteIds 逗號分隔的 AnalyteId 清單
+ */
+export async function getNutritionCompare(sampleIds, analyteIds) {
+    try {
+        const { data } = await axios.get(`${API_BASE}/nutrition/compare`, {
+            params: { sampleIds, analyteIds },
+        });
+        return data;
+    } catch (err) {
+        console.error("getNutritionCompare 錯誤:", err);
+        return { groups: [] };
+    }
+}
