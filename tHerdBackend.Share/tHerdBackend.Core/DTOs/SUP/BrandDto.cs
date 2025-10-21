@@ -30,18 +30,19 @@ namespace tHerdBackend.Core.DTOs.SUP
 		public int? SupplierId { get; set; }
 
 		[Display(Name = "供應商名稱")]
-		public string SupplierName { get; set; } // 顯示用途，查詢JOIN SUP_Supplier時填入用
+		public string? SupplierName { get; set; } // 顯示用途，查詢JOIN SUP_Supplier時填入用
 
 		/// <summary>
 		/// Seo 設定
 		/// </summary>
-		[Display(Name = "SEO設定ID")]
+		[Display(Name = "設定SeoId")]
 		public int? SeoId { get; set; }
+		//public string? SeoId { get; set; }
 
 		/// <summary>
 		/// 折扣率 (0 ~ 100%)
 		/// </summary>
-		[Display(Name = "折扣率")]
+		[Display(Name = "品牌折扣率")]
 		public decimal? DiscountRate { get; set; }
 
 		/// <summary>
@@ -49,6 +50,8 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// </summary>
 		[Display(Name = "折扣狀態")]
 		public bool IsDiscountActive { get; set; }
+
+		public string DiscountStatus { get; set; } // 新增給前端用
 
 		/// <summary>
 		/// 折扣開始日期
@@ -77,7 +80,7 @@ namespace tHerdBackend.Core.DTOs.SUP
 		/// <summary>
 		/// 品牌是否啟用
 		/// </summary>
-		[Display(Name = "啟用狀態")]
+		[Display(Name = "品牌啟用狀態")]
 		public bool IsActive { get; set; }
 
 		/// <summary>

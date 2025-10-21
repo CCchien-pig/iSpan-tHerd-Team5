@@ -1,56 +1,66 @@
 ﻿@using tHerdBackend.Core.DTOs.SUP
 @using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
-@* _BrandsFormPartial.cshtml 共用表單欄位*@
 
 @model BrandDto
 
 @{
-    // 根據 ViewBag.FormAction 決定表單提交 URL
     var formAction = ViewBag.FormAction == "Edit" ?
         Url.Action("Edit", "Brands", new { id = Model.BrandId, area = "SUP" })
         : Url.Action("Create", "Brands", new { area = "SUP" });
 }
 
 <form id="BrandForm" action="@formAction" method="post">
-
     @Html.AntiForgeryToken()
 
-    @* 放隱藏欄位，Edit 的時候才能帶回 BrandId *@
+    @* 只保留一個 BrandId hidden *@
     @if (ViewBag.FormAction == "Edit")
     {
         <input type="hidden" asp-for="BrandId" />
     }
 
+    <div class="d-flex justify-content-start mb-4">
+        <button type="button" id="fillNameContact"
+                class="btn d-flex align-items-center me-2"
+                style="background-color:#35afe6;color:#fff;">
+            自動填入名稱與簡碼
+        </button>
+    </div>
 
     <div class="container-fluid">
         @* 品牌名稱 *@
         <div class="form-floating mb-2">
             <input asp-for="BrandName" class="form-control" placeholder="" />
             <label asp-for="BrandName" class="form-label">@Html.DisplayNameFor(m => m.BrandName)</label>
-            <span asp-validation-for="BrandName" class="text-danger mt-1 d-block ms-2 "></span>
+            <span asp-validation-for="BrandName" class="text-danger mt-1 d-block ms-2"></span>
         </div>
 
-        @* 供應商名稱 *@
+        @* 品牌簡碼 *@
         <div class="form-floating mb-2">
-            <input asp-for="SupplierName" class="form-control" placeholder="" />
-            <label asp-for="SupplierName" class="form-label">@Html.DisplayNameFor(m => m.SupplierName)</label>
-            <span asp-validation-for="SupplierName" class="text-danger mt-1 d-block ms-2"></span>
+            <input asp-for="BrandCode" class="form-control" placeholder="" />
+            <label asp-for="BrandCode" class="form-label">@Html.DisplayNameFor(m => m.BrandCode)</label>
+            <span asp-validation-for="BrandCode" class="text-danger mt-1 d-block ms-2"></span>
         </div>
 
-        @* 品牌按讚數 *@
+        @* 供應商下拉選單 *@
         <div class="form-floating mb-2">
-            <input asp-for="LikeCount" class="form-control" placeholder="" />
-            <label asp-for="LikeCount" class="form-label">@Html.DisplayNameFor(m => m.LikeCount)</label>
-            <span asp-validation-for="LikeCount" class="text-danger mt-1 d-block ms-2"></span>
+
+            <select asp-for="SupplierId" class="form-select" asp-items="ViewBag.Suppliers">
+                <option value="">請選擇供應商</option>
+            </select>
+            <label asp-for="SupplierId" class="form-label">@Html.DisplayNameFor(m => m.SupplierName)</label>
+            <span asp-validation-for="SupplierId" class="text-danger mt-1 d-block ms-2"></span>
+        </div>
+
+        @* SeoId
+        <div class="form-floating mb-2">
+            <input asp-for="SeoId" class="form-control" type="text" placeholder="" />
+            <label asp-for="SeoId" class="form-label">@Html.DisplayNameFor(m => m.SeoId)</label>
+            <span asp-validation-for="SeoId" class="text-danger mt-1 d-block ms-2"></span>
         </div>
 
         @* 品牌折扣狀態 *@
-        <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
+        @* <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
             <label class="form-label mb-0 me-3 flex-shrink-0" for="IsDiscountActive">折扣狀態</label>
-
-            <!-- hidden values -->
-            <input type="hidden" id="BrandId" name="BrandId" value="@Model.BrandId" />
-
             <div class="form-check form-switch ms-3 mb-0">
                 <input type="hidden" name="IsDiscountActive" value="false" />
                 <input class="form-check-input" type="checkbox"
@@ -59,15 +69,11 @@
                        @(Model.IsDiscountActive ? "checked" : "")>
             </div>
         </div>
-        <p id="IsDiscountActiveStatusMsg" class="text-success my-2"></p>
+        <p id="IsDiscountActiveStatusMsg" class="text-success my-2"></p> *@
 
         @* 精選品牌狀態 *@
         <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
             <label class="form-label mb-0 me-3 flex-shrink-0" for="IsFeatured">精選品牌狀態</label>
-
-            <!-- hidden values -->
-            <input type="hidden" id="BrandId" name="BrandId" value="@Model.BrandId" />
-
             <div class="form-check form-switch ms-3 mb-0">
                 <input type="hidden" name="IsFeatured" value="false" />
                 <input class="form-check-input" type="checkbox"
@@ -81,10 +87,6 @@
         @* 品牌啟用狀態 *@
         <div class="border rounded d-flex align-items-center px-3" style="height: 3.5rem;">
             <label class="form-label mb-0 me-3 flex-shrink-0" for="IsActive">啟用狀態</label>
-
-            <!-- hidden values -->
-            <input type="hidden" id="BrandId" name="BrandId" value="@Model.BrandId" />
-
             <div class="form-check form-switch ms-3 mb-0">
                 <input type="hidden" name="IsActive" value="false" />
                 <input class="form-check-input" type="checkbox"
@@ -95,7 +97,6 @@
         </div>
         <p id="IsActiveStatusMsg" class="text-success my-2"></p>
 
-
         <div class="modal-footer justify-content-center">
             <button type="button" class="btn btn-secondary me-3" data-bs-dismiss="modal">取消</button>
             <button type="submit" class="btn btn-success">儲存</button>
@@ -104,7 +105,6 @@
 </form>
 
 @section Scripts {
-    @* 重新解析 jQuery Validation *@
     <script>
         $(function () {
             $.validator.unobtrusive.parse('#BrandForm');

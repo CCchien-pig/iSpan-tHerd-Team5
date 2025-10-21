@@ -45,6 +45,21 @@
     </div>
 </div>
 
+<!-- Modal: 顯示品牌列表 -->
+<div class="modal fade" id="brandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇品牌</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="brandListContainer">
+                <p class="text-muted">載入中...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 
     <script>
@@ -83,7 +98,7 @@
                         data: 'supplierName',
                         title: '供應商名稱',
                         render: function(data, type, row) {
-                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.supplierId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #73e0eb;"></i></button>`;
+                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.supplierId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #15b49f;"></i></button>`;
                         }
                     },
                     { data: 'contactName', title: '聯絡人' },
@@ -109,6 +124,9 @@
                         orderable: false,   // 禁止排序
                         render: function(data) {
                             return `
+                                <button class="btn btn-sm brand-btn" data-id="${data}" title="前往名下品牌" data-bs-toggle="tooltip">
+                                    <i class="fa-regular fa-copyright" style="color: #0094e9;"></i>
+                                </button>
                                 <button class="btn btn-sm inventory-btn" data-id="${data}" title="前往名下品牌庫存" data-bs-toggle="tooltip">
                                     <i class="fa-regular fa-truck" style="color: #dca91e;"></i> 庫存
                                 </button>
@@ -132,7 +150,40 @@
                 language: {
                     url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',   // i18n
                     processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'   // 自訂載入圖示，大小fa-3x
+                },
+                initComplete: function (settings, json) {
+                    var api = this.api(); // 取得 DataTable 實例
+
+                    // 從 sessionStorage 取初始供應商名稱
+                    var initialSupplierName = sessionStorage.getItem('selectedSupplierName') || '';
+
+                    // 取完就清掉，避免刷新又填入
+                    sessionStorage.removeItem('selectedSupplierName');
+
+                    // ===== 自動填入搜尋供應商名稱 =====
+                    if (initialSupplierName) {
+                        // 假設你的搜尋欄位是 DataTable 自帶的搜尋或自定義的 input
+                        var searchInput = $('#dt-search-0'); // 替換成你的搜尋 input ID
+                        searchInput.val(initialSupplierName).trigger('input');
+
+                        // 使用 DataTable API 搜尋
+                        api.search(initialSupplierName).draw();
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: '已篩選',
+                            text: `目前顯示供應商 "${initialSupplierName}" 的資料`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+
+                    // 初始化所有 tooltip
+                    $('[data-bs-toggle="tooltip"]').each(function () {
+                        new bootstrap.Tooltip(this);
+                    });
                 }
+
             });
 
             // 初始化 tooltip
@@ -197,7 +248,7 @@
                         checkbox.prop('checked', !newStatus);
                     } else {
                         // 使用者確認 → 更新提示 p
-                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態`);
+                        $('#statusMsg').text(`已切換至${newStatus ? '"啟用"' : '"停用"'}狀態，進貨權限將會一同變動`);
                     }
                 });
             });
@@ -290,9 +341,9 @@
 
                 Swal.fire({
                     title: newStatus ?
-                        `確定要啟用供應商：<br>"${supplierName}" 嗎？` :
-                        `確定要停用供應商：<br>"${supplierName}" 嗎？`,
-                    icon: newStatus ? 'question' : 'warning',
+                        `確定要啟用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同啟用` :
+                        `確定要停用供應商：<br>"${supplierName}" 嗎？<br>其進貨權限將一同停用`,
+                        icon: newStatus ? 'question' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
                     cancelButtonText: '取消',
@@ -391,26 +442,45 @@
                     success: function (brands) {
                         console.log('AJAX 成功，取得 brands:', brands);
 
-                        if (!brands || brands.length === 0) {
-                            console.warn('⚠️ 沒有品牌資料，存空字串');
-                            sessionStorage.setItem('selectedBrandName', '');
-                        } else {
-                            // 注意這裡大小寫要對
-                            var brandName = brands[0].brandName;
-                            console.log('📌 取出的 brandName:', brandName);
+                        $('#brandListContainer').empty(); // 清空 modal
 
-                            sessionStorage.setItem('selectedBrandName', brandName);
-                            console.log('✅ 存入 sessionStorage: selectedBrandName =', sessionStorage.getItem('selectedBrandName'));
+                        if (!brands || brands.length === 0) {
+                            $('#brandListContainer').html('<p class="text-danger">該供應商名下無品牌</p>');
+                        } else {
+                            brands.forEach(function (b) {
+                                var colors = ['primary', 'info', 'success', 'warning', 'secondary'];
+                                var color = colors[Math.floor(Math.random() * colors.length)];
+
+                                var brandText = b.brandName + (!b.isActive ? " (未啟用)" : "");
+                                console.log(brandText);
+
+                                var btn = $('<button>')
+                                    .addClass(`btn btn-${color} m-1 px-3 py-2 rounded-pill fw-semibold shadow-sm`)
+                                    .text(brandText)
+                                    .css('opacity', '0.7');
+
+                                // if (!b.IsActive) {
+                                //     btn.addClass('opacity-50');
+                                    //btn.prop('disabled', true); // 可視需求決定是否禁用
+                                // }
+
+                                // 點擊品牌後存 session 並跳轉
+                                btn.on('click', function () {
+                                    sessionStorage.setItem('selectedBrandName', b.brandName);
+                                    window.location.href = '/SUP/StockBatches/Index?supplierId=' + supplierId;
+                                });
+
+                                $('#brandListContainer').append(btn);
+                            });
                         }
 
-                        console.log('⏳ 10 秒後跳轉到 /SUP/StockBatches/Index ...');
-                        setTimeout(function () {
-                            window.location.href = '/SUP/StockBatches/Index';
-                        });
-                        //, 10000); //等十秒看主控台訊息
+                        // 顯示 Modal
+                        $('#brandModal').modal('show');
                     },
                     error: function (xhr, status, error) {
                         console.error('❌ AJAX 失敗:', status, error);
+                        $('#brandListContainer').html('<p class="text-danger">讀取品牌失敗，請稍後再試。</p>');
+                        $('#brandModal').modal('show');
                     }
                 });
             });
@@ -419,31 +489,99 @@
                 // 重新解析 jQuery Validation
                 $.validator.unobtrusive.parse('#supplierForm');
 
-                // 按鈕1：自動填入名稱與聯絡人
-                $('#fillNameContact').click(function () {
+                // 事件委派 - 綁定在表單容器上
+                $('#supplierModalContent').on('click', '#fillNameContact', function () {
                     const now = new Date();
-                    const hour = now.getHours();   // 小時
-                    const minute = now.getMinutes(); // 分鐘
+                    const hour = now.getHours();
+                    const minute = now.getMinutes();
 
                     $('#SupplierName').val(`供應商${hour}點`);
                     $('#ContactName').val(`聯絡人${minute}分`);
                 });
 
-                // 按鈕2：自動填入電子信箱
-                $('#fillEmail').click(function () {
+                $('#supplierModalContent').on('click', '#fillEmail', function () {
                     const now = new Date();
                     const hh = String(now.getHours()).padStart(2, '0');
                     const mm = String(now.getMinutes()).padStart(2, '0');
-                    const account = `${hh}${mm}`; // 例如 0935
+                    const account = `${hh}${mm}`;
 
-                    // 隨機選一個 domain
                     const domains = ['@@ispan.com', '@@fuen43.com', '@@gggmail.com', '@@yyymail.com'];
                     const domain = domains[Math.floor(Math.random() * domains.length)];
 
                     $('#Email').val(`${account}${domain}`);
                 });
-
             });
+
+            // ======= 點[品牌]跳轉 =======
+            $('#supplierTable').on('click', '.brand-btn', function () {
+                var supplierId = $(this).data('id');
+                console.log('📌 點擊[品牌]，取得 supplierId:', supplierId);
+
+                if (!supplierId) {
+                    console.error('❌ supplierId 為空，無法繼續');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/SUP/Brands/GetBrandNameBySupplier',
+                    type: 'GET',
+                    data: { supplierId: supplierId },
+                    success: function (brands) {
+                        console.log('✅ AJAX 成功，取得 brands:', brands);
+
+                        var container = $('#brandListContainer');
+                        container.empty();
+
+                        if (!brands || brands.length === 0) {
+                            container.append('<p class="text-danger">此供應商目前沒有品牌。</p>');
+                        } else {
+                            brands.forEach(function (b) {
+                                var colors = ['primary', 'info', 'success', 'warning', 'secondary'];
+                                var color = colors[Math.floor(Math.random() * colors.length)];
+
+                                // 如果未啟用，文字後加 (未啟用)
+                                var brandText = b.brandName + (!b.isActive ? " (未啟用)" : "");
+
+                                var btn = $('<button>')
+                                    .addClass(`btn btn-${color} m-1 px-3 py-2 rounded-pill fw-semibold shadow-sm`)
+                                    .text(brandText)
+                                    .css('opacity', '0.7')
+                                    .on('click', function () {
+                                        console.log('👉 選擇品牌:', brandText);
+
+                                        // 存入 sessionStorage
+                                        sessionStorage.setItem('selectedBrandName', b.brandName);
+                                        sessionStorage.setItem('selectedBrandId', b.brandId);
+                                        console.log('✅ 存入 sessionStorage:', sessionStorage.getItem('selectedBrandName'));
+
+                                        // 關閉 modal
+                                        $('#brandModal').modal('hide');
+
+                                        // 模擬延遲後導向品牌頁
+                                        setTimeout(function () {
+                                            // window.location.href = '/SUP/Brands/Details/' + b.brandId;
+                                            window.location.href = '/SUP/Brands/Index';
+                                        }, 300);
+                                    });
+                                // 如果未啟用，淡化樣式
+                                //if (!b.isActive) {
+                                    //btn.addClass('opacity-50'); // Bootstrap 透明度 50%
+                                    //btn.prop('disabled', true); // 選擇性禁用按鈕
+                                // }
+                                container.append(btn);
+                            });
+                        }
+
+                        $('#brandModal').modal('show'); // 顯示 Modal
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('❌ AJAX 失敗:', status, error);
+                        $('#brandListContainer').html('<p class="text-danger">讀取品牌失敗。</p>');
+                        $('#brandModal').modal('show');
+                    }
+                });
+            });
+
         });
     </script>
 }
