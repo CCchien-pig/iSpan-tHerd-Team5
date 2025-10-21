@@ -72,6 +72,7 @@
 
 
 <script>
+import { getFaqList } from './api/csfaq'// ← 路徑對應你的資料夾結構
 export default {
   name: 'FaqSearch',
   data() {
@@ -130,8 +131,8 @@ export default {
       } finally { this.loading = false }
     },
     async loadCategories() {
-      const res = await fetch('/api/cs/faq/list')
-      this.categories = await res.json()
+      const  data = await  getFaqList() 
+      this.categories = data;
     },
     hl(text) {
       if (!this.q || !text) return text
