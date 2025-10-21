@@ -21,11 +21,14 @@ namespace tHerdBackend.Core.DTOs.SUP
 		public decimal? DiscountRate { get; set; }
 
 		[Display(Name = "折扣開始日期")]
-		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd tt hh:mm:ss}", ApplyFormatInEditMode = true)]
+		[Required(ErrorMessage = "請輸入折扣開始日期")]
+		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd}", ApplyFormatInEditMode = true)]
+
 		public DateOnly? StartDate { get; set; }
 
 		[Display(Name = "折扣結束日期")]
-		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd tt hh:mm:ss}", ApplyFormatInEditMode = true)]
+		[Required(ErrorMessage = "請輸入折扣結束日期")]
+		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd}", ApplyFormatInEditMode = true)]
 		public DateOnly? EndDate { get; set; }
 
 		/// <summary>

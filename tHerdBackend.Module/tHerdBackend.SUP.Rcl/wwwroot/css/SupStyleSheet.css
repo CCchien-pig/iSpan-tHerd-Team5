@@ -194,6 +194,8 @@ input[type='radio']:focus {
     color: #88f2fd !important;
 }
 
+#stockBatchTable .edit-stock-btn,
+#historyTable .stock-text-btn,
 #logisticsTable .edit-btn,
 #supplierTable .edit-btn,
 #brandTable .edit-btn {
@@ -202,6 +204,8 @@ input[type='radio']:focus {
     color: #9073e8;
 }
 
+    #stockBatchTable .edit-stock-btn:hover,
+    #historyTable .stock-text-btn:hover,
     #logisticsTable .edit-btn:hover,
     #supplierTable .edit-btn:hover,
     #brandTable .edit-btn:hover {
@@ -209,12 +213,16 @@ input[type='radio']:focus {
         border: 1px solid #c3b8f3;
     }
 
+        #stockBatchTable .edit-stock-btn:hover svg,
+        #historyTable .stock-text-btn:hover svg,
         #logisticsTable .edit-btn:hover svg,
         #supplierTable .edit-btn:hover svg,
         #brandTable .edit-btn:hover svg {
             color: #9700a2 !important;
         }
 
+
+#stockBatchTable .stock-history-btn,
 #supplierTable .brand-btn,
 #logisticsTable .history-btn,
 #logisticsTable .delete-btn,
@@ -225,6 +233,7 @@ input[type='radio']:focus {
     color: #084496;
 }
 
+    #stockBatchTable .stock-history-btn:hover,
     #supplierTable .brand-btn:hover,
     #logisticsTable .history-btn:hover,
     #logisticsTable .delete-btn:hover,
@@ -234,12 +243,14 @@ input[type='radio']:focus {
         border: 1px solid #007bff;
     }
 
+    #stockBatchTable .stock-history-btn svg,
     #logisticsTable .history-btn svg,
     #logisticsTable .delete-btn svg,
     #supplierTable .delete-btn svg {
         color: #084496;
     }
 
+    #stockBatchTable .stock-history-btn:hover svg,
     #supplierTable .brand-btn:hover svg,
     #supplierTable .delete-btn:hover svg,
     #logisticsTable .history-btn:hover svg,
@@ -282,6 +293,13 @@ input[type='radio']:focus {
     color: #ff8108 !important;
 }
 
+/* ====== 庫存表格 庫存量 ====== */
+#stockBatchTable tr:hover .stock-danger svg {
+    color: #ff707e !important;
+}
+#stockBatchTable tr:hover .stock-danger {
+    color: #ffb5bc !important;
+}
 
 /* ====== 控制元件: 顯示筆數 dropdown ====== */
 .dataTables_length select {

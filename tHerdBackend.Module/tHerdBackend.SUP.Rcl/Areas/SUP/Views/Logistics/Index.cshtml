@@ -366,6 +366,7 @@
 
             // ======= 刪除運費區間 ======
             $('#logisticsTable').off('click', '.delete-rate-btn').on('click', '.delete-rate-btn', function () {
+                var $thisBtn = $(this);
                 var rateId = $(this).data('id');
                 var tr = $(this).closest('tr');
                 var row = table.row(tr);
@@ -377,7 +378,15 @@
                     showCancelButton: true,
                     confirmButtonText: '是的，刪除',
                     cancelButtonText: '取消',
-                    reverseButtons: true
+                    reverseButtons: true,
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.post(deleteRateUrl, { rateId: rateId }, function(res){
@@ -476,7 +485,15 @@
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
                     cancelButtonText: '取消',
-                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        checkbox.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if (!result.isConfirmed) {
                         // 使用者取消 → 回復舊值
@@ -507,7 +524,15 @@
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
                     cancelButtonText: '取消',
-                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        checkbox.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if(result.isConfirmed){
                         $.post(`${toggleActiveUrl}/${id}`, { isActive: newStatus })
@@ -533,6 +558,7 @@
 
             // ======= 刪除物流商 =======
             $('#logisticsTable').on('click', '.delete-btn', function() {
+                var $thisBtn = $(this);
                 var id = $(this).data('id');
                 var tr = $(this).closest('tr');
                 var row = table.row(tr);
@@ -544,7 +570,15 @@
                     showCancelButton: true,
                     confirmButtonText: '是的，刪除',
                     cancelButtonText: '取消',
-                    reverseButtons: true
+                    reverseButtons: true,
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if(result.isConfirmed){
                         $.post(`${deleteUrl}/${id}`, function(res){

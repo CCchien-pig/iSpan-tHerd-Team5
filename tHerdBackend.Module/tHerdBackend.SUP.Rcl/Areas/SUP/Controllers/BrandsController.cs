@@ -509,6 +509,10 @@ public class BrandsController : Controller
 			// 若驗證失敗，直接回傳原 partial view 方便前端重載
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
 		}
+		if (dto.StartDate > dto.EndDate)
+		{
+			ModelState.AddModelError("EndDate", "折扣結束日期不得早於開始日期");
+		}
 
 		try
 		{
@@ -588,7 +592,7 @@ public class BrandsController : Controller
 			return NotFound("找不到品牌");
 
 		// 組 DTO
-		var dto = new BrandDto
+		var dto = new BrandDiscountDto
 		{
 			BrandId = entity.BrandId,
 			BrandName = entity.BrandName,
@@ -596,21 +600,122 @@ public class BrandsController : Controller
 			StartDate = entity.StartDate,
 			EndDate = entity.EndDate,
 			IsDiscountActive = entity.IsDiscountActive,
-			IsActive = entity.IsActive,
-			IsFeatured = entity.IsFeatured,
-			SupplierId = entity.SupplierId,
-			BrandCode = entity.BrandCode
 			// ...其他必要欄位
 		};
 
+		//ViewBag.FormAction = "Edit";
 		// 回傳 PartialView
-		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountPartial.cshtml", dto);
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountEditPartial.cshtml", dto);
 
+	}
+
+	// POST: SUP/Brands/EditDiscount
+	[HttpPost]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> EditDiscount(BrandDiscountDto dto)
+	{
+		if (!ModelState.IsValid)
+		{
+			// 驗證失敗 → 回傳 partial 方便前端重載
+			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountEditPartial.cshtml", dto);
+		}
+
+		if (dto.StartDate > dto.EndDate)
+		{
+			ModelState.AddModelError("EndDate", "折扣結束日期不得早於開始日期");
+		}
+
+		try
+		{
+			var entity = await _context.SupBrands.FindAsync(dto.BrandId);
+			if (entity == null)
+				return Json(new { success = false, message = "找不到品牌資料" });
+
+			// 檢查是否未變更
+			if (EntityComparer.IsUnchanged(
+					entity, dto,
+					nameof(SupBrand.DiscountRate),
+					nameof(SupBrand.StartDate),
+					nameof(SupBrand.EndDate),
+					nameof(SupBrand.IsDiscountActive)))
+			{
+				return Json(new { success = false, message = "折扣資料未變更" });
+			}
+
+			// 取得目前登入使用者 ID
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+			if (user == null)
+				return Json(new { success = false, message = "找不到使用者資料" });
+			int currentUserId = user.UserNumberId;
+
+			// ===== 驗證邏輯與活動啟用判斷 =====
+			var today = DateOnly.FromDateTime(DateTime.Today);
+
+			if (dto.StartDate < today)
+				ModelState.AddModelError("StartDate", "折扣開始日不可早於今天");
+			if (!dto.EndDate.HasValue || !dto.StartDate.HasValue || dto.EndDate < dto.StartDate)
+				ModelState.AddModelError("EndDate", "折扣結束日不可早於開始日期");
+			if (!dto.DiscountRate.HasValue || dto.DiscountRate < 0.01m || dto.DiscountRate > 0.99m)
+				ModelState.AddModelError("DiscountRate", "折扣率必須介於0.01-0.99之間");
+
+			if (!ModelState.IsValid)
+			{
+				// 若有驗證錯誤，回傳表單 partial
+				return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandDiscountEditPartial.cshtml", dto);
+			}
+
+			bool isActive =
+				entity.IsActive &&                                  // 品牌必須啟用
+				dto.DiscountRate.HasValue && dto.DiscountRate > 0 &&
+				dto.StartDate.HasValue && dto.EndDate.HasValue &&
+				today >= dto.StartDate.Value && today <= dto.EndDate.Value;
+
+			// ===== 更新折扣欄位 =====
+			entity.DiscountRate = dto.DiscountRate;
+			entity.StartDate = dto.StartDate;
+			entity.EndDate = dto.EndDate;
+			entity.IsDiscountActive = isActive;
+			entity.Reviser = currentUserId;
+			entity.RevisedDate = DateTime.Now;
+
+			_context.Update(entity);
+			await _context.SaveChangesAsync();
+
+			// 成功 JSON 回傳
+			return Json(new
+			{
+				success = true,
+				message = "折扣更新成功",
+				brand = new
+				{
+					brandId = entity.BrandId,
+					brandName = entity.BrandName,
+					discountRate = entity.DiscountRate,
+					startDate = entity.StartDate,
+					endDate = entity.EndDate,
+					isDiscountActive = entity.IsDiscountActive
+				}
+			});
+		}
+		catch (DbUpdateConcurrencyException)
+		{
+			return Json(new { success = false, message = "資料已被其他使用者修改" });
+		}
+		catch (DbUpdateException dbEx)
+		{
+			return Json(new { success = false, message = "資料庫更新失敗: " + dbEx.Message });
+		}
+		catch (Exception ex)
+		{
+			return Json(new { success = false, message = "發生錯誤: " + ex.Message });
+		}
 	}
 
 	#endregion
 
 	#region 折扣 API
+
 	// 「計算折扣狀態」API
 	// GET: SUP/Brand/GetBrandDiscountStatus
 	[HttpGet]
@@ -624,7 +729,7 @@ public class BrandsController : Controller
 		if (!isActive) return "未進行（品牌停用）";
 		if (today < startDate.Value) return "尚未開始";
 		if (today > endDate.Value) return "折扣已結束";
-		return $"進行中（{(discountRate.Value * 10):0.#}折，至 {endDate.Value:yyyy-MM-dd}）";
+		return $"進行中（{(discountRate.Value * 10):0.#}折），{startDate.Value:yyyy/MM/dd}~{endDate.Value:yyyy/MM/dd}";
 	}
 
 	// 批次「刷新折扣狀態」API
@@ -666,13 +771,25 @@ public class BrandsController : Controller
 		if (brand == null)
 			return NotFound();
 
+		// 自行呼叫折扣狀態計算api，取得完整字串
+		var fullStatus = GetBrandDiscountStatus(
+			brand.StartDate,
+			brand.EndDate,
+			brand.DiscountRate,
+			brand.IsActive
+		);
+
+		// 簡化顯示的狀態（取前段「進行中」等）
+		var shortStatus = fullStatus.Split('（')[0];
+
 		var dto = new
 		{
 			brandName = brand.BrandName,
 			discountRate = brand.DiscountRate,
 			isDiscountActive = brand.IsDiscountActive,
 			startDate = brand.StartDate,
-			endDate = brand.EndDate
+			endDate = brand.EndDate,
+			discountStatus = shortStatus   // 新增簡化狀態
 		};
 		return Json(dto);
 	}

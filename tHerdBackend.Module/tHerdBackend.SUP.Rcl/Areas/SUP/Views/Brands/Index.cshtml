@@ -8,13 +8,19 @@
     </style>
 }
 
-@* 按鈕 *@
-<button id="create" class="btn btn-outline-success mb-2">新增品牌</button>
-<button id="createBrandDiscount" class="btn btn-outline-warning mb-2">新增全館品牌折扣</button>
-<button id="refreshDiscountStatusBtn" class="btn btn-outline-primary btn-sm" title="批次刷新全部品牌折扣狀態">
-    <i class="fa-solid fa-arrows-rotate"></i>
-</button>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <button id="create" class="btn btn-outline-success me-2">新增品牌</button>
+        <button id="createBrandDiscount" class="btn btn-outline-warning me-2">新增全館品牌折扣</button>
+        <button id="refreshDiscountStatusBtn" class="btn btn-outline-primary btn-sm" title="批次刷新全部品牌折扣狀態">
+            <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+    </div>
 
+    <div class="text-muted small fst-italic">
+        點擊「折扣狀態」欄內文字可查看品牌折扣詳情
+    </div>
+</div>
 
 @* 渲染 DataTable：#brandTable *@
 <div class="card brand-card">
@@ -166,17 +172,17 @@
                         title: '折扣狀態',
                         className: 'text-center',
                         render: function (data, type, row) {
+                            let colorClass = 'text-secondary';
                             if (data.startsWith('進行中')) {
-                                return `<span class="text-success">${data}</span>`;
+                                colorClass = 'text-success';
                             } else if (data.includes('尚未')) {
-                                return `<span class="text-warning">${data}</span>`;
+                                colorClass = 'text-warning';
                             } else if (data.includes('結束')) {
-                                return `<span class="text-danger">${data}</span>`;
-                            } else {
-                                return `<span>${data}</span>`;
+                                colorClass = 'text-danger';
                             }
+                            // 加上 discount-status class 及 data-id
+                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;">${data}</span>`;
                         }
-                        // ,orderable: false
                     },
                     {
                         data: 'isFeatured',
@@ -268,6 +274,7 @@
 
             // 新增品牌
             $("#create").click(function() {
+                this.blur();
                 //console.log("click create")
                 $.get(createUrl,  function(html) {
                     //console.log("ajax success"); // <- 看是否有進來
@@ -280,6 +287,7 @@
 
             // 編輯品牌
             $('#brandTable').on('click', '.edit-btn', function () {
+                this.blur();
                 var id = $(this).data('id');
                 $.get(`${editUrl}/${id}`, function (html) {
                     $("#brandModalTitle").text("修改品牌");
@@ -289,27 +297,9 @@
                 });
             });
 
-            // 點擊表格的「折扣狀態」顯示詳細折扣資訊 modal
-            $('#brandTable').on('click', '.discount-status', function () {
-                var brandId = $(this).data('id');
-                $.get(`/SUP/Brands/GetBrandDiscountDetail?brandId=${brandId}`, function (detail) {
-                    showDiscountDetailModal(detail);
-                });
-            });
-
-            // 點擊「操作」欄編輯折扣
-            $('#brandTable').on('click', '.discount-btn', function () {
-                var brandId = $(this).data('id');
-                $.get(`/SUP/Brands/EditDiscount?brandId=${brandId}`, function (html) {
-                    $("#brandDiscountModalTitle").text("編輯品牌活動折扣");
-                    $('#brandDiscountModalContent').html(html);
-                    $('#brandDiscountModal').modal('show');
-                    $.validator.unobtrusive.parse('#brandDiscountModalContent'); // 啟用驗證
-                });
-            });
-
             // 詳細資料
             $('#brandTable').on('click', '.details-btn', function() {
+                this.blur();
                 var id = $(this).data('id');
                 $.get(`${detailsUrl}/${id}`, function(html) {
                     $("#brandModalTitle").text("品牌詳細資料");
@@ -323,6 +313,7 @@
 
             // 刪除品牌
             $('#brandTable').on('click', '.delete-btn', function() {
+                var $thisBtn = $(this);
                 var id = $(this).data('id');
                 var rowData = table.row($(this).closest('tr')).data();
                 var brandName = rowData.brandName;
@@ -334,7 +325,15 @@
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
                     confirmButtonText: '刪除',
-                    cancelButtonText: '取消'
+                    cancelButtonText: '取消',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -355,17 +354,6 @@
                         });
                     }
                 });
-            });
-
-            // ======= 點新增全館折扣 =======
-            $("#createBrandDiscount").click(function() {
-              $.get(createDiscountUrl, function(html) {
-                $("#brandDiscountModalTitle").text("新增全館品牌折扣");
-                $('#brandDiscountModalContent').html(html);
-                $.validator.unobtrusive.parse('#brandDiscountModalContent');
-                $('#brandDiscountModal').modal('show');
-                setupDateLogic();
-              });
             });
 
             // ======= 提交品牌表單 (新增/修改) =======
@@ -459,7 +447,15 @@
                     showCancelButton: true,
                     confirmButtonText: newStatus ? '啟用' : '停用',
                     cancelButtonText: '取消',
-                    confirmButtonColor: newStatus ? '#3085d6' : '#d33'
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        checkbox.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if(result.isConfirmed){
                         $.post(`${toggleStatusUrl}`, { brandId: id, type: type, status: newStatus })
@@ -542,8 +538,9 @@
 
             // ======= 點品牌欄位的供應商按鈕跳轉 =======
             $('#brandTable').on('click', '.supplier-btn', function () {
+                var $thisBtn = $(this);
                 var supplierName = $(this).data('name');
-                console.log('點擊供應商按鈕，取得 supplierName:', supplierName);
+                // console.log('點擊供應商按鈕，取得 supplierName:', supplierName);
 
                 if (!supplierName) {
                     console.error('❌ supplierName 為空，無法跳轉');
@@ -555,7 +552,15 @@
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: '前往',
-                    cancelButtonText: '取消'
+                    cancelButtonText: '取消',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // 存入 sessionStorage
@@ -568,8 +573,44 @@
                 });
             });
 
+            // ======= 點新增全館折扣 =======
+            $("#createBrandDiscount").click(function() {
+                this.blur();
+                $.get(createDiscountUrl, function(html) {
+                $("#brandDiscountModalTitle").text("新增全館品牌折扣");
+                $('#brandDiscountModalContent').html(html);
+                $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                $('#brandDiscountModal').modal('show');
+                setupDateLogic();
+                });
+            });
+
+            // 點擊表格的「折扣狀態」顯示詳細折扣資訊 modal
+            $('#brandTable').on('click', '.discount-status', function () {
+                var brandId = $(this).data('id');
+                console.log('點擊折扣狀態，brandId:', brandId);
+                $.get(`/SUP/Brands/GetBrandDiscountDetail?brandId=${brandId}`, function (detail) {
+                    console.log('取得品牌折扣 detail:', detail);
+                    showDiscountDetailModal(detail);
+                });
+            });
+
+            // 點擊操作欄「編輯折扣」btn
+            $('#brandTable').on('click', '.discount-btn', function () {
+                this.blur();
+                var brandId = $(this).data('id');
+                $.get(`/SUP/Brands/EditDiscount?brandId=${brandId}`, function (html) {
+                    $("#brandDiscountModalTitle").text("編輯品牌活動折扣");
+                    $('#brandDiscountModalContent').html(html);
+                    $('#brandDiscountModal').modal('show');
+                    $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                    setupDateLogic();
+                });
+            });
+
             // 批次刷新所有品牌的折扣狀態
             $('#refreshDiscountStatusBtn').on('click', function() {
+                this.blur();
                 $.post('/SUP/Brands/RefreshAllBrandDiscountStatus', function(result) {
                     if (result.success) {
                         $('#brandTable').DataTable().ajax.reload(); // 刷新表格
@@ -579,7 +620,7 @@
                 });
             });
 
-            // ======= 新增全館折扣 submit 事件 =======
+            // ======= 新增折扣 submit 事件 =======
             $('#brandDiscountModalContent').on('submit', '#brandDiscountForm', function (e) {
                 e.preventDefault();
 
@@ -637,6 +678,56 @@
 
             });
 
+            // ======= 編輯折扣 submit 事件 =======
+            $('#brandDiscountModalContent').on('submit', '#brandDiscountEditForm', function (e) {
+                e.preventDefault();
+
+                var form = $(this);
+                console.log("送出編輯折扣", form.serializeArray());
+
+                $.post('/SUP/Brands/EditDiscount', form.serialize())
+                    .done(function(res) {
+                        var isHtml = typeof res === "string" && res.trim().startsWith("<form");
+                        var isJson = typeof res === "object" || (typeof res === "string" && res.trim().startsWith("{"));
+
+                        // console.log("EditDiscount response:", res);
+
+                        if (isHtml) {
+                            $('#brandDiscountModalContent').html(res);
+                            $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                            setupDateLogic();
+                        }
+                        else if (isJson) {
+                            if (typeof res === "string") {
+                                res = JSON.parse(res);
+                            }
+                            if (res.success) {
+                                $('#brandDiscountModal').modal('hide');
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: '折扣編輯成功',
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload();
+                            } else if (res.errors) {
+                                Swal.fire('表單錯誤', res.errors.join('<br>'), 'error');
+                            } else {
+                                Swal.fire('編輯折扣失敗', '', 'error');
+                            }
+                        } else {
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('編輯折扣 AJAX fail:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('編輯折扣失敗', '', 'error');
+                    });
+            });
+
+
         });
 
 
@@ -666,34 +757,6 @@
             });
         }
 
-        // ======= 新增全館折扣 日期設定 =======
-        function setupDateLogic() {
-            const today = new Date().toISOString().split('T')[0];
-
-            const $startDate = $('#StartDate');
-            const $endDate = $('#EndDate');
-
-            // 預設起始日為今天，如果沒填
-            if (!$startDate.val()) $startDate.val(today);
-            $startDate.attr('min', today);
-
-            // 結束日 min/預設，同步起始日
-            let startVal = $startDate.val() || today;
-            $endDate.attr('min', startVal);
-            // 只有當 EndDate 早於 startDate 才要自動設為 startDate
-            if (!$endDate.val() || $endDate.val() < startVal) {
-                $endDate.val(startVal);
-            }
-
-            // 只調整 min，不自動覆蓋當前 endDate（使用者可自由設定日）
-            $startDate.off('change').on('change', function() {
-                const val = $(this).val();
-                $endDate.attr('min', val);
-                // 若 endDate 早於新起始日才改掉，否則不動
-                if ($endDate.val() < val) $endDate.val(val);
-            });
-        }
-
         // ======= 品牌的詳細折扣資訊 ==========
         function showDiscountDetailModal(detail) {
             // 折扣率格式
@@ -701,24 +764,40 @@
                 ? (parseFloat(detail.discountRate * 10).toFixed(1).replace(/\.0$/, '')) + '折'
                 : '未設定';
 
-            // 狀態+進度條
-            let status = getDiscountStatus(detail);
+            // 狀態 + 進度條
+            // 統一使用後端傳過來的狀態字串，除非沒提供
+            let status = detail.discountStatus || '未設定狀態';
             let percent = 0, progressBar = '';
-            if (status === '進行中') {
-                const today = new Date();
+
+            if (status.includes('進行中')) {
+                const oneDay = 24 * 60 * 60 * 1000;
+
                 const start = new Date(detail.startDate);
                 const end = new Date(detail.endDate);
-                const oneDay = 24 * 60 * 60 * 1000;
-                const totalDays = Math.round((end - start) / oneDay + 1);
-                const passedDays = Math.round((today - start) / oneDay + 1);
-                percent = Math.round(passedDays / totalDays * 100);
+                const today = new Date();
+
+                // 強制取地方日期 (去時區偏差)
+                const startYMD = new Date(getLocalYMD(start));
+                const endYMD = new Date(getLocalYMD(end));
+                const todayYMD = new Date(getLocalYMD(today));
+
+                const totalDays = Math.max(1, Math.round((endYMD - startYMD) / oneDay) + 1);
+                const passedDays = Math.min(totalDays, Math.max(0, Math.round((todayYMD - startYMD) / oneDay) + 1));
+
+                let percent = Math.round((passedDays / totalDays) * 100);
                 percent = Math.max(0, Math.min(percent, 100));
+
                 progressBar = `
                     <div class="mb-2">進度：${percent}%</div>
                     <div class="progress mb-2">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-success" role="progressbar"
+                            style="width: ${percent}%;" aria-valuenow="${percent}"
+                            aria-valuemin="0" aria-valuemax="100"></div>
                     </div>`;
             }
+
+
+            // 顯示基本訊息
             let info = `
                 <div class="mb-2"><b>品牌名稱：</b> ${detail.brandName}</div>
                 <div class="mb-2"><b>折扣率：</b> ${discountText}</div>
@@ -728,11 +807,11 @@
             `;
             $('#discountDetailInfo').html(info);
 
-            // 月曆活動事件
+            // FullCalendar 事件資料
             let events = [];
             if (detail.startDate && detail.endDate) {
                 let start = detail.startDate.split('T')[0];
-                let end = addOneDay(detail.endDate.split('T')[0]);
+                let end = addOneDay(detail.endDate.split('T')[0]); // 顯示到結束日含當天
                 events.push({
                     title: `${detail.brandName} (${discountText})`,
                     start: start,
@@ -740,17 +819,18 @@
                     color: detail.discountRate <= 0.8 ? '#22bb33' : '#ffbb33'
                 });
             }
-            // console.log('FullCalendar events', events);
 
             // 顯示 modal
             $('#brandDiscountDetailModal').modal('show');
             $('#discountCalendar').empty();
 
+            // 等 modal 顯示完成再 render calendar
             $('#brandDiscountDetailModal').one('shown.bs.modal', function () {
-                var calendarEl = document.getElementById('discountCalendar');
+                const calendarEl = document.getElementById('discountCalendar');
                 if (window.brandDiscountCalendarInstance) {
                     window.brandDiscountCalendarInstance.destroy();
                 }
+
                 window.brandDiscountCalendarInstance = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
                     events: events,
@@ -758,7 +838,7 @@
                     headerToolbar: {
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'dayGridMonth,timeGridWeek'  // <--- 重點：加回 month/week
+                        right: 'dayGridMonth,timeGridWeek' // 加回 month/week
                     },
                     locale: 'zh-tw',
                     eventDisplay: 'block'
@@ -768,14 +848,63 @@
             });
         }
 
+        // ======= 折扣 日期設定 =======
+        function setupDateLogic() {
+            // const today = new Date().toISOString().split('T')[0];
+            const today = getLocalYMD();
+
+            const $startDate = $('#StartDate');
+            const $endDate = $('#EndDate');
+
+            // 預設起始日為今天，如果沒填
+            if (!$startDate.val()) $startDate.val(today);
+            $startDate.attr('min', today);
+
+            // 預設結束日為「起始日隔天」
+            let startVal = $startDate.val() || today;
+            let defaultEndVal = addOneDay(startVal);
+            $endDate.attr('min', defaultEndVal);
+
+            // 若未填結束日，或結束日早於起始日，自動填「起始日隔天」
+            if (!$endDate.val() || $endDate.val() < defaultEndVal) {
+                $endDate.val(defaultEndVal);
+            }
+
+            // 起始日變更監聽
+            $startDate.off('change').on('change', function() {
+                const val = $(this).val();
+                const nextDay = addOneDay(val);
+                $endDate.attr('min', nextDay);
+                if ($endDate.val() < nextDay) $endDate.val(nextDay);
+            });
+
+            // 必填驗證提示
+            $('#brandDiscountForm, #brandDiscountEditForm').off('submit').on('submit', function (e) {
+                const endVal = $endDate.val();
+                if (!endVal) {
+                    e.preventDefault();
+                    Swal.fire('結束日期為必填項目', '', 'warning');
+                    $endDate.focus();
+                    return false;
+                }
+            });
+        }
+
         // 日期＋1
         function addOneDay(dateStr) {
             let d = new Date(dateStr);
             d.setDate(d.getDate() + 1);
             return d.toISOString().split('T')[0];
         }
+        // 強制用「當地時間 yyyy-MM-dd」生成今天日期
+        function getLocalYMD(dateObj = new Date()) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
-        // 狀態判斷
+        // 折扣狀態判斷
         function getDiscountStatus(detail) {
             if (!detail.startDate || !detail.endDate || !detail.discountRate || detail.discountRate <= 0) {
                 return '尚未設定';
