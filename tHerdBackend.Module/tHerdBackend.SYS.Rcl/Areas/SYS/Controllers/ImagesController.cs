@@ -1,9 +1,6 @@
-﻿using CloudinaryDotNet;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.SYS;
-using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
@@ -31,6 +28,9 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         [HttpGet]
         public async Task<IActionResult> GetFolderItems(int? parentId = null, string? keyword = "")
         {
+            if (parentId == 0)
+                parentId = null;
+
             // Step 1️⃣ 取得子資料夾
             var folders = await _db.SysFolders
                 .Where(f => f.ParentId == parentId && f.IsActive)
@@ -45,7 +45,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 })
                 .ToListAsync();
 
-            // Step 2️⃣ 取得資料夾內的檔案
+            // Step 2️⃣ 取得檔案
             var filesQuery = _db.SysAssetFiles
                 .Where(f => f.FolderId == parentId && f.IsActive);
 
@@ -71,30 +71,52 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 })
                 .ToListAsync();
 
-            // Step 3️⃣ 合併顯示
             var items = folders.Concat(files)
                 .OrderByDescending(x => x.IsFolder)
                 .ThenBy(x => x.Name)
                 .ToList();
 
-            return Json(new
+            // ✅ 找出目前所在資料夾
+            SysFolder? currentFolder = null;
+            if (parentId.HasValue && parentId > 0)
+                currentFolder = await _db.SysFolders.FindAsync(parentId);
+
+            // ✅ 從上層開始遞迴找（例如 Products → PROD）
+            var breadcrumb = await GetBreadcrumbAsync(currentFolder?.ParentId);
+
+            // ✅ 把自己這層加進來（例如 Products）
+            if (currentFolder != null)
             {
-                items,
-                breadcrumb = await GetBreadcrumbAsync(parentId)
-            });
+                breadcrumb.Add(new SysFolderDto
+                {
+                    FolderId = currentFolder.FolderId,
+                    FolderName = currentFolder.FolderName,
+                    ParentId = currentFolder.ParentId
+                });
+            }
+
+            return Json(new { items, breadcrumb });
         }
 
         // === 產生麵包屑（遞迴找上層） ===
-        private async Task<List<string>> GetBreadcrumbAsync(int? folderId)
+        private async Task<List<SysFolderDto>> GetBreadcrumbAsync(int? folderId)
         {
-            var breadcrumb = new List<string> { "根目錄" };
+            var breadcrumb = new List<SysFolderDto>();
+
             if (!folderId.HasValue)
                 return breadcrumb;
 
             var current = await _db.SysFolders.FindAsync(folderId);
+
             while (current != null)
             {
-                breadcrumb.Insert(1, current.FolderName);
+                breadcrumb.Insert(0, new SysFolderDto
+                {
+                    FolderId = current.FolderId,
+                    FolderName = current.FolderName,
+                    ParentId = current.ParentId
+                });
+
                 if (current.ParentId == null)
                     break;
 
