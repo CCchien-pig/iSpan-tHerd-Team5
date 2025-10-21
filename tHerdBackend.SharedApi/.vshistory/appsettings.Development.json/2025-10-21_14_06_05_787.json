@@ -11,7 +11,7 @@
     "HashIV": "v77hoKGq4kWxNNIS",
     "PaymentUrl": "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5",
     "ReturnUrl": "https://localhost:7285/order/complete",
-    "OrderResultUrl": "https://hoarier-jame-intersidereal.ngrok-free.dev/api/ord/payment/ecpay/notify",
+    "OrderResultUrl": "https://YOUR-NGROK-URL.ngrok.io/api/ord/payment/ecpay/notify",
     "IsProduction": false
   }
 }
