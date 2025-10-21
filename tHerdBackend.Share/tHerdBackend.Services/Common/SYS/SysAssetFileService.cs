@@ -26,5 +26,15 @@ namespace tHerdBackend.Services.Common.SYS
         {
             return await _frepo.AddImages(uploadDto);
         }
+
+        public async Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
+        {
+            return await _frepo.UpdateImageMeta(dto);
+        }
+
+        public async Task<bool> DeleteImage(int fileId, CancellationToken ct = default)
+        {
+            return await _frepo.DeleteImage(fileId);
+        }
     }
 }

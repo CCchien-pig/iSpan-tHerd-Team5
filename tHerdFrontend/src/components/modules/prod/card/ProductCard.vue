@@ -1,5 +1,5 @@
 <template>
-  <div class="product-card h-100 d-flex flex-column">
+  <div class="product-card d-flex flex-column">
     <!-- 商品徽章 -->
     <div v-if="product.badge" class="product-badge">
       <span class="badge bg-danger">{{ product.badge }}</span>
@@ -99,6 +99,9 @@ defineEmits(['add-to-cart'])
 
 <style scoped>
 .product-card {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
   background: #fff;
   border: 1px solid #eee;
   border-radius: 0.5rem;
@@ -130,7 +133,8 @@ defineEmits(['add-to-cart'])
 
 .product-image {
   position: relative;
-  height: 180px;
+  aspect-ratio: 1 / 1; /* 讓它維持正方形 */
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,9 +142,9 @@ defineEmits(['add-to-cart'])
 }
 
 .product-image img {
-  max-height: 100%;
-  max-width: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .add-to-cart-btn {

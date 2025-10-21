@@ -16,6 +16,10 @@ initializeMocks()
 // Google Maps
 import VueGoogleMaps from '@fawmi/vue-google-maps'
 
+//啟用 ElementPlus
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -31,5 +35,7 @@ app.use(VueGoogleMaps, {
     libraries: 'places',
   },
 })
+//啟用 ElementPlus
+app.use(ElementPlus)
 
 app.mount('#app')

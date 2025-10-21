@@ -103,10 +103,10 @@ const handleQuickView = (product) => {
       <div class="alert alert-info d-flex justify-content-between align-items-center">
         <span><i class="bi bi-info-circle me-2"></i>商品頁面測試連結：</span>
         <div>
-          <RouterLink to="/products" class="btn btn-sm btn-primary me-2">
+          <RouterLink to="/prod/search" class="btn btn-sm btn-primary me-2">
             <i class="bi bi-list me-1"></i>商品列表
           </RouterLink>
-          <RouterLink to="/products/85180" class="btn btn-sm btn-success">
+          <RouterLink to="/prod/products/14600" class="btn btn-sm btn-success">
             <i class="bi bi-box-seam me-1"></i>商品詳情範例
           </RouterLink>
         </div>

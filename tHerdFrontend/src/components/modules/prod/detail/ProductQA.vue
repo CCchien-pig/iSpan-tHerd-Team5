@@ -171,7 +171,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import productApi from '@/services/modules/productApi'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 import { toast, success, error as showError } from '@/utils/sweetalert'
 
 const props = defineProps({
@@ -194,7 +194,7 @@ const questionContent = ref('')
 const loadQuestions = async () => {
   try {
     loading.value = true
-    const response = await productApi.getQuestions(props.productId)
+    const response = await ProductsApi.getQuestions(props.productId)
 
     if (response.success) {
       questions.value = (response.data || []).map((q) => ({
@@ -221,7 +221,7 @@ const handleSubmitQuestion = async () => {
 
   try {
     submitting.value = true
-    const response = await productApi.submitQuestion({
+    const response = await ProductsApi.submitQuestion({
       productId: props.productId,
       questionContent: questionContent.value,
     })
@@ -274,7 +274,7 @@ const handleSubmitAnswer = async (qa) => {
 
   try {
     submitting.value = true
-    const response = await productApi.submitAnswer({
+    const response = await ProductsApi.submitAnswer({
       questionId: qa.questionId,
       answerContent: qa.replyContent,
     })

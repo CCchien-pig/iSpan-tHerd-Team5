@@ -11,10 +11,10 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
     [Route("api/[folder]/[controller]")]   // 統一為 /api/prod/Products
     public class ProductsController : ControllerBase
 	{
-		private readonly IProductListForApiService _service;  // 服務注入
+		private readonly IProductsForApiService _service;  // 服務注入
 
 		// 建構子注入 Service
-		public ProductsController(IProductListForApiService service)
+		public ProductsController(IProductsForApiService service)
 		{
 			_service = service;
 		}
@@ -26,9 +26,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// <param name="ct">連線</param>
         /// <returns></returns>
         [AllowAnonymous]  // 不用 JWT，前台也能看
-        [HttpGet("search")]
+        [HttpPost("search")]
 		public async Task<IActionResult> SearchProducts(
-			[FromQuery] ProductFilterQueryDto query,
+			[FromBody] ProductFilterQueryDto query,
 			CancellationToken ct = default)
 		{
             try
@@ -36,6 +36,33 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
                 var result = await _service.GetFrontProductListAsync(query, ct);
 
                 return Ok(ApiResponse<PagedResult<ProdProductDto>>.Ok(result));
+            }
+            catch (Exception ex)
+            {
+                // 捕捉異常（例如 SQL 錯誤、參數錯誤）
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 前台：查詢產品詳細
+        /// </summary>
+        /// <param name="id">商品編號</param>
+        /// <param name="ct">連線</param>
+        /// <returns></returns>
+        [AllowAnonymous]  // 不用 JWT，前台也能看
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetProductDetail(
+            int id, CancellationToken ct = default)
+        {
+            try
+            {
+                var result = await _service.GetFrontProductListAsync(id, ct);
+
+                if (result == null)
+                    return NotFound(ApiResponse<string>.Fail("找不到商品"));
+
+                return Ok(ApiResponse<ProdProductDetailDto>.Ok(result));
             }
             catch (Exception ex)
             {

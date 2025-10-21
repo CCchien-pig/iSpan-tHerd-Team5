@@ -1,9 +1,10 @@
 ﻿using ExcelDataReader;
-using tHerdBackend.Core.DTOs.PROD;
-using tHerdBackend.Infra.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 {
@@ -22,8 +23,11 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
 		public async Task<IActionResult> Index_ex_datatable(CancellationToken ct)
 		{
-			// await SeedSkuDataAsync();
-			var products = await _db.ProdProducts.ToListAsync(ct);
+            // await SeedSkuDataAsync();
+
+            // await LoadImgsFromCSV(); // 匯入圖片測試
+
+            var products = await _db.ProdProducts.ToListAsync(ct);
 
 			var dtos = products.Select(p => new ProdProductDetailDto
 			{
@@ -40,7 +44,140 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 			return View(dtos); // 型別跟 View 宣告一致
 		}
 
-		public async Task<int> SeedSpecificationsAsync(CancellationToken ct = default)
+        public async Task LoadImgsFromCSV()
+        {
+            string csvPath = @"D:\iSpanProj\專題文件\PROD_imgs-20251019T145911Z-1-001\PROD_imgs\PROD_imgs_35-2.csv";
+
+            if (!System.IO.File.Exists(csvPath))
+            {
+                Console.WriteLine($"❌ 找不到檔案：{csvPath}");
+                return;
+            }
+
+            try
+            {
+                // 用 FileStream + FileShare.ReadWrite 允許共用讀取
+                using (var fs = new FileStream(csvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(fs))
+                {
+                    // 跳過標題列
+                    reader.ReadLine();
+
+                    while (!reader.EndOfStream)
+                    {
+                        string? line = reader.ReadLine();
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        // 分割第一個逗號（避免 URL 內含逗號被切錯）
+                        var parts = line.Split(',', 2);
+                        if (parts.Length < 2)
+                            continue;
+
+                        if (!int.TryParse(parts[0].Trim(), out int productId))
+                        {
+                            Console.WriteLine($"⚠️ 無法解析 ProductId：{parts[0]}");
+                            continue;
+                        }
+
+                        productId = productId - 1000 + 14882;
+
+                        string imgUrl = parts[1].Trim().Trim('"').Trim('\\');
+                        if (string.IsNullOrEmpty(imgUrl))
+                            continue;
+
+                        // 1️ 檢查產品是否存在
+                        var prod = await _db.ProdProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+                        if (prod == null)
+                        {
+                            Console.WriteLine($"⚠️ 找不到 ProductId={productId}，略過。");
+                            continue;
+                        }
+
+                        // 2️ 取得或建立 SysSeoMeta
+                        var seoMeta = await _db.SysSeoMeta
+                            .FirstOrDefaultAsync(s => s.RefTable == "Products" && s.RefId == productId);
+
+                        if (seoMeta == null)
+                        {
+                            seoMeta = new SysSeoMetum
+                            {
+                                RefTable = "Products",
+                                RefId = productId,
+                                SeoTitle = prod.ProductName,
+								SeoSlug = $"prod-{productId}",
+                                SeoDesc = prod.ShortDesc ?? ""
+                            };
+                            _db.SysSeoMeta.Add(seoMeta);
+
+                            await _db.SaveChangesAsync(); // 🔑 產生 SeoId
+                        }
+
+                        prod.SeoId = seoMeta.SeoId;
+
+                        // 3️ 解析檔案資訊
+                        var cleanUrl = imgUrl.Split('?')[0];
+                        var ext = Path.GetExtension(cleanUrl)?.Trim('.').ToLower() ?? "jpg";
+                        string mimeType = ext switch
+                        {
+                            "jpg" or "jpeg" => "image/jpeg",
+                            "png" => "image/png",
+                            "gif" => "image/gif",
+                            "webp" => "image/webp",
+                            _ => "application/octet-stream"
+                        };
+
+						var file = await _db.SysAssetFiles.FirstOrDefaultAsync(f => f.FileUrl == imgUrl);
+						if (file == null) {
+                            file = new SysAssetFile
+                            {
+                                FileKey = $"prod-{productId}-{Guid.NewGuid():N}".Substring(0, 20),
+                                IsExternal = true,
+                                FileUrl = imgUrl,
+                                FileExt = ext,
+                                MimeType = mimeType,
+                                IsActive = true
+                            };
+
+                            await _db.SysAssetFiles.AddAsync(file);
+                            await _db.SaveChangesAsync(); // 🔑 產生 FileId
+                        }
+
+                        // 4️ 建立關聯表 SysSeoMetaAsset
+						var link = await _db.SysSeoMetaAssets
+							.FirstOrDefaultAsync(s => s.SeoId == seoMeta.SeoId && s.FileId == file.FileId);
+						if (link == null) {
+                            link = new SysSeoMetaAsset
+                            {
+                                SeoId = seoMeta.SeoId,
+                                FileId = file.FileId,
+                                Role = "pr",
+                                OrderSeq = 1,
+                                IsPrimary = false,
+                                CreatedDate = DateTime.Now,
+                                IsActive = true
+                            };
+
+                            await _db.SysSeoMetaAssets.AddAsync(link);
+                            await _db.SaveChangesAsync();
+                        }
+                        Console.WriteLine($"✅ ProductId={productId} 已新增圖片 {imgUrl}");
+                    }
+                }
+
+                Console.WriteLine($"🎉 匯入完成。");
+            }
+            catch (IOException ioEx)
+            {
+                Console.WriteLine($"⚠️ 無法開啟 CSV（可能被佔用）：{ioEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 發生未預期錯誤：{ex.Message}");
+            }
+        }
+
+        public async Task<int> SeedSpecificationsAsync(CancellationToken ct = default)
 		{
 			var products = await _db.ProdProducts
 				.AsNoTracking()

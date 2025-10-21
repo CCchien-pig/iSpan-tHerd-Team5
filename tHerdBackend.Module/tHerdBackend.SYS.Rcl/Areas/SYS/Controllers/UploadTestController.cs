@@ -1,9 +1,7 @@
 ﻿using CloudinaryDotNet;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.Interfaces.SYS;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {
@@ -22,10 +20,11 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         [HttpPost]
         public async Task<IActionResult> Index(AssetFileUploadDto uploadDto)
         {
-            if (uploadDto.Files == null || uploadDto.Files.Count == 0)
+            if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
             {
                 ViewBag.Message = "請至少選擇一個檔案";
-                return View();
+                var files = await _frepo.GetFiles("SYS", "UploadTest");
+                return View(files);
             }
 
             uploadDto.ModuleId = "SYS";
@@ -52,6 +51,26 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         {
             var files = await _frepo.GetFiles("SYS", "UploadTest");
             return View(files);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteFile(int fileId, CancellationToken ct)
+        {
+            bool success = await _frepo.DeleteImage(fileId, ct);
+            if (success)
+                return Json(new { success = true, message = "刪除成功" });
+            else
+                return Json(new { success = false, message = "刪除失敗" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateMeta([FromBody] SysAssetFileDto dto, CancellationToken ct)
+        {
+            bool success = await _frepo.UpdateImageMeta(dto, ct);
+            if (success)
+                return Json(new { success = true, message = "更新成功" });
+            else
+                return Json(new { success = false, message = "更新失敗" });
         }
     }
 }
