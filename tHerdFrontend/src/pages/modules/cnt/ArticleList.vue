@@ -1,81 +1,116 @@
 <template>
-  <div class="container py-4">
+  <div class="container py-5">
     <!-- 🔖 頁面標題 -->
     <h2 class="mb-4 main-color-green-text">健康文章</h2>
 
-    <!-- 📰 文章列表 -->
-    <div v-for="article in articles" :key="article.id" class="row mb-4 align-items-center article-item">
-      <!-- 圖片區 -->
-      <div class="col-md-4">
-        <img
-          :src="article.image"
-          class="img-fluid rounded"
-          alt="文章封面"
-        />
-      </div>
-
-      <!-- 文字區 -->
-      <div class="col-md-8">
-        <h4 class="fw-bold">{{ article.title }}</h4>
-        <p class="text-muted small mb-2">{{ article.date }}</p>
-        <p class="text-secondary">{{ article.summary }}</p>
-        <router-link
-          :to="`/cnt/article/${article.slug}-${article.id}`"
-          class="btn btn-outline-primary btn-sm"
-        >
-          閱讀更多 →
-        </router-link>
-      </div>
+    <!-- ⌛ Loading 狀態 -->
+    <div v-if="loading" class="text-center py-5">
+      <p>載入中...</p>
     </div>
 
-    <!-- ⛔ 無資料狀態 -->
-    <div v-if="articles.length === 0" class="text-center text-muted py-5">
+    <!-- 🧾 無資料 -->
+    <div v-else-if="articles.length === 0" class="text-center text-muted py-5">
       尚無文章內容
+    </div>
+
+    <!-- 📰 文章卡片列表 -->
+    <div class="row g-4" v-else>
+      <div
+        class="col-md-4"
+        v-for="article in articles"
+        :key="article.pageId"
+      >
+        <div class="article-card shadow-sm h-100">
+          <!-- 圖片 -->
+          <div class="article-image-wrapper">
+            <img
+              :src="article.coverImage"
+              class="article-image"
+              alt="文章封面"
+            />
+          </div>
+
+          <!-- 內容 -->
+          <div class="p-3">
+            <h5 class="fw-bold article-title">{{ article.title }}</h5>
+            <p class="text-muted small mb-1">
+              {{ new Date(article.publishedDate).toLocaleDateString() }}
+            </p>
+            <p class="text-secondary article-excerpt">
+              {{ article.excerpt }}
+            </p>
+            <router-link
+              :to="`/cnt/article/${article.pageId}`"
+              class="btn btn-outline-primary btn-sm mt-auto"
+            >
+              閱讀更多 →
+            </router-link>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { getArticleList } from './api/cntService'
+
 export default {
   name: 'ArticleList',
   data() {
     return {
-      // 🧪 假資料 - 未來將替換為 API 取得
-      articles: [
-        {
-          id: 1,
-          title: '均衡飲食的重要性',
-          summary: '了解每日飲食中各項營養素的攝取比例，建立健康生活基礎。',
-          date: '2025-01-10',
-          slug: 'balanced-diet',
-          image: 'https://via.placeholder.com/350x200'
-        },
-        {
-          id: 2,
-          title: '維生素與免疫力的關係',
-          summary: '探討維生素C、D與B群如何增強人體免疫系統。',
-          date: '2025-01-05',
-          slug: 'vitamins-and-immunity',
-          image: 'https://via.placeholder.com/350x200'
-        },
-        {
-          id: 3,
-          title: '提升專注力的食物推薦',
-          summary: 'Omega-3脂肪酸與高纖維飲食如何幫助腦部專注與記憶力。',
-          date: '2024-12-28',
-          slug: 'focus-foods',
-          image: 'https://via.placeholder.com/350x200'
-        }
-      ]
+      articles: [],
+      loading: true,
+    }
+  },
+  async mounted() {
+    try {
+      const res = await getArticleList(1, 12)
+      // console.log('API 回應資料：', res)
+      this.articles = res.items
+    } catch (err) {
+      console.error('取得文章列表失敗：', err)
+    } finally {
+      this.loading = false
     }
   }
 }
 </script>
 
 <style scoped>
-.article-item img {
-  object-fit: cover;
+.article-card {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.article-image-wrapper {
   width: 100%;
-  height: 200px;
+  height: 180px;
+  overflow: hidden;
+}
+
+.article-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .3s;
+}
+
+.article-card:hover .article-image {
+  transform: scale(1.05);
+}
+
+.article-title {
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.article-excerpt {
+  font-size: 0.9rem;
+  height: 40px;
+  overflow: hidden;
 }
 </style>
