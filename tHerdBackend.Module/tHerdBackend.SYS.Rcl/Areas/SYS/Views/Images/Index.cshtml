@@ -187,6 +187,9 @@
 
         // DataTable 初始化（含固定表頭 + 分頁）
         const table = $('#fileTable').DataTable({
+            processing: true,
+            serverSide: true,
+            searching: false,
             paging: true,
             searching: false,
             info: true,
@@ -205,6 +208,28 @@
                     }
                 }
             ],
+            ajax: {
+                url: '/SYS/Images/GetPagedFolderItems',
+                type: 'GET',
+                data: function (d) {
+                    // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
+                    const last = breadcrumbStack[breadcrumbStack.length - 1];
+                    d.parentId = last?.id ?? null;
+                    d.keyword = $("#searchBox").val();
+                },
+                dataSrc: function (json) {
+                    // 自動同步更新麵包屑
+                    if (json.breadcrumb) {
+                        renderBreadcrumb(json.breadcrumb);
+                    }
+
+                    // DataTables 會使用這個陣列來渲染
+                    return json.data || json.data || [];
+                },
+                error: function (xhr, status, error) {
+                    console.error("載入資料發生錯誤：", error);
+                }
+            },
             columns: [
                 { data: "name" },
                 { data: "modifiedDate", render: d => d ? new Date(d).toLocaleString() : "-" },
@@ -212,6 +237,7 @@
                 { data: "size", render: s => s ? (s / 1024).toFixed(1) + " KB" : "-" }
             ],
             language: {
+                processing: "資料讀取中...",
                 emptyTable: "目前沒有任何資料",
                 info: "顯示第 _START_ 筆到第 _END_ 筆，共 _TOTAL_ 筆資料",
                 infoEmpty: "顯示第 0 筆到第 0 筆，共 0 筆",
@@ -267,19 +293,32 @@
             $("#btnSearch").prop("disabled", true).html('<i class="bi bi-hourglass-split"></i> 載入中...');
 
             try {
-                const res = await fetch(`/SYS/Images/GetFolderItems?parentId=${folderId ?? ''}&keyword=${keyword}`);
-                const data = await res.json();
+                table.ajax.reload(null, false); // 改成用 DataTables 自動載入
+                // // 呼叫支援分頁的 API
+                // const res = await fetch(
+                //     `/SYS/Images/GetPagedFolderItems?parentId=${folderId ?? ""}&keyword=${keyword}`
+                // );
+                // const data = await res.json();
 
-                const folders = data.items.filter(x => x.isFolder);
-                const files = data.items.filter(x => !x.isFolder);
-                const combined = [...folders, ...files];
-                table.clear().rows.add(combined).draw();
+                // // 更新 DataTable 的內容
+                // // 若有 serverSide 模式可直接 table.ajax.reload()，否則手動更新：
+                // if (table) {
+                //     table.clear().rows.add(data.items || data.data || []).draw();
+                // }
 
-                renderBreadcrumb(data.breadcrumb);
+                // // 更新麵包屑顯示（若後端有傳）
+                // if (data.breadcrumb) {
+                //     renderBreadcrumb(data.breadcrumb);
+                // }
+            } catch (err) {
+                console.error("載入資料夾發生錯誤：", err);
+                alert("載入資料夾失敗，請稍後再試。");
             } finally {
                 // 還原 UI 狀態
                 $table.removeClass("opacity-50");
-                $("#btnSearch").prop("disabled", false).html('<i class="bi bi-search"></i> 搜尋');
+                $("#btnSearch")
+                    .prop("disabled", false)
+                    .html('<i class="bi bi-search"></i> 搜尋');
             }
         }
 
@@ -330,7 +369,8 @@
             e.preventDefault();
             const id = $(this).data("id");
             breadcrumbStack.push({ id: id, name: $(this).text() });
-            await loadFolder(id);
+            // await loadFolder(id);
+            table.ajax.reload(null, false); // 第二參數 false => 保留目前頁碼
         });
 
         // 點擊麵包屑
@@ -410,16 +450,23 @@
 
         // 搜尋
         $("#btnSearch").click(() => {
-            const keyword = $("#searchBox").val();
-            const last = breadcrumbStack[breadcrumbStack.length - 1];
-            loadFolder(last.id, keyword);
+            table.ajax.reload(null, false); // 第二參數 false => 保留目前頁碼
         });
+        // $("#btnSearch").click(() => {
+        //     const keyword = $("#searchBox").val();
+        //     const last = breadcrumbStack[breadcrumbStack.length - 1];
+        //     loadFolder(last.id, keyword);
+        // });
 
         $("#searchBox").on("keypress", function (e) {
-            if (e.which === 13) {
-                $("#btnSearch").click();
-            }
+            if (e.which === 13) $("#btnSearch").click();
         });
+
+        // $("#searchBox").on("keypress", function (e) {
+        //     if (e.which === 13) {
+        //         $("#btnSearch").click();
+        //     }
+        // });
 
         // 初始化
         loadFolder();

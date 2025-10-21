@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Infra.Models;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {
@@ -31,7 +33,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             if (parentId == 0)
                 parentId = null;
 
-            // Step 1️⃣ 取得子資料夾
+            // Step 1️ 取得子資料夾
             var folders = await _db.SysFolders
                 .Where(f => f.ParentId == parentId && f.IsActive)
                 .Select(f => new FolderItemDto
@@ -45,9 +47,19 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 })
                 .ToListAsync();
 
-            // Step 2️⃣ 取得檔案
-            var filesQuery = _db.SysAssetFiles
-                .Where(f => f.FolderId == parentId && f.IsActive);
+            // Step 2️ 取得檔案
+            var filesQuery = _db.SysAssetFiles.Where(f => f.IsActive);
+
+            // 根目錄（parentId = null）
+            if (parentId == null)
+            {
+                // 只撈出真的沒有 FolderId 的
+                filesQuery = filesQuery.Where(f => f.FolderId == null);
+            }
+            else
+            {
+                filesQuery = filesQuery.Where(f => f.FolderId == parentId);
+            }
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
@@ -76,15 +88,15 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 .ThenBy(x => x.Name)
                 .ToList();
 
-            // ✅ 找出目前所在資料夾
+            // 找出目前所在資料夾
             SysFolder? currentFolder = null;
             if (parentId.HasValue && parentId > 0)
                 currentFolder = await _db.SysFolders.FindAsync(parentId);
 
-            // ✅ 從上層開始遞迴找（例如 Products → PROD）
+            // 從上層開始遞迴找（例如 Products → PROD）
             var breadcrumb = await GetBreadcrumbAsync(currentFolder?.ParentId);
 
-            // ✅ 把自己這層加進來（例如 Products）
+            // 把自己這層加進來（例如 Products）
             if (currentFolder != null)
             {
                 breadcrumb.Add(new SysFolderDto
@@ -127,24 +139,55 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetPagedFolderItems(int? parentId, string? keyword = "", int pageIndex = 1, int pageSize = 10)
+        public async Task<IActionResult> GetPagedFolderItems(
+            int? parentId = null,
+            string? keyword = "",
+            int start = 0,      // 起始筆數（由 DataTables 自動傳）
+            int length = 10,    // 每頁筆數
+            int draw = 1        // DataTables 驗證用
+        )
         {
+            // === 1 查資料夾 ===
+            var folderQuery = _db.SysFolders
+                .Where(f => f.ParentId == parentId && f.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+                folderQuery = folderQuery.Where(f => f.FolderName.Contains(keyword));
+
+            var folders = await folderQuery
+            .Select(f => new FolderItemDto
+            {
+                Id = f.FolderId,
+                Name = f.FolderName,
+                IsFolder = true,
+                MimeType = "資料夾",
+                ModifiedDate = null,
+                Size = null
+            })
+            .ToListAsync();
+
             var q = _db.SysAssetFiles.AsQueryable();
 
-            // 過濾資料夾層級
-            if (parentId.HasValue)
+            // === 2️ 查檔案 ===
+            if (parentId == null)
+            {
+                q = q.Where(f => f.FolderId == null);
+            }
+            else
+            {
                 q = q.Where(f => f.FolderId == parentId);
+            }
 
             // 關鍵字搜尋
-            if (!string.IsNullOrEmpty(keyword))
-                q = q.Where(f => f.AltText.Contains(keyword) || f.Caption.Contains(keyword));
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                q = q.Where(f =>
+                    f.FileKey.Contains(keyword) ||
+                    f.AltText.Contains(keyword) ||
+                    f.Caption.Contains(keyword));
+            }
 
-            var totalCount = await q.CountAsync();
-
-            var items = await q
-                .OrderByDescending(f => f.CreatedDate)
-                .Skip((pageIndex - 1) * pageSize)
-                .Take(pageSize)
+            var data = await q
                 .Select(f => new FolderItemDto
                 {
                     Id = f.FileId,
@@ -159,12 +202,25 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 })
                 .ToListAsync();
 
-            var breadcrumb = new List<string> { "根目錄" }; // 可根據 parentId 動態生成
+            // === 3️ 合併 + 排序 + 分頁 ===
+            var combined = folders.Concat(data)
+            .OrderByDescending(x => x.IsFolder) // 資料夾永遠在上方
+            .ThenBy(x => x.Name)
+            .ToList();
 
+            var totalCount = combined.Count;
+            var paged = combined.Skip(start).Take(length).ToList();
+
+            // === 4️ 生成麵包屑（可沿用你的遞迴法） ===
+            var breadcrumb = await GetBreadcrumbAsync(parentId);
+
+            // === 5️ 回傳 DataTables 標準格式 ===
             return Json(new
             {
-                totalCount,
-                items,
+                draw,
+                recordsTotal = totalCount,
+                recordsFiltered = totalCount,
+                data = paged,
                 breadcrumb
             });
         }
