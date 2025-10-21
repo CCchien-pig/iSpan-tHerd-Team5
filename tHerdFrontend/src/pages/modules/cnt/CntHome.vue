@@ -94,18 +94,21 @@
         </p>
 
         <!-- ✅ 保留 scroll=nutrition -->
-        <router-link
-          :to="{ name: 'cnt-nutrition', query: { from: 'home', scroll: 'nutrition' } }"
-          class="btn teal-reflect-button btn-hero-teal"
-        >
-          個別食材營養分析 →
-        </router-link>
-        <router-link
-          :to="{ name: 'cnt-nutrition-compare' }"
-          class="btn teal-reflect-button btn-hero-teal"
-        >
-          多種食材營養比較 →
-        </router-link>        
+        <div class="d-flex flex-wrap gap-3 mt-3">
+          <router-link
+            :to="{ name: 'cnt-nutrition', query: { from: 'home', scroll: 'nutrition' } }"
+            class="btn teal-reflect-button btn-hero-teal"
+          >
+            單一食材營養 →
+          </router-link>
+          <router-link
+            :to="{ name: 'cnt-nutrition-compare' }"
+            class="btn teal-reflect-button btn-hero-teal"
+          >
+            多種食材比較 →
+          </router-link>
+        </div>
+
       </div>
     </section>
 
@@ -220,4 +223,11 @@ onMounted(() => { loadFeaturedArticles() })
 .btn-hero-teal { color: #f2f2f2 !important; }
 .btn-hero-silver { color: #444 !important; }
 @media (max-width: 576px) { .article-card h5 { font-size: 1.05rem; } }
+
+@media (max-width: 576px) {
+  #nutrition .btn {
+    width: 100%;
+  }
+}
+
 </style>

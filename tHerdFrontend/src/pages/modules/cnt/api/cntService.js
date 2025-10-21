@@ -83,13 +83,13 @@ export async function getFoodCategories() {
 }
 
 /** 食材營養比較分析 */
-export async function getNutritionCompare(sampleIds, analyteIds) {
-    const res = await axios.get(`${API_BASE}/nutrition/compare`, {
-        params: {
-            sampleIds: sampleIds.join(','),
-            analyteIds: analyteIds.join(',')
-        }
-    });
-    return res.data;
-}
+// export async function getNutritionCompare(sampleIds, analyteIds) {
+//     const res = await axios.get(`${API_BASE}/nutrition/compare`, {
+//         params: {
+//             sampleIds: sampleIds.join(','),
+//             analyteIds: analyteIds.join(',')
+//         }
+//     });
+//     return res.data;
+// }
 

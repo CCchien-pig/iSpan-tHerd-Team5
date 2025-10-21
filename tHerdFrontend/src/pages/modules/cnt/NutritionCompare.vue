@@ -15,18 +15,18 @@
     <ul class="nav nav-tabs mb-3">
       <li class="nav-item" v-for="(g, i) in state.groups" :key="i">
         <button class="nav-link" :class="{ active: state.activeTab === i }" @click="state.activeTab = i">
-          {{ g.unit }}
+          {{ g.unit || "未標示單位" }}
         </button>
       </li>
     </ul>
 
     <!-- 小 multiples (面板圖) -->
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-      <div class="col" v-for="(a, idx) in activeAnalytes" :key="idx">
+      <div class="col" v-for="(a, idx) in activeAnalytes" :key="`${state.activeTab}-${idx}`">
         <div class="card shadow-sm border-0 h-100">
           <div class="card-body">
             <h6 class="card-title text-center fw-bold mb-3">{{ a.analyteName }}</h6>
-            <canvas :id="'chart-' + idx" height="200"></canvas>
+            <canvas :id="`chart-${state.activeTab}-${idx}`" height="200"></canvas>
           </div>
         </div>
       </div>
@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { reactive, computed, watch, onMounted } from "vue";
+import { reactive, computed, watch, onMounted, nextTick } from "vue";
 import Chart from "chart.js/auto";
 import annotationPlugin from "chartjs-plugin-annotation";
 import axios from "axios";
@@ -64,22 +64,36 @@ async function reloadData() {
         analyteIds: "1105,1107,1110,1112,1115"
       }
     });
+    console.log("Compare API 回傳：", data);
     state.groups = data.groups || [];
+
+    // 等 DOM 更新完成再畫圖
+    await nextTick();
     drawCharts();
   } catch (err) {
+    console.error(err);
     alert(err.response?.data?.error || "載入資料失敗");
   }
 }
 
-function drawCharts() {
+async function drawCharts() {
   // 清除舊的圖
   state.charts.forEach(c => c.destroy());
   state.charts = [];
 
   const analytes = activeAnalytes.value;
+  if (!analytes.length) {
+    console.warn("⚠️ 無資料可繪製圖表");
+    return;
+  }
+
   analytes.forEach((a, idx) => {
-    const ctx = document.getElementById("chart-" + idx);
-    if (!ctx) return;
+    const canvasId = `chart-${state.activeTab}-${idx}`;
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) {
+      console.warn(`❌ 找不到 canvas: ${canvasId}`);
+      return;
+    }
 
     const values = a.values.map(v => v.value);
     const avg = values.reduce((s, v) => s + v, 0) / values.length;
@@ -133,7 +147,15 @@ function drawCharts() {
   });
 }
 
-watch(() => state.activeTab, () => drawCharts());
+// Tab 切換後重新畫圖
+watch(
+  () => state.activeTab,
+  async () => {
+    await nextTick();
+    drawCharts();
+  }
+);
+
 onMounted(reloadData);
 </script>
 
