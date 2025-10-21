@@ -13,9 +13,10 @@ using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
+using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
-
+using tHerdBackend.Core.Abstractions.Security;
 namespace tHerdBackend.SharedApi
 {
     public class Program
@@ -67,6 +68,11 @@ namespace tHerdBackend.SharedApi
                     }
                 };
             });
+
+			builder.Services.AddAuthorization();
+
+			builder.Services.AddHttpContextAccessor();
+			builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 			// === SQL Connection Factory ===
 			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
