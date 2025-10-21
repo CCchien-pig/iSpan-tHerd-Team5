@@ -77,17 +77,28 @@
                 <li class="breadcrumb-item"><a href="#" class="crumb" data-id="">根目錄</a></li>
             </ol>
         </nav>
-
         <div class="d-flex align-items-center">
+            <input id="gotoPage" type="number" class="form-control form-control-sm"
+                   style="width: 100px;" placeholder="跳至頁數">
+            <button id="btnGoto" class="btn btn-sm btn-outline-primary ms-2 mr-4">Go</button>
+
             <input id="searchBox" class="form-control form-control-sm" placeholder="搜尋檔名或關鍵字..." style="width:250px;">
             <button id="btnSearch" class="btn btn-primary btn-sm ms-2"><i class="bi bi-search"></i> 搜尋</button>
         </div>
+    </div>
+    <div class="mb-2 d-flex gap-2">
+        <button id="btnEnable" class="btn btn-success btn-sm"><i class="bi bi-check2-circle"></i> 啟用</button>
+        <button id="btnDisable" class="btn btn-secondary btn-sm"><i class="bi bi-slash-circle"></i> 停用</button>
+        <button id="btnDelete" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> 刪除</button>
+        <button id="btnMove" class="btn btn-info btn-sm"><i class="bi bi-folder2-open"></i> 移動資料夾</button>
     </div>
 
     <div class="table-responsive">
         <table id="fileTable" class="table table-hover align-middle w-100">
             <thead class="table-light">
                 <tr>
+                    <th><input type="checkbox" id="selectAll" /></th>
+                    <th>編輯</th>
                     <th>名稱</th>
                     <th>修改日期</th>
                     <th>類型</th>
@@ -96,6 +107,37 @@
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+</div>
+
+@* 編輯圖片頁面 *@
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> 編輯檔案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editId" />
+                <div class="mb-2">
+                    <label class="form-label">名稱</label>
+                    <input type="text" class="form-control" id="editName" readonly />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">替代文字 (AltText)</label>
+                    <input type="text" class="form-control" id="editAlt" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">說明文字 (Caption)</label>
+                    <textarea class="form-control" id="editCaption" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnSaveEdit">儲存</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -119,6 +161,9 @@
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/colresize/1.6.1/dataTables.colResize.min.js"></script>
+    <link href="https://cdn.datatables.net/colresize/1.6.1/colResize.dataTables.min.css" rel="stylesheet" />
+
 
     <script>
         let breadcrumbStack = [{ id: null, name: "根目錄" }];
@@ -231,11 +276,37 @@
                 }
             },
             columns: [
+                {
+                    data: null,
+                    orderable: false,
+                    className: "text-center",
+                    width: "40px",
+                    render: (data, type, row) =>
+                        `<input type="checkbox" class="row-select" value="${row.id}" />`
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    className: "text-center",
+                    width: "60px",
+                    render: (data, type, row) =>
+                        `<button class="btn btn-sm btn-outline-warning btn-edit" data-id="${row.id}">
+                            <i class="bi bi-pencil"></i>
+                         </button>`
+                },
                 { data: "name" },
                 { data: "modifiedDate", render: d => d ? new Date(d).toLocaleString() : "-" },
                 { data: "mimeType", render: r => r || "-" },
                 { data: "size", render: s => s ? (s / 1024).toFixed(1) + " KB" : "-" }
             ],
+            colResize: {
+                tableWidthFixed: false,  // 可自由拖曳
+                handleWidth: 8,          // 拖曳區域寬度
+                hoverClass: 'dt-colresizable-hover',
+                resizeCallback: function(column) {
+                    console.log('Resized:', column.idx, column.width);
+                }
+            },
             language: {
                 processing: "資料讀取中...",
                 emptyTable: "目前沒有任何資料",
@@ -263,6 +334,29 @@
                     img.src = url;
                 }
             }
+        });
+
+        $('#btnGoto').on('click', function () {
+          const pageInput = parseInt($('#gotoPage').val(), 10);
+          if (isNaN(pageInput) || pageInput < 1) {
+            alert('請輸入有效的頁碼');
+            return;
+          }
+
+          // 每頁筆數
+          const pageLength = table.page.len();
+
+          // 計算起始筆數
+          const start = (pageInput - 1) * pageLength;
+
+          // 直接修改 DataTables 的設定（用 draw 重新載入）
+          table.settings()[0]._iDisplayStart = start;
+
+          // 重新呼叫伺服器端 API
+          table.ajax.reload(null, false);
+
+          // 自動捲回頂部（可選）
+          $('html, body').animate({ scrollTop: 0 }, 300);
         });
 
         // 圖片 + 資料夾名稱渲染
@@ -294,22 +388,6 @@
 
             try {
                 table.ajax.reload(null, false); // 改成用 DataTables 自動載入
-                // // 呼叫支援分頁的 API
-                // const res = await fetch(
-                //     `/SYS/Images/GetPagedFolderItems?parentId=${folderId ?? ""}&keyword=${keyword}`
-                // );
-                // const data = await res.json();
-
-                // // 更新 DataTable 的內容
-                // // 若有 serverSide 模式可直接 table.ajax.reload()，否則手動更新：
-                // if (table) {
-                //     table.clear().rows.add(data.items || data.data || []).draw();
-                // }
-
-                // // 更新麵包屑顯示（若後端有傳）
-                // if (data.breadcrumb) {
-                //     renderBreadcrumb(data.breadcrumb);
-                // }
             } catch (err) {
                 console.error("載入資料夾發生錯誤：", err);
                 alert("載入資料夾失敗，請稍後再試。");
@@ -341,28 +419,6 @@
             </li>`);
           });
         }
-
-        // function renderBreadcrumb(list) {
-        //     const $bc = $('#breadcrumb').empty();
-        //     $bc.append(`<li class="breadcrumb-item"><a href="#" class="crumb" data-id="">根目錄</a></li>`);
-
-        //     list.forEach((p, i) => {
-        //         const name = p.name || p; // 若後端傳的是物件
-        //         const id = p.id ?? null;
-        //         if (name === "根目錄") return;
-
-        //         const isLast = i === list.length - 1;
-        //         $bc.append(`<li class="breadcrumb-item ${isLast ? 'active' : ''}">
-        //             ${isLast ? name : `<a href="#" class="crumb" data-id="${id}">${name}</a>`}
-        //         </li>`);
-        //     });
-
-        //     if (list.length > 1) {
-        //         $bc.prepend(`<li class="breadcrumb-item">
-        //             <a href="#" id="goBack"><i class="bi bi-arrow-left-short"></i> 回上一層</a>
-        //         </li>`);
-        //     }
-        // }
 
         // 點擊資料夾
         $(document).on("click", ".folder-link", async function (e) {
@@ -452,21 +508,110 @@
         $("#btnSearch").click(() => {
             table.ajax.reload(null, false); // 第二參數 false => 保留目前頁碼
         });
-        // $("#btnSearch").click(() => {
-        //     const keyword = $("#searchBox").val();
-        //     const last = breadcrumbStack[breadcrumbStack.length - 1];
-        //     loadFolder(last.id, keyword);
-        // });
 
         $("#searchBox").on("keypress", function (e) {
             if (e.which === 13) $("#btnSearch").click();
         });
 
-        // $("#searchBox").on("keypress", function (e) {
-        //     if (e.which === 13) {
-        //         $("#btnSearch").click();
-        //     }
-        // });
+        // 功能按鈕
+
+        // 全選 / 全不選
+        $('#selectAll').on('change', function () {
+            const isChecked = this.checked;
+            $('.row-select').prop('checked', isChecked);
+        });
+
+        // 單筆選擇時，若全部勾選則同步全選
+        $(document).on('change', '.row-select', function () {
+            const all = $('.row-select').length;
+            const checked = $('.row-select:checked').length;
+            $('#selectAll').prop('checked', all === checked);
+        });
+
+        // 取得選取的 ID 陣列
+        function getSelectedIds() {
+            return $('.row-select:checked').map(function () {
+                return $(this).val();
+            }).get();
+        }
+
+        $('#btnEnable, #btnDisable').on('click', async function () {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return alert("請先選取項目");
+
+            const enable = this.id === 'btnEnable';
+            if (!confirm(`確定要${enable ? '啟用' : '停用'}這 ${ids.length} 筆嗎？`)) return;
+
+            await fetch('/SYS/Images/BatchSetActive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids, isActive: enable })
+            });
+
+            table.ajax.reload(null, false);
+        });
+
+        $(document).on('click', '.btn-edit', async function () {
+            const id = $(this).data('id');
+
+            // 呼叫後端 API 取資料
+            const res = await fetch(`/SYS/Images/GetFileDetail?id=${id}`);
+            const data = await res.json();
+
+            // 填入 modal
+            $('#editId').val(data.id);
+            $('#editName').val(data.name);
+            $('#editAlt').val(data.altText || '');
+            $('#editCaption').val(data.caption || '');
+            $('#editModal').modal('show');
+        });
+
+        $('#btnSaveEdit').on('click', async function () {
+            const dto = {
+                id: $('#editId').val(),
+                altText: $('#editAlt').val(),
+                caption: $('#editCaption').val()
+            };
+
+            await fetch('/SYS/Images/UpdateFile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dto)
+            });
+
+            $('#editModal').modal('hide');
+            table.ajax.reload(null, false);
+        });
+
+        $('#btnDelete').on('click', async function () {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return alert("請先選取項目");
+            if (!confirm(`確定要刪除 ${ids.length} 筆資料嗎？`)) return;
+
+            await fetch('/SYS/Images/BatchDelete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ids)
+            });
+
+            table.ajax.reload(null, false);
+        });
+
+        $('#btnMove').on('click', async function () {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return alert("請先選取項目");
+
+            const folderId = prompt("請輸入要移動到的資料夾 ID：");
+            if (!folderId) return;
+
+            await fetch('/SYS/Images/MoveToFolder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids, folderId })
+            });
+
+            table.ajax.reload(null, false);
+        });
 
         // 初始化
         loadFolder();

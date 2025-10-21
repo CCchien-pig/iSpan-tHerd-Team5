@@ -224,5 +224,103 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 breadcrumb
             });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> BatchSetActive([FromBody] BatchActiveRequest req)
+        {
+            if (req.Ids == null || req.Ids.Count == 0)
+                return BadRequest();
+
+            var files = await _db.SysAssetFiles
+                .Where(f => req.Ids.Contains(f.FileId))
+                .ToListAsync();
+
+            foreach (var f in files)
+                f.IsActive = req.IsActive;
+
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, count = files.Count });
+        }
+
+        public class BatchActiveRequest
+        {
+            public List<int> Ids { get; set; } = new();
+            public bool IsActive { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> BatchDelete([FromBody] List<int> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return BadRequest();
+
+            var files = await _db.SysAssetFiles
+                .Where(f => ids.Contains(f.FileId))
+                .ToListAsync();
+
+            _db.SysAssetFiles.RemoveRange(files);
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, deleted = files.Count });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MoveToFolder([FromBody] MoveFolderRequest req)
+        {
+            if (req.Ids == null || req.Ids.Count == 0)
+                return BadRequest();
+
+            var files = await _db.SysAssetFiles
+                .Where(f => req.Ids.Contains(f.FileId))
+                .ToListAsync();
+
+            foreach (var f in files)
+                f.FolderId = req.FolderId;
+
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, moved = files.Count });
+        }
+
+        public class MoveFolderRequest
+        {
+            public List<int> Ids { get; set; } = new();
+            public int FolderId { get; set; }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetFileDetail(int id)
+        {
+            var file = await _db.SysAssetFiles.FindAsync(id);
+            if (file == null)
+                return NotFound();
+
+            return Json(new
+            {
+                id = file.FileId,
+                name = Path.GetFileName(file.FileKey),
+                altText = file.AltText,
+                caption = file.Caption
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateFile([FromBody] UpdateFileDto dto)
+        {
+            var file = await _db.SysAssetFiles.FindAsync(dto.Id);
+            if (file == null)
+                return NotFound();
+
+            file.AltText = dto.AltText;
+            file.Caption = dto.Caption;
+            await _db.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
+
+        public class UpdateFileDto
+        {
+            public int Id { get; set; }
+            public string? AltText { get; set; }
+            public string? Caption { get; set; }
+        }
     }
 }
