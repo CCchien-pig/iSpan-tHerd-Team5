@@ -131,10 +131,6 @@ namespace tHerdBackend.SharedApi
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
 
-            
-
-            
-
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             // Controllers & Swagger
             builder.Services.AddControllers(options =>
@@ -178,6 +174,15 @@ namespace tHerdBackend.SharedApi
             app.UseHttpsRedirection();
 
 			app.UseCors("AllowAll");
+
+			// 訪客追蹤：若無 guestId 就建立
+			app.UseSession();
+			app.Use(async (ctx, next) =>
+			{
+				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
+					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
+				await next();
+			});
 
 			// 啟用 JWT 驗證
 			app.UseAuthentication();
