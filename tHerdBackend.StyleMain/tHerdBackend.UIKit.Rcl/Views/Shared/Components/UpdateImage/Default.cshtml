@@ -11,7 +11,7 @@
                 <img id="modalImg"
                      src="@Model.File.FileUrl"
                      alt="@Model.File.AltText"
-                     class="img-fluid mb-3 rounded"
+                     class="img-fluid mb-3 rounded img-zoomable"
                      style="max-width:600px; max-height:400px; object-fit:contain; cursor: zoom-in;"
                      data-file-id="@Model.File.FileId"
                      data-alt="@Model.File.AltText"
@@ -42,21 +42,18 @@
 @section Scripts {
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const modalImg = document.getElementById("modalImg");
-    if (!modalImg) return;
+    <script>
+        document.addEventListener("shown.bs.modal", (event) => {
+            const modal = event.target;
+            const img = modal.querySelector(".img-zoomable");
+            if (!img) return;
 
-    modalImg.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const imgUrl = this.src;
-        if (!imgUrl) return;
-
-        window.open(imgUrl, "_blank");
-    });
-});
-</script>
+            img.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(img.src, "_blank");
+            });
+        });
+    </script>
 }
 

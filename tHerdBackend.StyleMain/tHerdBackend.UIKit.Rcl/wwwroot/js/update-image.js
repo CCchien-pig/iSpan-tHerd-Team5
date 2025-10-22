@@ -1,12 +1,4 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
-    // === Modal ===
-    const modal = new bootstrap.Modal(document.getElementById("imgMetaModal"));
-    const modalImg = document.getElementById("modalImg");
-    const modalAlt = document.getElementById("modalAlt");
-    const modalCaption = document.getElementById("modalCaption");
-    const modalIsActive = document.getElementById("modalIsActive"); // 新增開關
-    const confirmBtn = document.getElementById("confirmMetaBtn");
-
     // === DOM 元素 ===
     const resetBtn = document.getElementById("resetBtn");
     const selectBtn = document.getElementById("selectBtn");
@@ -27,7 +19,7 @@
         }
     }
 
-    // === 啟用/停用按鈕 ===
+    // === 啟用／停用圖片 ===
     window.toggleActive = async function (fileId, btn) {
         const isCurrentlyActive = btn.textContent.trim() === "停用";
         const newState = !isCurrentlyActive;
@@ -59,7 +51,6 @@
                 const item = btn.closest(".img-item");
                 const img = item.querySelector("img");
 
-                // 更新畫面狀態
                 item.classList.toggle("inactive", !newState);
                 img.dataset.isActive = newState.toString();
                 btn.textContent = newState ? "停用" : "啟用";
@@ -95,17 +86,16 @@
                 wrapper.className = "img-item";
 
                 wrapper.innerHTML = `
-                            <img src="${e.target.result}" alt="" class="preview-img" />
-                            <button type="button" class="btn-close-custom" aria-label="Close">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                            <input type="text" class="form-control mt-2 alt-input"
-                                   placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
-                            <textarea class="form-control mt-2 caption-input"
-                                      placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
-                        `;
+                    <img src="${e.target.result}" alt="" class="preview-img" />
+                    <button type="button" class="btn-close-custom" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <input type="text" class="form-control mt-2 alt-input"
+                        placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
+                    <textarea class="form-control mt-2 caption-input"
+                        placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
+                `;
 
-                // 移除預覽圖按鈕
                 wrapper.querySelector(".btn-close-custom").addEventListener("click", () => {
                     wrapper.remove();
                     showReset();
@@ -118,12 +108,12 @@
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
 
-                const fileInput = document.createElement("input");
-                fileInput.type = "file";
-                fileInput.name = `Meta[${index}].File`;
-                fileInput.files = dataTransfer.files;
-                fileInput.hidden = true;
-                hiddenInputs.appendChild(fileInput);
+                const fileInputHidden = document.createElement("input");
+                fileInputHidden.type = "file";
+                fileInputHidden.name = `Meta[${index}].File`;
+                fileInputHidden.files = dataTransfer.files;
+                fileInputHidden.hidden = true;
+                hiddenInputs.appendChild(fileInputHidden);
             };
 
             reader.readAsDataURL(file);
@@ -135,7 +125,7 @@
         }
     }
 
-    // === 拖拉區塊 ===
+    // === 拖拉上傳區 ===
     if (dropArea) {
         ["dragenter", "dragover", "dragleave", "drop"].forEach(evtName => {
             dropArea.addEventListener(evtName, e => {
@@ -157,92 +147,93 @@
         });
     }
 
-    // === 選擇檔案 ===
+    // === 選擇檔案按鈕 ===
     if (selectBtn && fileInput) {
         selectBtn.addEventListener("click", () => fileInput.click());
         fileInput.addEventListener("change", () => {
             if (fileInput.files.length > 0) {
                 showPreview(fileInput.files);
-                fileInput.value = ""; // 允許重選相同檔案
+                fileInput.value = "";
             }
         });
     }
 
-    // === 編輯圖片資訊 (開啟 Modal) ===
-    document.querySelectorAll(".thumb-clickable").forEach(img => {
-        const parentButton = img.closest(".img-item")?.querySelector(".btn-close-custom");
-        const fileId = parentButton?.getAttribute("onclick")?.match(/\d+/)?.[0];
-        img.dataset.fileId = fileId || "";
+    // === Modal（支援多個 UpdateImage 元件） ===
+    document.querySelectorAll(".modal").forEach(modalElement => {
+        const modalImg = modalElement.querySelector(".img-zoomable");
+        if (!modalImg) return;
 
-        img.addEventListener("click", function () {
-            modalImg.src = this.src;
-            modalImg.alt = this.alt;
-            modalAlt.value = this.dataset.alt || "";
-            modalCaption.value = this.dataset.caption || "";
-            modalIsActive.checked = this.dataset.isActive === "true";
-            modalImg.dataset.fileId = this.dataset.fileId;
-            modal.show();
+        const modalId = modalElement.id;
+        const modalAlt = modalElement.querySelector("#modalAlt");
+        const modalCaption = modalElement.querySelector("#modalCaption");
+        const modalIsActive = modalElement.querySelector("#modalIsActive");
+        const confirmBtn = modalElement.querySelector("#confirmMetaBtn");
+        const modal = new bootstrap.Modal(modalElement);
+
+        // === 點擊 Modal 內的圖片 → 直接開原圖 ===
+        modalImg.addEventListener("click", e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const imgUrl = modalImg.src;
+            if (imgUrl) window.open(imgUrl, "_blank");
         });
-    });
 
-    // === 點擊 Modal 內的圖片 → 直接另開原圖網址 ===
-    modalImg.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
+        // === 點擊縮圖開啟 Modal ===
+        document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalId}"]`).forEach(img => {
+            img.addEventListener("click", () => {
+                modalImg.src = img.src;
+                modalImg.alt = img.alt;
+                modalAlt.value = img.dataset.alt || "";
+                modalCaption.value = img.dataset.caption || "";
+                modalIsActive.checked = img.dataset.isActive === "true";
+                modalImg.dataset.fileId = img.dataset.fileId;
+                modal.show();
+            });
+        });
 
-        const imgUrl = this.src;
-        if (!imgUrl) return;
+        // === Modal 確認更新 ===
+        if (confirmBtn) {
+            confirmBtn.addEventListener("click", async () => {
+                const fileId = modalImg.dataset.fileId;
+                if (!fileId) {
+                    Swal.fire("⚠️ 找不到圖片 ID，無法更新", "", "warning");
+                    return;
+                }
 
-        // 直接開新分頁顯示原圖
-        window.open(imgUrl, "_blank");
-    });
-
-    // === 確認更新 (Modal 確定) ===
-    if (confirmBtn) {
-        confirmBtn.addEventListener("click", async function () {
-            const fileId = modalImg.dataset.fileId;
-            const altText = modalAlt.value.trim();
-            const caption = modalCaption.value.trim();
-
-            if (!fileId) {
-                Swal.fire("⚠️ 找不到圖片 ID，無法更新", "", "warning");
-                return;
-            }
-
-            try {
+                const altText = modalAlt.value.trim();
+                const caption = modalCaption.value.trim();
                 const isActive = modalIsActive.checked;
 
-                const res = await fetch(`${window.location.origin}/SYS/UploadTest/UpdateMeta`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        FileId: parseInt(fileId),
-                        AltText: altText,
-                        Caption: caption,
-                        IsActive: isActive
-                    })
-                });
+                try {
+                    const res = await fetch(`${window.location.origin}/SYS/UploadTest/UpdateMeta`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            FileId: parseInt(fileId),
+                            AltText: altText,
+                            Caption: caption,
+                            IsActive: isActive
+                        })
+                    });
 
-                const data = await res.json();
+                    const data = await res.json();
 
-                if (data.success) {
-                    Swal.fire("✅ 更新成功", "", "success");
-
-                    // ✅ 傳進所有需要更新的資料
-                    updateImageState(fileId, altText, caption, isActive);
-
-                    modal.hide();
-                } else {
-                    Swal.fire("❌ 更新失敗", data.message || "", "error");
+                    if (data.success) {
+                        Swal.fire("✅ 更新成功", "", "success");
+                        updateImageState(fileId, altText, caption, isActive);
+                        modal.hide();
+                    } else {
+                        Swal.fire("❌ 更新失敗", data.message || "", "error");
+                    }
+                } catch (err) {
+                    Swal.fire("❌ 錯誤", "無法連線至伺服器", "error");
+                    console.error("update-image.js 錯誤:", err);
                 }
-            } catch (err) {
-                Swal.fire("❌ 錯誤", "無法連線至伺服器或回傳格式錯誤", "error");
-                console.error("更新錯誤：", err);
-            }
-        });
-    }
+            });
+        }
+    });
 
-    // ✅ 共用更新函式（可供 Modal 與 toggleActive 共用）
+    // === 更新畫面資料 ===
     function updateImageState(fileId, altText, caption, isActive) {
         const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
         if (!img) return;
@@ -252,15 +243,11 @@
         img.dataset.caption = caption;
         img.dataset.isActive = isActive.toString();
 
-        // 動態標記出啟用／停用狀態
         const parent = img.closest(".img-item");
         parent.classList.toggle("inactive", !isActive);
 
-        // 更新按鈕文字
         const toggleBtn = parent.querySelector(".toggle-active-btn");
-        if (toggleBtn) {
-            toggleBtn.textContent = isActive ? "停用" : "啟用";
-        }
+        if (toggleBtn) toggleBtn.textContent = isActive ? "停用" : "啟用";
     }
 
     // === 刪除圖片 ===
@@ -290,14 +277,12 @@
                 timer: 1000
             });
 
-            // 1. 直接從畫面移除該圖片
             const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
             if (targetImg) {
                 const parent = targetImg.closest(".img-item");
                 if (parent) parent.remove();
             }
 
-            // 2. 若全部圖片都刪完，就隱藏外層區域
             const grid = document.querySelector("form > div.img-grid");
             if (grid && grid.children.length === 0) {
                 grid.innerHTML = `<p class="text-muted">目前沒有圖片。</p>`;
@@ -306,4 +291,24 @@
             Swal.fire("❌ 刪除失敗", data.message || "", "error");
         }
     };
+
+    // === 修正版本：正確更新 Modal 內容 ===
+    document.addEventListener("shown.bs.modal", function (event) {
+        const modal = event.target;
+        const triggerImg = event.relatedTarget;
+        if (!triggerImg) return;
+
+        const modalImg = modal.querySelector(".img-zoomable");
+        const modalAlt = modal.querySelector("#modalAlt");
+        const modalCaption = modal.querySelector("#modalCaption");
+        const modalIsActive = modal.querySelector("#modalIsActive");
+
+        // 更新 Modal 內容
+        modalImg.src = triggerImg.src;
+        modalImg.alt = triggerImg.alt;
+        modalAlt.value = triggerImg.dataset.alt || "";
+        modalCaption.value = triggerImg.dataset.caption || "";
+        modalIsActive.checked = triggerImg.dataset.isActive === "true";
+        modalImg.dataset.fileId = triggerImg.dataset.fileId;
+    });
 });

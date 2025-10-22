@@ -51,7 +51,9 @@
                      data-file-id="@file.FileId"
                      data-alt="@file.AltText"
                      data-caption="@file.Caption"
-                     data-is-active="@file.IsActive.ToString().ToLower()" />
+                     data-is-active="@file.IsActive.ToString().ToLower()"
+                     data-bs-toggle="modal"
+                     data-bs-target="#imgMetaModal" />
 
                 <button type="button" class="btn-close-custom" aria-label="Close" onclick="deleteFile(@file.FileId)">
                     <i class="bi bi-x-lg"></i>
@@ -71,52 +73,12 @@
     </div>
 }
 
-<!-- Bootstrap Modal -->
+<!-- 編輯圖片 -->
 @await Component.InvokeAsync("UpdateImage", new { 
     modalId = "imgMetaModal", 
     title = "圖片資訊", 
-    file = new SysAssetFileDto { 
-        FileId = 1038, 
-        FileUrl = "https://cloudinary.images-iherb.com/image/upload/f_auto,q_auto:eco/images/atn/atn00611/r/97.jpg", 
-        AltText = "主圖", 
-        Caption = "封面", 
-        IsActive = true 
-    }
+    file = new SysAssetFileDto() // 空的 DTO，不要預設圖片
 })
-<div class="modal fade" id="imgMetaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">圖片資訊</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalImg"
-                     src=""
-                     alt=""
-                     class="img-fluid mb-3 rounded img-zoomable"
-                     style="max-width:600px; max-height:400px; object-fit:contain; cursor: zoom-in;" />
-
-                <div class="mb-3 text-start">
-                    <label for="modalAlt" class="form-label">AltText</label>
-                    <input type="text" id="modalAlt" class="form-control" />
-                </div>
-                <div class="mb-3 text-start">
-                    <label for="modalCaption" class="form-label">Caption</label>
-                    <textarea id="modalCaption" class="form-control" rows="2"></textarea>
-                </div>
-                <div class="form-check form-switch text-start mb-3">
-                    <input class="form-check-input" type="checkbox" id="modalIsActive" />
-                    <label class="form-check-label" for="modalIsActive">是否啟用</label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" id="confirmMetaBtn" class="btn btn-primary">確定</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")

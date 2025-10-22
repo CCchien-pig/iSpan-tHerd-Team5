@@ -1,4 +1,5 @@
-﻿@using tHerdBackend.Core.DTOs.SYS
+﻿@using tHerdBackend.Core.DTOs
+@using tHerdBackend.Core.DTOs.SYS
 @model IEnumerable<FolderItemDto>
 
 @section Styles {
@@ -111,49 +112,20 @@
 </div>
 
 @* 編輯圖片頁面 *@
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil"></i> 編輯檔案</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="editId" />
-                <div class="mb-2">
-                    <label class="form-label">名稱</label>
-                    <input type="text" class="form-control" id="editName" readonly />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">替代文字 (AltText)</label>
-                    <input type="text" class="form-control" id="editAlt" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">說明文字 (Caption)</label>
-                    <textarea class="form-control" id="editCaption" rows="2"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" id="btnSaveEdit">儲存</button>
-            </div>
-        </div>
-    </div>
-</div>
+@await Component.InvokeAsync("UpdateImage", new { 
+    modalId = "imgMetaModal", 
+    title = "圖片資訊", 
+    file = new SysAssetFileDto() // 空的 DTO，不要預設圖片
+})
 
-<!-- 🔍 圖片預覽 Modal -->
 <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark text-center">
-            <div class="modal-body">
-                <img id="previewImg"
-                     src=""
-                     alt="preview"
-                     class="img-preview"
-                     onerror="this.onerror=null; this.src='/images/No-Image.svg';" />
-            </div>
-        </div>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body text-center p-0">
+        <img id="previewImg" src="/images/No-Image.svg" class="img-preview rounded shadow-sm" alt="預覽圖">
+      </div>
     </div>
+  </div>
 </div>
 
 @section Scripts {
@@ -233,7 +205,7 @@
         // DataTable 初始化（含固定表頭 + 分頁）
         const table = $('#fileTable').DataTable({
             processing: true,
-            serverSide: true,
+            serverSide: false,
             searching: false,
             paging: true,
             searching: false,
@@ -253,28 +225,28 @@
                     }
                 }
             ],
-            ajax: {
-                url: '/SYS/Images/GetPagedFolderItems',
-                type: 'GET',
-                data: function (d) {
-                    // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
-                    const last = breadcrumbStack[breadcrumbStack.length - 1];
-                    d.parentId = last?.id ?? null;
-                    d.keyword = $("#searchBox").val();
-                },
-                dataSrc: function (json) {
-                    // 自動同步更新麵包屑
-                    if (json.breadcrumb) {
-                        renderBreadcrumb(json.breadcrumb);
-                    }
+            // ajax: {
+            //     url: '/SYS/Images/GetPagedFolderItems',
+            //     type: 'GET',
+            //     data: function (d) {
+            //         // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
+            //         const last = breadcrumbStack[breadcrumbStack.length - 1];
+            //         d.parentId = last?.id ?? null;
+            //         d.keyword = $("#searchBox").val();
+            //     },
+            //     dataSrc: function (json) {
+            //         // 自動同步更新麵包屑
+            //         if (json.breadcrumb) {
+            //             renderBreadcrumb(json.breadcrumb);
+            //         }
 
-                    // DataTables 會使用這個陣列來渲染
-                    return json.data || json.data || [];
-                },
-                error: function (xhr, status, error) {
-                    console.error("載入資料發生錯誤：", error);
-                }
-            },
+            //         // DataTables 會使用這個陣列來渲染
+            //         return json.data || json.data || [];
+            //     },
+            //     error: function (xhr, status, error) {
+            //         console.error("載入資料發生錯誤：", error);
+            //     }
+            // },
             columns: [
                 {
                     data: null,
@@ -294,7 +266,10 @@
                             <i class="bi bi-pencil"></i>
                          </button>`
                 },
-                { data: "name" },
+                  {
+                      data: "name",                 // 第三欄要改這樣
+                      render: renderName
+                  },
                 { data: "modifiedDate", render: d => d ? new Date(d).toLocaleString() : "-" },
                 { data: "mimeType", render: r => r || "-" },
                 { data: "size", render: s => s ? (s / 1024).toFixed(1) + " KB" : "-" }
@@ -361,43 +336,24 @@
 
         // 圖片 + 資料夾名稱渲染
         function renderName(data, type, row) {
-            if (row.isFolder) {
+            const isFolder = row.isFolder || row.IsFolder;
+            const url = row.url || row.fileUrl || row.FileUrl || null;
+
+            if (isFolder) {
                 return `<i class="bi bi-folder-fill text-warning me-2"></i>
-                        <a href="#" class="folder-link text-decoration-none" data-id="${row.id}">${data}</a>`;
+                        <a href="#" class="folder-link text-decoration-none" data-id="${row.id || row.folderId}">${data}</a>`;
             }
 
             const placeholder = "/images/No-Image.svg";
-            if (row.mimeType?.startsWith("image/") || row.url?.includes("img.youtube.com/vi/")) {
+
+            if (row.mimeType?.startsWith("image/") || (url && url.includes("img.youtube.com/vi/"))) {
                 return `<img src="${placeholder}"
                              onerror="this.onerror=null;this.src='${placeholder}'"
                              class="thumb me-2 image-thumb"
-                             data-url="${row.url}" /> ${data}`;
+                             data-url="${url}" /> ${data}`;
             }
 
             return `<i class="bi bi-file-earmark text-secondary me-2"></i>${data}`;
-        }
-
-        // 載入資料夾
-        async function loadFolder(folderId = null, keyword = "") {
-            // 資料夾切換時平滑滾動至頂端
-            $('html, body').animate({ scrollTop: 0 }, 300);
-
-            const $table = $('#fileTable');
-            $table.addClass("opacity-50"); // 半透明效果
-            $("#btnSearch").prop("disabled", true).html('<i class="bi bi-hourglass-split"></i> 載入中...');
-
-            try {
-                table.ajax.reload(null, false); // 改成用 DataTables 自動載入
-            } catch (err) {
-                console.error("載入資料夾發生錯誤：", err);
-                alert("載入資料夾失敗，請稍後再試。");
-            } finally {
-                // 還原 UI 狀態
-                $table.removeClass("opacity-50");
-                $("#btnSearch")
-                    .prop("disabled", false)
-                    .html('<i class="bi bi-search"></i> 搜尋');
-            }
         }
 
         // 麵包屑
@@ -424,9 +380,11 @@
         $(document).on("click", ".folder-link", async function (e) {
             e.preventDefault();
             const id = $(this).data("id");
-            breadcrumbStack.push({ id: id, name: $(this).text() });
-            // await loadFolder(id);
-            table.ajax.reload(null, false); // 第二參數 false => 保留目前頁碼
+            const name = $(this).text();
+            if (!id) return;
+
+            breadcrumbStack.push({ id, name });
+            await loadFolder(id);
         });
 
         // 點擊麵包屑
@@ -462,7 +420,6 @@
 
                 renderBreadcrumb(data.breadcrumb);
             } finally {
-                // 還原 UI 狀態
                 $table.removeClass("opacity-50");
                 $("#btnSearch").prop("disabled", false).html('<i class="bi bi-search"></i> 搜尋');
             }
@@ -551,19 +508,45 @@
             table.ajax.reload(null, false);
         });
 
+        // 點擊編輯圖片資訊
         $(document).on('click', '.btn-edit', async function () {
             const id = $(this).data('id');
 
-            // 呼叫後端 API 取資料
-            const res = await fetch(`/SYS/Images/GetFileDetail?id=${id}`);
-            const data = await res.json();
+            try {
+                const res = await fetch(`/SYS/Images/GetFileDetail?id=${id}`);
+                if (!res.ok) throw new Error("讀取圖片資訊失敗");
+                const data = await res.json();
 
-            // 填入 modal
-            $('#editId').val(data.id);
-            $('#editName').val(data.name);
-            $('#editAlt').val(data.altText || '');
-            $('#editCaption').val(data.caption || '');
-            $('#editModal').modal('show');
+                // ✅ 同時支援大小寫版本（避免他人 API 還是小寫）
+                const fileId = data.FileId ?? data.fileId;
+                const altText = data.AltText ?? data.altText ?? '';
+                const caption = data.Caption ?? data.caption ?? '';
+                const fileUrl = data.FileUrl ?? data.fileUrl ?? '';
+                const isActive = data.IsActive ?? data.isActive ?? true;
+
+                // ✅ 更新 modal
+                const modal = document.getElementById('imgMetaModal');
+                const $modal = $(modal);
+
+                $modal.find('#modalImg')
+                    .attr('src', fileUrl || '/images/No-Image.svg')
+                    .attr('data-file-id', fileId);
+
+                $modal.find('#modalAlt').val(altText);
+                $modal.find('#modalCaption').val(caption);
+                $modal.find('#modalIsActive').prop('checked', !!isActive);
+
+                // ✅ 顯示 modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    icon: "error",
+                    title: "載入失敗",
+                    text: "無法載入圖片資訊，請稍後再試。"
+                });
+            }
         });
 
         $('#btnSaveEdit').on('click', async function () {

@@ -287,22 +287,25 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetFileDetail(int id)
-        {
-            var file = await _db.SysAssetFiles.FindAsync(id);
-            if (file == null)
-                return NotFound();
+		public IActionResult GetFileDetail(int id)
+		{
+			var file = _db.SysAssetFiles
+				.Where(f => f.FileId == id)
+				.Select(f => new
+				{
+					FileId = f.FileId,
+					Name = Path.GetFileName(f.FileKey),
+					FileUrl = f.FileUrl,
+					AltText = f.AltText,
+					Caption = f.Caption,
+					IsActive = f.IsActive
+				})
+				.FirstOrDefault();
 
-            return Json(new
-            {
-                id = file.FileId,
-                name = Path.GetFileName(file.FileKey),
-                altText = file.AltText,
-                caption = file.Caption
-            });
-        }
+			return Json(file);
+		}
 
-        [HttpPost]
+		[HttpPost]
         public async Task<IActionResult> UpdateFile([FromBody] UpdateFileDto dto)
         {
             var file = await _db.SysAssetFiles.FindAsync(dto.Id);
