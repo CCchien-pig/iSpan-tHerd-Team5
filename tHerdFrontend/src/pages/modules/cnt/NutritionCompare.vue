@@ -73,6 +73,7 @@
               {{ state.showAllAnalytes ? '顯示：全部營養素' : '顯示：常見營養素' }}
             </label>
           </div>
+
           <button class="btn btn-sm btn-outline-secondary" @click="toggleAllGroups">
             {{ areAllGroupsCollapsed ? '全部展開' : '全部收合' }}
           </button>
@@ -173,8 +174,20 @@
 import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getNutritionList, getNutritionCompare, getAnalyteList } from '@/pages/modules/cnt/api/cntService'
+import Swal from 'sweetalert2'
+import 'sweetalert2/dist/sweetalert2.min.css' // （可選）加樣式
 
-/* ----------------------- state ----------------------- */
+/* ---------- SweetAlert helper ---------- */
+function showWarn(msg) {
+  Swal.fire({
+    text: msg,
+    icon: 'warning',
+    confirmButtonText: '確定',
+    confirmButtonColor: 'rgb(0,112,131)'
+  })
+}
+
+/* ---------- state ---------- */
 const state = reactive({
   // samples
   sampleKeyword: '',
@@ -286,15 +299,14 @@ function selectAllAnalytes() {
 
 /* ----------------------- sample pick ----------------------- */
 function addSample(s) {
-  if (ui.compareList.length >= 6) return alert('最多可比較 6 種食材')
-  if (ui.compareList.some(x => x.sampleId === s.sampleId)) return
+  if (ui.compareList.length >= 6) return showWarn('最多可比較 6 種食材')
   ui.compareList.push(s)
 }
 function removeSample(id) {
   ui.compareList = ui.compareList.filter(x => x.sampleId !== id)
 }
 
-/* ----------------------- group collapse ----------------------- */
+/* ---------- 群組收合 ---------- */
 function isGroupCollapsed(cat) {
   return ui.collapsedGroups.has(cat)
 }
@@ -324,10 +336,10 @@ function expandDefaults() {
 
 /* ----------------------- compare ----------------------- */
 async function fetchCompare() {
-  if (ui.compareList.length < 2 || ui.selectedAnalyteIds.length < 1) {
-    alert('請至少選 2 種食材與 1 種營養素')
-    return
-  }
+  if (ui.compareList.length < 2) return showWarn('請至少選 2 種食材')
+  if (ui.selectedAnalyteIds.length < 1) return showWarn('請至少選 1 種營養素')
+  if (ui.selectedAnalyteIds.length > 12) return showWarn('最多可選擇 12 種營養素')
+
   state.loading = true
   ui.groups = []
   try {

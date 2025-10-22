@@ -1,377 +1,426 @@
 <template>
   <div class="container py-4">
-    <!-- 導覽 -->
-    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-      <router-link to="/cnt/nutrition" class="btn btn-outline-secondary">
-        ← 返回營養資料庫
-      </router-link>
-      <button class="btn btn-outline-danger" @click="clearCompare">清空比較清單</button>
-      <div class="ms-auto d-flex gap-2">
-        <!-- 圖表切換 -->
-        <div class="btn-group" role="group">
-          <button class="btn btn-outline-primary" :class="{active: chartType==='radar'}" @click="chartType='radar'; updateCharts()">雷達圖</button>
-          <button class="btn btn-outline-primary" :class="{active: chartType==='bar'}" @click="chartType='bar'; updateCharts()">條狀圖</button>
+    <!-- 1️⃣ 食材選擇 -->
+    <section class="compare-step p-4 mb-4 rounded-3 shadow-sm bg-white">
+      <h4 class="main-color-green-text mb-3">選擇要比較的食材</h4>
+
+      <!-- 搜尋 + 下拉 -->
+      <div class="row g-3 align-items-center">
+        <div class="col-md-8">
+          <input
+            v-model.trim="state.sampleKeyword"
+            type="search"
+            class="form-control border-main-color-green"
+            placeholder="輸入食材名稱或關鍵字…"
+            @input="filterSamples"
+          />
         </div>
-        <!-- 指標模式 -->
-        <select class="form-select" style="width: 220px" v-model="mode" @change="rebuildData">
-          <option value="pms">脂肪酸組成（P/M/S）</option>
-          <option value="major">主要營養素（能量/三大營養）</option>
-          <option value="popular">前10熱門（IsPopular）</option>
-          <option value="all">全部可用營養素（可能很多）</option>
-        </select>
+        <div class="col-md-4 text-md-end">
+          <button class="btn teal-reflect-button text-white px-4" @click="state.showSampleDropdown = !state.showSampleDropdown">
+            {{ state.showSampleDropdown ? '收起清單' : '展開全部食材' }}
+          </button>
+        </div>
       </div>
-    </div>
 
-    <!-- 已選食材 -->
-    <div class="mb-3">
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <strong class="me-2">已選食材（{{ compareList.length }}）</strong>
-        <span
-          v-for="item in compareList"
-          :key="item.sampleId"
-          class="badge bg-light text-dark border d-flex align-items-center"
+      <!-- 下拉清單 -->
+      <div v-if="state.showSampleDropdown" class="mt-3 border rounded p-2 bg-light" style="max-height:300px; overflow-y:auto;">
+        <div
+          v-for="s in ui.filteredSamples"
+          :key="s.sampleId"
+          class="py-1 d-flex justify-content-between align-items-center border-bottom"
         >
-          <span class="px-2">{{ item.sampleName || ('#'+item.sampleId) }}</span>
-          <button class="btn btn-sm btn-link text-danger" @click="removeOne(item.sampleId)" title="移除">✕</button>
-        </span>
+          <span>{{ s.sampleName }}</span>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            :disabled="ui.compareList.some(c => c.sampleId === s.sampleId)"
+            @click="addSample(s)"
+          >
+            加入
+          </button>
+        </div>
       </div>
-      <small class="text-muted d-block mt-1">建議 2–10 個，支援 5 個以上比較。</small>
-    </div>
 
-    <!-- 資料載入狀態 -->
-    <div v-if="loading" class="text-center text-muted py-5">載入中…</div>
-    <div v-else-if="!canCompare" class="text-center text-muted py-5">
-      請先在食材頁按「加入比較」，至少需要 2 個食材。
-    </div>
+      <!-- 已選食材 -->
+      <div class="mt-4">
+        <strong>已選食材：</strong>
+        <span
+          v-for="c in ui.compareList"
+          :key="c.sampleId"
+          class="badge bg-light border text-dark me-2 d-inline-flex align-items-center"
+        >
+          {{ c.sampleName }}
+          <button class="btn btn-sm btn-link text-danger ms-1" @click="removeSample(c.sampleId)">✕</button>
+        </span>
+        <small class="text-muted d-block mt-2">請選擇 2–6 種食材</small>
+      </div>
+    </section>
 
-    <!-- 圖表 -->
-    <div v-else>
-      <div v-show="chartType==='radar'" ref="radarRef" style="width:100%; height: 460px;"></div>
-      <div v-show="chartType==='bar'" ref="barRef" style="width:100%; height: 520px;" class="mt-3"></div>
-    </div>
+    <!-- 2️⃣ 營養素選擇（動態載入 + 快搜 + 全部/常見切換 + 群組摺疊） -->
+    <section class="compare-step p-4 mb-4 rounded-3 shadow-sm bg-white">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="main-color-green-text m-0">選擇要比較的營養素</h4>
+
+        <div class="d-flex align-items-center gap-3">
+          <div class="form-check form-switch m-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="toggleAll"
+              v-model="state.showAllAnalytes"
+              @change="loadAnalytes"
+            />
+            <label class="form-check-label" for="toggleAll">
+              {{ state.showAllAnalytes ? '顯示：全部營養素' : '顯示：常見營養素' }}
+            </label>
+          </div>
+
+          <!-- 單一標籤切換 -->
+          <span
+            class="badge bg-light border border-main-color-green main-color-green-text px-3 py-2"
+            style="cursor:pointer"
+            @click="toggleAllGroups"
+          >
+            {{ areAllGroupsCollapsed ? '▸ 全部展開' : '▾ 全部收合' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- 快搜 + 全選/清空 -->
+      <div class="row g-2 align-items-center mb-2">
+        <div class="col-md-6">
+          <input
+            v-model.trim="state.analyteKeyword"
+            type="search"
+            class="form-control border-main-color-green"
+            placeholder="搜尋營養素（中英文皆可）…"
+            @input="filterAnalytes"
+          />
+        </div>
+        <div class="col-md-6 text-md-end">
+          <button class="btn btn-sm btn-outline-secondary me-2" @click="selectAllAnalytes">全選目前篩選</button>
+          <button class="btn btn-sm btn-outline-secondary" @click="ui.selectedAnalyteIds = []">清空</button>
+        </div>
+      </div>
+
+      <!-- 群組 -->
+      <div class="d-flex flex-column gap-2">
+        <div v-for="(group, gi) in ui.filteredAnalytesByCat" :key="group.category">
+          <button
+            class="group-header btn btn-sm d-inline-flex align-items-center gap-2 px-3 py-1 mb-2 fw-semibold rounded-pill"
+            :style="getGroupStyle(group.category, gi)"
+            @click="toggleGroup(group.category)"
+          >
+            <span class="group-caret">{{ isGroupCollapsed(group.category) ? '▸' : '▾' }}</span>
+            <span>{{ group.category }}</span>
+          </button>
+
+          <div v-show="!isGroupCollapsed(group.category)" class="d-flex flex-wrap gap-2 ms-1">
+            <label
+              v-for="a in group.items"
+              :key="a.analyteId"
+              class="form-check-label analyte-item border rounded px-3 py-1 bg-light"
+            >
+              <input
+                type="checkbox"
+                v-model="ui.selectedAnalyteIds"
+                :value="a.analyteId"
+                class="form-check-input me-2"
+              />
+              {{ a.analyteName }}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <small class="text-muted d-block mt-2">
+        建議選擇 5–10 項。已選：{{ ui.selectedAnalyteIds.length }} / 可任意組合。
+      </small>
+
+      <div class="text-end mt-3">
+        <button class="btn teal-reflect-button text-white px-4" @click="fetchCompare" :disabled="state.loading">
+          {{ state.loading ? '分析中…' : '開始比較' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- 3️⃣ 結果圖表 -->
+    <section v-if="ui.groups.length" class="compare-step p-4 rounded-3 shadow-sm bg-white">
+      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h4 class="main-color-green-text m-0">比較結果（依單位分群）</h4>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <label class="me-1 text-muted">視圖：</label>
+          <select v-model="ui.chartType" class="form-select form-select-sm" style="width:auto" @change="renderAll">
+            <option value="bar">條狀圖（群組）</option>
+            <option value="radar">雷達圖</option>
+            <option value="heatmap">熱圖</option>
+            <option value="stacked">堆疊百分比條圖</option>
+            <option value="boxplot">箱型圖</option>
+          </select>
+          <button class="btn btn-sm teal-reflect-button text-white" @click="exportCharts">匯出 PNG</button>
+          <button class="btn btn-sm silver-reflect-button" @click="generateShareLink">分享連結</button>
+        </div>
+      </div>
+
+      <div v-for="(grp, gi) in ui.groups" :key="gi" class="mb-5">
+        <h5 class="main-color-green-text mb-3">單位：{{ grp.unit }}</h5>
+        <div
+          :ref="el => chartRefs[gi] = el"
+          class="chart-box border rounded-3 p-2 bg-light"
+          style="height:520px;"
+        ></div>
+      </div>
+    </section>
+
+    <div v-else-if="state.loading" class="text-center py-5 text-muted">載入中…</div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
-// 若未設置 @ 別名，請改相對路徑 ../../api/cntApi
-import { getNutritionById } from '../../api/cntApi'
+import Swal from 'sweetalert2'
+import 'sweetalert2/dist/sweetalert2.min.css'
+import { getNutritionList, getNutritionCompare, getAnalyteList } from '@/pages/modules/cnt/api/cntService'
 
-export default {
-  name: 'NutritionCompare',
-  data() {
-    return {
-      loading: false,
-      chartType: 'radar',           // 'radar' | 'bar'
-      mode: 'popular',              // 'pms' | 'major' | 'popular' | 'all'
-      compareList: [],              // [{ sampleId, sampleName, slug }]
-      rawBySample: {},              // sampleId -> [{ analyteName, unit, valuePer100g | per100gRaw, IsPopular?, category }]
-      // 規範化後：nutrientKeys 與每個食材的值
-      nutrientKeys: [],             // 指標名陣列（如 ['蛋白質','脂肪','碳水', ...] 或 ['多元不飽和脂肪 (P)', ...]）
-      dataset: {},                  // nutrientKey -> { unit, values: { sampleId: number|null } }
-      radarChart: null,
-      barChart: null,
-    }
-  },
-  computed: {
-    canCompare() {
-      return this.compareList.length >= 2
-    }
-  },
-  methods: {
-    // 讀取 localStorage 清單（由 Detail 頁加入）
-    loadCompareList() {
-      try {
-        const key = 'nutrition_compare_list'
-        const list = JSON.parse(localStorage.getItem(key) || '[]')
-        // 限制最多 10 個以避免圖表擁擠
-        this.compareList = list.slice(0, 10)
-      } catch {
-        this.compareList = []
-      }
-    },
-    clearCompare() {
-      localStorage.setItem('nutrition_compare_list', '[]')
-      this.compareList = []
-      this.disposeCharts()
-    },
-    removeOne(sampleId) {
-      const key = 'nutrition_compare_list'
-      const list = (JSON.parse(localStorage.getItem(key) || '[]') || []).filter(x => x.sampleId !== sampleId)
-      localStorage.setItem(key, JSON.stringify(list))
-      this.loadCompareList()
-      this.rebuildAll()
-    },
+/* ---------- SweetAlert helper ---------- */
+function showWarn(msg) {
+  Swal.fire({
+    text: msg,
+    icon: 'warning',
+    confirmButtonText: '確定',
+    confirmButtonColor: 'rgb(0,112,131)'
+  })
+}
 
-    // 主流程：抓全部資料 → 規範化 → 建圖
-    async rebuildAll() {
-      if (!this.canCompare) return
-      this.loading = true
-      try {
-        // 1) 取每個 sample 的 nutrients
-        const all = {}
-        for (const item of this.compareList) {
-          try {
-            const resp = await getNutritionById(item.sampleId)
-            all[item.sampleId] = Array.isArray(resp?.nutrients) ? resp.nutrients : []
-            // 若沒有 API，fallback 簡單 mock（可刪）
-            if (!all[item.sampleId].length) {
-              all[item.sampleId] = this.mockNutrients(item.sampleId)
-            }
-          } catch {
-            all[item.sampleId] = this.mockNutrients(item.sampleId)
-          }
-        }
-        this.rawBySample = all
+/* ---------- state ---------- */
+const state = reactive({
+  sampleKeyword: '',
+  showSampleDropdown: false,
+  analyteKeyword: '',
+  showAllAnalytes: false,
+  loading: false
+})
 
-        // 2) 資料規範化（依 mode）
-        this.normalizeByMode()
+const ui = reactive({
+  allSamples: [],
+  filteredSamples: [],
+  compareList: [],
+  analyteOptions: [],
+  filteredAnalytesByCat: [],
+  selectedAnalyteIds: [],
+  collapsedGroups: new Set(),
+  groups: [],
+  chartType: 'bar'
+})
 
-        // 3) 建立 / 更新圖
-        this.$nextTick(() => {
-          this.initOrUpdateCharts()
-        })
-      } finally {
-        this.loading = false
-      }
-    },
+const chartRefs = reactive({})
+let resizeHandler = null
 
-    // 依模式規範化資料 -> this.nutrientKeys & this.dataset
-    normalizeByMode() {
-      // helpers 先把每個 sample 的 nutrients 轉為鍵值查找
-      const mapBySample = {} // sampleId -> name->obj
-      for (const [sid, arr] of Object.entries(this.rawBySample)) {
-        mapBySample[sid] = {}
-        for (const it of arr) {
-          const name = (it.analyteName || it.AnalyteName || '').trim()
-          if (!name) continue
-          mapBySample[sid][name] = it
-        }
-      }
+/* ---------- lifecycle ---------- */
+onMounted(async () => {
+  await Promise.all([loadSamples(), loadAnalytes()])
+  expandDefaults()
+  window.addEventListener('resize', (resizeHandler = debounce(resizeAll, 160)))
+})
 
-      // 依模式挑選指標
-      let keys = []
-      if (this.mode === 'pms') {
-        keys = ['多元不飽和脂肪 (P)', '單元不飽和脂肪 (M)', '飽和脂肪 (S)']
-      } else if (this.mode === 'major') {
-        // 主要營養素（可按你的實際命名調整）
-        keys = ['能量', '蛋白質', '脂肪', '碳水化合物', '膳食纖維']
-      } else if (this.mode === 'popular') {
-        // 取每個 sample 的熱門（IsPopular）營養素名稱，合併去重後取前 10
-        const popularNames = new Set()
-        for (const arr of Object.values(this.rawBySample)) {
-          arr.forEach(it => {
-            const popular = (it.IsPopular ?? it.isPopular) ? 1 : 0
-            if (popular) {
-              popularNames.add((it.analyteName || it.AnalyteName || '').trim())
-            }
-          })
-        }
-        keys = Array.from(popularNames).slice(0, 10)
-        if (keys.length === 0) {
-          // 若資料中沒有 popular 標記，退回 major
-          keys = ['能量', '蛋白質', '脂肪', '碳水化合物', '膳食纖維']
-        }
-      } else {
-        // all：將所有出現的營養素名統合（最多 16 個避免爆圖）
-        const names = new Set()
-        for (const arr of Object.values(this.rawBySample)) {
-          arr.forEach(it => names.add((it.analyteName || it.AnalyteName || '').trim()))
-        }
-        keys = Array.from(names).filter(Boolean).slice(0, 16)
-      }
+onBeforeUnmount(() => {
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+  Object.values(chartRefs).forEach(el => el?.__chartInstance?.dispose?.())
+})
 
-      // PMS 特殊處理：從 P/M/S raw 拆
-      const PMS_CHINESE = {
-        P: '多元不飽和脂肪 (P)',
-        M: '單元不飽和脂肪 (M)',
-        S: '飽和脂肪 (S)'
-      }
-
-      const dataset = {} // nutrientKey -> { unit, values: { sampleId: number|null } }
-      keys.forEach(k => (dataset[k] = { unit: '', values: {} }))
-
-      // 為每個 sample 填值
-      for (const item of this.compareList) {
-        const sid = item.sampleId
-        // 偵測 P/M/S
-        const pmsRow = mapBySample[sid]['P/M/S'] || mapBySample[sid]['PMS']
-        let pmsParsed = null
-        if (pmsRow && (pmsRow.per100gRaw || pmsRow.Per100g)) {
-          pmsParsed = this.parsePMS(pmsRow.per100gRaw || pmsRow.Per100g)
-        }
-
-        for (const key of keys) {
-          if (key === PMS_CHINESE.P && pmsParsed) {
-            dataset[key].values[sid] = this.toNumber(pmsParsed.P)
-            dataset[key].unit = (pmsRow.unit || pmsRow.Unit || 'g')
-            continue
-          }
-          if (key === PMS_CHINESE.M && pmsParsed) {
-            dataset[key].values[sid] = this.toNumber(pmsParsed.M)
-            dataset[key].unit = (pmsRow.unit || pmsRow.Unit || 'g')
-            continue
-          }
-          if (key === PMS_CHINESE.S && pmsParsed) {
-            dataset[key].values[sid] = this.toNumber(pmsParsed.S)
-            dataset[key].unit = (pmsRow.unit || pmsRow.Unit || 'g')
-            continue
-          }
-          // 一般營養素
-          // 嘗試多種常見命名（能量/熱量…）
-          const match = mapBySample[sid][key]
-            || mapBySample[sid]['能量'] || mapBySample[sid]['熱量'] || mapBySample[sid]['Energy']
-            || mapBySample[sid]['蛋白質'] || mapBySample[sid]['Protein']
-            || mapBySample[sid]['脂肪'] || mapBySample[sid]['Fat']
-            || mapBySample[sid]['碳水化合物'] || mapBySample[sid]['Carbohydrate']
-            || mapBySample[sid]['膳食纖維'] || mapBySample[sid]['Fiber']
-            || mapBySample[sid][key] // fallback 原名
-          if (match) {
-            const val = this.toNumber(match.valuePer100g ?? match.Per100g)
-            dataset[key].values[sid] = val
-            dataset[key].unit = (match.unit || match.DefaultUnit || match.Unit || '')
-          } else {
-            dataset[key].values[sid] = null
-          }
-        }
-      }
-
-      this.nutrientKeys = keys
-      this.dataset = dataset
-    },
-
-    // 重新依 mode 規範化並更新圖
-    rebuildData() {
-      if (!this.canCompare) return
-      this.normalizeByMode()
-      this.updateCharts()
-    },
-
-    // ---- 圖表 ----
-    initOrUpdateCharts() {
-      // 初始化
-      if (!this.radarChart) {
-        this.radarChart = echarts.init(this.$refs.radarRef)
-      }
-      if (!this.barChart) {
-        this.barChart = echarts.init(this.$refs.barRef)
-      }
-      this.updateCharts()
-      window.addEventListener('resize', this.handleResize)
-    },
-    updateCharts() {
-      if (!this.canCompare) return
-      const { radarOpt, barOpt } = this.buildOptions()
-      if (this.radarChart) this.radarChart.setOption(radarOpt, true)
-      if (this.barChart) this.barChart.setOption(barOpt, true)
-    },
-    disposeCharts() {
-      try {
-        if (this.radarChart) { this.radarChart.dispose(); this.radarChart = null }
-        if (this.barChart) { this.barChart.dispose(); this.barChart = null }
-        window.removeEventListener('resize', this.handleResize)
-      } catch {}
-    },
-    handleResize() {
-      if (this.radarChart) this.radarChart.resize()
-      if (this.barChart) this.barChart.resize()
-    },
-
-    // 建構 ECharts option
-    buildOptions() {
-      // X 軸（bar）= 食材；雷達指標 = nutrient keys
-      const sampleNames = this.compareList.map(x => x.sampleName || ('#'+x.sampleId))
-      // 取每個 nutrient 的 max（作雷達指標上限與 bar 堆疊尺度參考）
-      const indicators = this.nutrientKeys.map(k => {
-        const vals = this.compareList.map(s => this.dataset[k].values[s.sampleId]).filter(v => v != null)
-        const max = vals.length ? Math.max(...vals) : 1
-        return { name: k, max: max || 1 }
-      })
-
-      // 雷達：每個 sample 是一條 series
-      const radarSeries = this.compareList.map(s => ({
-        name: s.sampleName || ('#'+s.sampleId),
-        type: 'radar',
-        data: [{
-          value: this.nutrientKeys.map(k => this.dataset[k].values[s.sampleId] ?? 0),
-          name: s.sampleName || ('#'+s.sampleId)
-        }]
-      }))
-
-      // 條圖：用「指標為分組、食材為系列」或反之；這裡採「指標為類別軸，食材為系列」
-      const barSeries = this.compareList.map(s => ({
-        name: s.sampleName || ('#'+s.sampleId),
-        type: 'bar',
-        emphasis: { focus: 'series' },
-        data: this.nutrientKeys.map(k => this.dataset[k].values[s.sampleId] ?? 0)
-      }))
-
-      const radarOpt = {
-        tooltip: { trigger: 'item' },
-        legend: { top: 0, type: 'scroll' },
-        radar: { indicator: indicators, radius: '62%' },
-        series: radarSeries
-      }
-
-      const barOpt = {
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        legend: { top: 0, type: 'scroll' },
-        grid: { left: 10, right: 10, bottom: 20, containLabel: true },
-        xAxis: { type: 'category', data: this.nutrientKeys, axisLabel: { interval: 0 } },
-        yAxis: { type: 'value' },
-        series: barSeries
-      }
-
-      return { radarOpt, barOpt }
-    },
-
-    // ---- utils ----
-    parsePMS(raw) {
-      const parts = String(raw || '').split('/').map(x => this.toNumber(x))
-      return { P: parts[0] ?? null, M: parts[1] ?? null, S: parts[2] ?? null }
-    },
-    toNumber(x) {
-      const n = Number(x)
-      return isNaN(n) ? null : n
-    },
-
-    // 若 API 暫無資料 → 提供可視化 mock（依 sampleId 做變化避免完全一樣）
-    mockNutrients(sampleId) {
-      // 含 P/M/S 與主要營養素
-      const seed = Number(String(sampleId).slice(-2)) || 1
-      const r = (b) => Number((b * (1 + (seed % 7) / 20)).toFixed(2))
-      return [
-        { analyteName: 'P/M/S', unit: 'g', per100gRaw: `${r(1.2)}/${r(1.8)}/${r(0.9)}`, category: '脂肪酸組成' },
-        { analyteName: '能量', unit: 'kcal', valuePer100g: r(180) },
-        { analyteName: '蛋白質', unit: 'g', valuePer100g: r(20) },
-        { analyteName: '脂肪', unit: 'g', valuePer100g: r(12) },
-        { analyteName: '碳水化合物', unit: 'g', valuePer100g: r(5) },
-        { analyteName: '膳食纖維', unit: 'g', valuePer100g: r(1.8) },
-        // popular 標記示例
-        { analyteName: '維生素B12', unit: 'µg', valuePer100g: r(4.1), IsPopular: 1 },
-        { analyteName: '維生素D', unit: 'IU', valuePer100g: r(180), IsPopular: 1 },
-        { analyteName: '鈣', unit: 'mg', valuePer100g: r(25), IsPopular: 1 },
-        { analyteName: '鐵', unit: 'mg', valuePer100g: r(0.8), IsPopular: 1 },
-      ]
-    }
-  },
-
-  async mounted() {
-    this.loadCompareList()
-    if (this.canCompare) {
-      await this.rebuildAll()
-    }
-  },
-
-  beforeUnmount() {
-    this.disposeCharts()
+/* ---------- load data ---------- */
+async function loadSamples() {
+  try {
+    const res = await getNutritionList({ all: true })
+    ui.allSamples = res.items || []
+    ui.filteredSamples = ui.allSamples
+  } catch (e) {
+    console.error('載入食材失敗', e)
   }
 }
+
+async function loadAnalytes() {
+  try {
+    const res = await getAnalyteList(!state.showAllAnalytes ? true : false)
+    const items = res?.items || []
+    ui.analyteOptions = items
+    groupAnalytes(items)
+    filterAnalytes()
+  } catch (e) {
+    console.error('載入營養素失敗', e)
+  }
+}
+
+/* ---------- 分組 ---------- */
+function groupAnalytes(items) {
+  const map = new Map()
+  for (const a of items) {
+    const cat = a.category || '未分類'
+    if (!map.has(cat)) map.set(cat, [])
+    map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
+  }
+  ui.filteredAnalytesByCat = Array.from(map, ([category, items]) => ({ category, items }))
+}
+
+/* ---------- 篩選 ---------- */
+function filterSamples() {
+  const kw = state.sampleKeyword.trim().toLowerCase()
+  ui.filteredSamples = !kw ? ui.allSamples : ui.allSamples.filter(s => (s.sampleName || '').toLowerCase().includes(kw))
+}
+
+function filterAnalytes() {
+  const kw = state.analyteKeyword.trim().toLowerCase()
+  if (!kw) return groupAnalytes(ui.analyteOptions)
+  const map = new Map()
+  for (const a of ui.analyteOptions) {
+    if ((a.analyteName || '').toLowerCase().includes(kw)) {
+      const cat = a.category || '未分類'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
+    }
+  }
+  ui.filteredAnalytesByCat = Array.from(map, ([category, items]) => ({ category, items }))
+}
+
+function selectAllAnalytes() {
+  const ids = []
+  ui.filteredAnalytesByCat.forEach(g => g.items.forEach(a => ids.push(a.analyteId)))
+  const set = new Set([...ui.selectedAnalyteIds, ...ids])
+  ui.selectedAnalyteIds = Array.from(set)
+}
+
+/* ---------- 食材選取 ---------- */
+function addSample(s) {
+  if (ui.compareList.length >= 6) return showWarn('最多可比較 6 種食材')
+  ui.compareList.push(s)
+}
+function removeSample(id) {
+  ui.compareList = ui.compareList.filter(x => x.sampleId !== id)
+}
+
+/* ---------- 群組收合 ---------- */
+function isGroupCollapsed(cat) { return ui.collapsedGroups.has(cat) }
+function toggleGroup(cat) {
+  if (ui.collapsedGroups.has(cat)) ui.collapsedGroups.delete(cat)
+  else ui.collapsedGroups.add(cat)
+}
+function toggleAllGroups() {
+  if (areAllGroupsCollapsed.value) ui.collapsedGroups.clear()
+  else ui.filteredAnalytesByCat.forEach(g => ui.collapsedGroups.add(g.category))
+}
+const areAllGroupsCollapsed = computed(() =>
+  ui.filteredAnalytesByCat.length > 0 &&
+  ui.filteredAnalytesByCat.every(g => ui.collapsedGroups.has(g.category))
+)
+function expandDefaults() {
+  const defaults = new Set(['一般成分', '礦物質', '維生素B群 & C', '維生素E'])
+  ui.filteredAnalytesByCat.forEach(g => {
+    if (!defaults.has(g.category)) ui.collapsedGroups.add(g.category)
+  })
+}
+
+/* ---------- 比較 ---------- */
+async function fetchCompare() {
+  if (ui.compareList.length < 2) return showWarn('請至少選 2 種食材')
+  if (ui.selectedAnalyteIds.length < 1) return showWarn('請至少選 1 種營養素')
+  if (ui.selectedAnalyteIds.length > 12) return showWarn('最多可選擇 12 種營養素')
+
+  state.loading = true
+  ui.groups = []
+  try {
+    const sampleIds = ui.compareList.map(x => x.sampleId).join(',')
+    const analyteIds = ui.selectedAnalyteIds.join(',')
+    const res = await getNutritionCompare(sampleIds, analyteIds)
+    ui.groups = Array.isArray(res?.groups) ? res.groups : []
+    if (!ui.groups.length) return showWarn('查無比較資料，請確認選擇的營養素與食材')
+    await nextTick()
+    renderAll()
+  } catch (e) {
+    console.error(e)
+    showWarn('無法取得比較資料，請檢查 API')
+  } finally {
+    state.loading = false
+  }
+}
+
+/* ---------- 匯出 & 分享 ---------- */
+async function exportCharts() {
+  const charts = Object.values(chartRefs).map(el => el?.__chartInstance).filter(Boolean)
+  if (!charts.length) return showWarn('目前沒有可匯出的圖表')
+  for (let [i, chart] of charts.entries()) {
+    const url = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `營養比較圖-${i + 1}.png`
+    a.click()
+  }
+}
+
+function generateShareLink() {
+  if (ui.compareList.length < 2 || ui.selectedAnalyteIds.length < 1)
+    return showWarn('請先選擇食材與營養素再生成分享連結')
+  const samples = ui.compareList.map(x => x.sampleId).join(',')
+  const analytes = ui.selectedAnalyteIds.join(',')
+  const url = `${window.location.origin}${window.location.pathname}?samples=${samples}&analytes=${analytes}`
+  navigator.clipboard.writeText(url)
+  Swal.fire({
+    text: '分享連結已複製到剪貼簿！',
+    icon: 'success',
+    confirmButtonColor: 'rgb(0,112,131)'
+  })
+}
+
+/* ---------- chart rendering (同原版) ---------- */
+function renderAll() {
+  Object.values(chartRefs).forEach(el => el?.__chartInstance?.dispose?.())
+  ui.groups.forEach((grp, gi) => {
+    const el = chartRefs[gi]
+    if (!el) return
+    const chart = echarts.init(el)
+    el.__chartInstance = chart
+    const analytes = grp.analytes || []
+    const analyteNames = analytes.map(a => a.analyteName)
+    const sampleNames = analytes[0]?.values?.map(v => v.sampleName) || []
+    const dataset = sampleNames.map(() => [])
+    analytes.forEach((a, ai) => a.values.forEach((v, si) => (dataset[si][ai] = toNum(v.value))))
+    let option
+    switch (ui.chartType) {
+      case 'bar': option = optionBar(analyteNames, sampleNames, dataset, grp.unit); break
+      case 'radar': option = optionRadar(analyteNames, sampleNames, dataset); break
+      case 'heatmap': option = optionHeatmap(analyteNames, sampleNames, dataset, grp.unit); break
+      case 'stacked': option = optionStacked100(analyteNames, sampleNames, dataset, grp.unit); break
+      case 'boxplot': option = optionBoxplot(analyteNames, dataset, grp.unit); break
+    }
+    chart.setOption(option)
+  })
+}
+function resizeAll() { Object.values(chartRefs).forEach(el => el?.__chartInstance?.resize?.()) }
+
+/* ---------- chart option helpers / utils (同原版) ---------- */
+function toNum(v){const n=Number(v);return Number.isFinite(n)?n:0}
+function quantile(arr,p){if(!arr.length)return 0;const pos=(arr.length-1)*p;base=Math.floor(pos);rest=pos-base;return arr[base+1]!==undefined?arr[base]+rest*(arr[base+1]-arr[base]):arr[base]}
+function debounce(fn,t=200){let tid;return(...a)=>{clearTimeout(tid);tid=setTimeout(()=>fn(...a),t)}}
+function getGroupStyle(category,index){const map={'一般成分':{bg:'#e9f6f6',border:'#007083',text:'#004b4b'},'礦物質':{bg:'#e6f0fa',border:'#005bbb',text:'#0c2f6b'},'維生素B群 & C':{bg:'#fff4e5',border:'#f7931e',text:'#8a4b00'},'維生素E':{bg:'#f8e9f6',border:'#b76ac4',text:'#6d2b7a'},'脂肪酸組成':{bg:'#f0f0f0',border:'#7a7a7a',text:'#3a3a3a'}};const palette=[{bg:'#e9f6f6',border:'#007083',text:'#004b4b'},{bg:'#e6f0fa',border:'#005bbb',text:'#0c2f6b'},{bg:'#fff4e5',border:'#f7931e',text:'#8a4b00'},{bg:'#f8e9f6',border:'#b76ac4',text:'#6d2b7a'},{bg:'#f0f0f0',border:'#7a7a7a',text:'#3a3a3a'}];const c=map[category]||palette[index%palette.length];return{color:c.text,backgroundColor:c.bg,borderLeft:`6px solid ${c.border}`}}
 </script>
 
 <style scoped>
-.badge button {
-  line-height: 1;
-  padding: 0 0.25rem;
+.container { max-width: 1080px; }
+.compare-step { border: 1px solid #e9f6f6; }
+.border-main-color-green { border-color: rgb(0,112,131) !important; }
+.chart-box { width: 100%; }
+
+/* 群組標籤 */
+.group-header { color: #004b4b; }
+.group-caret { width: 1em; display: inline-block; }
+
+/* analyte checkbox hover */
+.analyte-item { transition: all 0.15s ease-in-out; }
+.analyte-item:hover {
+  background-color: #f2fbfb;
+  box-shadow: 0 0 0 2px rgba(0,112,131,0.2);
 }
+
+/* SweetAlert 主色調 */
+.swal2-popup { border-radius: 1rem !important; font-family: 'Microsoft JhengHei', sans-serif; }
+.swal2-confirm { background-color: rgb(0,112,131) !important; }
 </style>
