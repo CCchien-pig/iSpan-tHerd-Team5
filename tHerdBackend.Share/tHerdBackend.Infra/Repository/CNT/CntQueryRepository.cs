@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text;
+using tHerdBackend.Core.DTOs.CNT;
 using tHerdBackend.Core.Interfaces.CNT;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
@@ -208,6 +209,37 @@ ORDER BY OrderSeq;";
 				}
 
 				return dto;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		/// <summary>
+		/// 取得所有文章分類與文章數量
+		/// </summary>
+		public async Task<IEnumerable<ArticleCategoryDto>> GetArticleCategoriesAsync(CancellationToken ct = default)
+		{
+			const string sql = @"
+                SELECT 
+                    t.PageTypeId AS Id,
+                    t.TypeName   AS Name,
+                    COUNT(p.PageId) AS ArticleCount
+                FROM CNT_PageType t
+                LEFT JOIN CNT_Page p
+                    ON p.PageTypeId = t.PageTypeId
+                    AND p.IsDeleted = 0
+                    AND p.Status = 0   -- 只顯示正常狀態文章
+                GROUP BY t.PageTypeId, t.TypeName
+                ORDER BY t.PageTypeId;
+            ";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var result = await conn.QueryAsync<ArticleCategoryDto>(sql, null, tx);
+				return result.ToList();
 			}
 			finally
 			{

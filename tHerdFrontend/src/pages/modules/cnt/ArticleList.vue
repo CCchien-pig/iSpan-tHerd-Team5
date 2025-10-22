@@ -102,7 +102,7 @@ const state = reactive({
   totalDisplay: 0,
   categories: [],
   page: Number(route.query.page || 1),
-  pageSize: 9,
+  pageSize: 12,
   q: route.query.q ? String(route.query.q) : "",
   loading: false
 });
@@ -139,7 +139,7 @@ async function fetchList() {
     }
 
     state.page = page || 1;
-    state.pageSize = pageSize || 9;
+    state.pageSize = pageSize || 12;
 
     const map = new Map();
     state.items.forEach(a => {

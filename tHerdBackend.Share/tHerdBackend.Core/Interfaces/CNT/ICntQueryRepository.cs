@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using tHerdBackend.Core.DTOs.CNT;
 using tHerdBackend.Share.DTOs.CNT;
 
 namespace tHerdBackend.Core.Interfaces.CNT
@@ -11,6 +12,12 @@ namespace tHerdBackend.Core.Interfaces.CNT
 	/// </summary>
 	public interface ICntQueryRepository
 	{
+		/// <summary>
+		/// 取得所有文章分類與文章數量
+		/// </summary>
+		Task<IEnumerable<ArticleCategoryDto>> GetArticleCategoriesAsync(CancellationToken ct = default);
+
+
 		/// <summary>
 		/// 文章清單（支援分類、關鍵字、分頁）
 		/// </summary>
