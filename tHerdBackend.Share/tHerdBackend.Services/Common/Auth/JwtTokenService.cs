@@ -17,23 +17,31 @@ namespace tHerdBackend.Services.Common.Auth
 	public class JwtTokenService : IJwtTokenService
 	{
 		private readonly IConfiguration _config;
-		public JwtTokenService(IConfiguration config, string jti) => _config = config;
+
+		// ✅ 移除 string 參數
+		public JwtTokenService(IConfiguration config)
+		{
+			_config = config;
+		}
 
 		public (string token, DateTime expiresAtUtc, string jti) Generate(ApplicationUser user, IList<string> roles)
 		{
 			var jwt = _config.GetSection("Jwt");
-			var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-				jwt["SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey not configured")));
+			var signingKey = jwt["SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey not configured");
+			var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
 			var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+			// ✅ 在方法內產生 jti，不要放到建構子
 			var jti = Guid.NewGuid().ToString("N");
 
 			var claims = new List<Claim>
-		{
-			new("sub", user.Id),
-			new("email", user.Email ?? string.Empty),
-			new("name", $"{user.LastName}{user.FirstName}"),
-			new("user_number_id", user.UserNumberId.ToString())
-		};
+			{
+				new("jti", jti),
+				new("sub", user.Id),
+				new("email", user.Email ?? string.Empty),
+				new("name", $"{user.LastName}{user.FirstName}"),
+				new("user_number_id", user.UserNumberId.ToString())
+			};
 			foreach (var r in roles) claims.Add(new Claim("role", r));
 
 			var expiresAtUtc = DateTime.UtcNow.AddHours(2);
@@ -44,9 +52,11 @@ namespace tHerdBackend.Services.Common.Auth
 				claims: claims,
 				notBefore: DateTime.UtcNow,
 				expires: expiresAtUtc,
-				signingCredentials: creds);
+				signingCredentials: creds
+			);
 
-			return (new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc, jti);
+			var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+			return (tokenString, expiresAtUtc, jti);
 		}
 	}
 }

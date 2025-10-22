@@ -38,6 +38,8 @@ namespace tHerdBackend.SharedApi
 				.AddEntityFrameworkStores<ApplicationDbContext>()
 				.AddDefaultTokenProviders();
 
+			//關閉預設 Claims 映射
+			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 			// JWT Authentication
 			builder.Services.AddAuthentication(options =>
             {
@@ -52,7 +54,10 @@ namespace tHerdBackend.SharedApi
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+					RoleClaimType = "role",
+					NameClaimType = "name",
+					ClockSkew = TimeSpan.FromMinutes(1),
+					ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? string.Empty))
@@ -73,6 +78,7 @@ namespace tHerdBackend.SharedApi
 
 			builder.Services.AddHttpContextAccessor();
 			builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+			builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 			// === SQL Connection Factory ===
 			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
@@ -102,11 +108,10 @@ namespace tHerdBackend.SharedApi
 			});
 
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
-			builder.Services.AddHttpContextAccessor();
 			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 			// Auth Service
-			builder.Services.AddScoped<AuthService>();
+			//builder.Services.AddScoped<AuthService>();
 
 			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
 			builder.Services.AddtHerdBackend(builder.Configuration);

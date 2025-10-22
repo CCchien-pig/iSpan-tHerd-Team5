@@ -50,7 +50,9 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			var roles = await _userMgr.GetRolesAsync(user);
 			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
 
-			var (refreshPlain, refreshEntity) = await _refreshSvc.IssueAsync(user, jti); // 新增 refresh
+			// ⚠ 介面已改：IssueAsync 使用 userId（string），不再傳 ApplicationUser / EF 實體
+			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+
 			return Ok(new
 			{
 				accessToken,
@@ -79,20 +81,18 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			if (string.IsNullOrWhiteSpace(dto?.RefreshToken))
 				return BadRequest(new { error = "缺少 refresh token" });
 
-			// 1) 驗證舊 refresh token（含過期/撤銷/重放偵測）
-			var (user, current) = await _refreshSvc.ValidateAsync(dto.RefreshToken);
+			// 1) 先驗證 refresh（新介面：回傳 userId 與 RefreshTokenInfo）
+			var (userId, current) = await _refreshSvc.ValidateAsync(dto.RefreshToken);
 
-			// 2) 發新的 access token（產生新 jti）
+			// 2) 依 userId 取 Identity 使用者與角色，產新 access（新 jti）
+			var user = await _userMgr.FindByIdAsync(userId) ?? throw new InvalidOperationException("User not found");
+			if (!user.IsActive) return Unauthorized(new { error = "帳號不存在或已停用" });
+
 			var roles = await _userMgr.GetRolesAsync(user);
 			var (accessToken, accessExpiresUtc, newJti) = _jwt.Generate(user, roles);
 
-			// 3) 旋轉 refresh（撤銷舊 + 建立新）
-			var rotated = await _refreshSvc.RotateAsync(current, newJti, user);
-
-			// 取出新 refresh 明文（我放在 TokenHash 的特殊標記內）
-			var newRefreshPlain = rotated.TokenHash.StartsWith("__PLAIN__:")
-				? rotated.TokenHash["__PLAIN__:".Length..]
-				: throw new InvalidOperationException("旋轉 refresh 失敗");
+			// 3) 旋轉 refresh（新介面：傳入 RefreshTokenInfo + userId）
+			var (newRefreshPlain, _) = await _refreshSvc.RotateAsync(current, newJti, user.Id);
 
 			return Ok(new
 			{
@@ -112,8 +112,9 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			if (string.IsNullOrWhiteSpace(dto?.RefreshToken))
 				return BadRequest(new { error = "缺少 refresh token" });
 
+			// 先驗證拿到 RefreshTokenInfo，再用其 Id 撤銷（介面不暴露 EF 實體）
 			var (_, current) = await _refreshSvc.ValidateAsync(dto.RefreshToken);
-			await _refreshSvc.RevokeAsync(current, "user logout");
+			await _refreshSvc.RevokeAsync(current.Id, "user logout");
 
 			return Ok(new { ok = true });
 		}
