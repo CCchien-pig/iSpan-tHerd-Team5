@@ -116,3 +116,15 @@ export async function getNutritionCompare(sampleIds, analyteIds) {
         return { groups: [] };
     }
 }
+
+// 營養素清單（常見/全部）
+export async function getAnalyteList(isPopular = false) {
+    try {
+        const { data } = await axios.get(`${API_BASE}/nutrition/analytes`, { params: { isPopular } })
+        return data // { items: [{ analyteId, analyteName, unit, category }, ...] }
+    } catch (err) {
+        console.error('getAnalyteList 錯誤:', err)
+        return { items: [] }
+    }
+}
+

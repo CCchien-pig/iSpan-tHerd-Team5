@@ -117,5 +117,22 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 				return StatusCode(500, new { error = "伺服器內部錯誤", detail = ex.Message });
 			}
 		}
+
+
+		[HttpGet("analytes")]
+		public async Task<IActionResult> GetAnalytes([FromQuery] bool isPopular = false, CancellationToken ct = default)
+		{
+			try
+			{
+				var list = await _nutritionService.GetAnalyteListAsync(isPopular, ct);
+				return Ok(new { items = list });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { error = "載入營養素清單失敗", detail = ex.Message });
+			}
+		}
+
+
 	}
 }

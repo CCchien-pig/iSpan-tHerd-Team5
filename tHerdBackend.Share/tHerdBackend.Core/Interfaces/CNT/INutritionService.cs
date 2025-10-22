@@ -44,5 +44,9 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 				string? sort,
 				CancellationToken ct = default);
 
+		//營養素選單
+		Task<IReadOnlyList<object>> GetAnalyteListAsync(bool isPopular, CancellationToken ct = default);
+
+
 	}
 }

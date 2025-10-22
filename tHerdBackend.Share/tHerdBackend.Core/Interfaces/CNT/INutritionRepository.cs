@@ -50,6 +50,9 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 			string? sort,
 			CancellationToken ct = default);
 
-
+		/// <summary>
+		/// 取得營養素清單（可選常見或全部）
+		/// </summary>
+		Task<IReadOnlyList<dynamic>> GetAnalytesAsync(bool isPopular, CancellationToken ct = default);
 	}
 }

@@ -205,6 +205,20 @@ namespace tHerdBackend.Services.CNT
 		}
 
 
+		public async Task<IReadOnlyList<object>> GetAnalyteListAsync(bool isPopular, CancellationToken ct = default)
+		{
+			var rows = await _repo.GetAnalytesAsync(isPopular, ct);
+			var result = rows.Select(r => new
+			{
+				analyteId = (int)r.AnalyteId,
+				analyteName = r.AnalyteName.ToString(),
+				unit = r.Unit?.ToString() ?? "",
+				category = r.Category?.ToString() ?? ""
+			}).ToList();
+
+			return result;
+		}
+
 
 	}
 }

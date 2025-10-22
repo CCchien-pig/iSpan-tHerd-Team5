@@ -218,9 +218,9 @@ ORDER BY
 		}
 
 		public async Task<IReadOnlyList<dynamic>> CompareNutritionAsync(
-	IEnumerable<int> sampleIds,
-	IEnumerable<int> analyteIds,
-	CancellationToken ct = default)
+			IEnumerable<int> sampleIds,
+			IEnumerable<int> analyteIds,
+			CancellationToken ct = default)
 		{
 			const string sql = @"
 WITH sid AS (
@@ -263,6 +263,43 @@ ORDER BY a.AnalyteCategoryId, a.AnalyteName;
 			}
 		}
 
+		public async Task<IReadOnlyList<dynamic>> GetAnalytesAsync(bool isPopular, CancellationToken ct = default)
+		{
+			var popularList = new[]
+			{
+		"熱量", "總碳水化合物", "水分", "粗蛋白", "膳食纖維", "粗脂肪", "飽和脂肪", 
+		"鉀","磷", "鎂", "鈣", "鈉","鐵", "鋅", "維生素B1", "維生素C", 
+		"α-維生素E當量(α-TE)", "維生素E總量"
+	};
+
+			var sql = @"
+SELECT 
+    a.AnalyteId,
+    a.AnalyteName,
+    a.DefaultUnit AS Unit,
+    ac.CategoryName AS Category
+FROM dbo.CNT_Analyte a
+JOIN dbo.CNT_AnalyteCategory ac ON ac.AnalyteCategoryId = a.AnalyteCategoryId
+";
+
+			if (isPopular)
+				sql += "WHERE a.AnalyteName IN @Names\n";
+
+			sql += "ORDER BY ac.CategoryName, a.AnalyteName;";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = await conn.QueryAsync(sql, new { Names = popularList }, tx);
+				return rows.ToList();
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+
 
 		public async Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
 		{
@@ -286,10 +323,10 @@ ORDER BY c.CategoryId ASC;";
 		}
 
 		public async Task<IReadOnlyList<dynamic>> GetAllSamplesAsync(
-	string? keyword,
-	int? categoryId,
-	string? sort,
-	CancellationToken ct = default)
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default)
 		{
 			int? nutrientAnalyteId = TryParseNutrientSort(sort);
 
