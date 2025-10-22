@@ -146,3 +146,8 @@ fieldset {
 .img-item:hover img {
     transform: scale(1.05);
 }
+
+/*唯讀勾勾*/
+.pe-none {
+    pointer-events: none; /* 禁止互動但保留原色 */
+}

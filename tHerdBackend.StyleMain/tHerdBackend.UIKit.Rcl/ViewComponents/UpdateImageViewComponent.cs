@@ -9,9 +9,9 @@ namespace tHerdBackend.UIKit.Rcl.ViewComponents.UpdateImage
 			string modalId = "imgMetaModal",
 			string title = "圖片資訊",
 			SysAssetFileDto? file = null,
-			string updateApiUrl = "/SYS/UploadTest/UpdateMeta",
-			string deleteApiUrl = "/SYS/UploadTest/DeleteFile"
-		)
+			string updateApiUrl = "/SYS/Images/UpdateFile",
+			string deleteApiUrl = "/SYS/Images/DeleteFile"
+        )
 		{
 			var vm = new UpdateImageViewModel
 			{

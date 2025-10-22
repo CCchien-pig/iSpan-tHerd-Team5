@@ -8,6 +8,23 @@
     const dropArea = document.getElementById("dropArea");
     const hiddenInputs = document.getElementById("hiddenInputs");
 
+    // === 增加欄位綁定機制 ===
+    const fieldMap = {
+        fileId: "#modalFileId",
+        fileKey: "#modalFileKey",
+        fileUrl: "#modalFileUrl",
+        fileExt: "#modalFileExt",
+        mimeType: "#modalMimeType",
+        width: "#modalWidth",
+        height: "#modalHeight",
+        fileSizeBytes: "#modalFileSizeBytes",
+        altText: "#modalAlt",
+        caption: "#modalCaption",
+        isActive: "#modalIsActive",
+        folderId: "#modalFolderId",
+        createdDate: "#modalCreatedDate"
+    };
+
     // === 工具函式 ===
     function showReset() {
         if (resetBtn) resetBtn.classList.remove("d-none");
@@ -36,8 +53,8 @@
         if (!confirm.isConfirmed) return;
 
         try {
-            // ✅ 從圖片屬性讀取 update API（或預設）
-            const updateApiUrl = btn.dataset.updateApi || "/SYS/UploadTest/UpdateMeta";
+            // 從圖片屬性讀取 update API（或預設）
+            const updateApiUrl = btn.dataset.updateApi || "/SYS/Images/UpdateFile";
 
             const res = await fetch(`${window.location.origin}${updateApiUrl}`, {
                 method: "POST",
@@ -158,6 +175,85 @@
         });
     }
 
+    // === 等待 Modal 元素確實載入（最多等 1 秒）===
+    async function waitForElement(selector, timeout = 1000) {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+            const el = document.querySelector(selector);
+            if (el) return el;
+            await new Promise(r => setTimeout(r, 50));
+        }
+        console.warn(`⚠️ 元素超時未載入: ${selector}`);
+        return null;
+    }
+
+    // === 共用函式：開啟並填入圖片資訊到 Modal ===
+    // 支援 dataset (HTML data-*) 或 DTO (JSON 物件)
+    async function openImageModal(fileData, modalSelector = "#imgMetaModal") {
+        const modal = await waitForElement(modalSelector);
+        if (!modal) {
+            console.error("❌ 找不到指定的 Modal：", modalSelector);
+            return;
+        }
+
+        const modalImg = modal.querySelector(".img-zoomable");
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+
+        // === 更新欄位 ===
+        for (const [key, selector] of Object.entries(fieldMap)) {
+            const input = modal.querySelector(selector);
+            if (!input) continue;
+
+            let val = fileData[key] ?? fileData[key.charAt(0).toLowerCase() + key.slice(1)];
+            if (key === "createdDate") {
+                val = fileData.formateCreatedDate || fileData.FormateCreatedDate || val;
+            }
+
+            if (key === "isActive") {
+                input.checked = val === true || val === "true";
+            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                input.value = val ?? "";
+            }
+        }
+
+        // === 圖片安全載入 + dataset ===
+        const fileUrl =
+            fileData.PublicUrl || fileData.publicUrl ||
+            fileData.FileUrl || fileData.fileUrl ||
+            "/images/No-Image.svg";
+        const fileId = fileData.FileId ?? fileData.fileId ?? "";
+
+        if (modalImg) {
+            modalImg.src = fileUrl;
+            modalImg.dataset.fileId = fileId;
+            modalImg.dataset.isExternal = (
+                fileData.IsExternal === true ||
+                fileData.isExternal === true ||
+                fileData.IsExternal === "true" ||
+                fileData.isExternal === "true" ||
+                fileUrl.startsWith("http")
+            ).toString();
+
+            // 更新 API dataset
+            if (fileData.UpdateApiUrl) modalImg.dataset.updateApi = fileData.UpdateApiUrl;
+            if (fileData.DeleteApiUrl) modalImg.dataset.deleteApi = fileData.DeleteApiUrl;
+        }
+
+        // === ⬇️ 移到這裡：在 src 已更新後再檢查外部連結 ===
+        const badge = modal.querySelector(".badge.fs-6");
+        if (badge && modalImg) {
+            const isExternal =
+                modalImg.dataset.isExternal === "true" ||
+                (modalImg.src?.startsWith("http") && !modalImg.src.includes(window.location.hostname));
+
+            badge.textContent = isExternal ? "外部連結" : "自有檔案";
+            badge.classList.toggle("bg-success", isExternal);
+            badge.classList.toggle("bg-secondary", !isExternal);
+        }
+
+        bsModal.show();
+    }
+
     // === Modal（支援多個 UpdateImage 元件） ===
     document.querySelectorAll(".modal").forEach(modalElement => {
         const modalImg = modalElement.querySelector(".img-zoomable");
@@ -167,8 +263,8 @@
         const modalCaption = modalElement.querySelector("#modalCaption");
         const modalIsActive = modalElement.querySelector("#modalIsActive");
         const confirmBtn = modalElement.querySelector("#confirmMetaBtn");
-        // === 點擊 Modal 內的圖片 → 直接開原圖 ===
 
+        // === 點擊 Modal 內的圖片 → 直接開原圖 ===
         modalImg.addEventListener("click", e => {
             e.preventDefault();
             e.stopPropagation();
@@ -179,21 +275,7 @@
         // === 點擊縮圖開啟 Modal ===
         document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalElement.id}"]`).forEach(img => {
             img.addEventListener("click", () => {
-                modalImg.src = img.src;
-                modalAlt.value = img.dataset.alt || "";
-                modalCaption.value = img.dataset.caption || "";
-                modalIsActive.checked = img.dataset.isActive === "true";
-
-                // 同步 fileId
-                modalImg.dataset.fileId = img.dataset.fileId;
-
-                // 關鍵：只在縮圖沒有 API 時才保留 Razor 預設值
-                modalImg.dataset.updateApi = img.dataset.updateApi || modalImg.dataset.updateApi;
-                modalImg.dataset.deleteApi = img.dataset.deleteApi || modalImg.dataset.deleteApi;
-
-                // 開啟 Modal
-                const instance = bootstrap.Modal.getOrCreateInstance(modalElement);
-                instance.show();
+                openImageModal(img.dataset, `#${modalElement.id}`);
             });
         });
 
@@ -204,41 +286,78 @@
             }
 
             confirmBtn.addEventListener("click", async () => {
+                const modal = document.querySelector("#imgMetaModal");
+                const modalImg = modal.querySelector(".img-zoomable");
+
+                const api = modalImg.dataset.updateApi || "/SYS/UploadTest/UpdateFile";
                 const fileId = modalImg.dataset.fileId;
-                if (!fileId) {
-                    Swal.fire("⚠️ 找不到圖片 ID", "", "warning");
+
+                const alt = modal.querySelector("#modalAlt").value;
+                const caption = modal.querySelector("#modalCaption").value;
+                const isActive = modal.querySelector("#modalIsActive").checked;
+
+                if (!api) {
+                    Swal.fire({ icon: "error", title: "找不到更新 API", text: "請檢查 updateApiUrl 是否設定。" });
                     return;
                 }
 
-                const altText = modalAlt.value.trim();
-                const caption = modalCaption.value.trim();
-                const isActive = modalIsActive.checked;
-                const updateApiUrl = modalImg.dataset.updateApi || "/SYS/UploadTest/UpdateMeta";
-
                 try {
-                    const res = await fetch(`${window.location.origin}${updateApiUrl}`, {
+                    const res = await fetch(api, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ FileId: parseInt(fileId), AltText: altText, Caption: caption, IsActive: isActive })
+                        body: JSON.stringify({
+                            FileId: fileId,
+                            AltText: alt,
+                            Caption: caption,
+                            IsActive: isActive
+                        })
                     });
-                    const data = await res.json();
 
-                    if (data.success) {
-                        await Swal.fire({
+                    const contentType = res.headers.get("content-type") || "";
+                    let result = null;
+
+                    // 檢查回傳型別是不是 JSON
+                    if (!contentType.includes("application/json")) {
+                        // 伺服器沒有回 JSON → 可能是 HTML 錯誤頁或未登入頁
+                        const text = await res.text();
+                        console.error("⚠️ 伺服器回傳非 JSON：", text.slice(0, 150));
+                        throw new Error("伺服器回傳非 JSON（可能路由錯誤或登入過期）");
+                    } else {
+                        result = await res.json();
+                    }
+
+                    if (!res.ok || !result) {
+                        throw new Error(result?.message || `伺服器狀態碼 ${res.status}`);
+                    }
+
+                    if (result.success) {
+                        Swal.fire({
                             icon: "success",
-                            title: "✅ 更新成功",
+                            title: "更新成功",
                             timer: 1000,
                             showConfirmButton: false
                         });
 
-                        updateImageState(fileId, altText, caption, isActive);
-                        bootstrap.Modal.getInstance(modalElement)?.hide();
+                        // 關閉 Modal
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) bsModal.hide();
+
+                        // 同步更新畫面上的縮圖資料
+                        updateImageState(fileId, alt, caption, isActive);
                     } else {
-                        Swal.fire("❌ 更新失敗", data.message || "", "error");
+                        Swal.fire({
+                            icon: "error",
+                            title: "更新失敗",
+                            text: result.message || "伺服器未回傳成功"
+                        });
                     }
                 } catch (err) {
-                    Swal.fire("❌ 錯誤", "無法連線至伺服器", "error");
-                    console.error("update-image.js 錯誤:", err);
+                    console.error("❌ 更新錯誤：", err);
+                    Swal.fire({
+                        icon: "error",
+                        title: "錯誤",
+                        text: err.message || "無法連線至伺服器"
+                    });
                 }
             });
         }
@@ -312,24 +431,25 @@
         if (!triggerImg) return;
 
         const modalImg = modal.querySelector(".img-zoomable");
-        const modalAlt = modal.querySelector("#modalAlt");
-        const modalCaption = modal.querySelector("#modalCaption");
-        const modalIsActive = modal.querySelector("#modalIsActive");
-
-        // 更新 Modal 內容
         modalImg.src = triggerImg.src;
-        modalImg.alt = triggerImg.alt;
-        modalAlt.value = triggerImg.dataset.alt || "";
-        modalCaption.value = triggerImg.dataset.caption || "";
-        modalIsActive.checked = triggerImg.dataset.isActive === "true";
 
-        // 關鍵修正：把縮圖的 API 屬性同步進 modal 圖片
+        // 逐一更新欄位
+        for (const [key, selector] of Object.entries(fieldMap)) {
+            const input = modal.querySelector(selector);
+            if (!input) continue;
+
+            let val = triggerImg.dataset[key];
+            if (key === "isActive") {
+                input.checked = val === "true";
+            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                input.value = val || "";
+            }
+        }
+
+        // 把縮圖的 API 屬性同步進 dataset 圖片
         modalImg.dataset.fileId = triggerImg.dataset.fileId;
         modalImg.dataset.updateApi = triggerImg.dataset.updateApi;
         modalImg.dataset.deleteApi = triggerImg.dataset.deleteApi;
-
-        // 移除無用的變數 modalElement，改為直接聚焦 modal
-        modal.focus();
     });
 
     document.addEventListener("hidden.bs.modal", () => {
@@ -337,4 +457,6 @@
             document.activeElement.blur();
         }
     });
+
+    window.openImageModal = openImageModal;
 });

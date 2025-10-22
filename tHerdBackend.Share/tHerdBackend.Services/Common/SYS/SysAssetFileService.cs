@@ -15,7 +15,7 @@ namespace tHerdBackend.Services.Common.SYS
         }
 
         /// <summary>
-        /// 圖片管理用
+        /// 圖片管理用: 取得取得所有分頁圖片檔案清單
         /// </summary>
         /// <param name="ct"></param>
         /// <returns></returns>
@@ -46,14 +46,51 @@ namespace tHerdBackend.Services.Common.SYS
             return await _frepo.AddImages(uploadDto);
         }
 
+        /// <summary>
+        /// 更新圖片檔案的描述資訊
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public async Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
         {
+            if (dto == null) throw new Exception($"空的輸入資料");
+
             return await _frepo.UpdateImageMeta(dto);
         }
 
+        /// <summary>
+        /// 刪除圖片檔案
+        /// </summary>
+        /// <param name="fileId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
         public async Task<bool> DeleteImage(int fileId, CancellationToken ct = default)
         {
             return await _frepo.DeleteImage(fileId);
+        }
+
+        /// <summary>
+        /// 取得圖片詳細資料
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+        {
+            return await _frepo.GetFilesById(id);
+        }
+
+        /// <summary>
+        /// 建立資料夾
+        /// </summary>
+        /// <param name="folderName"></param>
+        /// <param name="parentId"></param>
+        /// <returns></returns>
+        public async Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId)
+        {
+            return await _frepo.CreateFolderAsync(folderName, parentId);
         }
     }
 }

@@ -14,5 +14,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
 
         Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId);
         Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId);
+
+        Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
     }
 }

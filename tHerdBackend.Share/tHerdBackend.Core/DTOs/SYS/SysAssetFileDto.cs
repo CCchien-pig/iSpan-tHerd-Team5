@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.Core.DTOs;
 
@@ -71,6 +72,8 @@ public partial class SysAssetFileDto
     /// 建檔時間
     /// </summary>
     public DateTime CreatedDate { get; set; }
+
+    public string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
 
     /// <summary>
     /// 是否有效

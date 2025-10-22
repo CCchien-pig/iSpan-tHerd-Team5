@@ -3,8 +3,8 @@
 @model List<SysAssetFileDto>
 
 @{
-    const string updateApiUrl = "/SYS/UploadTest/UpdateMeta";
-    const string deleteApiUrl = "/SYS/UploadTest/DeleteFile";
+    const string updateApiUrl = "/SYS/Images/UpdateFile";
+    const string deleteApiUrl = "/SYS/Images/DeleteFile";
 }
 
 @section Styles {
@@ -53,14 +53,24 @@
                 <img src="@file.FileUrl"
                      alt="@file.AltText"
                      class="thumb-clickable img-zoomable"
+                     data-bs-toggle="modal"
+                     data-bs-target="#imgMetaModal"
                      data-file-id="@file.FileId"
+                     data-file-key="@file.FileKey"
+                     data-file-url="@file.FileUrl"
+                     data-file-ext="@file.FileExt"
+                     data-mime-type="@file.MimeType"
+                     data-width="@file.Width"
+                     data-height="@file.Height"
+                     data-file-size-bytes="@file.FileSizeBytes"
                      data-alt="@file.AltText"
                      data-caption="@file.Caption"
+                     data-folder-id="@file.FolderId"
                      data-is-active="@file.IsActive.ToString().ToLower()"
+                     data-is-external="@file.IsExternal.ToString().ToLower()"
+                     data-created-date="@file.FormateCreatedDate"
                      data-update-api="@updateApiUrl"
-                     data-delete-api="@deleteApiUrl"
-                     data-bs-toggle="modal"
-                     data-bs-target="#imgMetaModal" />
+                     data-delete-api="@deleteApiUrl" />
 
                 <button type="button" class="btn-close-custom" aria-label="Close" onclick="deleteFile(@file.FileId)">
                     <i class="bi bi-x-lg"></i>

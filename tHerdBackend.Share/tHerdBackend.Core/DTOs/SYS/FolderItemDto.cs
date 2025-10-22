@@ -14,5 +14,6 @@
         public bool IsFolder { get; set; }
         public DateTime? ModifiedDate { get; set; }
         public long? Size { get; set; }
+        public bool? IsActive { get; set; }
     }
 }

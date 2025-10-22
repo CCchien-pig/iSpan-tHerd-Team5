@@ -1,6 +1,7 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.SYS;
@@ -26,6 +27,11 @@ namespace tHerdBackend.Infra.Repository.SYS
             _db = db;
         }
 
+        /// <summary>
+        /// 取得子資料夾列表
+        /// </summary>
+        /// <param name="parentId"></param>
+        /// <returns></returns>
         public async Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId)
         {
             return await _db.SysFolders
@@ -40,6 +46,12 @@ namespace tHerdBackend.Infra.Repository.SYS
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// 建立資料夾
+        /// </summary>
+        /// <param name="folderName"></param>
+        /// <param name="parentId"></param>
+        /// <returns></returns>
         public async Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId)
         {
             var parent = await _db.SysFolders.FindAsync(parentId);
@@ -48,6 +60,7 @@ namespace tHerdBackend.Infra.Repository.SYS
             {
                 FolderName = folderName,
                 ParentId = parentId,
+                IsActive = true,
             };
 
             _db.SysFolders.Add(folder);
@@ -57,11 +70,12 @@ namespace tHerdBackend.Infra.Repository.SYS
             {
                 FolderId = folder.FolderId,
                 FolderName = folder.FolderName,
+                IsActive = folder.IsActive,
             };
         }
 
         /// <summary>
-        /// 圖片管理工具，取得所有圖片
+        /// 圖片管理工具，取得檔案資訊
         /// </summary>
         /// <param name="moduleId"></param>
         /// <param name="progId"></param>
@@ -81,14 +95,8 @@ namespace tHerdBackend.Infra.Repository.SYS
                 .OrderByDescending(f => f.CreatedDate)
                 .Skip((query.PageIndex - 1) * query.PageSize)
                 .Take(query.PageSize)
-                .Select(f => new SysAssetFileDto
-                {
-                    FileId = f.FileId,
-                    FileUrl = f.FileUrl,
-                    AltText = f.AltText,
-                    CreatedDate = f.CreatedDate
-                })
-                .ToListAsync();
+                .Select(ToAssetFileDtoExpression)
+                .ToListAsync(ct);
 
             return new PagedResult<SysAssetFileDto>
             {
@@ -100,77 +108,51 @@ namespace tHerdBackend.Infra.Repository.SYS
         }
 
         /// <summary>
-        /// 取得圖片
+        /// 依模組及程式代號取得檔案資訊
         /// </summary>
-        /// <param name="moduleId"></param>
-        /// <param name="progId"></param>
+        /// <param name="moduleId">模組代號</param>
+        /// <param name="progId">程式代號</param>
         /// <param name="ct"></param>
         /// <returns></returns>
         public async Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
-        {
-            return await _db.SysAssetFiles
-                .Where(f => f.FileKey.StartsWith($"{moduleId}/{progId}"))
-                .OrderByDescending(f => f.CreatedDate)
-                .Select(f => new SysAssetFileDto
-                {
-                    FileId = f.FileId,
-                    FileKey = f.FileKey,
-                    FileUrl = f.FileUrl,
-                    AltText = f.AltText,
-                    Caption = f.Caption,
-                    IsActive = f.IsActive,
-                    CreatedDate = f.CreatedDate
-                })
-                .ToListAsync(ct);
-        }
+        => await _db.SysAssetFiles
+            .Where(f => f.FileKey.StartsWith($"{moduleId}/{progId}"))
+            .OrderByDescending(f => f.CreatedDate)
+            .Select(ToAssetFileDtoExpression)
+            .ToListAsync(ct);
 
         /// <summary>
-        /// 圖片管理工具，取得所有圖片
+        /// 依檔案代號取得檔案資訊
         /// </summary>
-        /// <param name="moduleId"></param>
-        /// <param name="progId"></param>
+        /// <param name="moduleId">模組代號</param>
+        /// <param name="progId">程式代號</param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        //public async Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default)
-        //{
-        //    var folder = query.FolderPath ?? "";
-        //    var q = _db.SysAssetFiles
-        //        .Where(f => f.IsActive && f.FolderPath.StartsWith(folder))
-        //        .OrderByDescending(f => f.CreatedDate);
+        public async Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+        => await _db.SysAssetFiles
+            .Where(f => f.FileId == id)
+            .Select(ToAssetFileDtoExpression).FirstOrDefaultAsync(ct);
 
-        //    var totalCount = await q.CountAsync();
-        //    var items = await q
-        //        .Skip((query.PageIndex - 1) * query.PageSize)
-        //        .Take(query.PageSize)
-        //        .Select(f => new SysAssetFileDto
-        //        {
-        //            FileId = f.FileId,
-        //            FileKey = f.FileKey,
-        //            IsExternal = f.IsExternal,
-        //            FileUrl = f.FileUrl,
-        //            FileExt = f.FileExt,
-        //            MimeType = f.MimeType,
-        //            Width = f.Width,
-        //            Height = f.Height,
-        //            FileSizeBytes = f.FileSizeBytes,
-        //            AltText = f.AltText,
-        //            Caption = f.Caption,
-        //            CreatedDate = f.CreatedDate,
-        //            IsActive = f.IsActive,
-        //            ModuleId = f.ModuleId,
-        //            FolderPath = f.FolderPath
-        //        })
-        //        .OrderByDescending(f => f.CreatedDate)
-        //        .ToListAsync();
-
-        //    return new PagedResult<SysAssetFileDto>
-        //    {
-        //        TotalCount = totalCount,
-        //        PageIndex = query.PageIndex,
-        //        PageSize = query.PageSize,
-        //        Items = items
-        //    };
-        //}
+        /// <summary>
+        /// 共用投影邏輯：從 Entity → DTO
+        /// </summary>
+        private static readonly Expression<Func<SysAssetFile, SysAssetFileDto>> ToAssetFileDtoExpression = f => new SysAssetFileDto
+        {
+            FileId = f.FileId,
+            FileKey = f.FileKey,
+            IsExternal = f.IsExternal,
+            FileUrl = f.FileUrl,
+            FileExt = f.FileExt,
+            MimeType = f.MimeType,
+            Width = f.Width,
+            Height = f.Height,
+            FileSizeBytes = f.FileSizeBytes,
+            AltText = f.AltText,
+            Caption = f.Caption,
+            CreatedDate = f.CreatedDate,
+            IsActive = f.IsActive,
+            FolderId = f.FolderId
+        };
 
         /// <summary>
         /// 新增相片至 Cloudinary 並存入資料庫
@@ -267,7 +249,7 @@ namespace tHerdBackend.Infra.Repository.SYS
         }
 
         /// <summary>
-        /// 修改圖片中繼資料 (AltText, Caption, IsActive)
+        /// 修改圖片資訊
         /// </summary>
         public async Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
         {
@@ -279,10 +261,12 @@ namespace tHerdBackend.Infra.Repository.SYS
                 if (file == null)
                     throw new Exception($"找不到 FileId={dto.FileId} 的圖片");
 
-                // 修改中繼資料
-                file.AltText = dto.AltText ?? file.AltText;
-                file.Caption = dto.Caption ?? file.Caption;
+                file.AltText = dto.AltText;
+                file.Caption = dto.Caption;
                 file.IsActive = dto.IsActive;
+                file.Width = dto.Width;
+                file.Height = dto.Height;
+
 
                 await _db.SaveChangesAsync(ct);
                 return true;
