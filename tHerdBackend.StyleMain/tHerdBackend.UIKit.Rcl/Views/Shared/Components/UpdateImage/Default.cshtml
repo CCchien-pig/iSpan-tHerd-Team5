@@ -16,7 +16,9 @@
                      data-file-id="@Model.File.FileId"
                      data-alt="@Model.File.AltText"
                      data-caption="@Model.File.Caption"
-                     data-is-active="@Model.File.IsActive.ToString().ToLower()" />
+                     data-is-active="@Model.File.IsActive.ToString().ToLower()"
+                     data-update-api="@Model.UpdateApiUrl"
+                     data-delete-api="@Model.DeleteApiUrl" />
 
                 <div class="mb-3 text-start">
                     <label for="modalAlt" class="form-label">AltText</label>

@@ -6,6 +6,10 @@
     <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
     <link href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/colresize/1.6.1/colResize.dataTables.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
+
     <style>
         .file-browser {
             background: #fff;
@@ -115,7 +119,9 @@
 @await Component.InvokeAsync("UpdateImage", new { 
     modalId = "imgMetaModal", 
     title = "圖片資訊", 
-    file = new SysAssetFileDto() // 空的 DTO，不要預設圖片
+    file = new SysAssetFileDto(), 
+    updateApiUrl = "/SYS/UploadTest/UpdateFile", 
+    deleteApiUrl = "/SYS/UploadTest/DeleteFile"
 })
 
 <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
@@ -134,8 +140,9 @@
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.datatables.net/colresize/1.6.1/dataTables.colResize.min.js"></script>
-    <link href="https://cdn.datatables.net/colresize/1.6.1/colResize.dataTables.min.css" rel="stylesheet" />
 
+    @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
 
     <script>
         let breadcrumbStack = [{ id: null, name: "根目錄" }];

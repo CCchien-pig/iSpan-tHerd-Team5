@@ -36,13 +36,13 @@
         if (!confirm.isConfirmed) return;
 
         try {
-            const res = await fetch(`/SYS/UploadTest/UpdateMeta`, {
+            // ✅ 從圖片屬性讀取 update API（或預設）
+            const updateApiUrl = btn.dataset.updateApi || "/SYS/UploadTest/UpdateMeta";
+
+            const res = await fetch(`${window.location.origin}${updateApiUrl}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    FileId: fileId,
-                    IsActive: newState
-                })
+                body: JSON.stringify({ FileId: fileId, IsActive: newState })
             });
 
             const data = await res.json();
@@ -65,7 +65,7 @@
                 Swal.fire("❌ 更新失敗", data.message || "", "error");
             }
         } catch (err) {
-            Swal.fire("❌ 錯誤", "伺服器連線失敗或回傳格式錯誤", "error");
+            Swal.fire("❌ 錯誤", "伺服器連線失敗", "error");
             console.error("toggleActive 錯誤：", err);
         }
     };
@@ -163,14 +163,12 @@
         const modalImg = modalElement.querySelector(".img-zoomable");
         if (!modalImg) return;
 
-        const modalId = modalElement.id;
         const modalAlt = modalElement.querySelector("#modalAlt");
         const modalCaption = modalElement.querySelector("#modalCaption");
         const modalIsActive = modalElement.querySelector("#modalIsActive");
         const confirmBtn = modalElement.querySelector("#confirmMetaBtn");
-        const modal = new bootstrap.Modal(modalElement);
-
         // === 點擊 Modal 內的圖片 → 直接開原圖 ===
+
         modalImg.addEventListener("click", e => {
             e.preventDefault();
             e.stopPropagation();
@@ -179,49 +177,62 @@
         });
 
         // === 點擊縮圖開啟 Modal ===
-        document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalId}"]`).forEach(img => {
+        document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalElement.id}"]`).forEach(img => {
             img.addEventListener("click", () => {
                 modalImg.src = img.src;
-                modalImg.alt = img.alt;
                 modalAlt.value = img.dataset.alt || "";
                 modalCaption.value = img.dataset.caption || "";
                 modalIsActive.checked = img.dataset.isActive === "true";
+
+                // 同步 fileId
                 modalImg.dataset.fileId = img.dataset.fileId;
-                modal.show();
+
+                // 關鍵：只在縮圖沒有 API 時才保留 Razor 預設值
+                modalImg.dataset.updateApi = img.dataset.updateApi || modalImg.dataset.updateApi;
+                modalImg.dataset.deleteApi = img.dataset.deleteApi || modalImg.dataset.deleteApi;
+
+                // 開啟 Modal
+                const instance = bootstrap.Modal.getOrCreateInstance(modalElement);
+                instance.show();
             });
         });
 
         // === Modal 確認更新 ===
         if (confirmBtn) {
+            if (!modalImg.dataset.updateApi) {
+                console.warn("⚠️ 找不到 updateApi，請確認 shown.bs.modal 有正確同步屬性");
+            }
+
             confirmBtn.addEventListener("click", async () => {
                 const fileId = modalImg.dataset.fileId;
                 if (!fileId) {
-                    Swal.fire("⚠️ 找不到圖片 ID，無法更新", "", "warning");
+                    Swal.fire("⚠️ 找不到圖片 ID", "", "warning");
                     return;
                 }
 
                 const altText = modalAlt.value.trim();
                 const caption = modalCaption.value.trim();
                 const isActive = modalIsActive.checked;
+                const updateApiUrl = modalImg.dataset.updateApi || "/SYS/UploadTest/UpdateMeta";
 
                 try {
-                    const res = await fetch(`${window.location.origin}/SYS/UploadTest/UpdateMeta`, {
+                    const res = await fetch(`${window.location.origin}${updateApiUrl}`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            FileId: parseInt(fileId),
-                            AltText: altText,
-                            Caption: caption,
-                            IsActive: isActive
-                        })
+                        body: JSON.stringify({ FileId: parseInt(fileId), AltText: altText, Caption: caption, IsActive: isActive })
                     });
-
                     const data = await res.json();
 
                     if (data.success) {
-                        Swal.fire("✅ 更新成功", "", "success");
+                        await Swal.fire({
+                            icon: "success",
+                            title: "✅ 更新成功",
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+
                         updateImageState(fileId, altText, caption, isActive);
-                        modal.hide();
+                        bootstrap.Modal.getInstance(modalElement)?.hide();
                     } else {
                         Swal.fire("❌ 更新失敗", data.message || "", "error");
                     }
@@ -251,10 +262,13 @@
     }
 
     // === 刪除圖片 ===
-    window.deleteFile = async function (fileId) {
+    window.deleteFile = async function (fileId, btn) {
+        // ✅ 從按鈕或圖片讀取 delete API（或預設）
+        const deleteApi = btn?.dataset.deleteApi || "/SYS/UploadTest/DeleteFile";
+
         const confirm = await Swal.fire({
             title: "確定刪除？",
-            text: "此圖片將從 Cloudinary 與資料庫永久移除",
+            text: "此圖片將從雲端與資料庫永久移除",
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "刪除",
@@ -262,7 +276,7 @@
         });
         if (!confirm.isConfirmed) return;
 
-        const res = await fetch(`/SYS/UploadTest/DeleteFile`, {
+        const res = await fetch(deleteApi, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({ fileId })
@@ -276,7 +290,6 @@
                 showConfirmButton: false,
                 timer: 1000
             });
-
             const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
             if (targetImg) {
                 const parent = targetImg.closest(".img-item");
@@ -309,6 +322,19 @@
         modalAlt.value = triggerImg.dataset.alt || "";
         modalCaption.value = triggerImg.dataset.caption || "";
         modalIsActive.checked = triggerImg.dataset.isActive === "true";
+
+        // 關鍵修正：把縮圖的 API 屬性同步進 modal 圖片
         modalImg.dataset.fileId = triggerImg.dataset.fileId;
+        modalImg.dataset.updateApi = triggerImg.dataset.updateApi;
+        modalImg.dataset.deleteApi = triggerImg.dataset.deleteApi;
+
+        // 移除無用的變數 modalElement，改為直接聚焦 modal
+        modal.focus();
+    });
+
+    document.addEventListener("hidden.bs.modal", () => {
+        if (document.activeElement && document.activeElement.classList.contains("btn-close")) {
+            document.activeElement.blur();
+        }
     });
 });

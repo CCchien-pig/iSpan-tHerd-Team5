@@ -2,6 +2,11 @@
 @using System.Linq
 @model List<SysAssetFileDto>
 
+@{
+    const string updateApiUrl = "/SYS/UploadTest/UpdateMeta";
+    const string deleteApiUrl = "/SYS/UploadTest/DeleteFile";
+}
+
 @section Styles {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
@@ -52,6 +57,8 @@
                      data-alt="@file.AltText"
                      data-caption="@file.Caption"
                      data-is-active="@file.IsActive.ToString().ToLower()"
+                     data-update-api="@updateApiUrl"
+                     data-delete-api="@deleteApiUrl"
                      data-bs-toggle="modal"
                      data-bs-target="#imgMetaModal" />
 
@@ -75,9 +82,11 @@
 
 <!-- 編輯圖片 -->
 @await Component.InvokeAsync("UpdateImage", new { 
-    modalId = "imgMetaModal", 
-    title = "圖片資訊", 
-    file = new SysAssetFileDto() // 空的 DTO，不要預設圖片
+    modalId = "imgMetaModal",
+    title = "圖片資訊",
+    file = new SysAssetFileDto(),
+    updateApiUrl = updateApiUrl,
+    deleteApiUrl = deleteApiUrl
 })
 
 @section Scripts {
