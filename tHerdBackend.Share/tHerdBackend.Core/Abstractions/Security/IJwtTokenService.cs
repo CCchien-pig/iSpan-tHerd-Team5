@@ -9,6 +9,6 @@ namespace tHerdBackend.Core.Abstractions.Security
 {
 	public interface IJwtTokenService
 	{
-		(string token, DateTime expiresAtUtc) Generate(ApplicationUser user, IList<string> roles);
+		(string token, DateTime expiresAtUtc, string jti) Generate(ApplicationUser user, IList<string> roles);
 	}
 }

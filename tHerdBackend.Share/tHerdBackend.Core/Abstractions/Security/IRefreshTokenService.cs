@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace tHerdBackend.Core.Abstractions.Security
 {
-	internal interface IRefreshTokenService
+	public interface IRefreshTokenService
 	{
 	}
 }

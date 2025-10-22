@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -16,14 +17,15 @@ namespace tHerdBackend.Services.Common.Auth
 	public class JwtTokenService : IJwtTokenService
 	{
 		private readonly IConfiguration _config;
-		public JwtTokenService(IConfiguration config) => _config = config;
+		public JwtTokenService(IConfiguration config, string jti) => _config = config;
 
-		public (string token, DateTime expiresAtUtc) Generate(ApplicationUser user, IList<string> roles)
+		public (string token, DateTime expiresAtUtc, string jti) Generate(ApplicationUser user, IList<string> roles)
 		{
 			var jwt = _config.GetSection("Jwt");
 			var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
 				jwt["SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey not configured")));
 			var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+			var jti = Guid.NewGuid().ToString("N");
 
 			var claims = new List<Claim>
 		{
@@ -44,7 +46,7 @@ namespace tHerdBackend.Services.Common.Auth
 				expires: expiresAtUtc,
 				signingCredentials: creds);
 
-			return (new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
+			return (new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc, jti);
 		}
 	}
 }
