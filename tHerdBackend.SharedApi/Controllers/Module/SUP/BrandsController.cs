@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
@@ -11,12 +15,17 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 	public class BrandsController : ControllerBase
 	{
 		private readonly IBrandService _service;
+		private readonly ICurrentUser _me;
 
-		public BrandsController(IBrandService service)
+		public BrandsController(
+			IBrandService service,
+			ICurrentUser me)
 		{
 			_service = service;
+			_me = me;
 		}
 
+		#region 查品牌
 		/// <summary>
 		/// 取得所有品牌清單（包含未啟用者）。
 		/// </summary>
@@ -100,28 +109,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		#endregion
 
-		/// <summary>
-		/// 取得指定品牌的按讚數。
-		/// </summary>
-		/// <param name="id">品牌編號</param>
-		/// GET /api/sup/Brands/LikeCount/5
-		[HttpGet("LikeCount/{id}")]
-		public async Task<IActionResult> GetBrandLikeCount(int id)
-		{
-			try
-			{
-				var likeCount = await _service.GetLikeCountAsync(id);
-				if (likeCount == null)
-					return NotFound(new { success = false, message = "找不到該品牌" });
-				return Ok(new { BrandId = id, LikeCount = likeCount });
-			}
-			catch (Exception ex)
-			{
-				return StatusCode(500, new { success = false, message = ex.Message });
-			}
-		}
-
+		#region 查品牌折扣
 
 		/// <summary>
 		/// 查詢所有品牌的折扣資料
@@ -176,8 +166,222 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		#endregion
+
+		#region 查品牌按讚數
+
+		/// <summary>
+		/// 取得指定品牌的按讚數。
+		/// </summary>
+		/// <param name="id">品牌編號</param>
+		/// GET /api/sup/Brands/LikeCount/5
+		[HttpGet("LikeCount/{id}")]
+		public async Task<IActionResult> GetBrandLikeCount(int id)
+		{
+			try
+			{
+				var likeCount = await _service.GetLikeCountAsync(id);
+				if (likeCount == null)
+					return NotFound(new { success = false, message = "找不到該品牌" });
+				return Ok(new { BrandId = id, LikeCount = likeCount });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = ex.Message });
+			}
+		}
+
+		#endregion
+
+		#region 品牌版面 layouts API
+		//查詢所有版面	GET		/api/brands/{brandId}/layouts	取得特定品牌的所有歷史版面設定（含版本與啟用狀態）
+		//取得啟用版型	GET		/api/brands/{brandId}/layout/active	取得目前啟用中的 Layout（IsActive = 1）
+		//新增版型		POST	/api/brands/{brandId}/layout	建立新的 JSON 版型設定
+		//更新版型		PUT		/api/brands/layouts/{layoutId}	覆寫版面內容
+		//啟用指定版型	PATCH	/api/brands/layouts/{layoutId}/activate	設定為啟用版本並停用其他同品牌版型
+		//刪除版型		DELETE	/api/brands/layouts/{layoutId}	移除版面記錄（軟刪，停止啟用IsActive = 0）
+
+		/// <summary>
+		/// 取得特定品牌的所有歷史版面設定（含版本與啟用狀態）
+		/// </summary>
+		/// GET /api/sup/brands/{brandId}/layouts
+		[HttpGet("{brandId}/layouts")]
+		public async Task<IActionResult> GetBrandLayouts(int brandId)
+		{
+			try
+			{
+				var brand = await _service.GetByIdAsync(brandId);
+				if (brand == null)
+					// 找不到品牌
+					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
+
+				var layouts = await _service.GetLayoutsByBrandIdAsync(brandId);
+				if (layouts == null || !layouts.Any())
+					// 找不到版面紀錄
+					return NotFound(new { success = false, message = "該品牌尚未建立任何版面設定紀錄。" });
+
+				return Ok(layouts);
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 取得目前啟用中的品牌 Layout（IsActive = 1）
+		/// </summary>
+		/// GET /api/sup/brands/{brandId}/layout/active
+		[HttpGet("{brandId}/layout/active")]
+		public async Task<IActionResult> GetActiveLayout(int brandId)
+		{
+			try
+			{
+				var brand = await _service.GetByIdAsync(brandId);
+				if (brand == null)
+					// 找不到品牌
+					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
+
+				var layout = await _service.GetActiveLayoutAsync(brandId);
+				if (layout == null)
+					// 找不到啟用中的版面
+					return NotFound(new { success = false, message = "該品牌目前沒有任何啟用中的版面設定。" });
+
+				return Ok(layout);
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 建立新的品牌 Layout JSON 設定
+		/// </summary>
+		/// POST /api/sup/brands/{brandId}/layout
+		[HttpPost("{brandId}/layout")]
+		public async Task<IActionResult> CreateBrandLayout(int brandId, [FromBody] BrandLayoutCreateDto dto)
+		{
+			if (!ModelState.IsValid)
+				return BadRequest(new { success = false, message = "輸入格式不正確，請檢查所有欄位。" }); // 稍微優化BadRequest
+
+			if (!_me.IsAuthenticated)
+				return Unauthorized(new { success = false, message = "使用者尚未登入，無法執行建立操作。" }); // 稍微優化Unauthorized
+
+			// TODO:登入ID
+			var creatorId = _me.IsAuthenticated ? _me.UserNumberId : 1004;
+			dto.Creator = creatorId;
+
+			try
+			{
+				var brand = await _service.GetByIdAsync(brandId);
+				if (brand == null)
+					// 找不到品牌
+					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄，無法新增版面。" });
+
+				var newId = await _service.CreateLayoutAsync(brandId, dto);
+
+				// 成功後應回傳 201 Created，並導向取得該資源的 API
+				return CreatedAtAction(nameof(GetActiveLayout), new { brandId = brandId },
+					new { success = true, layoutId = newId, message = "品牌版面設定已成功建立。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"執行建立操作時發生伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 修改品牌版面設定（整體覆寫 LayoutJson）
+		/// </summary>
+		/// PUT /api/sup/brands/layouts/{layoutId}
+		[HttpPut("layouts/{layoutId}")]
+		public async Task<IActionResult> UpdateBrandLayout(int layoutId, [FromBody] BrandLayoutUpdateDto dto)
+		{
+			if (!ModelState.IsValid)
+				return BadRequest(new { success = false, message = "輸入資料錯誤，請檢查所有欄位。" });
+
+			if (!_me.IsAuthenticated)
+				return Unauthorized(new { success = false, message = "使用者尚未登入，無法執行更新操作。" });
+
+			// TODO:登入ID
+			var reviserId = _me.IsAuthenticated ? _me.UserNumberId : 1004;
+			dto.Reviser = reviserId;
+
+			try
+			{
+				var updated = await _service.UpdateLayoutAsync(layoutId, dto);
+				if (!updated)
+					// 找不到 Layout
+					return NotFound(new { success = false, message = $"找不到 ID 為 {layoutId} 的品牌版面配置，更新失敗。" });
+
+				return Ok(new { success = true, message = "品牌版面設定已成功更新。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"執行更新操作時發生伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 啟用指定版型（同品牌僅允許一個 Layout 為啟用狀態）
+		/// </summary>
+		/// PATCH /api/sup/brands/layouts/{layoutId}/activate
+		[HttpPatch("layouts/{layoutId}/activate")]
+		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
+		public async Task<IActionResult> ActivateBrandLayout(int layoutId)
+		{
+			//if (!_me.IsAuthenticated)
+			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
+
+			// TODO:暫時用登入ID
+			var reviserId = 1004;
+
+			try
+			{
+				var result = await _service.ActivateLayoutAsync(layoutId, reviserId);
+				if (!result)
+					// 找不到 Layout
+					return NotFound(new { success = false, message = $"找不到指定的版面配置 (Layout ID: {layoutId})。" });
+
+				return Ok(new { success = true, message = "品牌版面設定已成功啟用為現行版本。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"執行啟用操作時發生伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 軟刪除（停用）品牌 Layout
+		/// </summary>
+		/// DELETE /api/sup/brands/layouts/{layoutId}
+		[HttpDelete("layouts/{layoutId}")]
+		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
+		public async Task<IActionResult> DeleteBrandLayout(int layoutId)
+		{
+			//if (!_me.IsAuthenticated)
+			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
+
+			// TODO:暫時用登入ID
+			var reviserId = 1004;
+
+			try
+			{
+				//var result = await _service.SoftDeleteLayoutAsync(layoutId, _me.UserNumberId);
+				var result = await _service.SoftDeleteLayoutAsync(layoutId, reviserId);
+				if (!result)
+					return NotFound(new { success = false, message = "找不到指定的品牌版面配置 (Layout ID: " + layoutId + ")" });
+
+				return Ok(new { success = true, message = "品牌版面配置已成功停用。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = "執行停用操作時發生伺服器錯誤: " + ex.Message });
+			}
+		}
 
 
-
+		#endregion
 	}
 }
