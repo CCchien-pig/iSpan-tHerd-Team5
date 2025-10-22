@@ -51,7 +51,7 @@
           {{ c.sampleName }}
           <button class="btn btn-sm btn-link text-danger ms-1" @click="removeSample(c.sampleId)">✕</button>
         </span>
-        <small class="text-muted d-block mt-2">請選擇 2–6 種食材</small>
+        <small class="text-muted d-block mt-2">（請選擇 2 – 6 種食材！）</small>
       </div>
     </section>
 
@@ -98,39 +98,53 @@
       </div>
 
       <!-- 群組（可摺疊） -->
-      <div class="d-flex flex-column gap-2">
-        <div v-for="(group, gi) in ui.filteredAnalytesByCat" :key="group.category">
-          <!-- 群組標題（可開合） -->
+      <div class="d-flex flex-column">
+        <div
+          v-for="(group, gi) in ui.filteredAnalytesByCat"
+          :key="group.category"
+          class="mb-3 border-start ps-2"
+        >
+          <!-- 群組標題 -->
           <button
-            class="group-header btn btn-sm d-inline-flex align-items-center gap-2 px-3 py-1 mb-2 fw-semibold rounded-pill"
+            class="group-header btn btn-sm d-inline-flex align-items-center gap-2 px-3 py-1 fw-semibold rounded-pill"
             :style="getGroupStyle(group.category, gi)"
             @click="toggleGroup(group.category)"
           >
-            <span class="group-caret">{{ isGroupCollapsed(group.category) ? '▸' : '▾' }}</span>
+            <i
+              class="bi"
+              :class="isGroupCollapsed(group.category)
+                ? 'bi-caret-right-fill rotate-90'
+                : 'bi-caret-down-fill rotate-0'"
+            ></i>
             <span>{{ group.category }}</span>
           </button>
 
-          <!-- 群組內容：checkbox 清單 -->
-          <div v-show="!isGroupCollapsed(group.category)" class="d-flex flex-wrap gap-2 ms-1">
-            <label
-              v-for="a in group.items"
-              :key="a.analyteId"
-              class="form-check-label analyte-item border rounded px-3 py-1 bg-light"
+          <!-- ✅ 群組內容要包在「同一個 div」裡 -->
+          <transition name="fade-collapse">
+            <div
+              v-show="!isGroupCollapsed(group.category)"
+              class="analyte-group-content d-flex flex-wrap gap-2 mt-2"
             >
-              <input
-                type="checkbox"
-                v-model="ui.selectedAnalyteIds"
-                :value="a.analyteId"
-                class="form-check-input me-2"
-              />
-              {{ a.analyteName }}
-            </label>
-          </div>
+              <label
+                v-for="a in group.items"
+                :key="a.analyteId"
+                class="form-check-label analyte-item border rounded px-3 py-1 bg-light"
+              >
+                <input
+                  type="checkbox"
+                  v-model="ui.selectedAnalyteIds"
+                  :value="a.analyteId"
+                  class="form-check-input me-2"
+                />
+                {{ a.analyteName }}
+              </label>
+            </div>
+          </transition>
         </div>
       </div>
 
       <small class="text-muted d-block mt-2">
-        建議選擇 5–10 項。已選：{{ ui.selectedAnalyteIds.length }} / 可任意組合。
+        建議選擇 5–10 項（上限12項）。已選：{{ ui.selectedAnalyteIds.length }} / 可任意組合。
       </small>
 
       <div class="text-end mt-3">
@@ -143,7 +157,7 @@
     <!-- 3️⃣ 圖表結果：面板（依單位分群） -->
     <section v-if="ui.groups.length" class="compare-step p-4 rounded-3 shadow-sm bg-white">
       <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="main-color-green-text m-0">比較結果（依單位分群）</h4>
+        <h4 class="main-color-green-text m-0">比較結果（依單位分群/每100公克含量）</h4>
         <div class="d-flex align-items-center gap-2">
           <label class="me-1 text-muted">視圖：</label>
           <select v-model="ui.chartType" class="form-select form-select-sm" style="width:auto" @change="renderAll">
@@ -208,20 +222,19 @@ const ui = reactive({
   analyteOptions: [],           // 從後端動態載入（含 category）
   filteredAnalytesByCat: [],    // 依類別分組後的篩選結果
   selectedAnalyteIds: [],
-  collapsedGroups: new Set(),   // 收合的群組名稱
   /* chart */
   groups: [],                   // compare 回傳
   chartType: 'bar'
 })
 
+// ✅ 改成這樣分開
+const collapsedGroups = ref([]) // 獨立的 ref，Vue 才能正確追蹤
 const chartRefs = reactive({})
 let resizeHandler = null
 
 /* ----------------------- lifecycle ----------------------- */
 onMounted(async () => {
   await Promise.all([loadSamples(), loadAnalytes()])
-  // 讓常見群組預設展開（其餘收合）
-  expandDefaults()
   window.addEventListener('resize', (resizeHandler = debounce(resizeAll, 160)))
 })
 
@@ -242,21 +255,33 @@ async function loadSamples() {
   }
 }
 
+let firstLoad = true
 async function loadAnalytes() {
   try {
-    const res = await getAnalyteList(!state.showAllAnalytes ? true : false) // true=常見
+    const res = await getAnalyteList(!state.showAllAnalytes ? true : false)
     const items = res?.items || []
     ui.analyteOptions = items
-    groupAnalytes(items)
-    // 重新套用關鍵字過濾
-    filterAnalytes()
+
+    // ✅ 初次載入：建群組 + 預設展開
+    if (firstLoad) {
+      groupAnalytes(items)
+      expandDefaults()
+      firstLoad = false
+    } else {
+      // ✅ 切換「全部/常見」時保留現有收合狀態
+      const prevCollapsed = [...collapsedGroups.value]
+      groupAnalytes(items)
+      collapsedGroups.value = collapsedGroups.value.filter(cat => prevCollapsed.includes(cat))
+    }
+
+    await nextTick()
+    filterAnalytes() // ✅ 即時根據搜尋文字重新顯示
   } catch (e) {
     console.error('載入營養素失敗', e)
-    ui.analyteOptions = []
-    ui.filteredAnalytesByCat = []
   }
 }
 
+/* ----------------------- analyte 群組處理 ----------------------- */
 function groupAnalytes(items) {
   const map = new Map()
   for (const a of items) {
@@ -264,7 +289,14 @@ function groupAnalytes(items) {
     if (!map.has(cat)) map.set(cat, [])
     map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
   }
-  ui.filteredAnalytesByCat = Array.from(map, ([category, items]) => ({ category, items }))
+
+  const newGroups = Array.from(map, ([category, items]) => ({ category, items }))
+  ui.filteredAnalytesByCat = newGroups
+
+  // ✅ 僅保留原有狀態，不重建 collapsedGroups
+  collapsedGroups.value = collapsedGroups.value.filter(cat =>
+    newGroups.some(g => g.category === cat)
+  )
 }
 
 /* ----------------------- filters ----------------------- */
@@ -277,8 +309,14 @@ function filterSamples() {
 
 function filterAnalytes() {
   const kw = state.analyteKeyword.trim().toLowerCase()
-  if (!kw) return groupAnalytes(ui.analyteOptions)
 
+  if (!kw) {
+    // ✅ 若清空搜尋 → 顯示全部 analyte
+    groupAnalytes(ui.analyteOptions)
+    return
+  }
+
+  // ✅ 即時搜尋（可跨群組）
   const map = new Map()
   for (const a of ui.analyteOptions) {
     if ((a.analyteName || '').toLowerCase().includes(kw)) {
@@ -287,7 +325,9 @@ function filterAnalytes() {
       map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
     }
   }
+
   ui.filteredAnalytesByCat = Array.from(map, ([category, items]) => ({ category, items }))
+  // ✅ 搜尋時保留收合狀態（避免閃爍）
 }
 
 function selectAllAnalytes() {
@@ -306,32 +346,45 @@ function removeSample(id) {
   ui.compareList = ui.compareList.filter(x => x.sampleId !== id)
 }
 
-/* ---------- 群組收合 ---------- */
+/* ---------- 群組收合（改為陣列可追蹤版） ---------- */
+
 function isGroupCollapsed(cat) {
-  return ui.collapsedGroups.has(cat)
+  return collapsedGroups.value.includes(cat)
 }
+
 function toggleGroup(cat) {
-  if (ui.collapsedGroups.has(cat)) ui.collapsedGroups.delete(cat)
-  else ui.collapsedGroups.add(cat)
+  const idx = collapsedGroups.value.indexOf(cat)
+  if (idx > -1) {
+    collapsedGroups.value.splice(idx, 1)
+  } else {
+    collapsedGroups.value.push(cat)
+  }
+
+  // 🔹 強制 Vue 重新追蹤（避免 v-show 不更新）
+  collapsedGroups.value = [...collapsedGroups.value]
 }
+
 function toggleAllGroups() {
   if (areAllGroupsCollapsed.value) {
-    ui.collapsedGroups.clear()
+    // ✅ 全部展開
+    collapsedGroups.value = []
   } else {
-    ui.filteredAnalytesByCat.forEach(g => ui.collapsedGroups.add(g.category))
+    // ✅ 全部收合
+    collapsedGroups.value = ui.filteredAnalytesByCat.map(g => g.category)
   }
 }
+
 const areAllGroupsCollapsed = computed(() =>
   ui.filteredAnalytesByCat.length > 0 &&
-  ui.filteredAnalytesByCat.every(g => ui.collapsedGroups.has(g.category))
+  ui.filteredAnalytesByCat.every(g => collapsedGroups.value.includes(g.category))
 )
 
 function expandDefaults() {
-  // 預設展開常見類別
-  const defaults = new Set(['一般成分', '礦物質', '維生素B群 & C', '維生素E'])
-  ui.filteredAnalytesByCat.forEach(g => {
-    if (!defaults.has(g.category)) ui.collapsedGroups.add(g.category)
-  })
+  const defaults = ['一般成分', '礦物質', '維生素B群 & C', '維生素E']
+  // ✅ 只設定為「非預設群組收合」
+  collapsedGroups.value = ui.filteredAnalytesByCat
+    .filter(g => !defaults.includes(g.category))
+    .map(g => g.category)
 }
 
 /* ----------------------- compare ----------------------- */
@@ -355,7 +408,7 @@ async function fetchCompare() {
     renderAll()
   } catch (e) {
     console.error(e)
-    alert('無法取得比較資料，請檢查 API')
+    showWarn('無法取得比較資料，請檢查 API')
   } finally {
     state.loading = false
   }
@@ -557,4 +610,31 @@ function getGroupStyle(category, index) {
   background-color: #f2fbfb;
   box-shadow: 0 0 0 2px rgba(0,112,131,0.2);
 }
+/* 🔹 收合時滑順淡出 */
+.fade-collapse-enter-active,
+.fade-collapse-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+.fade-collapse-enter-from,
+.fade-collapse-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.fade-collapse-enter-to,
+.fade-collapse-leave-from {
+  opacity: 1;
+  max-height: 500px; /* 足夠顯示整個群組 */
+}
+
+/* 🔹 小箭頭旋轉動畫 */
+.bi.rotate-90 {
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+}
+.bi.rotate-0 {
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
 </style>
