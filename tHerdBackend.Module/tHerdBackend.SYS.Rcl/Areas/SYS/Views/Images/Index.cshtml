@@ -444,6 +444,8 @@
                     img.src = url;
                 }
             }
+
+            $('#selectAll').prop('checked', false); // 重新繪製後取消全選
         });
 
         $('#btnGoto').on('click', function () {
@@ -545,15 +547,28 @@
             $("#btnSearch").prop("disabled", true).html('<i class="bi bi-hourglass-split"></i> 載入中...');
 
             try {
-                const res = await fetch(`/SYS/Images/GetFolderItems?parentId=${folderId ?? ''}&keyword=${keyword}`);
+                // 改成呼叫新的統一 API
+                const url = `/SYS/Images/GetPagedFolderItems?parentId=${folderId ?? ''}&keyword=${encodeURIComponent(keyword)}`;
+                const res = await fetch(url);
                 const data = await res.json();
 
-                const folders = data.items.filter(x => x.isFolder);
-                const files = data.items.filter(x => !x.isFolder);
+                // 根據是否有 data.items (非 DataTables 模式) 或 data.data (DataTables 模式)
+                const items = data.items || data.data || [];
+
+                // === 分開資料夾與檔案 ===
+                const folders = items.filter(x => x.isFolder);
+                const files = items.filter(x => !x.isFolder);
                 const combined = [...folders, ...files];
+
+                // === 更新 DataTable ===
                 table.clear().rows.add(combined).draw();
 
-                renderBreadcrumb(data.breadcrumb);
+                // === 更新麵包屑 ===
+                if (data.breadcrumb)
+                    renderBreadcrumb(data.breadcrumb);
+            } catch (err) {
+                console.error("載入資料夾失敗：", err);
+                Swal.fire("錯誤", "載入資料夾時發生錯誤", "error");
             } finally {
                 $table.removeClass("opacity-50");
                 $("#btnSearch").prop("disabled", false).html('<i class="bi bi-search"></i> 搜尋');
@@ -583,9 +598,9 @@
 
         // 單筆選擇時，若全部勾選則同步全選
         $(document).on('change', '.row-select', function () {
-            const all = $('.row-select').length;
-            const checked = $('.row-select:checked').length;
-            $('#selectAll').prop('checked', all === checked);
+          const all = $('.row-select').length;
+          const checked = $('.row-select:checked').length;
+          $('#selectAll').prop('checked', all > 0 && all === checked);
         });
 
         // 取得選取的 ID 陣列
@@ -735,17 +750,42 @@
 
         // 刪除
         $('#btnDelete').on('click', async function () {
-            const ids = getSelectedIds();
-            if (ids.length === 0) return alert("請先選取項目");
-            if (!confirm(`確定要刪除 ${ids.length} 筆資料嗎？`)) return;
+          const ids = getSelectedIds();
+          if (ids.length === 0) {
+            Swal.fire({ icon: "warning", title: "請先選取要刪除的項目" });
+            return;
+          }
 
-            await fetch('/SYS/Images/BatchDelete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(ids)
+          const confirmResult = await Swal.fire({
+            icon: "question",
+            title: "刪除確認",
+            text: `確定要刪除 ${ids.length} 筆資料嗎？（若資料夾下有內容將無法刪除）`,
+            showCancelButton: true,
+            confirmButtonText: "刪除",
+            cancelButtonText: "取消"
+          });
+
+          if (!confirmResult.isConfirmed) return;
+
+          try {
+            const res = await fetch("/SYS/Images/BatchDelete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(ids)
             });
 
-            table.ajax.reload(null, false);
+            const result = await res.json();
+
+            if (result.success) {
+              Swal.fire({ icon: "success", title: "刪除成功", text: result.message });
+              table.ajax.reload(null, false);
+            } else {
+              Swal.fire({ icon: "error", title: "刪除失敗", text: result.message });
+            }
+          } catch (err) {
+            console.error("❌ 刪除發生錯誤：", err);
+            Swal.fire({ icon: "error", title: "系統錯誤", text: "無法連線至伺服器" });
+          }
         });
 
         // === 移動資料夾（改為 jsTree 樹狀選擇）===

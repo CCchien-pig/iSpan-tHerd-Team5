@@ -48,90 +48,6 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 			return Json(folders);
 		}
 
-		// === API: 取得子資料夾與檔案 ===
-		[HttpGet]
-        public async Task<IActionResult> GetFolderItems(int? parentId = null, string? keyword = "")
-        {
-            if (parentId == 0)
-                parentId = null;
-
-            // Step 1️ 取得子資料夾
-            var folders = await _db.SysFolders
-                .Where(f => f.ParentId == parentId && f.IsActive)
-                .Select(f => new FolderItemDto
-                {
-                    Id = f.FolderId,
-                    Name = f.FolderName,
-                    IsFolder = true,
-                    ModifiedDate = null,
-                    MimeType = "資料夾",
-                    Size = null
-                })
-                .ToListAsync();
-
-            // Step 2️ 取得檔案
-            var filesQuery = _db.SysAssetFiles.Where(f => f.IsActive);
-
-            // 根目錄（parentId = null）
-            if (parentId == null)
-            {
-                // 只撈出真的沒有 FolderId 的
-                filesQuery = filesQuery.Where(f => f.FolderId == null);
-            }
-            else
-            {
-                filesQuery = filesQuery.Where(f => f.FolderId == parentId);
-            }
-
-            if (!string.IsNullOrWhiteSpace(keyword))
-            {
-                filesQuery = filesQuery.Where(f =>
-                    f.FileKey.Contains(keyword) ||
-                    f.AltText.Contains(keyword) ||
-                    f.Caption.Contains(keyword));
-            }
-
-            var files = await filesQuery
-                .Select(f => new FolderItemDto
-                {
-                    Id = f.FileId,
-                    Name = f.FileKey,
-                    IsFolder = false,
-                    Url = f.IsExternal ? f.FileUrl :
-                          $"/Images/{Path.GetFileName(f.FileKey)}",
-                    MimeType = f.MimeType,
-                    Size = f.FileSizeBytes,
-                    ModifiedDate = f.CreatedDate
-                })
-                .ToListAsync();
-
-            var items = folders.Concat(files)
-                .OrderByDescending(x => x.IsFolder)
-                .ThenBy(x => x.Name)
-                .ToList();
-
-            // 找出目前所在資料夾
-            SysFolder? currentFolder = null;
-            if (parentId.HasValue && parentId > 0)
-                currentFolder = await _db.SysFolders.FindAsync(parentId);
-
-            // 從上層開始遞迴找（例如 Products → PROD）
-            var breadcrumb = await GetBreadcrumbAsync(currentFolder?.ParentId);
-
-            // 把自己這層加進來（例如 Products）
-            if (currentFolder != null)
-            {
-                breadcrumb.Add(new SysFolderDto
-                {
-                    FolderId = currentFolder.FolderId,
-                    FolderName = currentFolder.FolderName,
-                    ParentId = currentFolder.ParentId
-                });
-            }
-
-            return Json(new { items, breadcrumb });
-        }
-
         // === 產生麵包屑（遞迴找上層） ===
         private async Task<List<SysFolderDto>> GetBreadcrumbAsync(int? folderId)
         {
@@ -178,154 +94,131 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 		}
 
 		[HttpGet]
-        public async Task<IActionResult> GetPagedFolderItems(
-            int? parentId = null,
-            string? keyword = "",
-            int start = 0,      // 起始筆數（由 DataTables 自動傳）
-            int length = 10,    // 每頁筆數
-            int draw = 1,        // DataTables 驗證用
-			string? orderColumn = "Name", // 前端傳的排序欄位名稱
-	        string? orderDir = "asc"      // 排序方向（asc / desc）
+		public async Task<IActionResult> GetPagedFolderItems(
+			int? parentId = null,
+			string? keyword = "",
+			int? start = null,      // 可選：起始筆數（DataTables 模式用）
+			int? length = null,     // 可選：每頁筆數（DataTables 模式用）
+			int draw = 1,           // DataTables 驗證用
+			string? orderColumn = "Name",
+			string? orderDir = "asc"
 		)
-        {
-            // === 防呆處理 ===
-            if (length <= 0) length = 10;
-            if (start < 0) start = 0;
+		{
+			// === 0️ 防呆 ===
+			if (parentId == 0) parentId = null;
 
-            // === 1 查資料夾 ===
-            var folderQuery = _db.SysFolders
-                .Where(f => f.ParentId == parentId && f.IsActive);
+			// === 1 查資料夾 ===
+			var folderQuery = _db.SysFolders
+				.Where(f => f.IsActive && f.ParentId == parentId);
 
-            if (!string.IsNullOrWhiteSpace(keyword))
-                folderQuery = folderQuery.Where(f => f.FolderName.Contains(keyword));
+			if (!string.IsNullOrWhiteSpace(keyword))
+				folderQuery = folderQuery.Where(f => f.FolderName.Contains(keyword));
 
-            var folders = await folderQuery
-                .Select(f => new FolderItemDto
-                {
-                    Id = f.FolderId,
-                    Name = f.FolderName,
-                    IsFolder = true,
-                    MimeType = "資料夾",
-                    ModifiedDate = null,
-                    Size = null,
-                    Url = string.Empty
-                })
-                .ToListAsync();
+			var folders = await folderQuery
+				.Select(f => new FolderItemDto
+				{
+					Id = f.FolderId,
+					Name = f.FolderName,
+					IsFolder = true,
+					MimeType = "資料夾",
+					ModifiedDate = null,
+					Size = null,
+					Url = string.Empty
+				})
+				.ToListAsync();
 
-            // === 2️ 查檔案 ===
-            var fileQuery = _db.SysAssetFiles.AsQueryable();
+			// === 2️ 查檔案 ===
+			var fileQuery = _db.SysAssetFiles.AsQueryable().Where(f => f.IsActive);
 
-            if (parentId == null)
-                fileQuery = fileQuery.Where(f => f.FolderId == null);
-            else
-                fileQuery = fileQuery.Where(f => f.FolderId == parentId);
+			if (parentId == null)
+				fileQuery = fileQuery.Where(f => f.FolderId == null);
+			else
+				fileQuery = fileQuery.Where(f => f.FolderId == parentId);
 
-            if (!string.IsNullOrWhiteSpace(keyword))
-            {
-                fileQuery = fileQuery.Where(f =>
-                    f.FileKey.Contains(keyword) ||
-                    f.AltText.Contains(keyword) ||
-                    f.Caption.Contains(keyword));
-            }
+			if (!string.IsNullOrWhiteSpace(keyword))
+			{
+				fileQuery = fileQuery.Where(f =>
+					f.FileKey.Contains(keyword) ||
+					f.AltText.Contains(keyword) ||
+					f.Caption.Contains(keyword));
+			}
 
-            var data = await fileQuery
-                .Select(f => new FolderItemDto
-                {
-                    Id = f.FileId,
-                    Name = Path.GetFileName(f.FileKey) ?? f.FileKey,
-                    Url = f.IsExternal
-                        ? f.FileUrl
-                        : $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
-                    MimeType = f.MimeType,
-                    IsFolder = false,
-                    ModifiedDate = f.CreatedDate,
-                    Size = f.FileSizeBytes
-                })
-                .ToListAsync();
+			var files = await fileQuery
+				.Select(f => new FolderItemDto
+				{
+					Id = f.FileId,
+					Name = Path.GetFileName(f.FileKey) ?? f.FileKey,
+					Url = f.IsExternal
+						? f.FileUrl
+						: $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
+					MimeType = f.MimeType,
+					IsFolder = false,
+					ModifiedDate = f.CreatedDate,
+					Size = f.FileSizeBytes,
+					IsActive = f.IsActive
+				})
+				.ToListAsync();
 
-            // === 3 計算數量 ===
-            var totalFolderCount = await _db.SysFolders
-                .Where(f => f.ParentId == parentId && f.IsActive)
-                .CountAsync();
+			// === 3️ 合併 ===
+			var combined = folders.Concat(files).ToList();
+			var totalCount = combined.Count; // 總筆數
 
-            var totalFileCount = await _db.SysAssetFiles
-                .Where(f => f.FolderId == parentId && f.IsActive)
-                .CountAsync();
-
-            var totalCount = totalFolderCount + totalFileCount;
-
-            var files = await fileQuery
-                .Select(f => new FolderItemDto
-                {
-                    Id = f.FileId,
-                    Name = Path.GetFileName(f.FileKey) ?? f.FileKey,
-                    Url = f.IsExternal
-                        ? f.FileUrl
-                        : $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
-                    MimeType = f.MimeType,
-                    IsFolder = false,
-                    ModifiedDate = f.CreatedDate,
-                    Size = f.FileSizeBytes,
-                    IsActive = f.IsActive
-                })
-                .ToListAsync();
-
-            // === 4 合併 + 排序 + 分頁 ===
-            var combined = folders.Concat(files).ToList();
-
-            // 5 若有搜尋條件，FilteredCount 要以搜尋結果為準
-            var filteredCount = combined.Count;
-
+			// === 4️ 排序 ===
 			bool desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
-
 			combined = orderColumn?.ToLower() switch
 			{
-				"name" => desc
-					? combined.OrderByDescending(x => x.IsFolder)
-							  .ThenByDescending(x => x.Name).ToList()
-					: combined.OrderByDescending(x => x.IsFolder)
-							  .ThenBy(x => x.Name).ToList(),
-
 				"modifieddate" => desc
-					? combined.OrderByDescending(x => x.IsFolder)
-							  .ThenByDescending(x => x.ModifiedDate).ToList()
-					: combined.OrderByDescending(x => x.IsFolder)
-							  .ThenBy(x => x.ModifiedDate).ToList(),
+					? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.ModifiedDate).ToList()
+					: combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.ModifiedDate).ToList(),
 
 				"size" => desc
-					? combined.OrderByDescending(x => x.IsFolder)
-							  .ThenByDescending(x => x.Size).ToList()
-					: combined.OrderByDescending(x => x.IsFolder)
-							  .ThenBy(x => x.Size).ToList(),
+					? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.Size).ToList()
+					: combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.Size).ToList(),
 
 				"mimetype" => desc
-					? combined.OrderByDescending(x => x.IsFolder)
-							  .ThenByDescending(x => x.MimeType).ToList()
-					: combined.OrderByDescending(x => x.IsFolder)
-							  .ThenBy(x => x.MimeType).ToList(),
+					? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.MimeType).ToList()
+					: combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.MimeType).ToList(),
 
-				_ => combined.OrderByDescending(x => x.IsFolder)
-							 .ThenBy(x => x.Name).ToList()
+				_ => desc
+					? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.Name).ToList()
+					: combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.Name).ToList(),
 			};
 
-			// 分頁
-			var paged = combined.Skip(start).Take(length).ToList();
+			// === 5️ 分頁（如果前端有傳 start/length） ===
+			List<FolderItemDto> paged;
+			if (start.HasValue && length.HasValue && length > 0)
+				paged = combined.Skip(start.Value).Take(length.Value).ToList();
+			else
+				paged = combined; // 不分頁 → 原 GetFolderItems 模式
 
-            // === 6️ 麵包屑（遞迴取得）===
-            var breadcrumb = await GetBreadcrumbAsync(parentId);
+			// === 6️ 麵包屑 ===
+			var breadcrumb = await GetBreadcrumbAsync(parentId);
 
-            // === 7️ 回傳 DataTables 標準格式 ===
-            return Json(new
-            {
-                draw,                           // 驗證用
-                recordsTotal = totalCount,       // 總筆數（未篩選）
-                recordsFiltered = filteredCount, // 篩選後筆數
-                data = paged,                    // 當前頁資料
-                breadcrumb                       // 額外資訊（前端自用）
-            });
-        }
+			// === 7️ 判斷回傳模式（DataTables 或一般） ===
+			if (start.HasValue && length.HasValue)
+			{
+				// DataTables 模式
+				return Json(new
+				{
+					draw,
+					recordsTotal = totalCount,
+					recordsFiltered = totalCount,
+					data = paged,
+					breadcrumb
+				});
+			}
+			else
+			{
+				// 一般模式（取代原 GetFolderItems）
+				return Json(new
+				{
+					items = paged,
+					breadcrumb
+				});
+			}
+		}
 
-        [HttpPost]
+		[HttpPost]
         public async Task<IActionResult> BatchSetActive([FromBody] BatchActiveRequest req)
         {
             if (req.Ids == null || req.Ids.Count == 0)
@@ -348,27 +241,55 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             public bool IsActive { get; set; }
         }
 
-        /// <summary>
-        /// 刪除多個檔案
-        /// </summary>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        [HttpPost]
-        public async Task<IActionResult> BatchDelete([FromBody] List<int> ids)
-        {
-            if (ids == null || ids.Count == 0)
-                return BadRequest();
+		/// <summary>
+		/// 刪除多個檔案
+		/// </summary>
+		/// <param name="ids"></param>
+		/// <returns></returns>
+		[HttpPost]
+		public async Task<IActionResult> BatchDelete([FromBody] List<int> ids)
+		{
+			if (ids == null || !ids.Any())
+				return Json(new { success = false, message = "未選取任何項目" });
 
-            var files = await _db.SysAssetFiles
-                .Where(f => ids.Contains(f.FileId))
-                .ToListAsync();
+			// === 查出這些 ID 是哪些資料夾 or 檔案 ===
+			var folders = await _db.SysFolders
+				.Where(f => ids.Contains(f.FolderId))
+				.ToListAsync();
 
-            _db.SysAssetFiles.RemoveRange(files);
-            await _db.SaveChangesAsync();
-            return Ok(new { success = true, deleted = files.Count });
-        }
+			var files = await _db.SysAssetFiles
+				.Where(f => ids.Contains(f.FileId))
+				.ToListAsync();
 
-        public class MoveFolderRequest
+			// === 驗證資料夾是否可以刪除 ===
+			foreach (var folder in folders)
+			{
+				bool hasSubFolders = await _db.SysFolders.AnyAsync(f => f.ParentId == folder.FolderId);
+				bool hasFiles = await _db.SysAssetFiles.AnyAsync(f => f.FolderId == folder.FolderId);
+
+				if (hasSubFolders || hasFiles)
+				{
+					return Json(new
+					{
+						success = false,
+						message = $"資料夾「{folder.FolderName}」下仍有內容，無法刪除。"
+					});
+				}
+			}
+
+			// === 執行刪除 ===
+			_db.SysFolders.RemoveRange(folders);
+			_db.SysAssetFiles.RemoveRange(files);
+			await _db.SaveChangesAsync();
+
+			return Json(new
+			{
+				success = true,
+				message = $"成功刪除 {folders.Count + files.Count} 筆項目"
+			});
+		}
+
+		public class MoveFolderRequest
         {
             public List<int> Ids { get; set; } = new();
             public int FolderId { get; set; }
@@ -448,53 +369,63 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             }
         }
 
-        /// <summary>
-        /// 遞迴組出完整路徑，例如 /根目錄/產品圖片/2025
-        /// </summary>
-        private async Task<string> BuildFullPathAsync(int folderId)
-        {
-            var folderList = await _db.SysFolders.AsNoTracking().ToListAsync();
-            var folder = folderList.FirstOrDefault(f => f.FolderId == folderId);
+		/// <summary>
+		/// 遞迴組出完整路徑，例如 /根目錄/產品圖片/2025
+		/// </summary>
+		private async Task<string> BuildFullPathAsync(int folderId)
+		{
+			var names = new List<string>();
+			var folder = await _db.SysFolders.FindAsync(folderId);
 
-            if (folder == null)
-                return string.Empty;
+			while (folder != null)
+			{
+				names.Insert(0, folder.FolderName);
+				folder = folder.ParentId.HasValue
+					? await _db.SysFolders.FindAsync(folder.ParentId.Value)
+					: null;
+			}
 
-            var path = new Stack<string>();
-            while (folder != null)
-            {
-                path.Push(folder.FolderName);
-                folder = folder.ParentId.HasValue
-                    ? folderList.FirstOrDefault(f => f.FolderId == folder.ParentId.Value)
-                    : null;
-            }
+			return "/" + string.Join("/", names);
+		}
 
-            return "/" + string.Join("/", path);
-        }
+		/// <summary>
+		/// 重新命名資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		[HttpPost]
+		public async Task<IActionResult> RenameFolder([FromBody] SysFolderDto dto)
+		{
+			if (dto == null || dto.FolderId <= 0)
+				return Json(new { success = false, message = "資料夾編號無效" });
 
-        [HttpPost]
-        public async Task<IActionResult> RenameFolder([FromBody] SysFolderDto dto)
-        {
-            if (dto == null || dto.FolderId <= 0)
-                return Json(new { success = false, message = "資料夾編號無效" });
+			if (string.IsNullOrWhiteSpace(dto.FolderName))
+				return Json(new { success = false, message = "請輸入資料夾名稱" });
 
-            if (string.IsNullOrWhiteSpace(dto.FolderName))
-                return Json(new { success = false, message = "請輸入資料夾名稱" });
+			var folder = await _db.SysFolders.FindAsync(dto.FolderId);
+			if (folder == null)
+				return Json(new { success = false, message = "找不到指定資料夾" });
 
-            var folder = await _db.SysFolders.FindAsync(dto.FolderId);
-            if (folder == null)
-                return Json(new { success = false, message = "找不到指定資料夾" });
+			// 檢查同層重名
+			bool duplicate = await _db.SysFolders.AnyAsync(f =>
+				f.ParentId == folder.ParentId &&
+				f.FolderId != folder.FolderId &&
+				f.FolderName.ToLower() == dto.FolderName.ToLower());
 
-            folder.FolderName = dto.FolderName.Trim();
-            await _db.SaveChangesAsync();
+			if (duplicate)
+				return Json(new { success = false, message = "同層已有相同名稱的資料夾" });
 
-            return Json(new { success = true, message = "資料夾名稱已更新" });
-        }
+			folder.FolderName = dto.FolderName.Trim();
+			await _db.SaveChangesAsync();
 
-        /// <summary>
-        /// 取得所有資料夾
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
+			return Json(new { success = true, message = "資料夾名稱已更新" });
+		}
+
+		/// <summary>
+		/// 取得所有資料夾
+		/// </summary>
+		/// <returns></returns>
+		[HttpGet]
         public async Task<IActionResult> GetAllFolders()
         {
             try
