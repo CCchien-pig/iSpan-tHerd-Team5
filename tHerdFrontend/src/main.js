@@ -35,7 +35,13 @@ auth.loadFromStorage();
 
 // （選擇）開發模式 & 沒 token 時自動拿一次 dev-token
 if (import.meta.env.DEV && !auth.accessToken) {
-  auth.devLogin().catch(console.error);
+  console.log('[boot] calling devLogin()')
+  try {
+    await auth.devLogin()  // ★ 先等 token 回來
+    console.log('[boot] devLogin done')
+  } catch (e) {
+    console.error('[boot] devLogin failed', e)
+  }
 }
 
 app.mount('#app')

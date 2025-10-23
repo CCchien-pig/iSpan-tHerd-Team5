@@ -12,12 +12,16 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = localStorage.getItem('accessToken') ?? '';
       this.accessExpiresAt = localStorage.getItem('accessExpiresAt') ?? '';
     },
-    setToken(token: string, expiresAt: string) {
-      this.accessToken = token;
-      this.accessExpiresAt = expiresAt;
-      localStorage.setItem('accessToken', token);
-      localStorage.setItem('accessExpiresAt', expiresAt);
-    },
+    setToken(token?: string, expiresAt?: string) {
+  if (typeof token !== 'string' || typeof expiresAt !== 'string' || !token || !expiresAt) {
+    console.warn('[setToken] invalid token payload', { token, expiresAt });
+    return; // 直接拒寫
+  }
+  this.accessToken = token;
+  this.accessExpiresAt = expiresAt;
+  localStorage.setItem('accessToken', token);
+  localStorage.setItem('accessExpiresAt', expiresAt);
+},
     clear() {
       this.accessToken = '';
       this.accessExpiresAt = '';
@@ -26,9 +30,14 @@ export const useAuthStore = defineStore('auth', {
     },
     // ★ 開發專用：向後端拿固定測試 token
     async devLogin() {
-      const { data } = await http.post('/auth/dev-token');
-      this.setToken(data.accessToken, data.accessExpiresAt);
-      return data;
-    },
+  const res = await http.post('/auth/dev-token');
+  console.log('[DEV-LOGIN payload]', res.data, Object.keys(res.data));
+  const { accessToken, accessExpiresAt } = res.data; // 先假設是這兩個鍵
+  if (!accessToken || !accessExpiresAt) {
+    throw new Error('Bad payload: ' + JSON.stringify(res.data));
+  }
+  this.setToken(accessToken, accessExpiresAt);
+  return res.data;
+}
   },
 });
