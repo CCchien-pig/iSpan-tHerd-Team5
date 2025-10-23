@@ -104,7 +104,7 @@ onUnmounted(cleanupWidget)
 
 
 <script>
-import { getFaqList } from './api/csfaq'// ← 路徑對應你的資料夾結構
+import { getFaqList, searchFaq /*, suggestFaq*/ } from './api/csfaq'
 export default {
   name: 'FaqSearch',
   data() {
@@ -168,12 +168,12 @@ export default {
     this.openFaqId = this.openFaqId === fid ? null : fid
   },
   async doSearch() {
-    if (!this.q) return
+    if (!this.q?.trim()) return
     this.loading = true
-    this.searched = true
     try {
-      const res = await fetch(`/api/cs/faqs/search?q=${encodeURIComponent(this.q)}`)
-      this.results = await res.json()
+    const list = await searchFaq(this.q.trim())
+    this.results = list
+    this.searched = true
     } finally {
       this.loading = false
     }
