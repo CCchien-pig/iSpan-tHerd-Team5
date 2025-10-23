@@ -5,6 +5,7 @@ using System.Data;
 using tHerdBackend.Core.DTOs.CS;
 using tHerdBackend.Core.Interfaces.CS;
 
+
 namespace tHerdBackend.Infra.Repository.CS
 {
 	public sealed class FaqRepository : IFaqRepository
@@ -78,5 +79,42 @@ VALUES(@FaqId, @IsHelpful, @UserId, @ClientSessionKey);";
 			using var cn = new SqlConnection(_connStr);
 			return await cn.ExecuteAsync(sql, input);
 		}
-	}
+        public async Task<IEnumerable<FaqSuggestDto>> SuggestAsync(string q, int limit)
+        {
+            const string sql = @"
+SELECT TOP (@limit)
+    f.FaqId,
+    f.Title,
+    c.CategoryName
+FROM CS_Faq f
+JOIN CS_FaqCategory c ON c.CategoryId = f.CategoryId
+WHERE f.IsActive = 1 AND c.IsActive = 1
+  AND (f.Title LIKE @kw OR f.AnswerHtml LIKE @kw)
+ORDER BY
+  CASE WHEN f.Title LIKE @kwStarts THEN 0 ELSE 1 END,
+  f.OrderSeq, f.FaqId;";
+
+            using var cn = new SqlConnection(_connStr);
+            var rows = await cn.QueryAsync<FaqSuggestDto>(
+                sql,
+                new { kw = $"%{q}%", kwStarts = $"{q}%", limit },
+                commandType: CommandType.Text);
+
+            return rows;
+        }
+        public async Task<FaqDetailDto?> GetDetailAsync(int id)
+        {
+            const string sql = @"
+SELECT TOP 1
+    f.FaqId,
+    f.Title,
+    f.AnswerHtml,
+    c.CategoryName
+FROM CS_Faq f
+JOIN CS_FaqCategory c ON c.CategoryId = f.CategoryId
+WHERE f.IsActive = 1 AND c.IsActive = 1 AND f.FaqId = @id;";
+            using var conn = new SqlConnection(_connStr);
+            return await conn.QueryFirstOrDefaultAsync<FaqDetailDto>(sql, new { id });
+        }
+    }
 }

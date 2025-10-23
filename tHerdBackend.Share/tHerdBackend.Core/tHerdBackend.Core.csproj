@@ -22,7 +22,6 @@
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
     <Folder Include="DTOs\CNT\" />
-    <Folder Include="DTOs\CS\" />
     <Folder Include="DTOs\ORD\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />

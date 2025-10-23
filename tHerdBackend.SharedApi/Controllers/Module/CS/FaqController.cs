@@ -45,6 +45,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CS
 			{
 				return BadRequest(ApiResponse<string>.Fail(ex.Message));
 			}
+
 		}
 
 		/// <summary>回報 FAQ 是否有幫助</summary>
@@ -61,5 +62,41 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CS
 				return BadRequest(ApiResponse<string>.Fail(ex.Message));
 			}
 		}
-	}
+		/// <summary>輸入關鍵字取得建議（自動完成）</summary>
+        [HttpGet("suggest")]
+		[AllowAnonymous]
+		public async Task<IActionResult> SuggestAsync([FromQuery] string q, [FromQuery] int limit = 6)
+		{
+			try
+			{
+				if (string.IsNullOrWhiteSpace(q))
+					return Ok(ApiResponse<IEnumerable<FaqSuggestDto>>.Ok(Array.Empty<FaqSuggestDto>()));
+
+				var data = await _service.SuggestAsync(q.Trim(), limit <= 0 ? 6 : limit);
+				return Ok(ApiResponse<IEnumerable<FaqSuggestDto>>.Ok(data));
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ApiResponse<string>.Fail(ex.Message));
+			}
+		}
+		/// <summary>取得 FAQ 單筆詳情</summary>
+        [HttpGet("{id:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetDetailAsync([FromRoute] int id)
+        {
+            try
+            {
+                var data = await _service.GetDetailAsync(id);
+                if (data is null) return NotFound(ApiResponse<string>.Fail("找不到資料"));
+                return Ok(ApiResponse<FaqDetailDto>.Ok(data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
+            }
+        }
+
+
+    }
 }

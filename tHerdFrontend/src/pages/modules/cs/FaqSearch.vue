@@ -3,17 +3,60 @@
     <!-- 搜尋框（保持不動） -->
     <div class="center-narrow">
       <h3 class="text-center mb-4">常見問題搜尋</h3>
-      <div class="input-group mb-5">
-        <input v-model.trim="q" @keyup.enter="doSearch" class="form-control"
-               placeholder="請輸入關鍵字（例：退款、取消訂單、付款失敗）"/>
-        <button class="btn btn-search" @click="doSearch">搜尋</button>
-      </div>
+      <div id="faq-searchbox" class="position-relative mb-5">
+  <div class="input-group">
+    <input v-model.trim="q"
+           @input="_debouncedFetch"
+           @keydown="onKeydown"
+           @keyup.enter="doSearch"
+           class="form-control"
+           placeholder="請輸入關鍵字（例：退款、取消訂單、付款失敗）"/>
+    <button class="btn btn-search" @click="doSearch">
+      <span v-if="!loadingSuggest">搜尋</span>
+      <span v-else class="spinner-border spinner-border-sm"></span>
+    </button>
+  </div>
+
+  <!-- 即時建議清單 -->
+  <div v-if="open"
+       class="position-absolute bg-white border rounded-3 shadow-sm w-100"
+       style="z-index:1000; max-height: 320px; overflow:auto;">
+    <button v-for="(s, idx) in suggestions"
+            :key="s.id"
+            type="button"
+           class="suggest-item w-100 text-start px-3 py-2 border-0 "
+          
+            @mouseenter="active = idx"
+            @mouseleave="active = -1"
+            @click="openFeatured(s.id)">
+      <div class="fw-semibold">{{ s.title }}</div>
+      <small class="text-muted">{{ s.categoryName }}</small>
+    </button>
+    <div v-if="!suggestions.length && !loadingSuggest" class="px-3 py-2 text-muted">沒有相關建議</div>
+    <div v-if="loadingSuggest" class="px-3 py-2"><span class="spinner-border spinner-border-sm"></span> 載入中</div>
+  </div>
+</div>
+
     </div>
 
     <!-- 搜尋結果（保持不動） -->
     <div class="center-narrow" v-if="q && searched">
       <!-- ... -->
     </div>
+    <!-- ✅ 精選答案卡（點建議後顯示；右上角 X 可關閉） -->
+<div v-if="featuredOpen" class="center-narrow" id="featured-ans">
+  <div class="featured-card position-relative p-3 p-md-4 mb-4 bg-white border rounded-3 shadow-sm">
+    <button class="btn-close position-absolute top-0 end-0 m-2" @click="closeFeatured"></button>
+    <div class="small text-muted mb-2" v-if="featuredFaq?.categoryName">{{ featuredFaq.categoryName }}</div>
+    <h5 class="mb-3 main-color-green-text">{{ featuredFaq?.title }}</h5>
+
+    <div v-if="featuredLoading" class="text-muted">
+      <span class="spinner-border spinner-border-sm"></span> 載入中…
+    </div>
+    <div v-else class="text-secondary small" v-html="featuredFaq?.answerHtml"></div>
+  </div>
+</div>
+
       <!-- ❶ 快捷卡片：移到幫助文章上方 -->
 <div class="quick-area">
   <div class="center-narrow">
@@ -104,7 +147,7 @@ onUnmounted(cleanupWidget)
 
 
 <script>
-import { getFaqList, searchFaq /*, suggestFaq*/ } from './api/csfaq'
+import { getFaqList, searchFaq , suggestFaq, getFaqDetail } from './api/csfaq'
 export default {
   name: 'FaqSearch',
   data() {
@@ -116,6 +159,14 @@ export default {
      openCategoryId: null, // 目前展開的分類
     openFaqId: null,      // 目前展開的那一題
       categories: [],
+      suggestions: [],    // 建議清單
+open: false,        // 是否開啟下拉
+active: -1,         // 目前選中的索引（用鍵盤上下移動）
+loadingSuggest: false,
+timer: null,
+featuredOpen: false,
+    featuredFaq: null, // {faqId,title,categoryName, answerHtml }
+    featuredLoading: false,
       quickActions: [
   {
     text: '追蹤我的訂單',
@@ -153,8 +204,64 @@ export default {
 
     }
   },
-  mounted() { this.loadCategories() },
+  mounted() { this.loadCategories()
+      document.addEventListener('click', this._onDocClick)
+   }, //  綁定全域點擊事件
+     beforeUnmount() {
+    document.removeEventListener('click', this._onDocClick) // 元件卸載時移除監聽
+  },
   methods: {
+    // ---------------- 即時建議 START ----------------
+async fetchSuggest() {
+  const kw = this.q.trim()
+  if (!kw) { this.suggestions = []; this.open = false; return }
+  this.loadingSuggest = true
+  try {
+    // 改這行：使用 suggestFaq()
+    const list = await suggestFaq(kw)
+    this.suggestions = (list || []).slice(0, 6).map(x => ({
+      id: x.faqId, title: x.title, categoryName: x.categoryName
+    }))
+    this.open = this.suggestions.length > 0
+    this.active = -1
+  } finally {
+    this.loadingSuggest = false
+  }
+},
+_debouncedFetch() {
+  clearTimeout(this.timer)
+  this.timer = setTimeout(this.fetchSuggest, 200) // 防抖
+},
+onKeydown(e) {
+  if (!this.open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    this.open = this.suggestions.length > 0
+    return
+  }
+  if (!this.open) return
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    this.active = (this.active + 1) % this.suggestions.length
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    this.active = (this.active - 1 + this.suggestions.length) % this.suggestions.length
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (this.active >= 0) this.select(this.suggestions[this.active])
+    else this.doSearch()
+  } else if (e.key === 'Escape') {
+    this.open = false
+  }
+},
+select(item) {
+  this.q = item.title
+ this.openFeatured(item.id)   // ← 直接開精選答案卡
+},
+_onDocClick(e) {
+  const box = document.getElementById('faq-searchbox')
+  if (box && !box.contains(e.target)) this.open = false
+},
+// ---------------- 即時建議 END ----------------
+
   async loadCategories() {
     const data = await getFaqList()
     this.categories = data
@@ -182,7 +289,44 @@ export default {
     if (!this.q || !text) return text
     const esc = this.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     return String(text).replace(new RegExp(esc, 'gi'), m => `<mark>${m}</mark>`)
+  },
+async openFeatured(faqId) {
+  try {
+    this.featuredLoading = true
+    this.featuredOpen = true
+    this.open = false        // ✅ 點下建議時立刻關閉建議下拉
+    this.searched = false    // ✅ 若想同時清空舊搜尋結果
+
+    // 正確取 data
+    const res = await getFaqDetail(faqId)
+    // 若後端包 ApiResponse<T>，就要取 res.data
+    this.featuredFaq = res.data ? res.data : res  // 自動判斷格式
+
+    // 捲動到卡片
+   this.$nextTick(() => {
+  const el = document.getElementById('featured-ans')
+  if (!el) return
+  // 換成你站上的 header 選擇器（例如 .navbar、#site-header、header）
+  const header = document.querySelector('.navbar, #site-header, header')
+  const offset = (header?.offsetHeight || 80) + 12 // 80 是預設高度，+12 做一點間距
+  const y = el.getBoundingClientRect().top + window.scrollY - offset
+  window.scrollTo({ top: y, behavior: 'smooth' })
+})
+
+  } catch (err) {
+    console.error('openFeatured error:', err)
+  } finally {
+    this.featuredLoading = false
   }
+},
+
+closeFeatured() {
+  this.featuredOpen = false
+  this.featuredFaq = null
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+
+}
+
 }
 }
 </script>
@@ -274,5 +418,19 @@ export default {
 
 .slide-enter-active, .slide-leave-active { transition: all .25s ease; }
 .slide-enter-from, .slide-leave-to { opacity:0; transform: translateY(-8px); }
+
+/* 建議項目 hover 效果 */
+.suggest-item {
+  background-color: #fff;
+  transition: background-color 0.15s ease;
+}
+
+.suggest-item:hover {
+  background-color: #4DB4C1;
+}
+
+
+
+
 
 </style>

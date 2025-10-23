@@ -25,5 +25,9 @@ namespace tHerdBackend.Services.CS
 			var affected = await _repo.AddFeedbackAsync(input);
 			if (affected <= 0) throw new InvalidOperationException("回饋寫入失敗");
 		}
-	}
+        public Task<IEnumerable<FaqSuggestDto>> SuggestAsync(string q, int limit)
+          => _repo.SuggestAsync(q, limit);
+        public Task<FaqDetailDto?> GetDetailAsync(int id) => _repo.GetDetailAsync(id);
+
+    }
 }

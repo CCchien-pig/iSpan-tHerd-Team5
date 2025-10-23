@@ -22,10 +22,11 @@ export async function suggestFaq(q, limit = 6) {
 }
 
 export async function getFaqDetail(id) {
-  const res = await http.get(`/api/cs/faq/${id}`);
-  if (res.data?.success) return res.data.data;
-  throw new Error(res.data?.message || "取得 FAQ 詳細失敗");
+  const res = await http.get(`/api/cs/faqs/${id}`)
+  if (res.data?.success) return res.data.data   //  直接回傳 data
+  throw new Error(res.data?.message || '取得 FAQ 詳細失敗')
 }
+
 
 
 export async function createFeedback(payload) {

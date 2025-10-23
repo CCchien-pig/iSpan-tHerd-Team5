@@ -7,5 +7,7 @@ namespace tHerdBackend.Core.Interfaces.CS
 		Task<List<CategoryWithFaqsDto>> GetListAsync();
 		Task<List<FaqSearchDto>> SearchAsync(string keyword);
 		Task<int> AddFeedbackAsync(FaqFeedbackIn input);
-	}
+        Task<IEnumerable<FaqSuggestDto>> SuggestAsync(string q, int limit);
+        Task<FaqDetailDto?> GetDetailAsync(int id);
+    }
 }
