@@ -166,13 +166,6 @@ onMounted(async () => {
   }
 });
 
-watch(
-  () => route.query.categoryId,
-  async () => {
-    await loadArticles();
-  }
-);
-
 async function loadCategories() {
   try {
     const { items } = await getArticleCategories();
@@ -213,8 +206,12 @@ function setCategory(id) {
     query: { ...route.query, categoryId: id || undefined, page: 1, scroll: "list" },
   });
   state.page = 1;
-  loadArticles();
 }
+
+watch(() => route.query.categoryId, async () => {
+  await loadArticles();
+});
+
 
 function onSearch() {
   router.replace({
