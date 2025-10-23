@@ -66,7 +66,7 @@
         class="col-12 col-md-6 col-lg-4"
       >
         <div class="card h-100 shadow-sm">
-          <img :src="a.coverImage" class="card-img-top" :alt="a.title" />
+          <!-- <img :src="a.coverImage" class="card-img-top" :alt="a.title" /> -->
           <div class="card-body d-flex flex-column">
             <div class="d-flex align-items-center justify-content-between mb-2">
               <span class="badge rounded-pill bg-light main-color-green-text">{{
@@ -78,7 +78,7 @@
                 >付費</span
               >
             </div>
-            <h5 class="card-title mb-2 main-color-green-text">{{ a.title }}</h5>
+            <h4 class="card-title mb-2 main-color-green-text" ><strong>{{ a.title }}</strong></h4>
             <p class="card-text text-muted small flex-grow-1">{{ a.excerpt }}</p>
             <div
               class="d-flex align-items-center justify-content-between mt-2"
