@@ -37,8 +37,13 @@
     }
 
     // === 啟用／停用圖片 ===
-    window.toggleActive = async function (fileId, btn) {
-        const isCurrentlyActive = btn.textContent.trim() === "停用";
+    window.toggleActive = async function (btn) {
+        const item = btn.closest(".img-item");
+        const img = item.querySelector("img");
+        const fileId = img.dataset.fileId;
+        const updateApiUrl = img.dataset.updateApi || "/SYS/Images/UpdateFile";
+
+        const isCurrentlyActive = img.dataset.isActive === "true";
         const newState = !isCurrentlyActive;
 
         const confirm = await Swal.fire({
@@ -53,23 +58,20 @@
         if (!confirm.isConfirmed) return;
 
         try {
-            // 從圖片屬性讀取 update API（或預設）
-            const updateApiUrl = btn.dataset.updateApi || "/SYS/Images/UpdateFile";
-
-            const res = await fetch(`${window.location.origin}${updateApiUrl}`, {
+            const res = await fetch(updateApiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ FileId: fileId, IsActive: newState })
+                body: JSON.stringify({
+                    FileId: fileId,
+                    IsActive: newState
+                })
             });
 
             const data = await res.json();
 
             if (data.success) {
-                const item = btn.closest(".img-item");
-                const img = item.querySelector("img");
-
-                item.classList.toggle("inactive", !newState);
                 img.dataset.isActive = newState.toString();
+                item.classList.toggle("inactive", !newState);
                 btn.textContent = newState ? "停用" : "啟用";
 
                 Swal.fire({
@@ -295,6 +297,8 @@
                 const alt = modal.querySelector("#modalAlt").value;
                 const caption = modal.querySelector("#modalCaption").value;
                 const isActive = modal.querySelector("#modalIsActive").checked;
+                const width = modal.querySelector("#modalWidth").value;
+                const height = modal.querySelector("#modalHeight").value;
 
                 if (!api) {
                     Swal.fire({ icon: "error", title: "找不到更新 API", text: "請檢查 updateApiUrl 是否設定。" });
@@ -309,7 +313,9 @@
                             FileId: fileId,
                             AltText: alt,
                             Caption: caption,
-                            IsActive: isActive
+                            IsActive: isActive,
+                            Width: width,
+                            Height: height
                         })
                     });
 
@@ -344,6 +350,16 @@
 
                         // 同步更新畫面上的縮圖資料
                         updateImageState(fileId, alt, caption, isActive);
+
+                        // 立即更新圖片的寬高 dataset（否則會顯示舊值）
+                        const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
+                        if (img) {
+                            const modalWidth = modal.querySelector("#modalWidth")?.value;
+                            const modalHeight = modal.querySelector("#modalHeight")?.value;
+
+                            img.dataset.width = modalWidth || img.dataset.width;
+                            img.dataset.height = modalHeight || img.dataset.height;
+                        }
                     } else {
                         Swal.fire({
                             icon: "error",
@@ -368,11 +384,27 @@
         const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
         if (!img) return;
 
+        const modal = document.querySelector("#imgMetaModal");
+
+        // === 從 Modal 取出最新值 ===
+        const width = modal?.querySelector("#modalWidth")?.value;
+        const height = modal?.querySelector("#modalHeight")?.value;
+        const mimeType = modal?.querySelector("#modalMimeType")?.value;
+        const fileSizeBytes = modal?.querySelector("#modalFileSizeBytes")?.value;
+        const createdDate = modal?.querySelector("#modalCreatedDate")?.value;
+
+        // === 更新 dataset ===
         img.alt = altText;
-        img.dataset.alt = altText;
+        img.dataset.altText = altText;
         img.dataset.caption = caption;
         img.dataset.isActive = isActive.toString();
+        img.dataset.width = width;
+        img.dataset.height = height;
+        img.dataset.mimeType = mimeType;
+        img.dataset.fileSizeBytes = fileSizeBytes;
+        img.dataset.createdDate = createdDate;
 
+        // === 更新 UI 狀態 ===
         const parent = img.closest(".img-item");
         parent.classList.toggle("inactive", !isActive);
 

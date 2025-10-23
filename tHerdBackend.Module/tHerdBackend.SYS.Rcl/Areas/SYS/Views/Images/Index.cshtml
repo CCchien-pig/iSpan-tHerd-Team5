@@ -65,13 +65,22 @@
         }
 
         .dataTables_wrapper tbody tr {
-            transition: all 0.15s ease-in-out;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            transform-origin: center center;
         }
 
-            .dataTables_wrapper tbody tr:hover {
-                background-color: #f1f5ff;
-                transform: scale(1.01);
-            }
+        .dataTables_wrapper tbody {
+            overflow-x: hidden; /* 防止橫向捲軸 */
+        }
+
+        .dataTables_scrollBody {
+            overflow-x: hidden !important; /* 強制覆蓋 DataTables 設定 */
+        }
+
+        .dataTables_wrapper tbody tr:hover {
+            background-color: #f1f5ff;
+            box-shadow: inset 0 0 0 9999px rgba(111, 66, 193, 0.03); /* 柔和高亮 */
+        }
          
         /* 群組按鈕 */
         :root {
@@ -107,6 +116,26 @@
                 border-top-right-radius: 50px !important;
                 border-bottom-right-radius: 50px !important;
             }
+
+        /* 讓 DataTables 底部資訊和跳頁區在同一排 */
+       .dataTables_paginate {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .goto-wrapper input {
+          width: 80px;
+          height: 30px;
+          padding: 2px 6px;
+        }
+
+        .goto-wrapper button {
+          height: 30px;
+          line-height: 1;
+          padding: 0 10px;
+        }
+
     </style>
 }
 
@@ -117,16 +146,6 @@
                 <li class="breadcrumb-item"><a href="#" class="crumb" data-id="">根目錄</a></li>
             </ol>
         </nav>
-        <div class="d-flex align-items-center">
-            <input id="gotoPage" type="number" class="form-control form-control-sm"
-                   style="width: 100px;" placeholder="跳至頁數">
-            <button id="btnGoto" class="btn btn-sm btn-outline-primary ms-2 mr-4">Go</button>
-
-            <input id="searchBox" class="form-control form-control-sm" placeholder="搜尋檔名或關鍵字..." style="width:250px;">
-            <button id="btnSearch" class="btn btn-primary btn-sm ms-2"><i class="bi bi-search"></i> 搜尋</button>
-        </div>
-    </div>
-    <div class="mb-3 d-flex justify-content-end">
         <div class="btn-group rounded-pill shadow-sm overflow-hidden" role="group" aria-label="圖片操作">
             <button id="btnEnable" class="btn btn-outline-primary btn-sm fw-semibold">
                 <i class="bi bi-check2-circle me-1"></i> 啟用
@@ -144,8 +163,11 @@
                 <i class="bi bi-folder-plus me-1"></i> 新增資料夾
             </button>
         </div>
+        <div class="d-flex align-items-center">
+            <input id="searchBox" class="form-control form-control-sm" placeholder="搜尋檔名或關鍵字..." style="width:250px;">
+            <button id="btnSearch" class="btn btn-primary btn-sm ms-2"><i class="bi bi-search"></i> 搜尋</button>
+        </div>
     </div>
-
     <div class="table-responsive">
         <table id="fileTable" class="table table-hover align-middle w-100">
             <thead class="table-light">
@@ -161,6 +183,10 @@
             </thead>
             <tbody></tbody>
         </table>
+        <div class="goto-wrapper">
+          <input id="gotoPage" type="number" class="form-control form-control-sm" style="width: 100px;" placeholder="跳至頁數">
+          <button id="btnGoto" class="btn btn-sm btn-outline-primary">Go</button>
+        </div>
     </div>
 </div>
 
@@ -290,10 +316,21 @@
                 url: '/SYS/Images/GetPagedFolderItems',
                 type: 'GET',
                 data: function (d) {
-                    // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
                     const last = breadcrumbStack[breadcrumbStack.length - 1];
                     d.parentId = last?.id ?? null;
                     d.keyword = $("#searchBox").val();
+
+                    // 加入排序欄位與方向
+                    if (d.order && d.order.length > 0) {
+                        const order = d.order[0];
+                        const column = d.columns[order.column].data;
+                        d.orderColumn = column;
+                        d.orderDir = order.dir;
+                    }
+                    // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
+                    // const last = breadcrumbStack[breadcrumbStack.length - 1];
+                    // d.parentId = last?.id ?? null;
+                    // d.keyword = $("#searchBox").val();
                 },
                 dataSrc: function (json) {
                     // 自動同步更新麵包屑
@@ -364,6 +401,23 @@
                 infoEmpty: "顯示第 0 筆到第 0 筆，共 0 筆",
                 paginate: { first: "第一頁", last: "最後一頁", next: "下一頁", previous: "上一頁" }
             }
+        });
+
+        // === 把跳頁欄位移到分頁器左邊 ===
+        table.on('init', function () {
+          const $paginate = $('#fileTable_paginate');
+          const $goto = $('.goto-wrapper');
+
+          if ($paginate.length && $goto.length) {
+            // 插入到分頁器的最後面
+            $paginate.append($goto.removeClass('d-none'));
+            $goto.css({
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginLeft: '60px'
+            });
+          }
         });
 
         // DataTable 重繪後補載圖片
@@ -551,7 +605,7 @@
                 return;
             }
 
-            // 🟣 過濾掉資料夾，只保留檔案
+            // 過濾掉資料夾，只保留檔案
             const fileRows = checkedRows.filter(r => !(r.isFolder || r.IsFolder));
 
             if (fileRows.length === 0) {
@@ -610,7 +664,7 @@
             const id = $(this).data('id');
             const rowData = table.row($(this).closest("tr")).data(); // 取得當前列的資料
 
-            // 🟣 如果是資料夾：改用 SweetAlert2 修改名稱
+            // 如果是資料夾：改用 SweetAlert2 修改名稱
             if (rowData.isFolder || rowData.IsFolder) {
                 const { value: newName } = await Swal.fire({
                     title: "重新命名資料夾",
@@ -652,7 +706,7 @@
                 return; // ⛔ 不執行後面的圖片編輯邏輯
             }
 
-            // 🟢 如果是檔案 → 呼叫原本圖片資訊邏輯
+            // 如果是檔案 → 呼叫原本圖片資訊邏輯
             try {
                 const res = await fetch(`${window.location.origin}/SYS/Images/GetFileDetail?id=${id}`);
                 const raw = await res.json();
@@ -729,7 +783,7 @@
               cancelButtonText: "取消",
               preConfirm: () => {
                 const val = document.getElementById("swal-move-folder").value;
-                return val ? parseInt(val) : null; // 🟣 根目錄 → null
+                return val ? parseInt(val) : null; // 根目錄 → null
               }
             });
 
@@ -757,21 +811,20 @@
           }
         });
 
-        document.addEventListener("DOMContentLoaded", () => {
         // 新增資料夾
-        document.getElementById("btnAddFolder").addEventListener("click", async () => {
+        $("#btnAddFolder").on("click", async function () {
           try {
             const folderRes = await fetch("/SYS/Images/GetAllFolders");
             const folderData = await folderRes.json();
 
-            const currentFolderId = breadcrumbStack.at(-1)?.id || null; // 🟣 當前資料夾 ID（若為根目錄則為 null）
+            const currentFolderId = breadcrumbStack.at(-1)?.id || null;
 
             const folderOptions = folderData.data
               .map(f => {
                 const id = f.FolderId || f.folderId;
                 const name = f.FolderName || f.folderName || "(未命名)";
                 const path = f.FullPath || f.fullPath || name;
-                const selected = id === currentFolderId ? "selected" : ""; // 🟢 預設選中當前資料夾
+                const selected = id === currentFolderId ? "selected" : "";
                 return `<option value="${id}" ${selected}>${name}  (${path})</option>`;
               })
               .join("");
@@ -806,7 +859,6 @@
 
             if (!formValues) return;
 
-            // === 呼叫後端 ===
             const res = await fetch("/SYS/Images/CreateFolder", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -826,7 +878,7 @@
             Swal.fire({ icon: "error", title: "錯誤", text: err.message || "無法連線至伺服器" });
           }
         });
-        });
+
 
         // 初始化
         loadFolder();

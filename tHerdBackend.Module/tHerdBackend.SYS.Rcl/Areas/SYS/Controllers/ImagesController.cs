@@ -146,8 +146,10 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             string? keyword = "",
             int start = 0,      // 起始筆數（由 DataTables 自動傳）
             int length = 10,    // 每頁筆數
-            int draw = 1        // DataTables 驗證用
-        )
+            int draw = 1,        // DataTables 驗證用
+			string? orderColumn = "Name", // 前端傳的排序欄位名稱
+	        string? orderDir = "asc"      // 排序方向（asc / desc）
+		)
         {
             // === 防呆處理 ===
             if (length <= 0) length = 10;
@@ -232,16 +234,45 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 .ToListAsync();
 
             // === 4 合併 + 排序 + 分頁 ===
-            var combined = folders.Concat(files)
-                .OrderByDescending(x => x.IsFolder) // 資料夾在上
-                .ThenBy(x => x.Name)
-                .ToList();
+            var combined = folders.Concat(files).ToList();
 
             // 5 若有搜尋條件，FilteredCount 要以搜尋結果為準
             var filteredCount = combined.Count;
 
-            // 分頁
-            var paged = combined.Skip(start).Take(length).ToList();
+			bool desc = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
+
+			combined = orderColumn?.ToLower() switch
+			{
+				"name" => desc
+					? combined.OrderByDescending(x => x.IsFolder)
+							  .ThenByDescending(x => x.Name).ToList()
+					: combined.OrderByDescending(x => x.IsFolder)
+							  .ThenBy(x => x.Name).ToList(),
+
+				"modifieddate" => desc
+					? combined.OrderByDescending(x => x.IsFolder)
+							  .ThenByDescending(x => x.ModifiedDate).ToList()
+					: combined.OrderByDescending(x => x.IsFolder)
+							  .ThenBy(x => x.ModifiedDate).ToList(),
+
+				"size" => desc
+					? combined.OrderByDescending(x => x.IsFolder)
+							  .ThenByDescending(x => x.Size).ToList()
+					: combined.OrderByDescending(x => x.IsFolder)
+							  .ThenBy(x => x.Size).ToList(),
+
+				"mimetype" => desc
+					? combined.OrderByDescending(x => x.IsFolder)
+							  .ThenByDescending(x => x.MimeType).ToList()
+					: combined.OrderByDescending(x => x.IsFolder)
+							  .ThenBy(x => x.MimeType).ToList(),
+
+				_ => combined.OrderByDescending(x => x.IsFolder)
+							 .ThenBy(x => x.Name).ToList()
+			};
+
+			// 分頁
+			var paged = combined.Skip(start).Take(length).ToList();
 
             // === 6️ 麵包屑（遞迴取得）===
             var breadcrumb = await GetBreadcrumbAsync(parentId);
