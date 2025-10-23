@@ -12,7 +12,7 @@ import router from './router'
 // Google Maps
 import VueGoogleMaps from '@fawmi/vue-google-maps'
 
-const app = createApp(App)
+const app = createApp(App);
 
 app.use(createPinia())
 app.use(router)
@@ -27,5 +27,15 @@ app.use(VueGoogleMaps, {
     libraries: 'places',
   },
 })
+
+// 初始化 auth
+import { useAuthStore } from '@/stores/auth';
+const auth = useAuthStore();
+auth.loadFromStorage();
+
+// （選擇）開發模式 & 沒 token 時自動拿一次 dev-token
+if (import.meta.env.DEV && !auth.accessToken) {
+  auth.devLogin().catch(console.error);
+}
 
 app.mount('#app')
