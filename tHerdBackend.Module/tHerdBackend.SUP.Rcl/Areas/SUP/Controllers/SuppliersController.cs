@@ -346,7 +346,9 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (id == null) { return NotFound(); }
 
 			var supEntity = await _context.SupSuppliers
-				.FirstOrDefaultAsync(m => m.SupplierId == id);
+				.Include(s => s.SupBrands) // 對應到 SupSupplier 裡的 ICollection<SupBrand>
+				.FirstOrDefaultAsync(s => s.SupplierId == id);
+
 			if (supEntity == null) { return NotFound(); }
 
 			//  帶入 SupSupplier 的值，Partial View 顯示原本的資料
@@ -358,6 +360,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				Phone = supEntity.Phone,
 				Email = supEntity.Email,
 				IsActive = supEntity.IsActive,
+
+				BrandNames = supEntity.SupBrands.Select(b => b.BrandName).ToList(),
 
 				Creator = supEntity.Creator,
 				CreatedDate = supEntity.CreatedDate,

@@ -467,16 +467,17 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetBrandNameBySupplier(int supplierId)
 		{
 			var brandNames = await _context.SupBrands
-				.Where(b => b.SupplierId == supplierId && b.IsActive)
+				.Where(b => b.SupplierId == supplierId)
 				.Select(b => new
 				{
 					b.BrandId,
-					b.BrandName
+					b.BrandName,
+					b.IsActive // 回傳啟用狀態
 				})
 				.ToListAsync();
 
-			if (brandNames == null || !brandNames.Any())
-				return NotFound("找不到對應的品牌");
+			//if (brandNames == null || !brandNames.Any())
+			//	return NotFound("找不到對應的品牌");
 
 			return Ok(brandNames);
 		}
@@ -493,7 +494,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					BrandId = b.BrandId,
 					BrandName = b.BrandName,
-					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
+
+					IsSupplierActive = b.Supplier != null ? b.Supplier.IsActive : (bool?)null  // 取得供應商狀態
 				})
 				.ToListAsync();
 			return Ok(brands);
