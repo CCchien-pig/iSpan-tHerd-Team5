@@ -222,18 +222,21 @@ ORDER BY OrderSeq;";
 		public async Task<IEnumerable<ArticleCategoryDto>> GetArticleCategoriesAsync(CancellationToken ct = default)
 		{
 			const string sql = @"
-                SELECT 
-                    t.PageTypeId AS Id,
-                    t.TypeName   AS Name,
-                    COUNT(p.PageId) AS ArticleCount
-                FROM CNT_PageType t
-                LEFT JOIN CNT_Page p
-                    ON p.PageTypeId = t.PageTypeId
-                    AND p.IsDeleted = 0
-                    AND p.Status = 0   -- 只顯示正常狀態文章
-                GROUP BY t.PageTypeId, t.TypeName
-                ORDER BY t.PageTypeId;
-            ";
+					SELECT 
+						t.PageTypeId AS Id,
+						t.TypeName   AS Name,
+						COUNT(p.PageId) AS ArticleCount
+					FROM CNT_PageType t
+					LEFT JOIN CNT_Page p
+						ON p.PageTypeId = t.PageTypeId
+						AND p.IsDeleted = 0
+						AND p.Status = 1 --只顯示status == 1的文章 
+						AND (p.PageTypeId IS NOT NULL AND p.PageTypeId > 0)
+					WHERE t.TypeName NOT IN (N'首頁')
+					GROUP BY t.PageTypeId, t.TypeName
+					ORDER BY t.PageTypeId;
+				";
+
 
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try

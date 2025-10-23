@@ -9,6 +9,24 @@ const API_BASE = "https://localhost:7103/api/cnt";
  * -------------------------------------------------- */
 
 /**
+ * 取得文章分類清單（含每分類文章數量）
+ * 對應後端：GET /api/cnt/categories
+ * 回傳格式：
+ * { items: [ { id, name, articleCount } ] }
+ */
+export async function getArticleCategories() {
+    try {
+        const { data } = await axios.get(`${API_BASE}/categories`);
+        // ⚙️ 安全處理：確保回傳陣列存在，且排除「首頁」
+        const items = (data?.items || []).filter(c => c.name !== "首頁");
+        return { items };
+    } catch (err) {
+        console.error("getArticleCategories 錯誤:", err);
+        return { items: [] };
+    }
+}
+
+/**
  * 取得文章清單
  * 對應後端：GET /api/cnt/list
  * 可傳參數：
@@ -117,14 +135,18 @@ export async function getNutritionCompare(sampleIds, analyteIds) {
     }
 }
 
-// 營養素清單（常見/全部）
+/**
+ * 營養素清單（常見/全部）
+ * 對應後端：GET /api/cnt/nutrition/analytes
+ */
 export async function getAnalyteList(isPopular = false) {
     try {
-        const { data } = await axios.get(`${API_BASE}/nutrition/analytes`, { params: { isPopular } })
-        return data // { items: [{ analyteId, analyteName, unit, category }, ...] }
+        const { data } = await axios.get(`${API_BASE}/nutrition/analytes`, {
+            params: { isPopular },
+        });
+        return data; // { items: [{ analyteId, analyteName, unit, category }, ...] }
     } catch (err) {
-        console.error('getAnalyteList 錯誤:', err)
-        return { items: [] }
+        console.error("getAnalyteList 錯誤:", err);
+        return { items: [] };
     }
 }
-

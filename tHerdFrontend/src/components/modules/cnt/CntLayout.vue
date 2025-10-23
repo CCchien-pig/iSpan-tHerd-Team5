@@ -17,21 +17,25 @@
 
           <transition name="expand">
             <ul v-show="openMenu === 'articles'" class="submenu ps-3 small">
+              <!-- 全部文章 -->
               <li>
-                <router-link to="/cnt/articles" class="submenu-link" active-class="active-link">
+                <router-link
+                  :to="{ path: '/cnt/articles' }"
+                  class="submenu-link"
+                  :class="{ 'active-link': !route.query.categoryId }"
+                >
                   全部文章
                 </router-link>
               </li>
-              <li
-                v-for="cat in articleCats"
-                :key="cat"
-              >
+
+              <li v-for="cat in articleCats" :key="cat.id">
                 <router-link
-                  :to="{ name: 'cnt-articles', query: { category: cat } }"
-                  class="submenu-link"
-                  active-class="active-link"
+                  :to="{ path: '/cnt/articles', query: { categoryId: cat.id } }"
+                  class="submenu-link d-flex justify-content-between align-items-center"
+                  :class="{ 'active-link': route.query.categoryId == cat.id }"
                 >
-                  {{ cat }}
+                  <span>{{ cat.name }}</span>
+                  <small class="text-muted">({{ cat.articleCount }})</small>
                 </router-link>
               </li>
             </ul>
@@ -82,18 +86,32 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { ref, onMounted } from "vue"
+import { getArticleCategories } from "@/pages/modules/cnt/api/cntService" // ✅ 改用統一 service
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const openMenu = ref(null)
-const articleCats = ["健康飲食", "運動營養", "保健知識"]
+const articleCats = ref([])
+
+// 🚀 從後端撈 CNT_PageType + 文章數量
+async function loadCategories() {
+  try {
+    const { items } = await getArticleCategories()
+    articleCats.value = items // 已自動排除首頁分類
+  } catch (err) {
+    console.error("載入分類失敗：", err)
+  }
+}
 
 function toggle(menu) {
   openMenu.value = openMenu.value === menu ? null : menu
 }
+
+onMounted(loadCategories)
 </script>
 
 <style scoped>
-/* 側邊欄 */
 .sidebar {
   width: 240px;
   transition: all 0.3s ease;
@@ -126,8 +144,6 @@ function toggle(menu) {
   color: #004c4c !important;
   background: #c9ebe7;
 }
-
-/* 展開動畫 */
 .expand-enter-active,
 .expand-leave-active {
   transition: all 0.25s ease-out;
@@ -142,8 +158,6 @@ function toggle(menu) {
   max-height: 200px;
   opacity: 1;
 }
-
-/* ›箭頭旋轉動畫 */
 .rotate-90 {
   display: inline-block;
   transform: rotate(90deg);

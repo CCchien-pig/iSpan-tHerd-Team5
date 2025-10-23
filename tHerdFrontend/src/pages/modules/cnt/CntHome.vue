@@ -9,14 +9,14 @@
         <p class="mx-auto main-color-white-text" style="max-width: 680px;">
           本平台整合健康文章與營養資料，結合視覺化圖表與內容知識，幫助你理解食材營養，建立更智慧的飲食選擇。
         </p>
-        <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+        <!-- <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
           <button class="btn teal-reflect-button btn-hero-teal" @click="scrollTo('articles')" title="前往健康文章精選">
             開始閱讀文章
           </button>
           <button class="btn silver-reflect-button btn-hero-silver" @click="scrollTo('nutrition')" title="前往營養分析介紹">
             進入營養分析
           </button>
-        </div>
+        </div> -->
       </div>
     </section>
 
@@ -123,10 +123,11 @@ import { getArticleList } from './api/cntService'
 const loading = ref(false)
 const articles = ref([])
 
-function scrollTo(sectionId) {
-  const el = document.getElementById(sectionId)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
+//給中間的進入文章跟營養分析用的按鈕20251023拔除
+// function scrollTo(sectionId) {
+//   const el = document.getElementById(sectionId)
+//   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+// }
 
 const coverPool = [
   '/images/cover00.png','/images/cover01.png','/images/cover02.png',
@@ -220,8 +221,10 @@ onMounted(() => { loadFeaturedArticles() })
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
 .btn-hero-teal { color: #f2f2f2 !important; }
-.btn-hero-silver { color: #444 !important; }
+/* 給中間的進入文章跟營養分析用的按鈕20251023拔除 */
+/* .btn-hero-silver { color: #444 !important; } */
 @media (max-width: 576px) { .article-card h5 { font-size: 1.05rem; } }
 
 @media (max-width: 576px) {
