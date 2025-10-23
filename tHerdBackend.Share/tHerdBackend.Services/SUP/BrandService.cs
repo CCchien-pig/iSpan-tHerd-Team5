@@ -1,6 +1,5 @@
 ﻿using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.Interfaces.SUP;
-using tHerdBackend.Infra.Models;
 
 public class BrandService : IBrandService
 {
@@ -31,6 +30,7 @@ public class BrandService : IBrandService
 
 	#endregion
 
+	//取得指定品牌的按讚數
 	public async Task<int?> GetLikeCountAsync(int brandId) => await _repo.GetLikeCountAsync(brandId);
 
 	#region 品牌折扣
@@ -43,27 +43,6 @@ public class BrandService : IBrandService
 
 	#endregion
 
-	#region 品牌版面
 
-	public Task<IEnumerable<BrandLayoutDto>> GetLayoutsByBrandIdAsync(int brandId)
-	   => _repo.GetLayoutsByBrandIdAsync(brandId);
-
-	public Task<BrandLayoutDto?> GetActiveLayoutAsync(int brandId)
-		=> _repo.GetActiveLayoutAsync(brandId);
-
-	public Task<int> CreateLayoutAsync(int brandId, BrandLayoutCreateDto dto)
-		=> _repo.CreateLayoutAsync(brandId, dto);
-
-	public Task<bool> UpdateLayoutAsync(int layoutId, BrandLayoutUpdateDto dto)
-		=> _repo.UpdateLayoutAsync(layoutId, dto);
-
-	public Task<bool> ActivateLayoutAsync(int layoutId, int reviserId)
-		=> _repo.ActivateLayoutAsync(layoutId, reviserId);
-
-	public Task<bool> SoftDeleteLayoutAsync(int layoutId, int reviserId)
-		=> _repo.SoftDeleteLayoutAsync(layoutId, reviserId);
-
-
-	#endregion
 }
 

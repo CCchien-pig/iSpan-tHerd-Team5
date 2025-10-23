@@ -1,0 +1,25 @@
+﻿@* 摺疊內容(_LayoutBlockEditor_accordionPartial.cshtml) *@
+
+@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.LayoutBlockViewModel
+@{
+    var index = (int)ViewData["Index"];
+}
+
+<div class="layout-block-item bg-white p-3 mb-3 shadow-sm rounded"
+     data-block-type="accordion"
+     data-block-id="@Model.Id">
+
+    <div class="block-header d-flex justify-content-between align-items-center bg-warning-subtle p-2 mb-2 rounded" style="cursor: grab;">
+        <span class="fw-bold">區塊 @(index + 1)：[摺疊內容]</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.layout-block-item').remove()">移除</button>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">摺疊標題</label>
+        <input type="text" class="form-control prop-title" value="@Model.Props.Title" placeholder="例如：品牌精神或常見問題" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">摺疊內容 (支援 HTML)</label>
+        <textarea class="form-control prop-content" rows="4">@Model.Props.Content</textarea>
+    </div>
+</div>

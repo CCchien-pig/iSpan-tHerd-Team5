@@ -8,7 +8,9 @@ using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.SUP;
+using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Infra.Models;
+using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 
 [Area("SUP")]
 public class BrandsController : Controller
@@ -17,17 +19,23 @@ public class BrandsController : Controller
 	private readonly ICurrentUser _me;
 	private readonly UserManager<ApplicationUser> _userMgr;
 	private readonly ISupplierService _supplierService;
+	private readonly IBrandService _brandService;
+	private readonly IBrandLayoutService _layoutService;
 
 	public BrandsController(
 		tHerdDBContext context,
 		ICurrentUser me,
 		UserManager<ApplicationUser> userMgr,
-		ISupplierService supplierService)
+		ISupplierService supplierService,
+		IBrandService brandService,
+		IBrandLayoutService layoutService)
 	{
 		_context = context;
 		_me = me;
 		_userMgr = userMgr;
 		_supplierService = supplierService;
+		_brandService = brandService;
+		_layoutService = layoutService;
 	}
 
 	// GET: SUP/Brands/Index
@@ -474,7 +482,8 @@ public class BrandsController : Controller
 	{
 		var brands = await _context.SupBrands
 			.Include(b => b.Supplier)
-			.Select(b => new {
+			.Select(b => new
+			{
 				b.BrandId,
 				b.BrandName,
 				SupplierActive = b.Supplier != null ? (bool?)b.Supplier.IsActive : null
@@ -794,6 +803,186 @@ public class BrandsController : Controller
 		return Json(dto);
 	}
 
+	#endregion
+
+	#region GET 請求：EditLayout Action (渲染編輯器)
+	//從 Service 層獲取當前或歷史的版面 JSON 資料，將其反序列化為 BrandLayoutEditViewModel，然後回傳 Partial View
+
+
+	/// <summary>
+	/// 渲染品牌版面編輯器 Partial View
+	/// GET /SUP/Brands/EditLayout/{id}
+	/// </summary>
+	[HttpGet]
+	public async Task<IActionResult> EditLayout(int id)
+	{
+		// 1. 檢查品牌存在性 (業務驗證)
+		var brand = await _brandService.GetByIdAsync(id);
+		if (brand == null)
+		{
+			return NotFound($"品牌 ID {id} 不存在。");
+		}
+
+		// 2. 取得啟用中的 Layout DTO
+		var activeLayoutDto = await _layoutService.GetActiveLayoutAsync(id);
+
+		// 3. 反序列化 LayoutJson 為 ViewModel 列表
+		var layoutBlocks = new List<LayoutBlockViewModel>();
+		string layoutJson = activeLayoutDto?.LayoutJson;
+
+		if (!string.IsNullOrEmpty(layoutJson))
+		{
+			try
+			{
+				// 使用 System.Text.Json 進行反序列化
+				// 由於 LayoutJson 包含嵌套屬性 (Props)，我們必須確保能正確處理
+				var blocks = System.Text.Json.JsonSerializer.Deserialize<List<LayoutBlockViewModel>>(
+					layoutJson,
+					new System.Text.Json.JsonSerializerOptions
+					{
+						PropertyNameCaseInsensitive = true,
+						// 確保能處理內容中的 HTML 字元，如 <p>
+						Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+					}
+				);
+				layoutBlocks = blocks ?? new List<LayoutBlockViewModel>();
+
+			}
+			catch (Exception ex)
+			{
+				// 如果 JSON 格式錯誤，回傳錯誤訊息或空列表
+				ModelState.AddModelError("", $"版面資料解析失敗: {ex.Message}");
+				// 實際項目中應記錄此錯誤
+			}
+		}
+
+		// 4. 組裝主 ViewModel
+		var viewModel = new BrandLayoutEditViewModel
+		{
+			BrandId = id,
+			BrandName = brand.BrandName,
+			ActiveLayoutId = activeLayoutDto?.LayoutId,
+			LayoutVersion = activeLayoutDto?.LayoutVersion ?? "v1.0",
+			LayoutBlocks = layoutBlocks
+		};
+
+		// 5. 回傳 Partial View
+		return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", viewModel);
+	}
+
+	/// <summary>
+	/// (輔助 Action) 供前端 AJAX 呼叫以動態新增區塊
+	/// GET /SUP/Brands/GetLayoutBlockPartial?blockType=banner&index=0
+	/// </summary>
+	public IActionResult GetLayoutBlockPartial(int brandId, string blockType, int index)
+	{
+		// 根據 Type 建立新的 ViewModel 實例
+		var model = new LayoutBlockViewModel
+		{
+			Id = Guid.NewGuid().ToString(),
+			Type = blockType,
+			Props = GetDefaultPropsForBlock(blockType) // 從一個輔助方法取得預設 Props
+		};
+
+		ViewData["Index"] = index;
+		// 渲染對應的 Partial View
+		return PartialView($"~/Areas/SUP/Views/Brands/Partials/_LayoutBlockEditor_{blockType}Partial.cshtml", model);
+	}
+
+	// 輔助方法：根據 Type 取得空的 Props (定義在 Controller 內部或一個 Helper 類別)
+	private LayoutBlockPropsViewModel GetDefaultPropsForBlock(string type)
+	{
+		// TODO: 實作邏輯來回傳對應的 LayoutBlockPropsViewModel 實例
+		if (type == "banner")
+			return new LayoutBlockPropsViewModel { Title = "新增 Banner", Subtitle = "請填寫副標題" };
+		if (type == "accordion")
+			return new LayoutBlockPropsViewModel { Title = "新增摺疊區塊", Content = "<p>請編輯內容</p>" };
+		return new LayoutBlockPropsViewModel();
+	}
+
+	#endregion
+
+	#region POST 請求：SaveLayout Action (處理提交)
+	//負責接收前端提交的 LayoutJson 字串，並呼叫 Service 進行儲存（Create 或 Update）。
+
+	/// <summary>
+	/// 處理版面編輯器表單提交，儲存 LayoutJson
+	/// POST /SUP/Brands/SaveLayout
+	/// </summary>
+	[HttpPost]
+	[ValidateAntiForgeryToken] // 建議加上 CSRF 保護
+	public async Task<IActionResult> SaveLayout(BrandLayoutEditViewModel model)
+	{
+		// 1. 模型驗證 (含 LayoutJson 的 Required 驗證)
+		if (!ModelState.IsValid)
+		{
+			// 如果驗證失敗，重新渲染 Partial View 並帶回錯誤訊息
+			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", model);
+		}
+
+		// 2. 準備 DTO
+		var reviserId = _me.IsAuthenticated ? _me.UserNumberId : 1004; // 假設使用當前用戶或預設 ID
+
+		// 注意：這裡的 model.LayoutJson 是前端傳來的標準 JSON 字串
+
+		if (model.ActiveLayoutId.HasValue && model.ActiveLayoutId.Value > 0)
+		{
+			// A. 更新現有 Layout (PUT)
+			var updateDto = new BrandLayoutUpdateDto
+			{
+				LayoutJson = model.LayoutJson,
+				LayoutVersion = model.LayoutVersion,
+				Reviser = reviserId
+			};
+
+			var updated = await _layoutService.UpdateLayoutAsync(model.ActiveLayoutId.Value, updateDto);
+
+			if (!updated)
+			{
+				// 如果更新失敗 (例如找不到 LayoutId)
+				ModelState.AddModelError("", "更新失敗：找不到指定的 Layout 紀錄。");
+				return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", model);
+
+			}
+		}
+		else
+		{
+			// B. 建立新 Layout (POST)
+			var createDto = new BrandLayoutCreateDto
+			{
+				LayoutJson = model.LayoutJson,
+				LayoutVersion = model.LayoutVersion,
+				Creator = reviserId // 首次建立，使用 Creator
+			};
+
+			// 雖然是新增，但邏輯上我們是建立一個新的版本
+			int newLayoutId = await _layoutService.CreateLayoutAsync(model.BrandId, createDto);
+
+			// 為了讓使用者在儲存後能立即啟用新版面
+			model.ActiveLayoutId = newLayoutId;
+		}
+
+		// 3. (可選) 自動啟用新儲存的版本 - **業務邏輯**
+		// 這是常見的流程：編輯完畢後，預設啟用新版本
+		try
+		{
+			await _layoutService.ActivateLayoutAsync(model.ActiveLayoutId!.Value, reviserId);
+		}
+		catch (Exception ex)
+		{
+			// 記錄啟用失敗，但仍視為儲存成功
+			ModelState.AddModelError("", $"版面內容已儲存，但自動啟用失敗: {ex.Message}");
+		}
+
+		// 4. 成功回傳 (返回 JSON 讓 AJAX 處理)
+		return Json(new
+		{
+			success = true,
+			message = "版面配置已儲存並啟用。",
+			layoutId = model.ActiveLayoutId // 傳回 ID 供前端參考
+		});
+	}
+	
 	#endregion
 
 }

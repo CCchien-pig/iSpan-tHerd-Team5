@@ -92,15 +92,44 @@
     </div>
 </div>
 
-
+<!-- 品牌版面編輯 Modal（名稱：brandLayoutModal）-->
+<div id="brandLayoutModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <div class="modal-header">
+                <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandLayoutModalContent" class="modal-body p-4"></div>
+        </div>
+    </div>
+</div>
 
 
 @section Scripts {
-    @* <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> *@
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <script>
+        // 確保在 Modal 載入後執行
+        $(function() {
+            initLayoutEditor();
+        });
+
+        /**
+         * 初始化編輯器：SortableJS 和其他事件
+         */
+        function initLayoutEditor() {
+            // 初始化 SortableJS
+            var el = document.getElementById('layout-blocks-container');
+            if (el) {
+                Sortable.create(el, {
+                    animation: 150,
+                    handle: '.block-header', // 區塊拖曳手柄
+                    group: 'blocks', // 可選，用於多列表間拖曳
+                });
+            }
+        }
+
         $(document).ready(function() {
             // ======= URL 變數 ======= //
             var indexJsonUrl = '@Url.Action("IndexJson", "Brands", new { area = "SUP" })';
@@ -110,6 +139,7 @@
             var deleteUrl    = '@Url.Action("DeleteAjax", "Brands", new { area = "SUP" })';
             var toggleStatusUrl = '@Url.Action("ToggleStatus", "Brands", new { area = "SUP" })';
             var createDiscountUrl = '@Url.Action("CreateDiscount", "Brands", new { area = "SUP" })';
+            var layoutEditUrl = '@Url.Action("EditLayout", "Brands", new { area = "SUP" })';
 
             // ======= 從 sessionStorage 拿到初始品牌名稱 =======
             var initialBrandName = sessionStorage.getItem('selectedBrandName') || '';
@@ -223,6 +253,9 @@
                                 <button class="btn btn-sm discount-btn" data-id="${data}" title="折扣編輯" data-bs-toggle="tooltip">
                                     <i class="fa-solid fa-tags" style="color: #e87439;"></i>
                                 </button>
+                                <button class="btn btn-sm layout-edit-btn" data-id="${data}" title="版面設定" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-layer-group" style="color: #6a63a5;"></i>
+                                </button>
                                 <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除品牌" data-bs-toggle="tooltip">
                                     <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
                                 </button>
@@ -302,6 +335,7 @@
                 this.blur();
                 var id = $(this).data('id');
                 $.get(`${detailsUrl}/${id}`, function(html) {
+                    console.log(`發送的 URL:${detailsUrl}/${id}`);
                     $("#brandModalTitle").text("品牌詳細資料");
                     $('#brandModalContent').html(html);
 
@@ -727,6 +761,83 @@
                     });
             });
 
+            // ======= 編輯品牌版面 Layout =======
+            $('#brandTable').on('click', '.layout-edit-btn', function () {
+                this.blur();
+                var brandId = $(this).data('id');
+                console.log('點擊的品牌 ID:', brandId);
+
+                // 檢查點 1: brandId 檢查 (保持原樣)
+                if (!brandId || brandId <= 0) {
+                    console.error("❌ 錯誤：未取得有效的 brandId。");
+                    Swal.fire('錯誤', '無法取得品牌 ID，請刷新頁面。', 'error');
+                    return;
+                }       
+    
+                var rowData = table.row($(this).closest('tr')).data();
+                var brandName = rowData.brandName;
+
+                var finalUrl = `${layoutEditUrl}/${brandId}`;
+                console.log(`發送的 URL: ${finalUrl}`); 
+
+                // AJAX 載入 EditLayout.cshtml
+                $.get(finalUrl).done(function (html) { 
+                    console.log("✅ AJAX 成功，接收到 HTML 內容。準備顯示 Modal...");
+
+                    // 1. 設置 Modal 標題
+                    $("#brandLayoutModalTitle").text(`編輯版面：${brandName}`);
+
+                    // 2. 【核心】將回傳的 HTML 內容插入 Modal Body
+                    $('#brandLayoutModalContent').html(html);
+
+                    // 3. 初始化 SortableJS 和其他 JS 邏輯
+                    if (typeof initLayoutEditor === 'function') {
+                        initLayoutEditor();
+                    }
+
+                    // 4. 【修正點】使用 setTimeout 延遲 Modal 實例化和顯示，確保 DOM 穩定
+                    setTimeout(function() {
+                        const $modalElement = $('#brandLayoutModal');
+
+                        if ($modalElement.length === 0) {
+                            console.error("FATAL ERROR: jQuery 找不到 #brandLayoutModal。Modal DOM 不存在！");
+                            Swal.fire('錯誤', '模態框容器已從 DOM 移除或 ID 錯誤。', 'error');
+                            return;
+                        }
+
+                        let modalInstance = bootstrap.Modal.getInstance($modalElement[0]);
+
+                        if (!modalInstance) {
+                            try {
+                                // 使用原生的 DOM 元素創建實例
+                                modalInstance = new bootstrap.Modal($modalElement[0]);
+                                console.log('Modal Instance 已成功創建。');
+                            } catch (e) {
+                                console.error("❌ Modal 實例化失敗 (TypeError):", e);
+                                Swal.fire('錯誤', '模態框初始化失敗，請檢查 Bootstrap JS 衝突。', 'error');
+                                return;
+                            }
+                        }
+
+                        modalInstance.show();
+                        console.log('Modal.show() 已被呼叫。');
+
+                    }, 50);
+
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) { 
+                    // 處理 AJAX 失敗
+                    let errorMsg = '無法載入版面編輯器。';
+                    if (jqXHR.status === 404) {
+                        errorMsg = `找不到資源 (404)。`;
+                    } else if (jqXHR.responseText) {
+                        errorMsg = jqXHR.responseText;
+                    }
+
+                    console.error("❌ AJAX 載入失敗詳情:", textStatus, errorThrown, jqXHR.responseText);
+                    Swal.fire('載入失敗', errorMsg, 'error');
+                });
+            });
 
         });
 

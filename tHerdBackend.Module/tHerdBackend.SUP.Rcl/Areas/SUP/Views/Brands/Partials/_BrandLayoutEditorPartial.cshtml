@@ -1,0 +1,153 @@
+﻿@* 編輯器主 Partial View (_BrandLayoutEditorPartial.cshtml) *@
+
+@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.BrandLayoutEditViewModel
+@{
+    // 確保 ViewData 內有 BrandId 以供 AJAX 使用
+    ViewData["BrandId"] = Model.BrandId;
+}
+
+<div class="layout-editor-main">
+    <div class="d-flex justify-content-between mb-3">
+        <h4>版面版本：<input type="text" asp-for="LayoutVersion" class="form-control d-inline w-auto" placeholder="v1.0" /></h4>
+        <button type="button" onclick="prepareAndSubmitForm()" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> 儲存並發佈
+        </button>
+    </div>
+
+    <div class="toolbar mb-3 p-3 bg-light rounded">
+        <label class="me-3">新增區塊：</label>
+        <button type="button" onclick="addBlock('banner')" class="btn btn-sm btn-info me-2">Banner 橫幅</button>
+        <button type="button" onclick="addBlock('accordion')" class="btn btn-sm btn-info me-2">摺疊內容</button>
+    </div>
+
+    <form id="layoutForm" asp-controller="Brand" asp-action="SaveLayout" method="post">
+        <input type="hidden" asp-for="BrandId" />
+        <input type="hidden" asp-for="ActiveLayoutId" />
+
+        <div id="layout-blocks-container" class="border p-3 min-vh-50">
+            @if (Model.LayoutBlocks != null)
+            {
+                for (int i = 0; i < Model.LayoutBlocks.Count; i++)
+                {
+                    // 動態渲染每個區塊的 Partial View
+                    // 假設您的命名規則是 _LayoutBlockEditor_{BlockType}Partial.cshtml
+                    @Html.Partial($"_LayoutBlockEditor_{Model.LayoutBlocks[i].Type}Partial", Model.LayoutBlocks[i], new ViewDataDictionary(ViewData) { { "Index", i } })
+                }
+            }
+            else
+            {
+                <div class="text-muted text-center py-5">
+                    拖曳元件到此區域，或點擊上方按鈕新增區塊。
+                </div>
+            }
+        </div>
+
+        <input type="hidden" id="LayoutJsonHidden" name="LayoutJson" />
+    </form>
+</div>
+
+<script>
+    /**
+     * 核心函式：遍歷 DOM，收集資料，序列化為 LayoutJson
+     */
+    function prepareAndSubmitForm() {
+        const blocks = [];
+        let isValid = true; // 簡單驗證標誌
+
+        // 遍歷所有排序後的區塊元素
+        $('#layout-blocks-container > .layout-block-item').each(function(index, element) {
+            const $el = $(element);
+            const blockType = $el.data('block-type');
+            const blockId = $el.data('block-id');
+
+            let props = {};
+
+            // --- 1. 根據 Block Type 讀取 Props ---
+            if (blockType === 'banner') {
+                props = {
+                    title: $el.find('.prop-title').val(),
+                    subtitle: $el.find('.prop-subtitle').val(), // 假設 banner 還有 subtitle
+                    linkUrl: $el.find('.prop-linkUrl').val(),
+                    fileId: parseInt($el.find('.prop-fileId').val()) || null,
+                    fileUrl: $el.find('.prop-fileUrl').val(),
+                    altText: $el.find('.prop-alttext').val()
+                };
+            } else if (blockType === 'accordion') {
+                 props = {
+                    title: $el.find('.prop-title').val(),
+                    content: $el.find('.prop-content').val(),
+                    // ... 其他 Accordion 屬性
+                };
+            }
+            // TODO: 擴展其他 blockType 的讀取邏輯
+
+            // --- 2. 簡單驗證 ---
+            if (!props.title) {
+                isValid = false;
+                $el.css('border', '2px solid red');
+                Swal.fire('驗證錯誤', `區塊 ${index + 1} (${blockType}) 的標題不能為空！`, 'warning');
+                return false; // 中止 .each
+            }
+            $el.css('border', '1px solid #ccc'); // 清除錯誤樣式
+
+            // --- 3. 組裝區塊物件 ---
+            blocks.push({
+                id: blockId,
+                type: blockType,
+                props: props
+            });
+        });
+
+        if (!isValid) return; // 如果驗證失敗，終止提交
+
+        // --- 4. 序列化並存入隱藏欄位 ---
+        const layoutJsonString = JSON.stringify(blocks);
+
+        // 存入隱藏欄位，後端 Controller 接收 name="LayoutJson"
+        $('#LayoutJsonHidden').val(layoutJsonString);
+
+        // 提交表單
+        $('#layoutForm').submit();
+    }
+
+    // --- 輔助函式：新增區塊 (使用 AJAX 取得 Partial View) ---
+    function addBlock(type) {
+        const brandId = @Html.Raw(Model.BrandId);
+        const index = $('#layout-blocks-container > .layout-block-item').length;
+
+        $.ajax({
+            url: '@Url.Action("GetLayoutBlockPartial", "Brands", new { area = "SUP" })',
+            type: 'GET',
+            data: {
+                brandId: brandId,
+                blockType: type,
+                index: index
+            },
+            success: function(data) {
+                $('#layout-blocks-container').append(data);
+                // 重新初始化 SortableJS (或者 SortableJS 預設會包含新加入的元素)
+            },
+            error: function() {
+                Swal.fire('新增失敗', '無法從伺服器載入區塊模板。', 'error');
+            }
+        });
+    }
+
+    // --- 輔助函式：媒體庫選擇器 ---
+    function openMediaLibrary(buttonElement) {
+        // 實務上：彈出一個 Modal/iframe 來選擇 SYS_AssetFile 中的圖片
+        var $parent = $(buttonElement).closest('.layout-block-item');
+
+        // 模擬選擇結果
+        const newFileId = Math.floor(Math.random() * 10000) + 1;
+        const newFileUrl = `/assets/${newFileId}.jpg`;
+        const newAltText = `圖片 ${newFileId}`;
+
+        $parent.find('.prop-fileId').val(newFileId);
+        $parent.find('.prop-fileUrl').val(newFileUrl);
+        $parent.find('.prop-alttext').val(newAltText);
+
+        Swal.fire('媒體庫', `已選擇圖片 ID: ${newFileId}`, 'success');
+    }
+
+</script>

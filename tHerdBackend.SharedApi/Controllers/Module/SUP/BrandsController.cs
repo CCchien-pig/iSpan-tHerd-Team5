@@ -1,12 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
-using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Core.ValueObjects;
+using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
@@ -14,14 +12,17 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 	[Route("api/[folder]/[controller]")]
 	public class BrandsController : ControllerBase
 	{
-		private readonly IBrandService _service;
+		private readonly IBrandService _service;// 處理品牌基本資料
+		private readonly IBrandLayoutService _layoutService; // 處理品牌版面配置
 		private readonly ICurrentUser _me;
 
 		public BrandsController(
 			IBrandService service,
+			IBrandLayoutService layoutService,
 			ICurrentUser me)
 		{
 			_service = service;
+			_layoutService = layoutService;
 			_me = me;
 		}
 
@@ -215,7 +216,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 					// 找不到品牌
 					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
 
-				var layouts = await _service.GetLayoutsByBrandIdAsync(brandId);
+				var layouts = await _layoutService.GetLayoutsByBrandIdAsync(brandId);
 				if (layouts == null || !layouts.Any())
 					// 找不到版面紀錄
 					return NotFound(new { success = false, message = "該品牌尚未建立任何版面設定紀錄。" });
@@ -242,7 +243,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 					// 找不到品牌
 					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
 
-				var layout = await _service.GetActiveLayoutAsync(brandId);
+				var layout = await _layoutService.GetActiveLayoutAsync(brandId);
 				if (layout == null)
 					// 找不到啟用中的版面
 					return NotFound(new { success = false, message = "該品牌目前沒有任何啟用中的版面設定。" });
@@ -279,7 +280,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 					// 找不到品牌
 					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄，無法新增版面。" });
 
-				var newId = await _service.CreateLayoutAsync(brandId, dto);
+				var newId = await _layoutService.CreateLayoutAsync(brandId, dto);
 
 				// 成功後應回傳 201 Created，並導向取得該資源的 API
 				return CreatedAtAction(nameof(GetActiveLayout), new { brandId = brandId },
@@ -310,7 +311,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 
 			try
 			{
-				var updated = await _service.UpdateLayoutAsync(layoutId, dto);
+				var updated = await _layoutService.UpdateLayoutAsync(layoutId, dto);
 				if (!updated)
 					// 找不到 Layout
 					return NotFound(new { success = false, message = $"找不到 ID 為 {layoutId} 的品牌版面配置，更新失敗。" });
@@ -339,7 +340,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 
 			try
 			{
-				var result = await _service.ActivateLayoutAsync(layoutId, reviserId);
+				var result = await _layoutService.ActivateLayoutAsync(layoutId, reviserId);
 				if (!result)
 					// 找不到 Layout
 					return NotFound(new { success = false, message = $"找不到指定的版面配置 (Layout ID: {layoutId})。" });
@@ -369,7 +370,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			try
 			{
 				//var result = await _service.SoftDeleteLayoutAsync(layoutId, _me.UserNumberId);
-				var result = await _service.SoftDeleteLayoutAsync(layoutId, reviserId);
+				var result = await _layoutService.SoftDeleteLayoutAsync(layoutId, reviserId);
 				if (!result)
 					return NotFound(new { success = false, message = "找不到指定的品牌版面配置 (Layout ID: " + layoutId + ")" });
 
@@ -380,7 +381,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				return StatusCode(500, new { success = false, message = "執行停用操作時發生伺服器錯誤: " + ex.Message });
 			}
 		}
-
 
 		#endregion
 	}
