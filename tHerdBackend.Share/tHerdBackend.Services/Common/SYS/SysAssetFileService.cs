@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
@@ -92,5 +93,54 @@ namespace tHerdBackend.Services.Common.SYS
         {
             return await _frepo.CreateFolderAsync(folderName, parentId);
         }
-    }
+
+		/// <summary>
+		/// 重新命名資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		public async Task<dynamic> RenameFolder(SysFolderDto dto)
+		{
+			if (dto == null || dto.FolderId <= 0)
+				return new { success = false, message = "資料夾編號無效" };
+
+			if (string.IsNullOrWhiteSpace(dto.FolderName))
+				return new { success = false, message = "請輸入資料夾名稱" };
+
+			return await _frepo.RenameFolder(dto);
+		}
+
+		/// <summary>
+		/// 取得所有資料夾結構
+		/// </summary>
+		/// <returns></returns>
+		public async Task<dynamic> GetAllFolders()
+		{
+			return await _frepo.GetAllFolders();
+		}
+
+		/// <summary>
+		/// 移動檔案到指定資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		public async Task<string> MoveToFolder(MoveRequestDto dto)
+		{
+			if (dto == null || dto.Ids == null || dto.Ids.Count == 0) return "沒有選取項目";
+
+			if (dto.FolderId == 0) dto.FolderId = null;
+
+			return await _frepo.MoveToFolder(dto);
+		}
+
+		/// <summary>
+		/// 清除雲端孤兒檔案
+		/// </summary>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<(int totalChecked, int deletedCount, List<string> deletedKeys)> CleanOrphanCloudinaryFiles(CancellationToken ct = default)
+		{
+			return await _frepo.CleanOrphanCloudinaryFiles(ct);
+		}
+	}
 }

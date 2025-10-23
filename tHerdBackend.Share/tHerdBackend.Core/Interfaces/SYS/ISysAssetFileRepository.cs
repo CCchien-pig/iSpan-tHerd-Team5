@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.SYS;
 
@@ -16,5 +17,13 @@ namespace tHerdBackend.Core.Interfaces.SYS
         Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId);
 
         Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
-    }
+
+        Task<dynamic> RenameFolder([FromBody] SysFolderDto dto);
+
+		Task<dynamic> GetAllFolders();
+
+		Task<string> MoveToFolder(MoveRequestDto dto);
+
+		Task<(int totalChecked, int deletedCount, List<string> deletedKeys)> CleanOrphanCloudinaryFiles(CancellationToken ct = default);
+	}
 }

@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
@@ -13,12 +16,14 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
     [Area("SYS")]
     public class ImagesController : Controller
     {
-        private readonly tHerdDBContext _db;
+		private readonly Cloudinary _cloudinary;
+		private readonly tHerdDBContext _db;
         private readonly ISysAssetFileService _frepo;
 
-        public ImagesController(tHerdDBContext db, ISysAssetFileService frepo)
+        public ImagesController(Cloudinary cloudinary, tHerdDBContext db, ISysAssetFileService frepo)
         {
-            _db = db;
+			_cloudinary = cloudinary;
+			_db = db;
             _frepo = frepo;
         }
 
@@ -395,31 +400,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 		/// <returns></returns>
 		[HttpPost]
 		public async Task<IActionResult> RenameFolder([FromBody] SysFolderDto dto)
-		{
-			if (dto == null || dto.FolderId <= 0)
-				return Json(new { success = false, message = "資料夾編號無效" });
-
-			if (string.IsNullOrWhiteSpace(dto.FolderName))
-				return Json(new { success = false, message = "請輸入資料夾名稱" });
-
-			var folder = await _db.SysFolders.FindAsync(dto.FolderId);
-			if (folder == null)
-				return Json(new { success = false, message = "找不到指定資料夾" });
-
-			// 檢查同層重名
-			bool duplicate = await _db.SysFolders.AnyAsync(f =>
-				f.ParentId == folder.ParentId &&
-				f.FolderId != folder.FolderId &&
-				f.FolderName.ToLower() == dto.FolderName.ToLower());
-
-			if (duplicate)
-				return Json(new { success = false, message = "同層已有相同名稱的資料夾" });
-
-			folder.FolderName = dto.FolderName.Trim();
-			await _db.SaveChangesAsync();
-
-			return Json(new { success = true, message = "資料夾名稱已更新" });
-		}
+			=> Json(_frepo.RenameFolder(dto));
 
 		/// <summary>
 		/// 取得所有資料夾
@@ -427,159 +408,24 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 		/// <returns></returns>
 		[HttpGet]
         public async Task<IActionResult> GetAllFolders()
-        {
-            try
-            {
-                var folders = await _db.SysFolders
-                    .Select(f => new
-                    {
-                        f.FolderId,
-                        f.FolderName,
-                        f.ParentId,
-                        f.IsActive
-                    })
-                    .ToListAsync();
+			=> Json(await _frepo.GetAllFolders());
 
-                // 用 Dictionary 快取
-                var folderDict = folders.ToDictionary(f => f.FolderId);
-
-                // 建立結果
-                var result = new List<object>();
-
-                foreach (var f in folders)
-                {
-                    var names = new List<string> { f.FolderName };
-                    var parentId = f.ParentId;
-
-                    // 防止循環
-                    var visited = new HashSet<int> { f.FolderId };
-
-                    while (parentId != null &&
-                           folderDict.TryGetValue(parentId.Value, out var parent) &&
-                           !visited.Contains(parent.FolderId))
-                    {
-                        names.Insert(0, parent.FolderName);
-                        visited.Add(parent.FolderId);
-                        parentId = parent.ParentId;
-                    }
-
-                    result.Add(new
-                    {
-                        f.FolderId,
-                        f.FolderName,
-                        f.ParentId,
-                        f.IsActive,
-                        FullPath = "/" + string.Join("/", names)
-                    });
-                }
-
-                return Json(new { success = true, data = result });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpPost]
+		/// <summary>
+		/// 移動檔案到指定資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		[HttpPost]
         public async Task<IActionResult> MoveToFolder([FromBody] MoveRequestDto dto)
         {
-            try
-            {
-                if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
-                    return Json(new { success = false, message = "沒有選取項目" });
+			var res = await _frepo.MoveToFolder(dto);
 
-                if (dto.FolderId == 0)
-                    dto.FolderId = null;
-
-                // 1️ 如果 FolderId 是 null → 根目錄，允許通過
-                SysFolder? targetFolder = null;
-                if (dto.FolderId.HasValue)
-                {
-                    targetFolder = await _db.SysFolders.FindAsync(dto.FolderId);
-                    if (targetFolder == null)
-                        return Json(new { success = false, message = "找不到目標資料夾" });
-                }
-
-                // 2️ 找出檔案
-                var files = await _db.SysAssetFiles
-                    .Where(f => dto.Ids.Contains(f.FileId))
-                    .ToListAsync();
-
-                // 3️ 找出資料夾
-                var folders = await _db.SysFolders
-                    .Where(f => dto.Ids.Contains(f.FolderId))
-                    .ToListAsync();
-
-                // 防呆：不允許資料夾移到自己或子層底下
-                if (dto.FolderId != null)
-                {
-                    var movingIds = folders.Select(f => f.FolderId).ToHashSet();
-                    if (movingIds.Contains(dto.FolderId.Value))
-                        return Json(new { success = false, message = "無法將資料夾移動到自己" });
-                }
-
-                // 4️ 更新檔案的 FolderId
-                foreach (var file in files)
-                    file.FolderId = dto.FolderId;
-
-                // 5️ 更新資料夾的 ParentId（防止自我循環）
-                foreach (var folder in folders)
-                    folder.ParentId = dto.FolderId;
-
-                // 防呆：不允許資料夾移到自己或子層底下
-                if (dto.FolderId != null)
-                {
-                    var movingIds = folders.Select(f => f.FolderId).ToHashSet();
-
-                    // 1️ 檢查是否移到自己
-                    if (movingIds.Contains(dto.FolderId.Value))
-                        return Json(new { success = false, message = "無法將資料夾移動到自己" });
-
-                    // 2️ 檢查是否移到自己的子層底下
-                    var allFolders = await _db.SysFolders.ToListAsync();
-                    foreach (var movingFolder in folders)
-                    {
-                        if (IsDescendant(dto.FolderId.Value, movingFolder.FolderId, allFolders))
-                        {
-                            return Json(new { success = false, message = $"無法將「{movingFolder.FolderName}」移到自己的子層" });
-                        }
-                    }
-                }
-
-                await _db.SaveChangesAsync();
-
-                var targetName = targetFolder?.FolderName ?? "根目錄";
-
-                return Json(new
-                {
-                    success = true,
-                    message = $"成功移動 {files.Count + folders.Count} 項至「{targetName}」"
-                });
-            }
-            catch (Exception ex)
-            {
-                // ⚠️ 回傳 JSON 而不是整頁錯誤
-                return Json(new { success = false, message = $"伺服器錯誤：{ex.Message}" });
-            }
-        }
-
-        /// <summary>
-        /// 判斷 targetId 是否是 sourceId 的子孫
-        /// </summary>
-        private bool IsDescendant(int targetId, int sourceId, List<SysFolder> all)
-        {
-            var current = all.FirstOrDefault(f => f.FolderId == targetId);
-            while (current != null)
-            {
-                if (current.ParentId == sourceId)
-                    return true;
-                current = current.ParentId.HasValue
-                    ? all.FirstOrDefault(f => f.FolderId == current.ParentId.Value)
-                    : null;
-            }
-            return false;
-        }
+			return Json(new
+			{
+				success = string.IsNullOrEmpty(res),
+				message = res
+			});
+		}
 
         /// <summary>
         /// 更新圖片資訊
@@ -625,5 +471,24 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             else
                 return Json(new { success = false, message = "刪除失敗" });
         }
-    }
+
+        /// <summary>
+        /// 清除雲端未建資料庫的資料
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+		[HttpPost]
+		public async Task<IActionResult> CleanCloudinaryOrphans(CancellationToken ct)
+		{
+			var (totalChecked, deletedCount, deletedKeys) = await _frepo.CleanOrphanCloudinaryFiles(ct);
+
+			return Json(new
+			{
+				success = true,
+				totalChecked,
+				deletedCount,
+				deletedKeys
+			});
+		}
+	}
 }

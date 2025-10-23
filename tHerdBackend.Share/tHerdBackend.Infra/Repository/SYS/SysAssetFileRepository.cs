@@ -1,5 +1,6 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using tHerdBackend.Core.DTOs;
@@ -339,5 +340,338 @@ namespace tHerdBackend.Infra.Repository.SYS
             }
             return successCount;
         }
-    }
+
+		/// <summary>
+		/// 新增資料夾
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
+		//[HttpPost]
+		//public async Task<IActionResult> CreateFolder([FromBody] SysFolderDto dto)
+		//{
+		//	if (string.IsNullOrWhiteSpace(dto.FolderName))
+		//		return Json(new { success = false, message = "請輸入資料夾名稱" });
+
+		//	try
+		//	{
+		//		bool exists = await _db.SysFolders.AnyAsync(f => f.ParentId == dto.ParentId && f.FolderName == dto.FolderName);
+
+		//		if (exists)
+		//			return Json(new { success = false, message = "同一層已存在相同名稱的資料夾" });
+
+		//		// 防止指向自己或循環
+		//		if (dto.ParentId == dto.FolderId)
+		//			return Json(new { success = false, message = "資料夾不能指向自己" });
+
+		//		// 如果指定的父層不存在
+		//		if (dto.ParentId.HasValue && !await _db.SysFolders.AnyAsync(f => f.FolderId == dto.ParentId))
+		//			return Json(new { success = false, message = "找不到父層資料夾" });
+
+		//		// 建立新資料夾
+		//		var newFolder = new SysFolder
+		//		{
+		//			FolderName = dto.FolderName.Trim(),
+		//			ParentId = dto.ParentId,
+		//			IsActive = true,
+		//		};
+
+		//		_db.SysFolders.Add(newFolder);
+		//		await _db.SaveChangesAsync();
+
+		//		// 組出完整路徑
+		//		string fullPath = await BuildFullPathAsync(newFolder.FolderId);
+
+		//		return Json(new
+		//		{
+		//			success = true,
+		//			message = "建立成功",
+		//			data = new
+		//			{
+		//				newFolder.FolderId,
+		//				newFolder.FolderName,
+		//				newFolder.ParentId,
+		//				fullPath
+		//			}
+		//		});
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		return new { success = false, message = ex.Message };
+		//	}
+		//}
+
+		/// <summary>
+		/// 遞迴組出完整路徑，例如 /根目錄/產品圖片/2025
+		/// </summary>
+		private async Task<string> BuildFullPathAsync(int folderId)
+		{
+			var names = new List<string>();
+			var folder = await _db.SysFolders.FindAsync(folderId);
+
+			while (folder != null)
+			{
+				names.Insert(0, folder.FolderName);
+				folder = folder.ParentId.HasValue
+					? await _db.SysFolders.FindAsync(folder.ParentId.Value)
+					: null;
+			}
+
+			return "/" + string.Join("/", names);
+		}
+
+		/// <summary>
+		/// 重新命名資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		public async Task<dynamic> RenameFolder(SysFolderDto dto)
+		{
+			var folder = await _db.SysFolders.FindAsync(dto.FolderId);
+			if (folder == null)
+				return new { success = false, message = "找不到指定資料夾" };
+
+			// 檢查同層重名
+			bool duplicate = await _db.SysFolders.AnyAsync(f =>
+				f.ParentId == folder.ParentId &&
+				f.FolderId != folder.FolderId &&
+				f.FolderName.ToLower() == dto.FolderName.ToLower());
+
+			if (duplicate) return new { success = false, message = "同層已有相同名稱的資料夾" };
+
+			folder.FolderName = dto.FolderName.Trim();
+			await _db.SaveChangesAsync();
+
+			return new { success = true, message = "資料夾名稱已更新" };
+		}
+
+		/// <summary>
+		/// 取得所有資料夾
+		/// </summary>
+		/// <returns></returns>
+		public async Task<dynamic> GetAllFolders()
+		{
+			try
+			{
+				var folders = await _db.SysFolders
+					.Select(f => new
+					{
+						f.FolderId,
+						f.FolderName,
+						f.ParentId,
+						f.IsActive
+					})
+					.ToListAsync();
+
+				// 用 Dictionary 快取
+				var folderDict = folders.ToDictionary(f => f.FolderId);
+
+				// 建立結果
+				var result = new List<object>();
+
+				foreach (var f in folders)
+				{
+					var names = new List<string> { f.FolderName };
+					var parentId = f.ParentId;
+
+					// 防止循環
+					var visited = new HashSet<int> { f.FolderId };
+
+					while (parentId != null &&
+						   folderDict.TryGetValue(parentId.Value, out var parent) &&
+						   !visited.Contains(parent.FolderId))
+					{
+						names.Insert(0, parent.FolderName);
+						visited.Add(parent.FolderId);
+						parentId = parent.ParentId;
+					}
+
+					result.Add(new
+					{
+						f.FolderId,
+						f.FolderName,
+						f.ParentId,
+						f.IsActive,
+						FullPath = "/" + string.Join("/", names)
+					});
+				}
+
+				return new { success = true, data = result };
+			}
+			catch (Exception ex)
+			{
+				return new { success = false, message = ex.Message };
+			}
+		}
+
+		/// <summary>
+		/// 移動檔案或資料夾到指定資料夾
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <returns></returns>
+		public async Task<string> MoveToFolder(MoveRequestDto dto)
+		{
+			try
+			{
+				// 1️ 如果 FolderId 是 null → 根目錄，允許通過
+				SysFolder? targetFolder = null;
+				if (dto.FolderId.HasValue)
+				{
+					targetFolder = await _db.SysFolders.FindAsync(dto.FolderId);
+					if (targetFolder == null) return "找不到目標資料夾";
+				}
+
+				// 2️ 找出檔案
+				var files = await _db.SysAssetFiles
+					.Where(f => dto.Ids.Contains(f.FileId))
+					.ToListAsync();
+
+				// 3️ 找出資料夾
+				var folders = await _db.SysFolders
+					.Where(f => dto.Ids.Contains(f.FolderId))
+					.ToListAsync();
+
+				// 防呆：不允許資料夾移到自己或子層底下
+				if (dto.FolderId != null)
+				{
+					var movingIds = folders.Select(f => f.FolderId).ToHashSet();
+					if (movingIds.Contains(dto.FolderId.Value)) return "無法將資料夾移動到自己";
+				}
+
+				// 4️ 更新檔案的 FolderId
+				foreach (var file in files)
+					file.FolderId = dto.FolderId;
+
+				// 5️ 更新資料夾的 ParentId（防止自我循環）
+				foreach (var folder in folders)
+					folder.ParentId = dto.FolderId;
+
+				// 防呆：不允許資料夾移到自己或子層底下
+				if (dto.FolderId != null)
+				{
+					var movingIds = folders.Select(f => f.FolderId).ToHashSet();
+
+					// 1️ 檢查是否移到自己
+					if (movingIds.Contains(dto.FolderId.Value))	return "無法將資料夾移動到自己";
+
+					// 2️ 檢查是否移到自己的子層底下
+					var allFolders = await _db.SysFolders.ToListAsync();
+					foreach (var movingFolder in folders)
+					{
+						if (IsDescendant(dto.FolderId.Value, movingFolder.FolderId, allFolders))
+						{
+							return $"無法將「{movingFolder.FolderName}」移到自己的子層";
+						}
+					}
+				}
+
+				await _db.SaveChangesAsync();
+
+				var targetName = targetFolder?.FolderName ?? "根目錄";
+
+				return string.Empty;
+			}
+			catch (Exception ex)
+			{
+				return $"伺服器錯誤：{ex.Message}";
+			}
+		}
+
+		/// <summary>
+		/// 判斷 targetId 是否是 sourceId 的子孫
+		/// </summary>
+		private bool IsDescendant(int targetId, int sourceId, List<SysFolder> all)
+		{
+			var current = all.FirstOrDefault(f => f.FolderId == targetId);
+			while (current != null)
+			{
+				if (current.ParentId == sourceId)
+					return true;
+				current = current.ParentId.HasValue
+					? all.FirstOrDefault(f => f.FolderId == current.ParentId.Value)
+					: null;
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// 清除 Cloudinary 上「資料庫未使用」的孤立檔案
+		/// </summary>
+		public async Task<(int totalChecked, int deletedCount, List<string> deletedKeys)> CleanOrphanCloudinaryFiles(CancellationToken ct = default)
+		{
+			var deletedKeys = new List<string>();
+			int totalChecked = 0;
+			int deletedCount = 0;
+
+			try
+			{
+				// === 1. 取出目前資料庫中存在的 FileKey 清單 ===
+				var dbKeys = await _db.SysAssetFiles
+					.Select(f => f.FileKey)
+					.ToListAsync(ct);
+
+				var dbKeySet = new HashSet<string>(dbKeys);
+
+				// === 2. 從 Cloudinary 分頁抓取所有圖片 ===
+				string? nextCursor = null;
+
+				do
+				{
+					var listParams = new ListResourcesParams
+					{
+						Type = "upload",
+						ResourceType = ResourceType.Image,
+						MaxResults = 500, // 每次最多500筆
+						NextCursor = nextCursor
+					};
+
+					var listResult = await _cloudinary.ListResourcesAsync(listParams, ct);
+					totalChecked += (listResult.Resources == null ? 0 : listResult.Resources.Count());
+
+					foreach (var res in listResult.Resources)
+					{
+						var publicId = res.PublicId;
+
+						// Cloudinary 上有，但 DB 沒有 → 要刪除
+						if (!dbKeySet.Contains(publicId))
+						{
+							try
+							{
+								var delParams = new DeletionParams(publicId)
+								{
+									ResourceType = ResourceType.Image
+								};
+								var delResult = await _cloudinary.DestroyAsync(delParams);
+
+								if (delResult.Result == "ok" || delResult.Result == "not found")
+								{
+									deletedKeys.Add(publicId);
+									deletedCount++;
+									Console.WriteLine($"已刪除未使用檔案: {publicId}");
+								}
+								else
+								{
+									Console.WriteLine($"刪除失敗: {publicId}, result={delResult.Result}");
+								}
+							}
+							catch (Exception ex)
+							{
+								Console.WriteLine($"刪除 {publicId} 失敗: {ex.Message}");
+							}
+						}
+					}
+
+					nextCursor = listResult.NextCursor;
+				} while (!string.IsNullOrEmpty(nextCursor));
+
+				Console.WriteLine($"清理完成，共檢查 {totalChecked} 筆，刪除 {deletedCount} 筆孤立檔案。");
+
+				return (totalChecked, deletedCount, deletedKeys);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"清理失敗: {ex.Message}");
+				throw;
+			}
+		}
+	}
 }
