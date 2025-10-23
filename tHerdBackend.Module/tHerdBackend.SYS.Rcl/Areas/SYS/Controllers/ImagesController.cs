@@ -28,8 +28,28 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             return View();
         }
 
-        // === API: 取得子資料夾與檔案 ===
-        [HttpGet]
+        /// <summary>
+        /// 取得資料夾結構
+        /// </summary>
+        /// <returns></returns>
+		[HttpGet]
+		public IActionResult GetTreeData()
+		{
+			var folders = _db.SysFolders
+				.Where(f => f.IsActive)
+				.Select(f => new
+				{
+					id = f.FolderId.ToString(),
+					parent = f.ParentId == null ? "#" : f.ParentId.ToString(),
+					text = f.FolderName
+				})
+				.ToList();
+
+			return Json(folders);
+		}
+
+		// === API: 取得子資料夾與檔案 ===
+		[HttpGet]
         public async Task<IActionResult> GetFolderItems(int? parentId = null, string? keyword = "")
         {
             if (parentId == 0)
@@ -140,7 +160,24 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             return breadcrumb;
         }
 
-        [HttpGet]
+		[HttpGet]
+		public async Task<IActionResult> GetBreadcrumbPath(int folderId)
+		{
+			var list = new List<object>();
+			var folder = await _db.SysFolders.FindAsync(folderId);
+
+			while (folder != null)
+			{
+				list.Insert(0, new { folder.FolderId, folder.FolderName });
+				folder = folder.ParentId.HasValue
+					? await _db.SysFolders.FindAsync(folder.ParentId.Value)
+					: null;
+			}
+
+			return Json(list);
+		}
+
+		[HttpGet]
         public async Task<IActionResult> GetPagedFolderItems(
             int? parentId = null,
             string? keyword = "",
@@ -365,8 +402,13 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 
             try
             {
-                // 防止指向自己或循環
-                if (dto.ParentId == dto.FolderId)
+				bool exists = await _db.SysFolders.AnyAsync(f => f.ParentId == dto.ParentId && f.FolderName == dto.FolderName);
+
+				if (exists)
+					return Json(new { success = false, message = "同一層已存在相同名稱的資料夾" });
+
+				// 防止指向自己或循環
+				if (dto.ParentId == dto.FolderId)
                     return Json(new { success = false, message = "資料夾不能指向自己" });
 
                 // 如果指定的父層不存在
