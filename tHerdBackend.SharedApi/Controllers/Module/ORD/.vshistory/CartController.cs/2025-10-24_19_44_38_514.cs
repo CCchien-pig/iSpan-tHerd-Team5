@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Core.Interfaces.ORD;
+using tHerdBackend.Core.DTOs.ORD;
 
 #nullable enable
 
@@ -44,7 +45,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
-        {
+        '{
             if (request == null)
                 return BadRequest(new { success = false, message = "請傳入有效 JSON" });
 
@@ -52,9 +53,10 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 return Ok(new { success = false, message = "購物車是空的" });
 
             using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                // 1. 檢查商品與庫存
+                // 1. 檢查商品有效性與庫存
                 var errorList = new List<string>();
                 decimal subtotal = 0;
 
@@ -70,11 +72,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                         errorList.Add($"找不到商品 SKU: {item.SkuId}");
                         continue;
                     }
+
                     if (sku.StockQty < item.Quantity)
                     {
                         errorList.Add($"{sku.Product?.ProductName ?? "未知商品"} 庫存不足，目前庫存 {sku.StockQty}");
                         continue;
                     }
+
                     subtotal += item.SalePrice * item.Quantity;
                 }
 
@@ -86,6 +90,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
                 // 2. 建立訂單主檔
                 string orderNo = await GenerateOrderNoAsync();
+
                 var order = new OrdOrder
                 {
                     OrderNo = orderNo,
@@ -104,6 +109,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     IsVisibleToMember = true,
                     CreatedDate = DateTime.Now
                 };
+
                 _context.OrdOrders.Add(order);
                 await _context.SaveChangesAsync();
 
@@ -121,7 +127,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 }
                 await _context.SaveChangesAsync();
 
-                // 4. 折扣
+                // 4. 折扣處理
                 if (!string.IsNullOrEmpty(request.CouponCode) && (request.DiscountAmount ?? 0) > 0)
                 {
                     _context.OrdOrderAdjustments.Add(new OrdOrderAdjustment
@@ -140,7 +146,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
                 // 5. 建立付款記錄
                 decimal finalTotal = subtotal - (request.DiscountAmount ?? 0);
-                string merchantTradeNo = DateTime.Now.ToString("yyyyMMddHHmmss");
+                string merchantTradeNo = $"{orderNo}_{DateTime.Now:yyyyMMddHHmmss}";
 
                 var paymentId = await _paymentRepo.CreatePaymentAsync(
                     order.OrderId,
@@ -149,9 +155,10 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     "pending",
                     merchantTradeNo);
 
-                // 6. 產生綠界表單
+                // 6. 建立綠界付款表單
                 string itemName = string.Join("#", request.CartItems.Select(i => i.ProductName ?? "商品"));
-                if (itemName.Length > 200) itemName = itemName.Substring(0, 200);
+                if (itemName.Length > 200)
+                    itemName = itemName.Substring(0, 200);
 
                 string ecpayFormHtml = _ecpayService.CreatePaymentForm(orderNo, (int)finalTotal, itemName);
 
@@ -174,6 +181,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 await transaction.CommitAsync();
 
                 _logger.LogInformation($"訂單 {orderNo} 建立成功，準備跳轉綠界");
+
                 return Ok(new
                 {
                     success = true,
@@ -195,7 +203,11 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "結帳失敗");
                 string inner = ex.InnerException?.Message ?? "(無內層例外)";
-                return Ok(new { success = false, message = $"結帳失敗: {ex.Message} | Inner: {inner}" });
+                return Ok(new
+                {
+                    success = false,
+                    message = $"結帳失敗: {ex.Message} | Inner: {inner}"
+                });
             }
         }
 
@@ -221,7 +233,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
         public int? UserNumberId { get; set; }
         public List<CartItemRequest>? CartItems { get; set; }
 
-        [BindNever] public string? CouponCode { get; set; }
+        [BindNever]
+        public string? CouponCode { get; set; }
+
         public decimal? DiscountAmount { get; set; }
         public int PaymentConfigId { get; set; } = 1000;
     }

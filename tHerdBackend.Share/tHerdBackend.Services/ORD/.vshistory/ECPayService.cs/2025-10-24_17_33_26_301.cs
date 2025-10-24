@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.Interfaces.ORD;
+using tHerdBackend.Infra.Data;
 using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.Infra.Repository.ORD

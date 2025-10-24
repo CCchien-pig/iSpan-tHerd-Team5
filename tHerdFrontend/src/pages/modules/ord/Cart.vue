@@ -6,7 +6,7 @@
     </div>
 
     <div class="row g-4">
-      <!-- 左：商品明細 -->
+      <!-- 左:商品明細 -->
       <div class="col-lg-8">
         <div
           v-for="item in cartItems"
@@ -15,7 +15,7 @@
         >
           <div class="flex-grow-1 pe-3">
             <h5 class="fw-bold mb-1">{{ item.productName }}</h5>
-            <p class="text-muted mb-1"><i class="bi bi-tag"></i> 規格：{{ item.skuName }}</p>
+            <p class="text-muted mb-1"><i class="bi bi-tag"></i> 規格:{{ item.skuName }}</p>
             <div class="text-muted text-decoration-line-through small">
               NT$ {{ item.unitPrice.toLocaleString() }}
             </div>
@@ -50,7 +50,7 @@
         </div>
       </div>
 
-      <!-- 右：訂單摘要 -->
+      <!-- 右:訂單摘要 -->
       <div class="col-lg-4">
         <div class="card shadow-sm border-0 sticky-top p-4" style="top:20px;">
           <h5 class="fw-bold mb-4 text-teal"><i class="bi bi-receipt"></i> 訂單摘要</h5>
@@ -73,8 +73,16 @@
             <h3 class="text-danger fw-bold mb-0">NT$ {{ finalTotal.toLocaleString() }}</h3>
           </div>
 
-          <button class="btn w-100 py-3 mt-3 teal-reflect-button" @click="checkout">
-            <i class="bi bi-credit-card"></i> 前往結帳
+          <button 
+            class="btn w-100 py-3 mt-3 teal-reflect-button" 
+            @click="checkout"
+            :disabled="isCheckingOut">
+            <span v-if="!isCheckingOut">
+              <i class="bi bi-credit-card"></i> 前往結帳
+            </span>
+            <span v-else>
+              <span class="spinner-border spinner-border-sm me-2"></span>正在跳轉至綠界...
+            </span>
           </button>
           <button class="btn w-100 py-3 mt-2 silver-reflect-button" @click="continueShopping">
             <i class="bi bi-arrow-left"></i> 繼續購物
@@ -82,6 +90,9 @@
         </div>
       </div>
     </div>
+
+    <!-- ✅ 綠界表單容器 (隱藏) -->
+    <div id="ecpayFormContainer" style="display:none;"></div>
   </div>
 </template>
 
@@ -93,11 +104,12 @@ export default {
   data() {
     return {
       couponCode: "",
+      isCheckingOut: false,
       cartItems: [
         {
           productId: 14246,
           skuId: 2680,
-          productName: "Lake Avenue Nutrition, Omega-3 魚油，30 粒魚明膠軟膠囊（每粒軟膠囊 1,250 毫克）",
+          productName: "Lake Avenue Nutrition, Omega-3 魚油,30 粒魚明膠軟膠囊(每粒軟膠囊 1,250 毫克)",
           skuName: "30 單位",
           unitPrice: 500.0,
           salePrice: 346.0,
@@ -107,32 +119,12 @@ export default {
         {
           productId: 14246,
           skuId: 3388,
-          productName: "Lake Avenue Nutrition, Omega-3 魚油，90 粒魚明膠軟膠囊（每粒軟膠囊 1,250 毫克）",
+          productName: "Lake Avenue Nutrition, Omega-3 魚油,90 粒魚明膠軟膠囊(每粒軟膠囊 1,250 毫克)",
           skuName: "90 單位",
           unitPrice: 1000.0,
           salePrice: 898.0,
           quantity: 1,
           subtotal: 898.0
-        },
-        {
-          productId: 14600,
-          skuId: 2869,
-          productName: "Optimum Nutrition, Opti-Women®，針對活躍女性的多維生素，60 粒膠囊",
-          skuName: "60 粒",
-          unitPrice: 800.0,
-          salePrice: 656.0,
-          quantity: 1,
-          subtotal: 656.0
-        },
-        {
-          productId: 14600,
-          skuId: 3387,
-          productName: "Optimum Nutrition, Opti-Women®，針對活躍女性的多維生素，120 粒膠囊",
-          skuName: "120 粒",
-          unitPrice: 1300.0,
-          salePrice: 1188.0,
-          quantity: 1,
-          subtotal: 1188.0
         }
       ]
     };
@@ -168,7 +160,7 @@ export default {
       this.updateSubtotal(i);
     },
     confirmRemove(i) {
-      if (window.confirm(`確定要移除「${i.productName}（${i.skuName}）」嗎？`)) {
+      if (window.confirm(`確定要移除「${i.productName}(${i.skuName})」嗎?`)) {
         this.cartItems = this.cartItems.filter(
           x => !(x.productId === i.productId && x.skuId === i.skuId)
         );
@@ -178,7 +170,25 @@ export default {
     applyCoupon() {
       alert("這是示範用優惠券功能");
     },
+    
+    // 🔥 完整的結帳流程
     async checkout() {
+      // 防止重複點擊
+      if (this.isCheckingOut) {
+        console.log("⏳ 處理中,請稍候...");
+        return;
+      }
+
+      // 檢查購物車
+      if (!this.cartItems || this.cartItems.length === 0) {
+        alert("❌ 購物車是空的!");
+        return;
+      }
+      
+      this.isCheckingOut = true;
+      console.log("🛒 開始結帳流程...");
+
+      // 組裝請求資料
       const payload = {
         sessionId: "session123",
         userNumberId: 1056,
@@ -189,45 +199,133 @@ export default {
           optionName: i.skuName,
           salePrice: i.salePrice,
           quantity: i.quantity
-        }))
+        })),
+        couponCode: this.couponCode || null,
+        discountAmount: 0,
+        paymentConfigId: 1000
       };
 
-      console.log("🚀 Checkout Payload:", payload);
+      console.log("📦 Checkout Payload:", payload);
 
       try {
+        // 呼叫後端 API
         const res = await axios.post(
           "https://localhost:7103/api/ord/Cart/checkout",
           payload,
           {
             headers: {
-              "Content-Type": "application/json" // 👈 關鍵
+              "Content-Type": "application/json"
             }
           }
         );
 
-        console.log("✅ Response:", res.data);
+        console.log("✅ 後端回應:", res.data);
 
+        // 檢查是否成功
         if (res.data?.success) {
-          alert(`✅ 訂單建立成功！編號：${res.data.orderNo}`);
+          const ecpayHtml = res.data?.data?.ecpayFormHtml;
+          
+          if (!ecpayHtml) {
+            throw new Error("後端未回傳 ecpayFormHtml");
+          }
+
+          console.log("🔥 收到綠界表單,準備提交...");
+          console.log("訂單編號:", res.data.data.orderNo);
+          console.log("訂單金額:", res.data.data.total);
+
+          // 🔥 關鍵步驟: 插入表單並自動提交
+          this.submitECPayForm(ecpayHtml);
+
+          // 注意: 提交後會跳轉到綠界,所以不需要重置 isCheckingOut
         } else {
-          alert(`❌ ${res.data?.message ?? "結帳失敗"}`);
+          // 結帳失敗
+          const errorMsg = res.data?.message || "結帳失敗,請稍後再試";
+          console.error("❌ 結帳失敗:", errorMsg);
+          
+          if (res.data?.errors && res.data.errors.length > 0) {
+            alert("❌ " + res.data.errors.join("\n"));
+          } else {
+            alert("❌ " + errorMsg);
+          }
+          
+          this.isCheckingOut = false;
         }
-      } catch (e) {
-        console.error("❌ Checkout Error:", e);
-        if (e.response) {
-          alert(`伺服器錯誤：${e.response.status} - ${e.response.statusText}`);
+      } catch (error) {
+        console.error("❌ 結帳錯誤:", error);
+        this.isCheckingOut = false;
+        
+        // 解析錯誤訊息
+        let errorMsg = "結帳失敗,請稍後再試";
+        
+        if (error.response) {
+          // 後端回傳錯誤
+          console.error("Error Response:", error.response.data);
+          errorMsg = error.response.data?.message || 
+                     `伺服器錯誤 (${error.response.status})`;
+        } else if (error.request) {
+          // 請求已發送但沒收到回應
+          errorMsg = "無法連接到伺服器,請檢查網路連線";
         } else {
-          alert("❌ 無法結帳，請確認 API 是否啟動。");
+          // 其他錯誤
+          errorMsg = error.message || "未知錯誤";
         }
+        
+        alert("❌ " + errorMsg);
       }
     },
+
+    // 🔥 提交綠界表單 (關鍵方法!)
+    submitECPayForm(htmlString) {
+      try {
+        console.log("📝 正在處理綠界表單...");
+        
+        // 取得容器
+        const container = document.getElementById("ecpayFormContainer");
+        if (!container) {
+          throw new Error("找不到 ecpayFormContainer 元素");
+        }
+
+        // 插入 HTML
+        container.innerHTML = htmlString;
+        console.log("✅ 表單 HTML 已插入 DOM");
+
+        // 找到表單
+        const form = container.querySelector("form");
+        if (!form) {
+          console.error("HTML 內容:", htmlString);
+          throw new Error("找不到 form 元素");
+        }
+
+        console.log("✅ 找到表單:", form.id);
+        console.log("📍 表單 action:", form.action);
+        console.log("📍 表單 method:", form.method);
+        
+        // 列出所有表單欄位 (除錯用)
+        const inputs = form.querySelectorAll("input");
+        console.log(`📋 表單欄位數量: ${inputs.length}`);
+        inputs.forEach(input => {
+          console.log(`  - ${input.name}: ${input.value.substring(0, 50)}...`);
+        });
+
+        // 🔥 提交表單 (會跳轉到綠界)
+        console.log("🚀 正在提交表單到綠界...");
+        form.submit();
+
+        // 提交後會離開當前頁面,所以這行不會執行
+        console.log("✅ 表單已提交");
+      } catch (error) {
+        console.error("❌ 提交綠界表單失敗:", error);
+        alert("❌ 付款表單載入失敗: " + error.message);
+        this.isCheckingOut = false;
+      }
+    },
+
     continueShopping() {
       window.location.href = "/";
     }
   }
 };
 </script>
-
 
 <style scoped>
 .text-teal { color:#007083; }
@@ -258,8 +356,13 @@ export default {
   font-size:1.35rem; font-weight:700;
   display:flex; align-items:center; justify-content:center;
   transition:all .2s ease;
+  cursor: pointer;
 }
 .circle-btn:hover { background:#0096a8; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+.circle-btn:disabled { 
+  background:#ccc; 
+  cursor: not-allowed;
+}
 .qty-input {
   width:56px; height:42px; text-align:center;
   border:1.5px solid #ccc; border-radius:8px;
@@ -270,5 +373,39 @@ export default {
 .summary-row {
   display:flex; justify-content:space-between;
   align-items:center; margin-bottom:10px; font-size:1.05rem;
+}
+
+/* 按鈕樣式 */
+.teal-reflect-button {
+  background: linear-gradient(135deg, #007083 0%, #00a0b8 100%);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+.teal-reflect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 112, 131, 0.3);
+}
+.teal-reflect-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.silver-reflect-button {
+  background: linear-gradient(135deg, #6c757d 0%, #9ca3af 100%);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+.silver-reflect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
 }
 </style>

@@ -140,7 +140,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 
                 // 5. 建立付款記錄
                 decimal finalTotal = subtotal - (request.DiscountAmount ?? 0);
-                string merchantTradeNo = DateTime.Now.ToString("yyyyMMddHHmmss");
+                string merchantTradeNo = $"{orderNo}_{DateTime.Now:yyyyMMddHHmmss}";
 
                 var paymentId = await _paymentRepo.CreatePaymentAsync(
                     order.OrderId,

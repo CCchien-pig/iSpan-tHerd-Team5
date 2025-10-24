@@ -22,26 +22,37 @@ namespace tHerdBackend.Infra.Repository.ORD
         }
 
         public async Task<int> CreatePaymentAsync(
-        int orderId, int paymentConfigId, int amount, string status, string merchantTradeNo)
+            int orderId,
+            int paymentConfigId,
+            int amount,
+            string status,
+            string merchantTradeNo)
         {
-            var sql = @"
-                INSERT INTO ORD_Payment
-                (OrderId, PaymentConfigId, Amount, Status, MerchantTradeNo, CreatedDate, SimulatePaid)
-                VALUES (@p0, @p1, @p2, @p3, @p4, SYSDATETIME(), 0);
-                SELECT CAST(SCOPE_IDENTITY() as int);";
+            try
+            {
+                var sql = @"
+                    INSERT INTO ORD_Payment 
+                    (OrderId, PaymentConfigId, Amount, Status, MerchantTradeNo, 
+                     CreatedDate, SimulatePaid)
+                    VALUES 
+                    (@p0, @p1, @p2, @p3, @p4, SYSDATETIME(), 0);
+                    SELECT CAST(SCOPE_IDENTITY() as int);";
 
-            var result = await _context.Database
-                .SqlQueryRaw<int>(sql,
-                    orderId,
-                    paymentConfigId,
-                    amount,
-                    status,
-                    merchantTradeNo)
-                .ToListAsync();
+                var result = await _context.Database
+                    .SqlQuery<int>($"{sql}")
+                    .ToListAsync();
 
-            return result.FirstOrDefault();
+                var paymentId = result.FirstOrDefault();
+
+                _logger.LogInformation($"✅ 建立付款記錄: PaymentId={paymentId}, OrderId={orderId}");
+                return paymentId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ 建立付款記錄失敗: OrderId={orderId}");
+                throw;
+            }
         }
-
 
         public async Task<bool> UpdatePaymentByMerchantTradeNoAsync(
             string merchantTradeNo,
