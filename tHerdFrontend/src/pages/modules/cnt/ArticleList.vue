@@ -2,7 +2,7 @@
   <div class="container py-4">
     <!-- 標題 + 搜尋列 -->
     <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mb-4">
-      <h2 class="m-0 main-color-green-text">健康文章</h2>
+      <h2 id="article-list-title" class="m-0 main-color-green-text">健康文章</h2>
       <div class="ms-md-auto w-100" style="max-width:480px;">
         <form @submit.prevent="onSearch">
           <div class="input-group">
@@ -156,12 +156,19 @@ onMounted(async () => {
   await loadCategories();
   await loadArticles();
 
-  // ✅ 精準滾動到卡片起點
+// ✅ 新增：捲到清單頁標題
+  if (route.query.scroll === "title") {
+    setTimeout(() => {
+      const el = document.getElementById("article-list-title");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+  }
+
+  // 既有：捲到卡片清單起點
   if (route.query.scroll === "list") {
     setTimeout(() => {
       const target = document.getElementById("article-list-start");
-      if (target)
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 300);
   }
 });
@@ -278,4 +285,6 @@ function formatDate(d) {
 .border-main-color-green {
   border-color: rgb(0, 112, 131) !important;
 }
+/* 清單頁樣式加一條，讓固定導覽列不會把標題遮住 */
+:where(h2[id]) { scroll-margin-top: calc(var(--navbar-height, 80px) + 10px); }
 </style>
