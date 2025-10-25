@@ -58,5 +58,25 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             var files = await _frepo.GetFilesByProg("SYS", "UploadTest"); // 依據模組及程式，取得已上傳的檔案
             return View(files);
         }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteFile(int fileId, CancellationToken ct)
+        {
+            bool success = await _frepo.DeleteImage(fileId, ct);
+            if (success)
+                return Json(new { success = true, message = "刪除成功" });
+            else
+                return Json(new { success = false, message = "刪除失敗" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateMeta([FromBody] SysAssetFileDto dto, CancellationToken ct)
+        {
+            bool success = await _frepo.UpdateImageMeta(dto, ct);
+            if (success)
+                return Json(new { success = true, message = "更新成功" });
+            else
+                return Json(new { success = false, message = "更新失敗" });
+        }
     }
 }

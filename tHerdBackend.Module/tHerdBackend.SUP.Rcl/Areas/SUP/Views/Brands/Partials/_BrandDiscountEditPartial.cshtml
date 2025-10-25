@@ -1,0 +1,57 @@
+﻿@using tHerdBackend.Core.DTOs.SUP
+@model BrandDiscountDto
+@* _BrandDiscountEditPartial.cshtml（編輯折扣表單） *@
+
+@{
+    var formAction = Url.Action("EditDiscount", "Brands", new { id = Model.BrandId, area = "SUP" });
+}
+
+<form id="brandDiscountEditForm" action="@formAction" method="post" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="BrandId" />
+
+    <div class="container-fluid">
+        <div style="padding-left: 12px;">
+            <b>品牌ID：</b>@Model.BrandId
+        </div>
+
+        <div style="padding-left: 12px;margin-top: 8px;margin-bottom: 10px;">
+            <b>品牌名稱：</b>@Model.BrandName
+        </div>
+
+        <div class="form-floating mb-2">
+            <input asp-for="DiscountRate" class="form-control" type="number" step="0.01" />
+            <label asp-for="DiscountRate" class="form-label">@Html.DisplayNameFor(m => m.DiscountRate)</label>
+            <span asp-validation-for="DiscountRate" class="text-danger mt-1 d-block ms-2"></span>
+        </div>
+        <div class="row mb-2">
+            <div class="col">
+                <div class="form-floating">
+                    <input asp-for="StartDate" class="form-control" type="date" />
+                    <label asp-for="StartDate" class="form-label">@Html.DisplayNameFor(m => m.StartDate)</label>
+                    <span asp-validation-for="StartDate" class="text-danger mt-1 d-block ms-2"></span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-floating">
+                    <input asp-for="EndDate" class="form-control" type="date" min="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                    <label asp-for="EndDate" class="form-label">@Html.DisplayNameFor(m => m.EndDate)</label>
+                    <span asp-validation-for="EndDate" class="text-danger mt-1 d-block ms-2"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer justify-content-center" style="padding-bottom: 0px;">
+            <button type="button" class="btn btn-secondary me-3" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-success">儲存</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $.validator.unobtrusive.parse('#brandDiscountForm');
+        });
+    </script>
+}

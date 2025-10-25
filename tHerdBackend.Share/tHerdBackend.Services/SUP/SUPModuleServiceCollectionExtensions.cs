@@ -11,6 +11,8 @@ namespace tHerdBackend.Services.SUP
 			services.AddAntiforgery();
 
 			// 註冊 Service
+			services.AddScoped<ISupplierService, SupplierService>();
+
 			services.AddScoped<IStockService, StockService>();
 			services.AddScoped<IStockBatchService, StockBatchService>();
 
@@ -19,7 +21,10 @@ namespace tHerdBackend.Services.SUP
 
 			services.AddScoped<IBrandService, BrandService>();
 
+
 			// 註冊 Repository
+			services.AddScoped<ISupplierRepository, SupplierRepository>();
+
 			services.AddScoped<ILogisticsRepository, LogisticsRepository>();
 			services.AddScoped<ILogisticsRateRepository, LogisticsRateRepository>();
 
