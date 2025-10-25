@@ -13,8 +13,6 @@ using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
-using tHerdBackend.Core.Interfaces.MKT;
-using tHerdBackend.Infra.Services.MKT;
 
 
 namespace tHerdBackend.SharedApi
