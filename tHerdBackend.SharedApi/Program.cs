@@ -24,8 +24,6 @@ namespace tHerdBackend.SharedApi
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            // 🚀 加在這裡 (ConfigureServices 位置)
-            builder.Services.AddScoped<IMktCouponService, MktCouponService>();
 
             // JWT Authentication
             builder.Services.AddAuthentication(options =>
