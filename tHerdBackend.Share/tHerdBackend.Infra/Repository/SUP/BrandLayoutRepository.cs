@@ -17,6 +17,7 @@ namespace tHerdBackend.Infra.Repository.SUP
 
 		#region 品牌版面 - 查詢 (Read Operations)
 
+		// (多筆)取得所有歷史版本 Layouts
 		public async Task<IEnumerable<BrandLayoutDto>> GetLayoutsByBrandIdAsync(int brandId)
 		{
 			return await _context.SupBrandLayoutConfigs
@@ -36,6 +37,38 @@ namespace tHerdBackend.Infra.Repository.SUP
 				}).ToListAsync();
 		}
 
+		// (單筆)依 Layout ID 取得單一 Layout 紀錄（包含完整的 LayoutJson）
+		public async Task<BrandLayoutDto?> GetLayoutByLayoutIdAsync(int layoutId)
+		{
+			return await _context.SupBrandLayoutConfigs.AsNoTracking()
+				.Where(x => x.LayoutId == layoutId)
+				.Select(x => new BrandLayoutDto
+				{
+					// ... (BrandLayoutDto 的所有屬性，包括 LayoutJson)
+					LayoutId = x.LayoutId,
+					BrandId = x.BrandId,
+					LayoutJson = x.LayoutJson, // 必須包含完整的 JSON
+					LayoutVersion = x.LayoutVersion,
+					IsActive = x.IsActive,
+					Creator = x.Creator,
+					CreatedDate = x.CreatedDate,
+					Reviser = x.Reviser,
+					RevisedDate = x.RevisedDate
+				})
+				.FirstOrDefaultAsync(); // 確保只傳回一筆或 null
+		}
+
+		// 僅取目前啟用中的 Layout ID
+		public async Task<int?> GetActiveLayoutIdAsync(int brandId)
+		{
+			// 查詢 IsActive = true 的 Layout，並只選擇 LayoutId
+			return await _context.SupBrandLayoutConfigs.AsNoTracking()
+				.Where(x => x.BrandId == brandId && x.IsActive == true)
+				.Select(x => (int?)x.LayoutId) // 確保傳回 int? 類型
+				.FirstOrDefaultAsync();
+		}
+
+		// 取得完整的 Layout 數據
 		public async Task<BrandLayoutDto?> GetActiveLayoutAsync(int brandId)
 		{
 			return await _context.SupBrandLayoutConfigs
@@ -54,23 +87,28 @@ namespace tHerdBackend.Infra.Repository.SUP
 				}).FirstOrDefaultAsync();
 		}
 
-		// **新增：實作 GetActivationInfoByIdAsync (用於 Service 啟用判斷)**
+		// 先取出資料，再在記憶體中指定預設值 (用於 Service 啟用判斷)
 		public async Task<BrandLayoutDto?> GetActivationInfoByIdAsync(int layoutId)
 		{
-			// 只查詢 Service 層執行 Activate 邏輯所需的最低限度資訊
-			return await _context.SupBrandLayoutConfigs
+			var entity = await _context.SupBrandLayoutConfigs
+				.AsNoTracking()
 				.Where(x => x.LayoutId == layoutId)
-				.Select(x => new BrandLayoutDto
-				{
-					LayoutId = x.LayoutId,
-					BrandId = x.BrandId,
-					IsActive = x.IsActive,
-					// 其他欄位給予預設值，避免 EF 查詢不必要的資料
-					LayoutJson = string.Empty,
-					Creator = 0,
-					CreatedDate = DateTime.MinValue,
-				})
 				.FirstOrDefaultAsync();
+
+			if (entity == null)
+				return null;
+
+			return new BrandLayoutDto
+			{
+				LayoutId = entity.LayoutId,
+				BrandId = entity.BrandId,
+				IsActive = entity.IsActive,
+				CreatedDate = entity.CreatedDate,
+				RevisedDate = entity.RevisedDate,
+				LayoutJson = string.Empty,
+				Creator = 0,
+				Reviser = 0
+			};
 		}
 
 		#endregion
@@ -146,6 +184,25 @@ namespace tHerdBackend.Infra.Repository.SUP
 					.SetProperty(l => l.IsActive, true)
 					.SetProperty(l => l.Reviser, reviserId)
 					.SetProperty(l => l.RevisedDate, revisedDate));
+		}
+
+		#endregion
+
+		#region 品牌版面 - 驗證 (Validation)
+
+		// 檢查版本號是否存在，currentLayoutId 用於排除自身
+		public async Task<bool> VersionExistsAsync(int brandId, string version, int? currentLayoutId)
+		{
+			var query = _context.SupBrandLayoutConfigs
+				.Where(x => x.BrandId == brandId && x.LayoutVersion == version);
+
+			if (currentLayoutId.HasValue)
+			{
+				// 如果是更新，則排除當前正在編輯的 Layout
+				query = query.Where(x => x.LayoutId != currentLayoutId.Value);
+			}
+
+			return await query.AnyAsync();
 		}
 
 		#endregion

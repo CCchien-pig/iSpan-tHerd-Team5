@@ -198,6 +198,7 @@ input[type='radio']:focus {
 #historyTable .stock-text-btn,
 #logisticsTable .edit-btn,
 #supplierTable .edit-btn,
+#brandTable .layout-edit-btn,
 #brandTable .edit-btn {
     background-color: #f5f0ff;
     border: 1px solid #ac99ff;
@@ -208,6 +209,7 @@ input[type='radio']:focus {
     #historyTable .stock-text-btn:hover,
     #logisticsTable .edit-btn:hover,
     #supplierTable .edit-btn:hover,
+    #brandTable .layout-edit-btn:hover,
     #brandTable .edit-btn:hover {
         background-color: #ded2fc;
         border: 1px solid #c3b8f3;
@@ -217,6 +219,7 @@ input[type='radio']:focus {
         #historyTable .stock-text-btn:hover svg,
         #logisticsTable .edit-btn:hover svg,
         #supplierTable .edit-btn:hover svg,
+        #brandTable .layout-edit-btn:hover svg,
         #brandTable .edit-btn:hover svg {
             color: #9700a2 !important;
         }

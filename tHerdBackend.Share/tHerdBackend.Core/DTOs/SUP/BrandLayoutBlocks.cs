@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP.LayoutBlocks
+﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks
 {
 	// =======================================================
 	// 1. 屬性 DTOs (Props)

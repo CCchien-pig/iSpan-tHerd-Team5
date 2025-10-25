@@ -4,7 +4,7 @@
 	/// 品牌版面單一區塊的屬性內容 (對應 LayoutJson 內的 "props" 物件)
 	/// 用來承載 JSON 中每個區塊的 props 內容
 	/// </summary>
-	public class LayoutBlockPropsViewModel
+	public class BrandLayoutBlockPropsViewModel
 	{
 		// Banner/通用 屬性
 		public string? Title { get; set; }

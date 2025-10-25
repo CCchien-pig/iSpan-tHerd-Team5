@@ -19,6 +19,7 @@
 		/// 建檔人員（後台登入使用者 ID）
 		/// </summary>
 		public int Creator { get; set; }
+		public int BrandId { get; set; } 
 	}
 }
 

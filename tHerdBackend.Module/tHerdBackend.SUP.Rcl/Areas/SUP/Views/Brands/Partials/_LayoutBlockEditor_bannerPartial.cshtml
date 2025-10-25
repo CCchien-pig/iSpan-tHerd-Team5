@@ -1,55 +1,56 @@
-﻿@* 區塊 Partial View 範例 (_LayoutBlockEditor_bannerPartial.cshtml) *@
+﻿@* 摺疊內容(_LayoutBlockEditor_accordionPartial.cshtml) *@
+@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.BrandLayoutBlockViewModel
 
-@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.LayoutBlockViewModel
+@using System.Text.Json;
+@using tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks
 
 @{
-    // 確保這裡的命名空間與您專案中實際的 ViewModel 命名空間一致
-    var index = (int)ViewData["Index"];
+    // 這裡假設您在 Controller 的 GetLayoutBlockPartial Action 中設置了 ViewData["Index"]
+    var index = ViewData["Index"] as int? ?? 0;
+
+    // 【修正點：二次反序列化】將通用的 Model.Props 轉換為強型別 AccordionPropsDto
+    AccordionPropsDto? accordionProps = null;
+
+    try
+    {
+        var propsJson = JsonSerializer.Serialize(Model.Props);
+        accordionProps = JsonSerializer.Deserialize<AccordionPropsDto>(propsJson,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    }
+    catch (Exception)
+    {
+        // 反序列化失敗時，保持 accordionProps 為 null
+    }
 }
 
 <div class="layout-block-item bg-white p-3 mb-3 shadow-sm rounded"
-     data-block-type="@Model.Type"
-     data-block-id="@Model.Id">
+        data-block-type="accordion"
+        data-block-id="@Model.Id">
 
-    <div class="block-header d-flex justify-content-between align-items-center bg-light p-2 mb-2 rounded" style="cursor: grab;">
-        <span class="fw-bold">區塊 @(index + 1)：[Banner 橫幅]</span>
+    <div class="block-header d-flex justify-content-between align-items-center bg-warning-subtle p-2 mb-2 rounded" style="cursor: grab;">
+        <span class="fw-bold">區塊 @(index + 1)：[摺疊內容]</span>
+        @* 注意：這是 jQuery 移除按鈕，在 Vue 編輯器中應使用 Vue 的 removeBlock 函式 *@
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.layout-block-item').remove()">移除</button>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label class="form-label">主標題</label>
-            <input type="text" class="form-control prop-title" value="@Model.Props.Title" placeholder="Banner 主要標題" />
+    @if (accordionProps != null)
+    {
+        <div class="mb-3">
+            <label class="form-label">摺疊標題</label>
+            @* 【修正】使用強型別 accordionProps 存取 Title *@
+            <input type="text" class="form-control prop-title" value="@accordionProps.Title" placeholder="例如：品牌精神或常見問題" />
         </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">副標題</label>
-            <input type="text" class="form-control prop-subtitle" value="@Model.Props.Subtitle" placeholder="Banner 副標題/促銷訊息" />
+        <div class="mb-3">
+            <label class="form-label">摺疊內容 (支援 HTML)</label>
+            @* 【修正】使用強型別 accordionProps 存取 Content *@
+            <textarea class="form-control prop-content" rows="4">@accordionProps.Content</textarea>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8 mb-3">
-            <label class="form-label">連結網址 (Link URL)</label>
-            <input type="url" class="form-control prop-linkUrl" value="@Model.Props.LinkUrl" placeholder="/products/..." />
+        @* TODO: 圖片選擇 (ImgId) 的欄位 *@
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            警告：無法解析 Accordion 屬性資料。請檢查 JSON 結構是否正確。
         </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label">Alt 替代文字</label>
-            <input type="text" class="form-control prop-alttext" value="@Model.Props.AltText" placeholder="SEO 友善文字" />
-        </div>
-    </div>
-
-    <div class="form-group border-top pt-3">
-        <label class="form-label fw-bold">圖片資源</label>
-        <div class="input-group">
-            <input type="hidden" class="prop-fileId" value="@Model.Props.FileId" />
-            <input type="text" class="form-control prop-fileUrl" value="@Model.Props.FileUrl" disabled placeholder="圖片 URL" />
-            <button type="button" class="btn btn-secondary" onclick="openMediaLibrary(this)">
-                <i class="fa-solid fa-image"></i> 選擇媒體庫圖片
-            </button>
-        </div>
-        @if (!string.IsNullOrEmpty(Model.Props.FileUrl))
-        {
-            <div class="mt-2"><img src="@Model.Props.FileUrl" style="max-height: 80px; border: 1px solid #eee;" alt="預覽" /></div>
-        }
-    </div>
+    }
 </div>

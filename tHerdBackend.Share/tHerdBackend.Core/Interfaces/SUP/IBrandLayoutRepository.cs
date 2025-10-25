@@ -10,9 +10,19 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		#region 品牌版面 - 查詢 (Read Operations)
 
 		/// <summary>
-		/// 取得指定品牌的所有 Layout 設定（歷史版本）
+		/// 依 Brand ID 取得指定品牌的所有 Layout 設定（歷史版本）
 		/// </summary>
 		Task<IEnumerable<BrandLayoutDto>> GetLayoutsByBrandIdAsync(int brandId);
+		
+		/// <summary>
+		/// 依 Layout ID 取得單一 Layout 紀錄（包含完整的 LayoutJson）
+		/// </summary>
+		Task<BrandLayoutDto?> GetLayoutByLayoutIdAsync(int layoutId);
+
+		/// <summary>
+		/// 取得目前啟用中的 Brand Layout ID。
+		/// </summary>
+		Task<int?> GetActiveLayoutIdAsync(int brandId);
 
 		/// <summary>
 		/// 取得目前啟用的品牌 Layout（IsActive = 1）
@@ -42,7 +52,7 @@ namespace tHerdBackend.Core.Interfaces.SUP
 
 		#endregion
 
-		#region 品牌版面 - 狀態管理 (Activation/Deactivation)
+		#region 品牌版面 - 啟用與停用 (Activation/Deactivation)
 
 		/// <summary>
 		/// 啟用指定 Layout（同品牌僅允許一個啟用中）
@@ -71,6 +81,14 @@ namespace tHerdBackend.Core.Interfaces.SUP
 
 		#endregion
 
+		#region 品牌版面 - 驗證 (Validation)
+
+		/// <summary>
+		/// 檢查版本號是否存在，currentLayoutId 用於排除自身
+		/// </summary>
+		Task<bool> VersionExistsAsync(int brandId, string version, int? currentLayoutId);
+
+		#endregion
 
 	}
 }

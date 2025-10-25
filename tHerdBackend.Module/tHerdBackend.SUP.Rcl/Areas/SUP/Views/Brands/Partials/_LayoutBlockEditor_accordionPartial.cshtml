@@ -1,25 +1,61 @@
 ﻿@* 摺疊內容(_LayoutBlockEditor_accordionPartial.cshtml) *@
+@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.BrandLayoutBlockViewModel
 
-@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.LayoutBlockViewModel
+@using System.Text.Json;
+@using tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks // 確保 DTO 命名空間正確
+
 @{
-    var index = (int)ViewData["Index"];
+    // 1. 獲取 ViewData["Index"] (如果存在)
+    var index = ViewData["Index"] as int? ?? 0;
+
+    // 2. 【核心修正區】強型別二次反序列化
+    //    這必須在 Razor 頂部完成，以創建強型別變數
+    AccordionPropsDto? accordionProps = null;
+
+    try
+    {
+        var propsJson = JsonSerializer.Serialize(Model.Props);
+        accordionProps = JsonSerializer.Deserialize<AccordionPropsDto>(propsJson,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    }
+    catch (Exception)
+    {
+        // 反序列化失敗，保持 accordionProps 為 null
+    }
 }
 
 <div class="layout-block-item bg-white p-3 mb-3 shadow-sm rounded"
-     data-block-type="accordion"
-     data-block-id="@Model.Id">
+        data-block-type="accordion"
+        data-block-id="@Model.Id">
 
     <div class="block-header d-flex justify-content-between align-items-center bg-warning-subtle p-2 mb-2 rounded" style="cursor: grab;">
         <span class="fw-bold">區塊 @(index + 1)：[摺疊內容]</span>
+        @* 由於 Vue 編輯器負責移除，此處的 jQuery 移除按鈕可刪除或保留備用 *@
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.layout-block-item').remove()">移除</button>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">摺疊標題</label>
-        <input type="text" class="form-control prop-title" value="@Model.Props.Title" placeholder="例如：品牌精神或常見問題" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">摺疊內容 (支援 HTML)</label>
-        <textarea class="form-control prop-content" rows="4">@Model.Props.Content</textarea>
-    </div>
+    @* 【核心修正區】只有在強型別變數存在時才渲染編輯器輸入框 *@
+    @if (accordionProps != null)
+    {
+        <div class="mb-3">
+            <label class="form-label">摺疊標題</label>
+            @* 【修正】使用強型別 accordionProps 存取 Title *@
+            <input type="text"
+                   class="form-control prop-title"
+                   value="@accordionProps.Title"
+                   placeholder="例如：品牌精神或常見問題" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">摺疊內容 (支援 HTML)</label>
+            @* 【修正】使用強型別 accordionProps 存取 Content *@
+            <textarea class="form-control prop-content"
+                  rows="4">@accordionProps.Content</textarea>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>錯誤！</strong> 內容屬性載入失敗，請檢查資料庫 JSON 或 DTO 結構。
+        </div>
+    }
 </div>

@@ -8,24 +8,32 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
 	/// </summary>
 	public class BrandLayoutEditViewModel
 	{
+		[Display(Name = "版本Id")]
+		public int? LayoutId { get; set; } // 如果是新增，則為 null
+
+		[Display(Name = "品牌Id")]
 		public int BrandId { get; set; }
 
 		[Display(Name = "品牌名稱")]
 		public string BrandName { get; set; } = string.Empty;
 
+		[Display(Name = "現行啟用版本Id")]
 		public int? ActiveLayoutId { get; set; } // 現行啟用版面的 LayoutId (若為新增則為 null)
 
 		[Display(Name = "版型版本號")]
 		public string? LayoutVersion { get; set; }
 
 		/// <summary>
-		/// 已反序列化的區塊列表 (供 Razor 迴圈渲染)
+		/// 已反序列化的區塊列表 (供 Razor 迴圈渲染)，Vue 編輯器的核心 Model，包含所有區塊的陣列
 		/// </summary>
-		public List<LayoutBlockViewModel> LayoutBlocks { get; set; } = new List<LayoutBlockViewModel>();
+		public List<BrandLayoutBlockViewModel> LayoutBlocks { get; set; } = new List<BrandLayoutBlockViewModel>();
 
 		// 接收前端提交的 JSON 字串（隱藏欄位）
 		[Display(Name = "版面 JSON 內容")]
 		[Required(ErrorMessage = "版面配置內容不能為空。")]
 		public string LayoutJson { get; set; } = string.Empty;
+
+		// 用來驗證版本號不重複
+		public List<string> AllLayoutVersions { get; set; }
 	}
 }

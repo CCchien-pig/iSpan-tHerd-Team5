@@ -4,7 +4,6 @@ using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Core.ValueObjects;
-using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {

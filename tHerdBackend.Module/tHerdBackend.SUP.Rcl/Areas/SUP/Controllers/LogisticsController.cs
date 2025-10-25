@@ -6,8 +6,6 @@ using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.DTOs.SUP;
-using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels;
 
 namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 {
