@@ -87,6 +87,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<MktCouponRule> MktCouponRules { get; set; }
 
+    public virtual DbSet<MktGameRecord> MktGameRecords { get; set; }
+
     public virtual DbSet<MktPlacement> MktPlacements { get; set; }
 
     public virtual DbSet<OrdEcpayReturnNotification> OrdEcpayReturnNotifications { get; set; }
@@ -154,6 +156,8 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<ProdSpecificationConfig> ProdSpecificationConfigs { get; set; }
 
     public virtual DbSet<ProdSpecificationOption> ProdSpecificationOptions { get; set; }
+
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<SupBrand> SupBrands { get; set; }
 
@@ -1374,6 +1378,26 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasComment("是否啟用");
+        });
+
+        modelBuilder.Entity<MktGameRecord>(entity =>
+        {
+            entity.HasKey(e => e.GameRecordId).HasName("PK__MKT_Game__D53273FBF51DBEC5");
+
+            entity.ToTable("MKT_GameRecord", tb => tb.HasComment("活動遊戲紀錄"));
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PlayedDate }, "IX_MKT_GameRecord_UserNumberId_PlayedDate");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PlayedDate }, "UQ_MKT_GameRecord_UserNumber_PlayedDate").IsUnique();
+
+            entity.Property(e => e.GameRecordId).HasComment("主鍵，自動遞增 ID");
+            entity.Property(e => e.CouponAmount).HasComment("兌換金額");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.PlayedDate).HasComment("遊戲日期（同會員每日僅一筆）");
+            entity.Property(e => e.Score).HasComment("當局得分");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID (FK)");
         });
 
         modelBuilder.Entity<MktPlacement>(entity =>
@@ -2801,6 +2825,17 @@ public partial class tHerdDBContext : DbContext
                 .HasConstraintName("FK_PROD_SpecificationOption_SpecificationConfigId");
         });
 
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_RefreshTokens_UserId");
+
+            entity.Property(e => e.JwtId).IsRequired();
+            entity.Property(e => e.TokenHash).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
+
+            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens).HasForeignKey(d => d.UserId);
+        });
+
         modelBuilder.Entity<SupBrand>(entity =>
         {
             entity.HasKey(e => e.BrandId).HasName("PK__SUP_Bran__DAD4F05E8053B727");
@@ -3167,6 +3202,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasComment("是否有效");
+            entity.Property(e => e.IsDeleted).HasComment("軟刪除");
             entity.Property(e => e.IsExternal).HasComment("是否外部URL");
             entity.Property(e => e.MimeType)
                 .HasMaxLength(100)

@@ -77,6 +77,11 @@ public partial class SysAssetFile
 
     public int? FolderId { get; set; }
 
+    /// <summary>
+    /// 軟刪除
+    /// </summary>
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
 
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();

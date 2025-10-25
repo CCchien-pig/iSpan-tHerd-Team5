@@ -168,6 +168,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[MKT_GameRecord]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[MKT_Placement]",
          "ObjectType": 0
       },
@@ -305,6 +309,10 @@
       },
       {
          "Name": "[dbo].[PROD_SpecificationOption]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[RefreshTokens]",
          "ObjectType": 0
       },
       {

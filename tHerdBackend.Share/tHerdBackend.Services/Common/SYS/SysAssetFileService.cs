@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using tHerdBackend.Core.DTOs;
+﻿using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
@@ -15,132 +14,114 @@ namespace tHerdBackend.Services.Common.SYS
             _frepo = frepo;
         }
 
-        /// <summary>
-        /// 圖片管理用: 取得取得所有分頁圖片檔案清單
-        /// </summary>
-        /// <param name="ct"></param>
-        /// <returns></returns>
+        // ============================================================
+        //  檔案 / 圖片：查詢、上傳、刪除、更新
+        // ============================================================
+
         public Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default)
-        {
-            return _frepo.GetPagedFilesAsync(query, ct);
-        }
+            => _frepo.GetPagedFilesAsync(query, ct);
 
-        /// <summary>
-        /// 依模組與程式取得圖片檔案
-        /// </summary>
-        /// <param name="moduleId">模組代號</param>
-        /// <param name="progId">程式代號</param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
         public Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
+            => _frepo.GetFilesByProg(moduleId, progId, ct);
+
+        public Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+            => _frepo.GetFilesById(id, ct);
+
+        public Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default)
+            => _frepo.AddImages(uploadDto, ct);
+
+        public Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
         {
-            return _frepo.GetFilesByProg(moduleId, progId, ct);
+            if (dto == null)
+                return Task.FromResult<object>(new { success = false, message = "空的輸入資料" });
+            return _frepo.UpdateImageMeta(dto, ct);
         }
 
-        /// <summary>
-        /// 新增相片至 Cloudinary 並存入資料庫
-        /// </summary>
-        /// <param name="files"></param>
-        /// <returns></returns>
-        public async Task<AssetFileUploadDto> AddImages(AssetFileUploadDto uploadDto)
+        public Task<object> DeleteImage(int fileId, CancellationToken ct = default)
+            => _frepo.DeleteImage(fileId, ct);
+
+        public Task<object> DeleteImages(List<int> ids, CancellationToken ct = default)
         {
-            return await _frepo.AddImages(uploadDto);
+            if (ids == null || ids.Count == 0)
+                return Task.FromResult<object>(new { success = false, message = "未選取任何項目" });
+            return _frepo.DeleteImages(ids, ct);
         }
 
-        /// <summary>
-        /// 更新圖片檔案的描述資訊
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public async Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
+        public Task<object> BatchDelete(List<int> ids, CancellationToken ct = default)
         {
-            if (dto == null) throw new Exception($"空的輸入資料");
-
-            return await _frepo.UpdateImageMeta(dto);
+            if (ids == null || ids.Count == 0)
+                return Task.FromResult<object>(new { success = false, message = "未選取任何項目" });
+            return _frepo.BatchDelete(ids, ct);
         }
 
-        /// <summary>
-        /// 刪除圖片檔案
-        /// </summary>
-        /// <param name="fileId"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<bool> DeleteImage(int fileId, CancellationToken ct = default)
+        public Task<object> BatchSetActive(BatchActiveRequest req)
+            => _frepo.BatchSetActive(req);
+
+        public Task<object> CleanOrphanCloudinaryFiles(CancellationToken ct = default)
+            => _frepo.CleanOrphanCloudinaryFiles(ct);
+
+        // ============================================================
+        //  資料夾：CRUD、移動、結構
+        // ============================================================
+
+        public Task<object> CreateFolderAsync(string folderName, int? parentId)
         {
-            return await _frepo.DeleteImage(fileId);
+            if (string.IsNullOrWhiteSpace(folderName))
+                return Task.FromResult<object>(new { success = false, message = "請輸入資料夾名稱" });
+            return _frepo.CreateFolderAsync(folderName, parentId);
         }
 
-        /// <summary>
-        /// 取得圖片詳細資料
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+        public Task<object> RenameFolder(SysFolderDto dto)
         {
-            return await _frepo.GetFilesById(id);
+            if (dto == null || dto.FolderId <= 0)
+                return Task.FromResult<object>(new { success = false, message = "資料夾編號無效" });
+            if (string.IsNullOrWhiteSpace(dto.FolderName))
+                return Task.FromResult<object>(new { success = false, message = "請輸入資料夾名稱" });
+
+            return _frepo.RenameFolder(dto);
         }
 
-        /// <summary>
-        /// 建立資料夾
-        /// </summary>
-        /// <param name="folderName"></param>
-        /// <param name="parentId"></param>
-        /// <returns></returns>
-        public async Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId)
+        public Task<object> DeleteFolder(int folderId)
+            => _frepo.DeleteFolder(folderId);
+
+        public Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId)
+            => _frepo.GetSubFoldersAsync(parentId);
+
+        public Task<object> GetTreeData()
+            => _frepo.GetTreeData();
+
+        public Task<object> GetAllFolders()
+            => _frepo.GetAllFolders();
+
+        public Task<object> MoveToFolder(MoveRequestDto dto)
         {
-            return await _frepo.CreateFolderAsync(folderName, parentId);
+            if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
+                return Task.FromResult<object>(new { success = false, message = "沒有選取項目" });
+
+            if (dto.FolderId == 0)
+                dto.FolderId = null;
+
+            return _frepo.MoveToFolder(dto);
         }
 
-		/// <summary>
-		/// 重新命名資料夾
-		/// </summary>
-		/// <param name="dto"></param>
-		/// <returns></returns>
-		public async Task<dynamic> RenameFolder(SysFolderDto dto)
-		{
-			if (dto == null || dto.FolderId <= 0)
-				return new { success = false, message = "資料夾編號無效" };
+        // ============================================================
+        //  檔案總管用查詢 (資料夾 + 檔案 + 麵包屑)
+        // ============================================================
 
-			if (string.IsNullOrWhiteSpace(dto.FolderName))
-				return new { success = false, message = "請輸入資料夾名稱" };
+        public Task<object> GetPagedFolderItems(
+            int? parentId = null,
+            string? keyword = "",
+            int? start = null,
+            int? length = null,
+            int draw = 1,
+            string? orderColumn = "Name",
+            string? orderDir = "asc")
+        {
+            if (parentId == 0) parentId = null;
+            return _frepo.GetPagedFolderItems(parentId, keyword, start, length, draw, orderColumn, orderDir);
+        }
 
-			return await _frepo.RenameFolder(dto);
-		}
-
-		/// <summary>
-		/// 取得所有資料夾結構
-		/// </summary>
-		/// <returns></returns>
-		public async Task<dynamic> GetAllFolders()
-		{
-			return await _frepo.GetAllFolders();
-		}
-
-		/// <summary>
-		/// 移動檔案到指定資料夾
-		/// </summary>
-		/// <param name="dto"></param>
-		/// <returns></returns>
-		public async Task<string> MoveToFolder(MoveRequestDto dto)
-		{
-			if (dto == null || dto.Ids == null || dto.Ids.Count == 0) return "沒有選取項目";
-
-			if (dto.FolderId == 0) dto.FolderId = null;
-
-			return await _frepo.MoveToFolder(dto);
-		}
-
-		/// <summary>
-		/// 清除雲端孤兒檔案
-		/// </summary>
-		/// <param name="ct"></param>
-		/// <returns></returns>
-		public async Task<(int totalChecked, int deletedCount, List<string> deletedKeys)> CleanOrphanCloudinaryFiles(CancellationToken ct = default)
-		{
-			return await _frepo.CleanOrphanCloudinaryFiles(ct);
-		}
-	}
+        public Task<object> GetBreadcrumbPath(int folderId)
+            => _frepo.GetBreadcrumbPath(folderId);
+    }
 }

@@ -117,6 +117,7 @@ public class AssetFileUploadDto
 {
     public string ModuleId { get; set; } // 模組代號
     public string ProgId { get; set; } // 程式代號
+    public int? FolderId { get; set; }
     public List<AssetFileDetailsDto> Meta { get; set; } = new();
 }
 

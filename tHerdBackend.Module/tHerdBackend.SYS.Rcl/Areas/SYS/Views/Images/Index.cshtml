@@ -167,7 +167,7 @@
                 <i class="bi bi-folder-plus me-1"></i> 新增資料夾
             </button>
 
-                <!-- 🔴 新增紅色「清理未使用檔案」按鈕 -->
+                <!-- 新增紅色「清理未使用檔案」按鈕 -->
             <button id="btnCleanOrphanFiles" class="btn btn-danger btn-sm fw-semibold d-none">
                 <i class="bi bi-exclamation-triangle me-1"></i> 清理未使用檔案
             </button>
@@ -344,13 +344,19 @@
                     // d.keyword = $("#searchBox").val();
                 },
                 dataSrc: function (json) {
-                    // 自動同步更新麵包屑
-                    if (json.breadcrumb) {
-                        renderBreadcrumb(json.breadcrumb);
+                    // DataTables 模式
+                    if (Array.isArray(json.data)) {
+                        if (json.breadcrumb) renderBreadcrumb(json.breadcrumb);
+                        return json.data;  // 這裡直接回傳陣列
                     }
 
-                    // DataTables 會使用這個陣列來渲染
-                    return json.data || json.data || [];
+                    // 一般模式（非 DataTables 呼叫 loadFolder 時用）
+                    if (json.data && Array.isArray(json.data.items)) {
+                        if (json.data.breadcrumb) renderBreadcrumb(json.data.breadcrumb);
+                        return json.data.items;
+                    }
+
+                    return []; // fallback
                 },
                 error: function (xhr, status, error) {
                     console.error("載入資料發生錯誤：", error);
@@ -558,7 +564,13 @@
                 const data = await res.json();
 
                 // 根據是否有 data.items (非 DataTables 模式) 或 data.data (DataTables 模式)
-                const items = data.items || data.data || [];
+                let items = [];
+                if (Array.isArray(data.data)) {
+                  items = data.data;
+                } else if (data.data && Array.isArray(data.data.items)) {
+                  items = data.data.items;
+                }
+
 
                 // === 分開資料夾與檔案 ===
                 const folders = items.filter(x => x.isFolder);
@@ -729,7 +741,7 @@
                     Swal.fire({ icon: "error", title: "錯誤", text: err.message || "無法連線至伺服器" });
                 }
 
-                return; // ⛔ 不執行後面的圖片編輯邏輯
+                return; // 不執行後面的圖片編輯邏輯
             }
 
             // 如果是檔案 → 呼叫原本圖片資訊邏輯
@@ -754,6 +766,7 @@
         });
 
         // 刪除
+        // === 刪除 ===
         $('#btnDelete').on('click', async function () {
           const ids = getSelectedIds();
           if (ids.length === 0) {
@@ -761,16 +774,20 @@
             return;
           }
 
-          const confirmResult = await Swal.fire({
-            icon: "question",
-            title: "刪除確認",
-            text: `確定要刪除 ${ids.length} 筆資料嗎？（若資料夾下有內容將無法刪除）`,
+          // --- 二次確認 ---
+          const confirm = await Swal.fire({
+            icon: "warning",
+            title: "確定要刪除？",
+            text: `將刪除 ${ids.length} 筆資料（含雲端圖片）`,
             showCancelButton: true,
-            confirmButtonText: "刪除",
-            cancelButtonText: "取消"
+            confirmButtonText: "確定刪除",
+            cancelButtonText: "取消",
+            reverseButtons: true
           });
 
-          if (!confirmResult.isConfirmed) return;
+          if (!confirm.isConfirmed) return;
+
+          let result;
 
           try {
             const res = await fetch("/SYS/Images/BatchDelete", {
@@ -779,18 +796,56 @@
               body: JSON.stringify(ids)
             });
 
-            const result = await res.json();
-
-            if (result.success) {
-              Swal.fire({ icon: "success", title: "刪除成功", text: result.message });
-              table.ajax.reload(null, false);
-            } else {
-              Swal.fire({ icon: "error", title: "刪除失敗", text: result.message });
+            const text = await res.text();
+            try {
+              result = JSON.parse(text);
+            } catch {
+              console.error("後端回來的不是 JSON：", text);
+              throw new Error("伺服器沒有回傳有效的 JSON，可能是 500 錯誤");
             }
+
           } catch (err) {
             console.error("❌ 刪除發生錯誤：", err);
-            Swal.fire({ icon: "error", title: "系統錯誤", text: "無法連線至伺服器" });
+            Swal.fire({
+              icon: "error",
+              title: "系統錯誤",
+              text: "無法連線至伺服器或伺服器發生未預期錯誤。"
+            });
+            return;
           }
+
+          // --- 到這裡 result 一定是 JSON 物件 ---
+          const { success, status, message, data } = result;
+
+          if (!success) {
+            Swal.fire({
+              icon: status === "warning" ? "warning" : "error",
+              title: "刪除失敗",
+              text: message || "伺服器回傳錯誤。"
+            });
+            return;
+          }
+
+          // === 根據狀態動態顯示 ===
+          const deletedCount = data?.softDeleted?.length || 0;
+          const blockedCount = data?.blocked?.length || 0;
+
+          let htmlMsg = `
+            <b>已軟刪除：</b> ${deletedCount} 筆<br>
+          `;
+          if (blockedCount > 0) {
+            htmlMsg += `<b>仍被引用：</b> ${blockedCount} 筆`;
+          }
+
+          Swal.fire({
+            icon: blockedCount > 0 ? "warning" : "success",
+            title: blockedCount > 0 ? "部分刪除" : "刪除完成",
+            html: htmlMsg,
+            confirmButtonText: "確定"
+          });
+
+          // 重新整理 DataTable
+          table.ajax.reload(null, false);
         });
 
         // === 移動資料夾（改為 jsTree 樹狀選擇）===
@@ -827,11 +882,14 @@
         $("#btnAddFolder").on("click", async function () {
           const currentFolderId = breadcrumbStack.at(-1)?.id || null;
 
-          const { value: parentId } = await openFolderTreeSelector({
-            title: "選擇父層資料夾",
-            apiUrl: "/SYS/Images/GetTreeData",
-            defaultId: currentFolderId,
-          });
+        const treeResult = await openFolderTreeSelector({
+          title: "選擇父層資料夾",
+          apiUrl: "/SYS/Images/GetTreeData",
+          defaultId: currentFolderId,
+        });
+
+        if (!treeResult.isConfirmed) return; // 按取消就結束
+        const parentId = treeResult.value;
 
           const { value: folderName } = await Swal.fire({
             title: "輸入新資料夾名稱",
@@ -852,9 +910,6 @@
 
           if (result.success) {
               Swal.fire({ icon: "success", title: "建立成功" });
-
-              const newId = result.data?.folderId ?? null;
-              const newName = result.data?.folderName ?? "";
 
               // 若目前頁面就是該父層，就直接刷新
               const currentFolderId = breadcrumbStack.at(-1)?.id ?? null;
@@ -888,7 +943,7 @@
               `,
               focusConfirm: false,
               showCancelButton: true,
-              confirmButtonText: "確定",
+              confirmButtonText: "下一步",
               cancelButtonText: "取消",
               didOpen: async () => {
                 $("#swal-tree-container").jstree({
@@ -936,7 +991,7 @@
               $("#treeSearchBox").remove();
               setTimeout(() => {
                 $("#treeSearchBox").remove();
-                $("input[placeholder='🔍 搜尋資料夾...']").remove();
+                $("input[placeholder='搜尋資料夾...']").remove();
               }, 100);
             },
               preConfirm: () => {
@@ -965,7 +1020,7 @@
           }
         }
 
-        // === 🔴 清理 Cloudinary 未使用檔案 ===
+        // === 清理 Cloudinary 未使用檔案 ===
         $('#btnCleanOrphanFiles').on('click', async function () {
             const confirmResult = await Swal.fire({
                 icon: 'warning',
@@ -992,8 +1047,8 @@
                         icon: 'success',
                         title: '清理完成',
                         html: `
-                            ✅ 已檢查 ${result.totalChecked} 筆<br>
-                            🗑️ 成功刪除 ${result.deletedCount} 筆
+                            已檢查 ${result.totalChecked} 筆<br>
+                            成功刪除 ${result.deletedCount} 筆
                         `,
                     });
                 } else {

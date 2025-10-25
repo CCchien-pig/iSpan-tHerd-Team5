@@ -7,23 +7,52 @@ namespace tHerdBackend.Core.Interfaces.SYS
 {
     public interface ISysAssetFileRepository
     {
-        Task<AssetFileUploadDto> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
-        Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);
+        // ============================================================
+        //  Cloudinary 上傳 / 刪除 / 清理
+        // ============================================================
+        Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
+        Task<object> DeleteImage(int fileId, CancellationToken ct = default);
+        Task<object> DeleteImages(List<int> ids, CancellationToken ct = default);
+        Task<object> CleanOrphanCloudinaryFiles(CancellationToken ct = default);
+
+        // ============================================================
+        //  檔案查詢 / 更新
+        // ============================================================
         Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default);
-        Task<bool> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default);
-        Task<bool> DeleteImage(int fileId, CancellationToken ct = default);
-
-        Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId);
-        Task<SysFolderDto> CreateFolderAsync(string folderName, int? parentId);
-
+        Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);
         Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
+        Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default);
+        Task<object> BatchSetActive(BatchActiveRequest req);
 
-        Task<dynamic> RenameFolder([FromBody] SysFolderDto dto);
+        // ============================================================
+        //  資料夾 CRUD / 結構操作
+        // ============================================================
+        Task<object> CreateFolderAsync(string folderName, int? parentId);
+        Task<object> RenameFolder(SysFolderDto dto);
+        Task<object> DeleteFolder(int folderId);
+        Task<List<SysFolderDto>> GetSubFoldersAsync(int? parentId);
+        Task<object> GetTreeData();
+        Task<object> GetAllFolders();
+        Task<object> MoveToFolder(MoveRequestDto dto);
 
-		Task<dynamic> GetAllFolders();
+        // ============================================================
+        //  結構查詢（資料夾 + 檔案、麵包屑）
+        // ============================================================
+        Task<object> GetPagedFolderItems(
+            int? parentId = null,
+            string? keyword = "",
+            int? start = null,
+            int? length = null,
+            int draw = 1,
+            string? orderColumn = "Name",
+            string? orderDir = "asc"
+        );
 
-		Task<string> MoveToFolder(MoveRequestDto dto);
+        Task<object> GetBreadcrumbPath(int folderId);
 
-		Task<(int totalChecked, int deletedCount, List<string> deletedKeys)> CleanOrphanCloudinaryFiles(CancellationToken ct = default);
-	}
+        // ============================================================
+        //  批次刪除
+        // ============================================================
+        Task<object> BatchDelete(List<int> ids, CancellationToken ct = default);
+    }
 }
