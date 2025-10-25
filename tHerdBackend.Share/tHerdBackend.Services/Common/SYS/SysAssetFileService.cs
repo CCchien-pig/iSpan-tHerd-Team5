@@ -37,6 +37,9 @@ namespace tHerdBackend.Services.Common.SYS
             return _frepo.UpdateImageMeta(dto, ct);
         }
 
+        public async Task<bool> UpdateFileMetaField(FileMetaUpdateDto model)
+            => await _frepo.UpdateFileMetaField(model);
+
         public Task<object> DeleteImage(int fileId, CancellationToken ct = default)
             => _frepo.DeleteImage(fileId, ct);
 

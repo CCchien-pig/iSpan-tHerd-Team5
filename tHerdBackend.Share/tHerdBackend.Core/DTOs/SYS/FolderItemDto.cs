@@ -12,8 +12,8 @@
         public string? Url { get; set; }
         public string? MimeType { get; set; }
         public bool IsFolder { get; set; }
-        public DateTime? ModifiedDate { get; set; }
-        public long? Size { get; set; }
+        public string? AltText { get; set; }
+        public string? Caption { get; set; }
         public bool? IsActive { get; set; }
     }
 }

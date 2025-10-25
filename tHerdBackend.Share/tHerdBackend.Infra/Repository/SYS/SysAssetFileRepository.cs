@@ -1,5 +1,6 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using tHerdBackend.Core.DTOs;
@@ -793,8 +794,8 @@ namespace tHerdBackend.Infra.Repository.SYS
                     Name = f.FolderName,
                     IsFolder = true,
                     MimeType = "資料夾",
-                    ModifiedDate = null,
-                    Size = null,
+                    AltText = null,
+                    Caption = null,
                     Url = string.Empty,
                     IsActive = true
                 })
@@ -825,8 +826,8 @@ namespace tHerdBackend.Infra.Repository.SYS
                         : $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
                     MimeType = f.MimeType,
                     IsFolder = false,
-                    ModifiedDate = f.CreatedDate,
-                    Size = f.FileSizeBytes,
+                    AltText = f.AltText,
+                    Caption = f.Caption,
                     IsActive = f.IsActive
                 })
                 .ToListAsync();
@@ -841,12 +842,12 @@ namespace tHerdBackend.Infra.Repository.SYS
             combined = orderColumn?.ToLower() switch
             {
                 "modifieddate" => desc
-                    ? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.ModifiedDate).ToList()
-                    : combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.ModifiedDate).ToList(),
+                    ? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.AltText).ToList()
+                    : combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.AltText).ToList(),
 
                 "size" => desc
-                    ? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.Size).ToList()
-                    : combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.Size).ToList(),
+                    ? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.Caption).ToList()
+                    : combined.OrderByDescending(x => x.IsFolder).ThenBy(x => x.Caption).ToList(),
 
                 "mimetype" => desc
                     ? combined.OrderByDescending(x => x.IsFolder).ThenByDescending(x => x.MimeType).ToList()
@@ -969,6 +970,33 @@ namespace tHerdBackend.Infra.Repository.SYS
                     message = ex.Message
                 };
             }
+        }
+
+        /// <summary>
+        /// 照片資訊即時更新
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        public async Task<bool> UpdateFileMetaField(FileMetaUpdateDto model)
+        {
+            var file = await _db.SysAssetFiles.FindAsync(model.FileId);
+            if (file == null)
+                throw new Exception($"找不到檔案 ID {model.FileId}");
+
+            switch (model.Field?.ToLower())
+            {
+                case "alttext":
+                    file.AltText = model.Value;
+                    break;
+                case "caption":
+                    file.Caption = model.Value;
+                    break;
+                default:
+                    throw new Exception($"不允許的欄位 {model.FileId}");
+            }
+
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         /// <summary>

@@ -22,6 +22,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
         Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);
         Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
         Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default);
+        Task<bool> UpdateFileMetaField(FileMetaUpdateDto model);
         Task<object> BatchSetActive(BatchActiveRequest req);
 
         // ============================================================

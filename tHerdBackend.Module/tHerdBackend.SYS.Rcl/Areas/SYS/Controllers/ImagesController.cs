@@ -87,6 +87,26 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         public async Task<IActionResult> UpdateFile([FromBody] SysAssetFileDto dto, CancellationToken ct)
             => Json(await _frepo.UpdateImageMeta(dto, ct));
 
+        /// <summary>
+        /// 照片資訊即時更新
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<IActionResult> UpdateFileMetaField([FromBody] FileMetaUpdateDto model)
+        {
+            try
+            {
+                await _frepo.UpdateFileMetaField(model);
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                // 攔截錯誤，確保回傳 JSON 而不是 .NET 例外字串
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> DeleteFile(int? fileId, CancellationToken ct)
         {

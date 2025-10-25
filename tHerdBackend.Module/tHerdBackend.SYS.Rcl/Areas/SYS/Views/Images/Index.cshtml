@@ -18,8 +18,9 @@
             border-radius: 8px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
             padding: 1.5rem;
-            max-width: 100%;
-            width: 1200px;
+            width: 100%;
+            max-width: none; /* 取消最大寬度限制 */
+            margin-left: 20px; /* 左邊保留一點空間 */
         }
 
         .breadcrumb {
@@ -143,7 +144,7 @@
     </style>
 }
 
-<div class="container py-4 file-browser">
+<div class="container-fluid py-4 file-browser">
     <div class="d-flex justify-content-between align-items-center mb-3 sticky-top bg-white pb-2" style="z-index:10;">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-3" id="breadcrumb">
@@ -185,9 +186,9 @@
                     <th>編輯</th>
                     <th>名稱</th>
                     <th>狀態</th>
-                    <th>修改日期</th>
                     <th>類型</th>
-                    <th>大小</th>
+                    <th>AltText</th>
+                    <th>Caption</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -321,7 +322,8 @@
                         if (type === 'sort') return row.isFolder ? '0_' + data : '1_' + data;
                         return renderName(data, type, row);
                     }
-                }
+                },
+                { targets: "_all", className: "align-middle" }
             ],
             ajax: {
                 url: '/SYS/Images/GetPagedFolderItems',
@@ -381,27 +383,21 @@
                             <i class="bi bi-pencil"></i>
                          </button>`
                 },
-                {
-                    data: "name",
-                    render: renderName
-                },
+                { data: "name", render: renderName },
                 {
                     data: "isActive",
                     className: "text-center",
                     width: "90px",
                     render: (isActive, type, row) => {
-                        // 資料夾不用顯示狀態
                         if (row.isFolder || row.IsFolder) return "-";
-
-                        const active = isActive ?? false;
-                        const badgeClass = active ? "bg-success" : "bg-secondary";
-                        const text = active ? "啟用" : "停用";
+                        const badgeClass = isActive ? "bg-success" : "bg-secondary";
+                        const text = isActive ? "啟用" : "停用";
                         return `<span class="badge ${badgeClass} fw-semibold px-3 py-2">${text}</span>`;
                     }
                 },
-                { data: "modifiedDate", render: d => d ? new Date(d).toLocaleString() : "-" },
-                { data: "mimeType", render: r => r || "-" },
-                { data: "size", render: s => s ? (s / 1024).toFixed(1) + " KB" : "-" }
+                { data: "mimeType", title: "類型", width: "120px" },
+                { data: "altText", title: "AltText", width: "200px", render: a => a ?? "" },
+                { data: "caption", title: "Caption", width: "250px", render: c => c ?? "" }
             ],
             colResize: {
                 tableWidthFixed: false,  // 可自由拖曳
@@ -418,6 +414,94 @@
                 infoEmpty: "顯示第 0 筆到第 0 筆，共 0 筆",
                 paginate: { first: "第一頁", last: "最後一頁", next: "下一頁", previous: "上一頁" }
             }
+        });
+
+        // === 雙擊 AltText / Caption 可直接編輯（排除資料夾） ===
+        $('#fileTable tbody').on('dblclick', 'td', function () {
+          const cell = table.cell(this);
+          const column = table.column(this).dataSrc();
+          const editableCols = ["altText", "caption"];
+          if (!editableCols.includes(column)) return; // 不是這兩欄就略過
+
+          const rowData = table.row(this).data();
+
+          // 🧱 檢查是否為資料夾，資料夾禁止編輯
+          if (rowData.isFolder || rowData.IsFolder) {
+            Swal.fire({
+              toast: true,
+              icon: "info",
+              title: "資料夾無法編輯 AltText / Caption",
+              position: "top-end",
+              timer: 1500,
+              showConfirmButton: false
+            });
+            return;
+          }
+
+          const fileId = rowData.fileId || rowData.FileId || rowData.id || rowData.Id;
+          const originalValue = cell.data() || "";
+          const td = $(this);
+          if (td.find('input').length > 0) return; // 防止重複
+
+          // 🔒暫停 DataTables 的 redraw（避免 removeChild 衝突）
+          $.fn.dataTable.ext.errMode = 'none';
+          table.settings()[0].oFeatures.bSort = false;
+
+          const $input = $(`<input type="text" class="form-control form-control-sm"
+            style="width:100%;border:none;outline:none;padding:2px 4px;" value="${originalValue}">`);
+          td.empty().append($input);
+          $input.trigger("focus").select();
+
+          let isSaving = false;
+
+          async function saveValue(newValue) {
+            try {
+              const res = await fetch("/SYS/Images/UpdateFileMetaField", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ FileId: fileId, Field: column, Value: newValue })
+              });
+              const result = await res.json();
+              if (!result.success) throw new Error(result.message || "更新失敗");
+              cell.data(newValue);
+              td.text(newValue);
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: `${column} 已更新`,
+                showConfirmButton: false,
+                timer: 1200
+              });
+            } catch (err) {
+              td.text(originalValue);
+              Swal.fire({ icon: "error", title: "更新失敗", text: err.message });
+            } finally {
+              isSaving = false;
+              table.settings()[0].oFeatures.bSort = true;
+            }
+          }
+
+          $input.on("keydown", async function (e) {
+            if (e.key === "Escape") {
+              td.text(originalValue);
+              return;
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (isSaving) return;
+              isSaving = true;
+              const newValue = $(this).val().trim();
+              td.text("儲存中...");
+              await saveValue(newValue);
+            }
+          });
+
+          $input.on("blur", function () {
+            if (isSaving) return;
+            const val = $(this).val().trim();
+            td.text(val || originalValue);
+          });
         });
 
         // === 把跳頁欄位移到分頁器左邊 ===
@@ -1065,6 +1149,13 @@
                     title: '連線錯誤',
                     text: '無法連線至伺服器，請稍後再試。',
                 });
+            }
+        });
+
+        // === 當圖片資訊視窗關閉時，自動刷新 DataTable ===
+        document.getElementById('imgMetaModal').addEventListener('hidden.bs.modal', function () {
+            if (window.table) {
+                table.ajax.reload(null, false); // false = 保留目前頁碼
             }
         });
 
