@@ -26,17 +26,17 @@ namespace tHerdBackend.Core.DTOs.MKT
         /// <summary>
         /// 優惠券名稱
         /// </summary>
-        public string CouponName { get; set; }
+        public required string CouponName { get; set; }
 
         /// <summary>
         /// 優惠券代碼
         /// </summary>
-        public string CouponCode { get; set; }
+        public required string CouponCode { get; set; }
 
         /// <summary>
         /// 狀態（有效、停用）
         /// </summary>
-        public string Status { get; set; }
+        public required string Status { get; set; }
 
         /// <summary>
         /// 發放開始日期
@@ -92,5 +92,10 @@ namespace tHerdBackend.Core.DTOs.MKT
         /// 建檔時間
         /// </summary>
         public DateTime CreatedDate { get; set; }
+
+        /// <summary>
+        /// 使用者是否已領取（非資料表欄位）
+        /// </summary>
+        public bool IsReceived { get; set; }  // 🆕 新增
     }
 }
