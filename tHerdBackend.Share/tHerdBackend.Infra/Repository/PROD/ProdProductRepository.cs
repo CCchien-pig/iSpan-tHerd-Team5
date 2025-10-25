@@ -188,6 +188,7 @@ namespace tHerdBackend.Infra.Repository.PROD
             var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
                            p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
+                           p.badge, p.MainSkuId, 
                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
                            p.CreatedDate, p.Reviser, p.RevisedDate
                       FROM PROD_Product p

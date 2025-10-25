@@ -20,7 +20,7 @@
 
       <!-- 一次性購買區域 -->
       <div class="auto-delivery-section p-3">
-        <div class="form-check">
+        <!-- <div class="form-check">
           <input
             class="form-check-input"
             type="checkbox"
@@ -30,7 +30,7 @@
           <label class="form-check-label" for="autoDelivery">
             <strong>一次性購買：</strong>
           </label>
-        </div>
+        </div> -->
         <div class="price-display mt-2">
           <span class="fs-4 fw-bold text-danger">NT${{ currentPrice }}</span>
         </div>
