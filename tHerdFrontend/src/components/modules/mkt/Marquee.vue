@@ -55,16 +55,8 @@ export default {
 
     // ✅ 產生隨機顏色的方法
     getRandomColor() {
-  const palette = ['#FFFFFF', // 亮白
-    '#E8E8E8', // 銀灰
-    '#F8F8F8', // 奶白
-    '#FFD580', // 香檳金
-    '#FFC77D', // 粉橘
-    '#FFF5CC', // 米黃
-    '#FFE2B3', // 淡杏橙
-    '#F0F0F0',  // 珍珠白
-    '#FFFFFF', 
-    '#FFB347'
+  const palette = [
+    '#FFFFFF', // 亮白
     ]
   return palette[Math.floor(Math.random() * palette.length)]
 },
