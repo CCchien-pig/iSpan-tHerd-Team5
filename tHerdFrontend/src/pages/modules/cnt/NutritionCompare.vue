@@ -73,9 +73,12 @@
               {{ state.showAllAnalytes ? '顯示：全部營養素' : '顯示：常見營養素' }}
             </label>
           </div>
-
-          <button class="btn btn-sm btn-outline-secondary" @click="toggleAllGroups">
-            {{ areAllGroupsCollapsed ? '全部展開' : '全部收合' }}
+          <button
+            type="button"
+            class="btn silver-reflect-button btn-sm text-dark px-3"
+            @click.stop.prevent="toggleAllGroups"
+          >
+            {{ allCollapsed ? '全部展開' : '全部收合' }}
           </button>
         </div>
       </div>
@@ -92,8 +95,8 @@
           />
         </div>
         <div class="col-md-6 text-md-end">
-          <button class="btn btn-sm btn-outline-secondary me-2" @click="selectAllAnalytes">全選目前篩選</button>
-          <button class="btn btn-sm btn-outline-secondary" @click="ui.selectedAnalyteIds = []">清空</button>
+          <button class="btn silver-reflect-button btn-sm text-dark px-3 me-2" @click="selectAllAnalytes">全選目前篩選</button>
+          <button class="btn silver-reflect-button btn-sm text-dark px-3" @click="ui.selectedAnalyteIds = []">清空</button>
         </div>
       </div>
 
@@ -121,23 +124,24 @@
 
           <!-- ✅ 群組內容要包在「同一個 div」裡 -->
           <transition name="fade-collapse">
-            <div
-              v-show="!isGroupCollapsed(group.category)"
-              class="analyte-group-content d-flex flex-wrap gap-2 mt-2"
-            >
-              <label
-                v-for="a in group.items"
-                :key="a.analyteId"
-                class="form-check-label analyte-item border rounded px-3 py-1 bg-light"
-              >
-                <input
-                  type="checkbox"
-                  v-model="ui.selectedAnalyteIds"
-                  :value="a.analyteId"
-                  class="form-check-input me-2"
-                />
-                {{ a.analyteName }}
-              </label>
+            <!-- 由這層 v-show 控制顯示；不要放任何 d-* 類別 -->
+            <div v-show="!isGroupCollapsed(group.category)" class="mt-2">
+              <!-- 這層才放 d-flex 等排版類別 -->
+              <div class="analyte-group-content d-flex flex-wrap gap-2">
+                <label
+                  v-for="a in group.items"
+                  :key="a.analyteId"
+                  class="form-check-label analyte-item border rounded px-3 py-1 bg-light"
+                >
+                  <input
+                    type="checkbox"
+                    v-model="ui.selectedAnalyteIds"
+                    :value="a.analyteId"
+                    class="form-check-input me-2"
+                  />
+                  {{ a.analyteName }}
+                </label>
+              </div>
             </div>
           </transition>
         </div>
@@ -200,6 +204,11 @@ function showWarn(msg) {
     confirmButtonColor: 'rgb(0,112,131)'
   })
 }
+// 全程正規化分類字串。加入這個 helper
+const norm = s => {
+  const t = String(s || '').trim()
+  return t === '' ? '未分類' : t
+}
 
 /* ---------- state ---------- */
 const state = reactive({
@@ -231,6 +240,10 @@ const ui = reactive({
 const collapsedGroups = ref([]) // 獨立的 ref，Vue 才能正確追蹤
 const chartRefs = reactive({})
 let resizeHandler = null
+// 🛡️ 批次切換期間的全域旗標（放最上面，任何函式執行時都能讀到正確值）
+let isBulkToggling = false
+const allCollapsed = ref(false)   // ← 新增：全局唯一「全部收合」狀態
+let togglingNow = false
 
 /* ----------------------- lifecycle ----------------------- */
 onMounted(async () => {
@@ -257,6 +270,7 @@ async function loadSamples() {
 
 let firstLoad = true
 async function loadAnalytes() {
+  console.log('[LOAD] showAll=', state.showAllAnalytes, 'bulk=', isBulkToggling)
   try {
     const res = await getAnalyteList(!state.showAllAnalytes ? true : false)
     const items = res?.items || []
@@ -275,17 +289,21 @@ async function loadAnalytes() {
     }
 
     await nextTick()
-    filterAnalytes() // ✅ 即時根據搜尋文字重新顯示
+    if (state.analyteKeyword.trim() !== '') {
+      filterAnalytes() // 只有真的在搜尋時才觸發
+    }
+    console.log('[LOAD] done. groups=', ui.filteredAnalytesByCat.length)
   } catch (e) {
     console.error('載入營養素失敗', e)
   }
 }
 
 /* ----------------------- analyte 群組處理 ----------------------- */
+// 3) groupAnalytes：保護期後依 allCollapsed 同步 collapsedGroups
 function groupAnalytes(items) {
   const map = new Map()
   for (const a of items) {
-    const cat = a.category || '未分類'
+    const cat = norm(a.category) || '未分類'
     if (!map.has(cat)) map.set(cat, [])
     map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
   }
@@ -293,11 +311,20 @@ function groupAnalytes(items) {
   const newGroups = Array.from(map, ([category, items]) => ({ category, items }))
   ui.filteredAnalytesByCat = newGroups
 
-  // ✅ 僅保留原有狀態，不重建 collapsedGroups
+  // 批次切換期間：完全不要動 collapsedGroups（避免「收了又展開」）
+  if (isBulkToggling) return
+
+  if (allCollapsed.value) {
+    // 目前是「全部收合」模式 → 重建後維持全部收合
+    collapsedGroups.value = newGroups.map(g => norm(g.category))
+  } else {
+    // 一般模式 → 僅清理不存在的分類
   collapsedGroups.value = collapsedGroups.value.filter(cat =>
-    newGroups.some(g => g.category === cat)
-  )
+    newGroups.some(g => norm(g.category) === cat))
+  }
+  console.log('[GROUP] exit:  collapsed=', collapsedGroups.value.length)
 }
+
 
 /* ----------------------- filters ----------------------- */
 function filterSamples() {
@@ -309,10 +336,14 @@ function filterSamples() {
 
 function filterAnalytes() {
   const kw = state.analyteKeyword.trim().toLowerCase()
+  console.log('[FILTER] kw=', kw, 'bulk=', isBulkToggling)
 
   if (!kw) {
     // ✅ 若清空搜尋 → 顯示全部 analyte
-    groupAnalytes(ui.analyteOptions)
+    // 🛡️ 批次切換期間不要重建，避免洗掉剛設定的 collapsedGroups
+    if (!isBulkToggling) {
+      groupAnalytes(ui.analyteOptions)
+    }
     return
   }
 
@@ -320,7 +351,7 @@ function filterAnalytes() {
   const map = new Map()
   for (const a of ui.analyteOptions) {
     if ((a.analyteName || '').toLowerCase().includes(kw)) {
-      const cat = a.category || '未分類'
+      const cat = norm(a.category) || '未分類'
       if (!map.has(cat)) map.set(cat, [])
       map.get(cat).push({ analyteId: a.analyteId, analyteName: a.analyteName })
     }
@@ -349,42 +380,47 @@ function removeSample(id) {
 /* ---------- 群組收合（改為陣列可追蹤版） ---------- */
 
 function isGroupCollapsed(cat) {
-  return collapsedGroups.value.includes(cat)
+  return collapsedGroups.value.includes(norm(cat))
 }
 
 function toggleGroup(cat) {
-  const idx = collapsedGroups.value.indexOf(cat)
-  if (idx > -1) {
-    collapsedGroups.value.splice(idx, 1)
-  } else {
-    collapsedGroups.value.push(cat)
-  }
-
+  const c = norm(cat)
+  const i = collapsedGroups.value.indexOf(c)
+  if (i > -1) collapsedGroups.value.splice(i, 1)
+  else collapsedGroups.value.push(c)
   // 🔹 強制 Vue 重新追蹤（避免 v-show 不更新）
   collapsedGroups.value = [...collapsedGroups.value]
 }
 
-function toggleAllGroups() {
-  if (areAllGroupsCollapsed.value) {
-    // ✅ 全部展開
-    collapsedGroups.value = []
-  } else {
-    // ✅ 全部收合
-    collapsedGroups.value = ui.filteredAnalytesByCat.map(g => g.category)
+// 2) 改寫 toggleAllGroups（改用 allCollapsed 當唯一事實來源）
+async function toggleAllGroups() {
+  if (togglingNow) return         // 🛡️ 防連點
+  togglingNow = true
+  try {
+    isBulkToggling = true
+    allCollapsed.value = !allCollapsed.value
+
+    collapsedGroups.value = allCollapsed.value
+      ? ui.filteredAnalytesByCat.map(g => norm(g.category)) // 全收
+      : []                                                  // 全展
+
+    collapsedGroups.value = [...collapsedGroups.value]
+    await nextTick()
+    await Promise.resolve() // 再等一拍避開同輪 regroup
+  } finally {
+    isBulkToggling = false
+    togglingNow = false      // ✅ 關鍵：把點擊鎖放開
+    console.log('[CLICK] after:', 'allCollapsed=', allCollapsed.value,
+                'collapsed=', collapsedGroups.value.length)
   }
 }
-
-const areAllGroupsCollapsed = computed(() =>
-  ui.filteredAnalytesByCat.length > 0 &&
-  ui.filteredAnalytesByCat.every(g => collapsedGroups.value.includes(g.category))
-)
 
 function expandDefaults() {
   const defaults = ['一般成分', '礦物質', '維生素B群 & C', '維生素E']
   // ✅ 只設定為「非預設群組收合」
   collapsedGroups.value = ui.filteredAnalytesByCat
-    .filter(g => !defaults.includes(g.category))
-    .map(g => g.category)
+    .filter(g => !defaults.includes(norm(g.category)))
+    .map(g => norm(g.category))
 }
 
 /* ----------------------- compare ----------------------- */
@@ -596,7 +632,18 @@ function getGroupStyle(category, index) {
 
 <style scoped>
 .container { max-width: 1080px; }
-.compare-step { border: 1px solid #e9f6f6; }
+/* 🌿 比較面板外框：略深、微陰影、hover時更清楚 */
+.compare-step {
+  border: 1px solid #b0d5d5;          /* 🔹 比原本 e9f6f6 稍深一階，框線更明顯 */
+  border-radius: 10px;
+  background-color: #ffffff;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.compare-step:hover {
+  border-color: #b7dede;               /* 🔹 滑入時稍再深一階，增加層次感 */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+}
 .border-main-color-green { border-color: rgb(0,112,131) !important; }
 .chart-box { width: 100%; }
 
@@ -635,6 +682,17 @@ function getGroupStyle(category, index) {
 .bi.rotate-0 {
   transform: rotate(0deg);
   transition: transform 0.2s ease;
+}
+.silver-reflect-button {
+  background: linear-gradient(180deg, #f8f8f8 0%, #e6e6e6 100%);
+  border: 1px solid #bdbdbd;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: 50px;
+  transition: all 0.2s ease;
+}
+.silver-reflect-button:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #dcdcdc 100%);
+  box-shadow: 0 0 8px rgba(180,180,180,0.6);
 }
 
 </style>

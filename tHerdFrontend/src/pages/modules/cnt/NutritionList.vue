@@ -66,19 +66,19 @@
         border
         height="60vh"
         class="brand-table"
-        @row-click="toDetail"
       >
         <el-table-column prop="sampleId" label="ID" width="90" />
         <el-table-column prop="sampleName" label="食材名稱" min-width="220" />
         <el-table-column prop="categoryName" label="分類" width="180" />
         <el-table-column prop="aliasName" label="別名" min-width="220" />
 
+        <!-- ✅ 僅此按鈕能跳轉 -->
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button
               size="small"
               class="btn-strong teal-reflect-button btn-compact"
-              @click.stop="toDetail(row)"
+              @click="toDetail(row)"  
               title="查看詳情"
             >
               查看
@@ -86,6 +86,7 @@
           </template>
         </el-table-column>
       </el-table>
+
 
       <!-- 📄 分頁（預設 24；使用者可切換） -->
       <div class="pager-wrap">
@@ -273,6 +274,7 @@ onMounted(async () => {
 }
 :deep(.brand-table .el-table__row:hover) {
   background-color: #f5fbfb;
+  cursor: default; /* 改為普通滑鼠，不會誤導可點擊 */
 }
 :deep(.brand-table) {
   border-radius: 12px;

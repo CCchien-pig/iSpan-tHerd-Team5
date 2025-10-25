@@ -184,24 +184,46 @@ function getNavbarOffset() {
   return 80;
 }
 
-function scrollToWithOffset(selectorOrId) {
-  let target = null;
-  if (selectorOrId.startsWith("#") || selectorOrId.startsWith(".")) {
-    target = document.querySelector(selectorOrId);
-  } else {
-    target = document.getElementById(selectorOrId);
-  }
-  if (!target) return;
+function scrollToWithOffset(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
 
+  const scroller = getScrollParent(contentRef.value);
+  const isWindow = scroller === window;
+  const scTop = isWindow ? 0 : scroller.getBoundingClientRect().top;
+  const current = isWindow ? window.scrollY : scroller.scrollTop;
   const offset = (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
-  const y = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: y, behavior: "smooth" });
+
+  const targetAbs = el.getBoundingClientRect().top - scTop + current;
+  const to = Math.max(0, targetAbs - offset);
+
+  if (isWindow) {
+    window.scrollTo({ top: to, behavior: 'smooth' });
+  } else {
+    scroller.scrollTo({ top: to, behavior: 'smooth' });
+  }
 }
-// ✅ 點 TOC 時即時高亮 + 平滑捲動
+
+// 模組層級旗標（放在 <script setup> 最上方）
+let isJumping = false;
+let jumpTargetId = null;
+let jumpTimer = null;
+
 function onTocClick(id) {
-  toc.value.activeId = id;
-  scrollToWithOffset(id);
+  toc.value.activeId = id;  // 先高亮
+  isJumping = true;
+  jumpTargetId = id;
+
+  scrollToWithOffset(id);   // 你的平滑捲動函式
+
+  // 安全閥，最多 2 秒自動解鎖避免卡住
+  clearTimeout(jumpTimer);
+  jumpTimer = setTimeout(() => {
+    isJumping = false;
+    jumpTargetId = null;
+  }, 2000);
 }
+
 
 // === 自動重新計算 offset ===
 function syncNavbarCssVar() {
@@ -219,6 +241,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
 });
 
+let disposeSticky = null; //加一個變數來接收清理函式，並統一清理
 // ==== lifecycle ====
 onMounted(async () => {
   // 只在本頁動態載入 Bootstrap Icons
@@ -245,17 +268,18 @@ onMounted(async () => {
   // ✅ 若從列表/首頁帶入 scroll=body，進入就捲到正文
   if (route.query.scroll === "body") {
     setTimeout(() => {
-      scrollToWithOffset(".rounded-3.p-4.mb-3 h1");
+      scrollToWithOffset("article-body-start"); // 或傳入第一個 h2 的 id
     }, 300);
   }
   buildHeadings();
   await loadRecommended();
   syncNavbarCssVar();       // 進頁就把 --navbar-height 設準
-  setupStickyAssist();      // 啟用加強版 sticky / 高亮同步（下一步定義）
+  disposeSticky = setupStickyAssist(); // 啟用並保存清理函式
 });
 
 onBeforeUnmount(() => {
   if (observer) observer.disconnect();
+  if (disposeSticky) disposeSticky();    // ✅ 這裡統一清理 sticky 相關監聽
 });
 
 // ==== computed（付費遮罩時顯示部分內容）====
@@ -279,6 +303,20 @@ const displayBlocks = computed(() => {
 });
 
 // ==== methods ====
+// === 工具：找出實際可滾動容器（window 或內層 div） ===
+function getScrollParent(el) {
+  let node = el;
+  while (node && node !== document.body) {
+    const style = getComputedStyle(node);
+    const overflowY = style.overflowY;
+    const canScroll =
+      (overflowY === "auto" || overflowY === "scroll") &&
+      node.scrollHeight > node.clientHeight;
+    if (canScroll) return node;
+    node = node.parentElement;
+  }
+  return window; // 找不到就退回 window
+}
 
 /** 
  * 加強版：同時處理
@@ -288,40 +326,141 @@ const displayBlocks = computed(() => {
 function setupStickyAssist() {
   const root = contentRef.value;
   if (!root) return;
-  if (!root || !root.querySelectorAll) return;
-  const headers = Array.from(root.querySelectorAll("h2, h3"));
-  if (headers.length === 0) return;
+  
 
-  // 2-1) 利用 scroll 事件，依「誰最貼近頂部（含 offset）」做為 active
+  const headers = Array.from(root.querySelectorAll('h2, h3')).filter(h => h.id);
+  if (!headers.length) return;
+
+  // 取得實際的 scroller（可能是 window，也可能是某個 div）
+  const scroller = getScrollParent(root);
+  console.log("[TOC] 實際滾動容器 =", scroller, "isWindow =", scroller === window);
+  const isWindow = scroller === window;
+
+  // 把「視窗座標」換成「scroller 座標」的量法
+  const getScrollTop = () => (isWindow ? window.scrollY : scroller.scrollTop);
+  const getScrollerTop = () => (isWindow ? 0 : scroller.getBoundingClientRect().top);
+
+  // 你的 navbar 高度 offset（保持原本的函式/變數）
+  const getOffset = () => (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
+
+  // 量錨點的「絕對 Y（以 scroller 的座標系）」
+  let anchorTops = [];
+  const measure = () => {
+    const scTop = getScrollerTop();
+    const sTop = getScrollTop();
+    anchorTops = headers.map(h => ({
+      id: h.id,
+      // 🚩 把 header 的視窗 top 轉成 scroller 座標：rect.top - scrollerRect.top + scrollTop
+      y: h.getBoundingClientRect().top - scTop + sTop,
+      txt: (h.textContent || '').trim().slice(0, 30),
+    }));
+    // console.table(anchorTops); // 需要時打開
+  };
+
+  // 跳轉偏好
+  const NEAR_RANGE = 120;
+
   const onScroll = () => {
-    const offset = currentNavbarOffset || getNavbarOffset() + STICKY_EXTRA;
-    let activeId = headers[0].id;
+    const offset = getOffset();
+    const pos = getScrollTop() + offset;
 
-    for (const h of headers) {
-      const top = h.getBoundingClientRect().top - offset - 4; // 貼頂略過 4px
-      if (top <= 0) activeId = h.id; else break;
-    }
-    toc.value.activeId = activeId;
-
-    // 2-2) 視覺：誰正在貼頂就加 .is-stuck
-    headers.forEach((h) => {
-      const top = h.getBoundingClientRect().top - offset;
-      if (top <= 1 && top > -1 * (h.offsetHeight || 32)) {
-        h.classList.add("is-stuck");
-      } else {
-        h.classList.remove("is-stuck");
+    // 跳轉期間，沒到站就不覆蓋 active
+    if (isJumping && jumpTargetId) {
+      const el = document.getElementById(jumpTargetId);
+      if (el) {
+        const targetAbs = el.getBoundingClientRect().top - getScrollerTop() + getScrollTop();
+        if (Math.abs(targetAbs - pos) <= 6) {
+          isJumping = false;
+          clearTimeout(jumpTimer);
+        } else {
+          return;
+        }
       }
+    }
+
+    // 近目標優先（避免第一顆 sticky 抢回）
+    if (jumpTargetId) {
+      const el = document.getElementById(jumpTargetId);
+      if (el) {
+        const targetAbs = el.getBoundingClientRect().top - getScrollerTop() + getScrollTop();
+        if (Math.abs(targetAbs - pos) <= NEAR_RANGE) {
+          toc.value.activeId = jumpTargetId;
+          // 貼頂視覺（仍用視窗 rect 計）
+          headers.forEach(h => {
+            const top = h.getBoundingClientRect().top - offset;
+            if (top <= 1 && top > -1 * (h.offsetHeight || 32)) h.classList.add('is-stuck');
+            else h.classList.remove('is-stuck');
+          });
+          return;
+        }
+      }
+    }
+
+    // 一般就近判定（用 scroller 座標）
+    let activeId = anchorTops[0]?.id;
+    for (let i = 0; i < anchorTops.length; i++) {
+      if (anchorTops[i].y <= pos + 1) activeId = anchorTops[i].id;
+      else break;
+    }
+    if (activeId) toc.value.activeId = activeId;
+
+    // 視覺貼頂（與原來相同）
+    headers.forEach(h => {
+      const top = h.getBoundingClientRect().top - offset;
+      if (top <= 1 && top > -1 * (h.offsetHeight || 32)) h.classList.add('is-stuck');
+      else h.classList.remove('is-stuck');
     });
   };
 
-  // 初始化與監聽
-  onScroll();
-  window.addEventListener("scroll", onScroll, { passive: true });
+  // 防抖 remeasure（避免頻繁重算）
+  let remeasureTimer = null;
+  let remeasurePending = false;
+  const remeasure = () => {
+    if (remeasurePending) return;
+    remeasurePending = true;
+    clearTimeout(remeasureTimer);
+    remeasureTimer = setTimeout(() => {
+      remeasurePending = false;
+      measure();
+      onScroll();
+    }, 80);
+  };
 
-  // 卸載時移除監聽，避免重複與記憶體外洩
-  onBeforeUnmount(() => {
-    window.removeEventListener("scroll", onScroll);
+  // 初始化
+  measure();
+  onScroll();
+
+  // 監聽「正確的 scroller」
+  const addScroll = () =>
+    (isWindow
+      ? window.addEventListener('scroll', onScroll, { passive: true })
+      : scroller.addEventListener('scroll', onScroll, { passive: true }));
+  const removeScroll = () =>
+    (isWindow
+      ? window.removeEventListener('scroll', onScroll)
+      : scroller.removeEventListener('scroll', onScroll));
+
+  addScroll();
+  window.addEventListener('resize', remeasure);
+
+  // 🔎 圖片載入/內容變更重新量測（注意不要監聽 attributes，避免自觸發）
+  const imgs = root.querySelectorAll('img');
+  imgs.forEach(img => {
+    if (!img.complete) img.addEventListener('load', remeasure, { once: true });
   });
+  const mo = new MutationObserver(remeasure);
+  mo.observe(root, { childList: true, subtree: true }); // 不監聽 attributes
+
+  window.addEventListener('load', remeasure);
+  setTimeout(remeasure, 150);
+  setTimeout(remeasure, 600);
+
+  return () => {
+    removeScroll();
+    window.removeEventListener('resize', remeasure);
+    window.removeEventListener('load', remeasure);
+    mo.disconnect();
+  };
 }
 
 function goBack() {
@@ -616,6 +755,7 @@ function formatDate(d) {
   color: #005a60;
   font-weight: 600;
 }
+.toc-bar .toc-item.active { background:#e9f6f6; }
 
 /* 付費遮罩 */
 .content-mask {
