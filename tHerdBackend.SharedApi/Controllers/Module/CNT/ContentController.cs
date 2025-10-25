@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using tHerdBackend.Core.Interfaces.CNT;
+using tHerdBackend.Services.CNT;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 {
@@ -22,9 +23,55 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 		}
 
 		/// <summary>
-		/// 文章清單（支援分類、關鍵字、分頁）
-		/// 範例：/api/cnt/list?categoryId=1&q=魚油&page=1&pageSize=12
+		/// 取得所有文章分類（含每個分類的文章數量）
 		/// </summary>
+		/// <remarks>
+		/// 用於前台 Sidebar 與文章列表上方分類區塊。  
+		/// 資料來源：CNT_PageType + CNT_Page  
+		/// 
+		/// **範例：**
+		/// GET `/api/cnt/categories`
+		/// 
+		/// **回傳範例：**
+		/// ```json
+		/// {
+		///   "items": [
+		///     { "id": 1, "name": "健康飲食", "articleCount": 12 },
+		///     { "id": 2, "name": "運動營養", "articleCount": 8 },
+		///     { "id": 3, "name": "保健知識", "articleCount": 5 }
+		///   ]
+		/// }
+		/// ```
+		/// </remarks>
+		[HttpGet("categories")]
+		public async Task<IActionResult> GetCategories()
+		{
+			var list = await _svc.GetCategoriesAsync();
+			return Ok(new { items = list });
+		}
+
+
+		/// <summary>
+		/// 文章清單（支援分類、關鍵字搜尋與分頁）
+		/// </summary>
+		/// <remarks>
+		/// 用於前台文章列表頁顯示。  
+		/// 可根據分類、關鍵字查詢，並支援分頁。
+		/// 
+		/// **範例：**
+		/// GET `/api/cnt/list?categoryId=1&q=魚油&page=1&pageSize=12`
+		/// 
+		/// **回傳欄位：**
+		/// - `PageId`: 文章ID  
+		/// - `Title`: 標題  
+		/// - `Slug`: SEO 友善網址  
+		/// - `Excerpt`: 文章摘要  
+		/// - `CoverImage`: 封面圖路徑  
+		/// - `CategoryName`: 所屬分類名稱  
+		/// - `PublishedDate`: 發佈日期  
+		/// - `IsPaidContent`: 是否為付費文章  
+		/// - `Tags`: 標籤集合
+		/// </remarks>
 		[HttpGet("list")]
 		public async Task<IActionResult> GetList(
 			[FromQuery] int? categoryId,

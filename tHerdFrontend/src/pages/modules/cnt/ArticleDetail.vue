@@ -40,7 +40,7 @@
               :key="idx"
               class="btn btn-sm toc-item"
               :class="{ active: h.id === toc.activeId }"
-              @click="scrollToAnchor(h.id)"
+              @click="onTocClick(h.id)"
             >
               <span class="me-1" v-if="h.level===2">H2｜</span>
               <span class="me-1" v-else>H3｜</span>
@@ -172,6 +172,53 @@ let observer = null;
 // 推薦文章
 const recommended = ref([]);
 
+// === 全域導覽列偏移控制 ===
+let currentNavbarOffset = 80;
+const STICKY_EXTRA = 10; // h2/h3 的 sticky 額外間距，需與 CSS 的 +10px 一致
+function getNavbarOffset() {
+  const nav = document.querySelector(".navbar.fixed-top, header.fixed-top, nav.fixed-top");
+  if (nav) {
+    const rect = nav.getBoundingClientRect();
+    return rect.height + 5;
+  }
+  return 80;
+}
+
+function scrollToWithOffset(selectorOrId) {
+  let target = null;
+  if (selectorOrId.startsWith("#") || selectorOrId.startsWith(".")) {
+    target = document.querySelector(selectorOrId);
+  } else {
+    target = document.getElementById(selectorOrId);
+  }
+  if (!target) return;
+
+  const offset = (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
+  const y = target.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top: y, behavior: "smooth" });
+}
+// ✅ 點 TOC 時即時高亮 + 平滑捲動
+function onTocClick(id) {
+  toc.value.activeId = id;
+  scrollToWithOffset(id);
+}
+
+// === 自動重新計算 offset ===
+function syncNavbarCssVar() {
+  const px = (currentNavbarOffset || getNavbarOffset());
+  document.documentElement.style.setProperty('--navbar-height', `${px}px`);
+}
+
+function handleResize() {
+  currentNavbarOffset = getNavbarOffset();
+  syncNavbarCssVar(); // ← 新增：同步到 CSS 變數，sticky 立刻生效
+}
+window.addEventListener("resize", handleResize);
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", handleResize);
+});
+
 // ==== lifecycle ====
 onMounted(async () => {
   // 只在本頁動態載入 Bootstrap Icons
@@ -192,19 +239,19 @@ onMounted(async () => {
       blocks.value = Array.isArray(res.data.blocks) ? res.data.blocks : [];
     }
   }
-
+  
   await nextTick();
+
   // ✅ 若從列表/首頁帶入 scroll=body，進入就捲到正文
   if (route.query.scroll === "body") {
     setTimeout(() => {
-      const target = document.getElementById("article-body-start");
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToWithOffset(".rounded-3.p-4.mb-3 h1");
     }, 300);
   }
-
   buildHeadings();
-  setupObserver();
   await loadRecommended();
+  syncNavbarCssVar();       // 進頁就把 --navbar-height 設準
+  setupStickyAssist();      // 啟用加強版 sticky / 高亮同步（下一步定義）
 });
 
 onBeforeUnmount(() => {
@@ -232,6 +279,51 @@ const displayBlocks = computed(() => {
 });
 
 // ==== methods ====
+
+/** 
+ * 加強版：同時處理
+ * 1) H2/H3 在貼頂時加上 .is-stuck（陰影）
+ * 2) TOC 高亮依「視窗頂端 + offset」就近原則更新
+ */
+function setupStickyAssist() {
+  const root = contentRef.value;
+  if (!root) return;
+  if (!root || !root.querySelectorAll) return;
+  const headers = Array.from(root.querySelectorAll("h2, h3"));
+  if (headers.length === 0) return;
+
+  // 2-1) 利用 scroll 事件，依「誰最貼近頂部（含 offset）」做為 active
+  const onScroll = () => {
+    const offset = currentNavbarOffset || getNavbarOffset() + STICKY_EXTRA;
+    let activeId = headers[0].id;
+
+    for (const h of headers) {
+      const top = h.getBoundingClientRect().top - offset - 4; // 貼頂略過 4px
+      if (top <= 0) activeId = h.id; else break;
+    }
+    toc.value.activeId = activeId;
+
+    // 2-2) 視覺：誰正在貼頂就加 .is-stuck
+    headers.forEach((h) => {
+      const top = h.getBoundingClientRect().top - offset;
+      if (top <= 1 && top > -1 * (h.offsetHeight || 32)) {
+        h.classList.add("is-stuck");
+      } else {
+        h.classList.remove("is-stuck");
+      }
+    });
+  };
+
+  // 初始化與監聽
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  // 卸載時移除監聽，避免重複與記憶體外洩
+  onBeforeUnmount(() => {
+    window.removeEventListener("scroll", onScroll);
+  });
+}
+
 function goBack() {
   if (window.history.length > 1) router.back();
   else router.push({ name: "cnt-articles" });
@@ -291,38 +383,6 @@ function buildHeadings() {
 
 function toggleToc() {
   toc.value.open = !toc.value.open;
-}
-
-function scrollToAnchor(id) {
-  const root = contentRef.value;
-  if (!root) return;
-  const target = root.querySelector(`#${CSS.escape(id)}`);
-  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-// ScrollSpy
-function setupObserver() {
-  if (observer) observer.disconnect();
-  const root = contentRef.value;
-  if (!root) return;
-  observer = new IntersectionObserver(handleIntersect, {
-    root: null,
-    rootMargin: "0px 0px -65% 0px",
-    threshold: 0,
-  });
-  root.querySelectorAll("h2, h3").forEach((el) => observer.observe(el));
-}
-
-function handleIntersect(entries) {
-  let topMost = null;
-  for (const entry of entries) {
-    if (entry.isIntersecting) {
-      if (!topMost || entry.boundingClientRect.top < topMost.boundingClientRect.top) {
-        topMost = entry;
-      }
-    }
-  }
-  if (topMost) toc.value.activeId = topMost.target.id;
 }
 
 // 推薦文章：同分類 + 第一個 tag
@@ -496,13 +556,42 @@ function formatDate(d) {
 .article-content {
   line-height: 1.85;
   color: #333;
+  position: relative; /* ✅ 讓 sticky 的 top 有參考點 */
+  z-index: 0;
 }
+/* 1) 統一用 CSS 變數表示導覽列高度，sticky 直接吃這個值 */
+:global(:root) {
+  --navbar-height: 80px; /* ✅ 變數全域生效，sticky 才會動 */
+}
+
+/* 2) 確保富文本容器不破壞 sticky 行為 */
+.richtext-block {
+  position: relative; /* sticky 的祖先不能全是 static */
+  overflow: visible;  /* 不能把 sticky 的區域裁掉 */
+}
+
+/* 3) 讓 h2/h3 真的 sticky 並蓋在文字上方 */
 .article-content h2,
 .article-content h3 {
-  color: var(--main-color-green, #007078);
+  position: sticky;
+  top: calc(var(--navbar-height) + 10px);
+  z-index: 10;
+  background: #fff;
+  padding: 0.25rem 0;
   margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  color: var(--main-color-green, #007078);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
+
+/* 4) 視覺回饋（可選）：真正「貼住」頂端時加陰影 */
+.article-content h2.is-stuck,
+.article-content h3.is-stuck {
+  background: #f8fdfd; /* ✅ 貼頂時背景微變色，更明顯 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
 .article-content p {
   margin-bottom: 1rem;
 }

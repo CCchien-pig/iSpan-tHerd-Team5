@@ -14,9 +14,15 @@
 export default [
   {
     path: '/cnt',
-    component: () => import('../pages/modules/cnt/CntHome.vue'),
+    component: () => import('@/components/modules/cnt/CntLayout.vue'), // 新增的 Layout 元件
     meta: { title: '健康中心' },
     children: [
+      {
+        path: '',
+        name: 'cnt-home',
+        component: () => import('@/pages/modules/cnt/CntHome.vue'),
+        meta: { title: '健康平台首頁' }
+      },
       {
         path: 'articles',
         name: 'cnt-articles',
