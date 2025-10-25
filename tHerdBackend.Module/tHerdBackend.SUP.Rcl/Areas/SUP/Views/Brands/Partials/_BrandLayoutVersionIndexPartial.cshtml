@@ -8,7 +8,7 @@
     var indexUrl = Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = Model.BrandId });
 }
 
-@* 【關鍵】加入隱藏欄位，供 Index.cshtml 的 JS 讀取 Brand ID *@
+@* 【關鍵】加入隱藏欄位，供 Index.cshtml 的 JS 讀取 BrandId、BrandName *@
 <input type="hidden" id="currentBrandId" value="@Model.BrandId" />
 <input type="hidden" id="currentBrandName" value="@Model.BrandName" /> @* 增加 Name 獲取，更穩定 *@
 
@@ -75,14 +75,14 @@
                                 }
 
                                 @* 刪除/停用按鈕：依靠 Index.cshtml 的事件委派 *@
-                                @if (!layout.IsActive)
+                                @* @if (!layout.IsActive)
                                 {
                                     <button class="btn btn-sm btn-outline-danger delete-btn"  
                                                                   data-layout-id="@layout.LayoutId"  
                                                                   title="移除紀錄">
                                         <i class="fa-solid fa-trash-can"></i> 刪除
                                     </button>
-                                }
+                                } *@
                             </td>
                         </tr>
                         @* 如果您需要更細緻的 LayoutDto，請確保在 Service 層進行了 DTO 映射 *@

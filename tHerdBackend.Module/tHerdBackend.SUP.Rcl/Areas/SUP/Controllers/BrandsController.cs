@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -854,12 +855,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		/// <summary>
 		/// 渲染品牌版面編輯器 Partial View
 		/// 將版面資料傳遞給 View，並讓 Vue 應用接管
-		/// </summary>
-		// BrandsController.cs
-
+		/// </summary>		
+		// 【修正】接收兩個參數：brandId 仍使用 id 慣例，layoutId 則為可選的 int?
 		// GET: SUP/Brands/EditLayout/{brandId}/{layoutId?}
 		[HttpGet]
-		// 【修正】接收兩個參數：brandId 仍使用 id 慣例，layoutId 則為可選的 int?
 		public async Task<IActionResult> EditLayout(int id, int? layoutId)
 		{
 			// 慣例式路由修正
@@ -875,7 +874,9 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			if (layoutId.HasValue)
 			{
 				// 2-1. 載入指定 ID 的 Layout (用於編輯歷史版本)
+				// 編輯模式：載入指定版本
 				layoutToEdit = await _layoutService.GetLayoutByLayoutIdAsync(layoutId.Value);
+
 
 				// 如果找不到指定的版本
 				if (layoutToEdit == null)
@@ -886,22 +887,14 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			else
 			{
 				// 2-2. 載入啟用中的版本，作為「新增」或「複製」的基礎
+				// 新增模式：載入啟用版本作為範本
 				layoutToEdit = await _layoutService.GetActiveLayoutAsync(brandId);
 			}
 
 			// 3. 解析數據：將 LayoutJson 字串反序列化成 C# 區塊物件列表
-			var layoutBlocks = new List<BaseLayoutBlockDto>();
-			int? activeLayoutId = null;
-
-			if (layoutToEdit != null)
-			{
-				// 呼叫 Service 解析 JSON 字串 (Service 需處理 JSON 格式錯誤)
-				layoutBlocks = _layoutService.DeserializeLayout(layoutToEdit.LayoutJson);
-				// 由於我們載入的版本可能不是啟用版，需要知道當前啟用版 ID
-				activeLayoutId = await _layoutService.GetActiveLayoutIdAsync(brandId);
-			}
-			// 如果 layoutToEdit 為 null (表示該品牌從未設定任何版面)，layoutBlocks 保持為空列表。
-
+			var layoutBlocks = layoutToEdit != null
+					? _layoutService.DeserializeLayout(layoutToEdit.LayoutJson)
+					: new List<BaseLayoutBlockDto>();
 
 			// 4. 映射到 ViewModel：將 DTO 轉換為 View 層的 ViewModel
 			var layoutBlockViewModels = layoutBlocks
@@ -913,26 +906,27 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				})
 				.ToList();
 
-
 			// 5. 準備最終 ViewModel
 			var layoutModel = new BrandLayoutEditViewModel
 			{
 				BrandId = brandId,
 				BrandName = brand.BrandName,
 
-				// 正在編輯的版本 ID：如果是載入特定版本就是該 ID，如果是載入啟用版就是啟用版 ID
-				LayoutId = layoutToEdit?.LayoutId,
-
-				// 現行啟用中的版本 ID (用於前端判斷)
-				ActiveLayoutId = activeLayoutId,
-
-				LayoutVersion = layoutToEdit?.LayoutVersion,
-
 				// 核心區塊數據
 				LayoutBlocks = layoutBlockViewModels,
 
 				// 賦值為空，用於接收前端提交
-				LayoutJson = string.Empty
+				LayoutJson = string.Empty,
+
+				// 如果是新增模式 (layoutId is null)，則 LayoutId 和 LayoutVersion 必須為 null/empty
+				// 這樣 Vue 才會知道要執行 POST (Create) 而不是 PUT (Update)
+				LayoutId = layoutId.HasValue ? layoutToEdit?.LayoutId : null,
+				LayoutVersion = layoutId.HasValue ? layoutToEdit?.LayoutVersion : null,
+
+				// 傳遞所有版本號列表，用於前端驗證
+				AllLayoutVersions = (await _layoutService.GetLayoutsByBrandIdAsync(brandId))
+							  .Select(l => l.LayoutVersion)
+							  .ToList()
 			};
 
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", layoutModel);
@@ -1061,25 +1055,27 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 
 				// 4. 啟用新版本
-				try
-				{
-					await _layoutService.ActivateLayoutAsync(finalLayoutId, reviserId);
-				}
-				catch (Exception ex)
-				{
-					return Json(new
-					{
-						success = true,
-						message = $"版面內容已儲存，但自動啟用失敗: {ex.Message}。",
-						layoutId = finalLayoutId
-					});
-				}
+				// 更新=>不自動啟用
+				//try
+				//{
+				//	await _layoutService.ActivateLayoutAsync(finalLayoutId, reviserId);
+				//}
+				//catch (Exception ex)
+				//{
+				//	return Json(new
+				//	{
+				//		success = true,
+				//		message = $"版面內容已儲存，但自動啟用失敗: {ex.Message}。",
+				//		layoutId = finalLayoutId
+				//	});
+				//}
 
 				// 5. 成功回傳
 				return Json(new
 				{
 					success = true,
-					message = "品牌版面配置已成功儲存並啟用為現行版本。",
+					//message = "品牌版面配置已成功儲存並啟用為現行版本。",
+					message = "版面配置已儲存成功。",
 					layoutId = finalLayoutId
 				});
 			}
@@ -1089,6 +1085,83 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				// 這樣前端就不會遇到 SyntaxError
 				Console.Error.WriteLine($"SaveLayout CRITICAL ERROR: {ex}");
 				return StatusCode(500, new { success = false, message = "伺服器發生未預期錯誤，請檢查伺服器 Console 日誌。", detail = ex.Message });
+			}
+		}
+
+		#endregion
+
+		#region 複製一份版面的api - 啟用/停用
+
+		/// <summary>
+		/// 啟用指定版型（同品牌僅允許一個 Layout 為啟用狀態）
+		/// </summary>
+		/// POST /SUP/Brands/ActivateLayout/1004
+		[HttpPost("~/SUP/Brands/ActivateLayout/{layoutId}")]
+		[ValidateAntiForgeryToken]
+		[AllowAnonymous]
+		public async Task<IActionResult> ActivateBrandLayout(int layoutId)
+		{
+			Console.WriteLine($"[PATCH] ActivateBrandLayout 被呼叫 layoutId={layoutId}");
+
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+			{
+				Debug.WriteLine("User not found");
+				return Json(new { success = false, message = "找不到使用者資料" });
+			}
+
+			int currentUserId = user.UserNumberId;
+
+			try
+			{
+				var result = await _layoutService.ActivateLayoutAsync(layoutId, currentUserId);
+				if (!result)
+					// 找不到 Layout
+					return NotFound(new { success = false, message = $"找不到指定的版面配置 (Layout ID: {layoutId})。" });
+
+				return Ok(new { success = true, message = "品牌版面設定已成功啟用為現行版本。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = $"執行啟用操作時發生伺服器錯誤: {ex.Message}" });
+			}
+		}
+
+		/// <summary>
+		/// 軟刪除（停用）品牌 Layout
+		/// </summary>
+		/// DELETE SUP/Brand/layouts/{layoutId}
+		[HttpDelete("~/SUP/Brands/layouts/{layoutId}")]
+		[ValidateAntiForgeryToken]
+		[AllowAnonymous]
+		public async Task<IActionResult> DeleteBrandLayout(int layoutId)
+		{
+			Console.WriteLine($"[DELETE] DeleteBrandLayout 被呼叫 layoutId={layoutId}");
+
+			var userId = _me.Id;
+			var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+
+			if (user == null)
+			{
+				Debug.WriteLine("User not found");
+				return Json(new { success = false, message = "找不到使用者資料" });
+			}
+
+			int currentUserId = user.UserNumberId;
+
+			try
+			{
+				var result = await _layoutService.SoftDeleteLayoutAsync(layoutId, currentUserId);
+				if (!result)
+					return NotFound(new { success = false, message = "找不到指定的品牌版面配置 (Layout ID: " + layoutId + ")" });
+
+				return Ok(new { success = true, message = "品牌版面配置已成功停用。" });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = "執行停用操作時發生伺服器錯誤: " + ex.Message });
 			}
 		}
 

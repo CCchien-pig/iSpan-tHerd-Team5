@@ -25,7 +25,7 @@
 
     <div id="component-palette" class="mb-3">
         <button @@click="addBlock('Banner')" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
-        <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-primary me-2">新增 品牌故事</button>
+        <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-primary me-2">新增 Accordion</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
     </div>
     @* 【新增輸入框】綁定 v-model="layoutVersion" *@
@@ -38,35 +38,71 @@
     </div>
 
     <div id="layout-blocks-container">
-        <div v-for="block in blocks" :key="block.id" :data-block-id="block.id" class="draggable-block card mb-2">
+        <div v-for="(block, index) in blocks" :key="block.id" class="draggable-block card mb-2">
 
             <div class="card-header block-header" @@click="toggleEdit(block.id)">
                 <i class="fa-solid fa-grip-vertical me-2"></i>
                 <strong class="me-2">
-                    {{ block.type }} 區塊
+                    @* 【修正】顯示 #{{ index + 1 }} 來表示順序 *@
+                    #{{ index + 1 }} - {{ block.type }} 區塊
                     <span v-if="block.props.title">- {{ block.props.title }}</span>
                 </strong>
-                <span class="badge bg-secondary">{{ block.id.substring(0, 8) }}</span>
+                @* 唯一識別碼ID *@
+                @* <span class="badge bg-secondary">{{ block.id }}</span> *@
+                @* 動態切換顯示向上/向下箭頭 *@
                 <i :class="['fa-solid', 'float-end', { 'fa-chevron-down': editingId !== block.id, 'fa-chevron-up': editingId === block.id }]"></i>
             </div>
 
             <div v-if="editingId === block.id" class="card-body">
+                @* ================= Banner 區塊編輯 ================= *@
                 <div v-if="block.type === 'Banner'">
-                    <h5>摺疊區塊編輯</h5>
+                    <h5>Banner 區塊編輯</h5>
                     <div class="mb-3">
-                        <label>標題:</label>
-                        <input type="text" class="form-control" v-model="block.props.title">
+                        <label>圖片Alt 替代文字：</label>
+                        @* [AltText]預設填入品牌名 *@
+                        <input type="text" class="form-control" v-model="block.props.altText">
                     </div>
                     <div class="mb-3">
-                        <label>內容:</label>
-                        @* 確保內文也綁定 v-model *@
-                        <textarea class="form-control" v-model="block.props.content"></textarea> 
+                        <label>圖片說明 (Caption)：</label>
+                        @* [Caption]預設填入品牌名_Banner_yyyy/mm/dd *@
+                        <input type="text" class="form-control" v-model="block.props.caption">
                     </div>
-                    @* TODO: 圖片選擇邏輯 *@
+                    <div class="mb-3">
+                        <label class="form-label">點擊連結 URL</label>
+                        <input type="url" class="form-control" v-model="block.props.linkUrl" placeholder="/category/product-slug">
+                    </div>
+                    @* TODO: 圖片選擇邏輯(將選擇的 fileId, fileUrl 寫回 block.props) *@
                 </div>
 
+                @* ================= Accordion 區塊編輯 ================= *@
                 <div v-if="block.type === 'Accordion'">
-                    @* TODO: Accordion 編輯表單邏輯 *@
+                    @* 存回[SUP_BrandAccordionContent]表 *@
+                    <h5>摺疊區塊編輯</h5>
+                    <div class="mb-3">
+                        <label>摺疊標題：</label> @*[ContentTitle]*@
+                        <input type="text" class="form-control" v-model="block.props.contentTitle" placeholder="請在此輸入標題。">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">摺疊內容：</label>
+                        @* 這裡未來可以替換成 CKEditor 或 TinyMCE 等富文本編輯器 *@
+                        <textarea class="form-control" rows="5" v-model="block.props.content" placeholder="請在此輸入內容。"></textarea>
+                    </div>
+                    @* 提醒：OrderSeq (順序) 將由區塊在列表中的位置決定，儲存時自動產生 *@
+                    @* TODO: 圖片選擇邏輯 (將選擇的 imgId 寫回 block.props.imgId) *@
+                    @* [IsActive] *@
+                </div>
+
+                @* ================= Article 區塊編輯 (新增) ================= *@
+                <div v-if="block.type === 'Article'">
+                    <h5>品牌文章區塊編輯</h5>
+                    <div class="mb-3">
+                        <label class="form-label">文章標題</label>
+                        <input type="text" class="form-control" v-model="block.props.contentTitle">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">文章內容：</label>
+                        <textarea class="form-control" rows="8" v-model="block.props.content"></textarea>
+                    </div>
                 </div>
 
                 <button @@click="removeBlock(block.id)" class="btn btn-sm btn-danger mt-2">移除區塊</button>
@@ -77,9 +113,10 @@
         <p v-if="blocks.length === 0" class="text-muted text-center mt-4">請點擊上方按鈕新增區塊</p>
     </div>
 
+    @* 按鈕區 *@
     <div class="d-flex justify-content-between mt-4">
-        <button @@click="goToVersions" class="btn btn-outline-secondary ms-auto">
-            <i class="fa-solid fa-arrow-left"></i> 返回版本管理
+        <button @@click="goToVersions" class="btn btn-outline-secondary ms-auto me-1">
+            <i class="fa-solid fa-arrow-left"></i> 返回
         </button>
 
         <button @@click="saveLayout" class="btn btn-success me-2" :disabled="isSaving">
@@ -101,6 +138,7 @@
         const csrfToken = '@requestToken';
         const csrfHeaderName = '@headerName';
         const brandId = @Model.BrandId;
+        const brandName = '@Model.BrandName';
         const initialLayoutId = '@(Model.LayoutId.HasValue? Model.LayoutId.Value.ToString() : "null")';
         const initialBlocks = @Html.Raw(initialBlocksJson);
         // 【新增變數】獲取後端傳來或空的版本號
@@ -110,10 +148,32 @@
 
         // 儲存區塊的預設屬性工廠
         const createProps = (type) => {
+            const today = new Date();
+            const dateString = `${today.getFullYear()}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}`;
+
             switch (type) {
-                case 'Banner': return { title: '新 Banner 標題', fileUrl: '', linkUrl: '', subtitle: '副標題' };
-                case 'Accordion': return { title: '新 Accordion 標題', content: '請在此輸入內容。' };
-                default: return {};
+                case 'Banner':
+                    return {
+                        altText: brandName, // 預設填入品牌名
+                        caption: `${brandName}_Banner_${dateString}`, // 預設填入品牌名_Banner_日期
+                        fileId: null, // 圖片 ID
+                        fileUrl: '', // 圖片 URL
+                        linkUrl: '' // 點擊連結
+                    };
+                case 'Accordion':
+                    return {
+                        contentTitle: '', // 對應 [ContentTitle]
+                        content: '', // 對應 [Content]
+                        imgId: null // 對應 [ImgId] (可選)
+                    };
+                case 'Article': // 品牌文章區塊
+                     return {
+                        contentTitle: '新文章標題', // 對應 [ContentTitle]
+                        content: '<h2>文章副標題</h2><p>請在此撰寫文章內容。</p>', // 對應 [Content]
+                        imgId: null // 對應 [ImgId]
+                    };
+                default:
+                    return {};
             }
         };
 
@@ -161,10 +221,18 @@
                     }
                 };
 
+                // 【新增輔助函式】在 JS 中生成一個簡易的唯一 ID
+                function generateUniqueId() {
+                    return 'xxxxxxxx'.replace(/[x]/g, function(c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+
                 // 新增區塊
                 const addBlock = (type) => {
                     const newBlock = {
-                        id: (type.toLowerCase() + '-' + Date.now().toString()).substring(0, 15),
+                        id: generateUniqueId(),
                         type: type,
                         props: createProps(type)
                     };
@@ -198,30 +266,31 @@
                 // 儲存版面配置
                 const saveLayout = async () => {
                     if (!layoutVersion.value) {
-                         Swal.fire('錯誤', '請輸入版型版本號。', 'warning');
-                         return;
+                            Swal.fire('錯誤', '請輸入版型版本號。', 'warning');
+                            return;
                     }
 
                     isSaving.value = true;
 
-                    const currentLayoutId = layoutIdState.value;
-
-                    const payload = {
-                        BrandId: brandId,
-                        ActiveLayoutId: currentLayoutId !== 'null' ? parseInt(currentLayoutId) : null,
-                        // 【關鍵】使用用戶輸入的響應式變數，使用 v-model 綁定的 layoutVersion.value
-                        LayoutVersion: layoutVersion.value,
-                        LayoutJson: JSON.stringify(blocks.value),
-                    };
-
-                    const url = '/SUP/Brands/SaveLayout';
-
-                    const headers = {
-                        'Content-Type': 'application/json',
-                        [csrfHeaderName]: csrfToken 
-                    };
+                    // 【修正 1】將 savedLayoutId 提升到 try 區塊的頂部
+                    let savedLayoutId = null;
 
                     try {
+                        const currentLayoutId = layoutIdState.value;
+                        const payload = {
+                            BrandId: brandId,
+                            ActiveLayoutId: currentLayoutId !== 'null' ? parseInt(currentLayoutId) : null,
+                            LayoutVersion: layoutVersion.value,
+                            LayoutJson: JSON.stringify(blocks.value),
+                        };
+
+                        const url = '/SUP/Brands/SaveLayout';
+                        const headers = {
+                            'Content-Type': 'application/json',
+                            [csrfHeaderName]: csrfToken
+                        };
+
+                        // 1. 執行儲存
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: headers,
@@ -231,22 +300,58 @@
                         const resJson = await response.json();
 
                         if (response.ok && resJson.success) {
-                            Swal.fire('儲存成功', resJson.message || '版面配置已更新並啟用。', 'success');
+                            // 【修正 2】只賦值，不重新宣告
+                            savedLayoutId = resJson.layoutId;
+                            layoutIdState.value = savedLayoutId.toString();
 
-                            if (currentLayoutId === 'null' && resJson.layoutId) {
-                                layoutIdState.value = resJson.layoutId.toString();
-                            }
-
-                            // 關閉 Modal 並刷新父頁面 DataTable
-                            $('#brandLayoutModal').modal('hide');
-                            // 如果 window.table 存在，則呼叫其 reload 方法
-                            if (window.table) { window.table.ajax.reload(null, false); }
-
+                            // 2. 跳出 Swal 詢問是否啟用
+                            Swal.fire({
+                                title: '儲存成功！',
+                                text: "是否要立即啟用此版本？",
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonText: '立即啟用',
+                                cancelButtonText: '返回列表'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // 3. 如果使用者確認，則執行啟用 API 呼叫
+                                    $.ajax({
+                                        url: `/SUP/Brands/ActivateLayout/${savedLayoutId}`,
+                                        type: 'POST',
+                                        headers: { [csrfHeaderName]: csrfToken },
+                                        success: function(data) {
+                                            console.log("[DEBUG] 啟用成功，後端回傳:", data);
+                                            if (data.success) {
+                                                Swal.fire('啟用成功', data.message, 'success').then(() => {
+                                                    const indexUrl = `@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__BRANDID__" })`
+                                                        .replace('__BRANDID__', brandId);
+                                                    loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+                                                });
+                                            } else {
+                                                console.error("[DEBUG] 啟用失敗:", data.message);
+                                                Swal.fire('啟用失敗', data.message, 'error');
+                                            }
+                                        },
+                                        error: function(jqXHR, textStatus, errorThrown) {
+                                            console.error("[DEBUG] 啟用 AJAX 錯誤:", jqXHR.status, jqXHR.responseText, errorThrown);
+                                            Swal.fire('伺服器錯誤', '啟用操作失敗。', 'error');
+                                        },
+                                        complete: () => {
+                                            if (typeof reloadVersionIndex === 'function') {
+                                                reloadVersionIndex(brandId);
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    if (typeof reloadVersionIndex === 'function') {
+                                        reloadVersionIndex(brandId);
+                                    }
+                                }
+                            });
                         } else {
                             const message = resJson.message || `API 錯誤: ${response.status} ${response.statusText}`;
                             Swal.fire('操作失敗', message, 'error');
                         }
-
                     } catch (error) {
                         console.error('Save failed:', error);
                         Swal.fire('網路錯誤', '無法連線到伺服器或發生未預期錯誤。', 'error');

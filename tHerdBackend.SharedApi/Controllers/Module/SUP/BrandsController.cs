@@ -8,7 +8,7 @@ using tHerdBackend.Core.ValueObjects;
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/[folder]/[controller]")]
+	[Route("api/sup/[controller]")]
 	public class BrandsController : ControllerBase
 	{
 		private readonly IBrandService _service;// 處理品牌基本資料
@@ -331,6 +331,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
 		public async Task<IActionResult> ActivateBrandLayout(int layoutId)
 		{
+			Console.WriteLine($"[PATCH] ActivateBrandLayout 被呼叫 layoutId={layoutId}");
+
 			//if (!_me.IsAuthenticated)
 			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
 
@@ -360,6 +362,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
 		public async Task<IActionResult> DeleteBrandLayout(int layoutId)
 		{
+			Console.WriteLine($"[DELETE] DeleteBrandLayout 被呼叫 layoutId={layoutId}");
+
 			//if (!_me.IsAuthenticated)
 			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
 

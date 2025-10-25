@@ -26,7 +26,7 @@ namespace tHerdBackend.Services.SUP
 
 		#region 品牌版面 - 查詢與CRUD (呼叫 Repository)
 
-		// 查詢方法直接轉發給 Repository
+		// 查詢
 		public Task<IEnumerable<BrandLayoutDto>> GetLayoutsByBrandIdAsync(int brandId)
 			=> _repo.GetLayoutsByBrandIdAsync(brandId);
 
@@ -39,11 +39,11 @@ namespace tHerdBackend.Services.SUP
 		public async Task<int?> GetActiveLayoutIdAsync(int brandId)
 			=> await _repo.GetActiveLayoutIdAsync(brandId);		
 
-		// 新增方法直接轉發給 Repository
+		// 新增
 		public Task<int> CreateLayoutAsync(int brandId, BrandLayoutCreateDto dto)
 			=> _repo.AddLayoutAsync(brandId, dto); // 呼叫 Repository 的 AddLayoutAsync
 
-		// 更新方法直接轉發給 Repository
+		// 更新
 		public Task<bool> UpdateLayoutAsync(int layoutId, BrandLayoutUpdateDto dto)
 			=> _repo.UpdateLayoutAsync(layoutId, dto);
 
@@ -134,8 +134,18 @@ namespace tHerdBackend.Services.SUP
 				// 確保陣列開始標記沒有被錯誤處理 (如果 JSON 字串被包在額外的引號中)
 
 				// 重新使用 JsonSerializer 進行反序列化
-				return JsonSerializer.Deserialize<List<BaseLayoutBlockDto>>(cleanJson, _jsonOptions)
+				var blocks = JsonSerializer.Deserialize<List<BaseLayoutBlockDto>>(cleanJson, _jsonOptions)
 					?? new List<BaseLayoutBlockDto>();
+
+				// 遍歷所有反序列化後的區塊，並強制賦予一個新的、唯一的 ID。
+				// 這可以解決前端因重複 key 導致的所有連動問題。
+				foreach (var block in blocks)
+				{
+					// 使用 Guid 或其他唯一字串生成器確保 ID 的唯一性
+					block.Id = Guid.NewGuid().ToString("N").Substring(0, 12);
+				}
+
+				return blocks;
 			}
 			catch (JsonException ex)
 			{
