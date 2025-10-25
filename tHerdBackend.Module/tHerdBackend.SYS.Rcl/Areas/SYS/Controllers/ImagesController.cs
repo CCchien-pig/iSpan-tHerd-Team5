@@ -158,5 +158,10 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         [HttpPost]
         public async Task<IActionResult> CleanCloudinaryOrphans(CancellationToken ct)
             => Json(await _frepo.CleanOrphanCloudinaryFiles(ct));
-	}
+
+        // === 刪除資料夾 ===
+        [HttpPost]
+        public async Task<IActionResult> DeleteFolder([FromBody] int folderId)
+            => Json(await _frepo.DeleteFolder(folderId));
+    }
 }

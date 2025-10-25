@@ -1,6 +1,6 @@
-﻿using tHerdBackend.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.Interfaces.SYS;
-using Microsoft.AspNetCore.Mvc;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {

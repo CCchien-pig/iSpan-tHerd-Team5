@@ -231,7 +231,10 @@
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
     <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
 
-    <script>
+    <script type="module">
+        import { openFolderTreeSelector } from '/_content/tHerdBackend.UIKit.Rcl/js/folder-tree.js';
+        window.openFolderTreeSelector = openFolderTreeSelector;
+
         let breadcrumbStack = [{ id: null, name: "根目錄" }];
 
         // 建立全域實例（或用 let 存起來）
@@ -850,7 +853,6 @@
         });
 
         // 刪除
-        // === 刪除 ===
         $('#btnDelete').on('click', async function () {
           const ids = getSelectedIds();
           if (ids.length === 0) {
@@ -858,11 +860,26 @@
             return;
           }
 
-          // --- 二次確認 ---
+          // 分開出資料夾與檔案
+          const rows = ids.map(id => table.row($(`.row-select[value="${id}"]`).closest('tr')).data());
+          const folderRows = rows.filter(r => r.isFolder || r.IsFolder);
+          const fileRows = rows.filter(r => !(r.isFolder || r.IsFolder));
+
+          if (folderRows.length === 0 && fileRows.length === 0) {
+            Swal.fire({ icon: "info", title: "沒有可刪除的項目" });
+            return;
+          }
+
+          // 二次確認
           const confirm = await Swal.fire({
             icon: "warning",
             title: "確定要刪除？",
-            text: `將刪除 ${ids.length} 筆資料（含雲端圖片）`,
+            html: `
+              <div class="text-start">
+                將刪除以下項目：<br>
+                <b>${folderRows.length}</b> 個資料夾（含其內容）<br>
+                <b>${fileRows.length}</b> 個檔案（含雲端圖片）
+              </div>`,
             showCancelButton: true,
             confirmButtonText: "確定刪除",
             cancelButtonText: "取消",
@@ -871,23 +888,65 @@
 
           if (!confirm.isConfirmed) return;
 
-          let result;
-
           try {
-            const res = await fetch("/SYS/Images/BatchDelete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(ids)
-            });
+            // === 1 刪除資料夾 ===
+            let folderDeleted = 0;
+            let folderBlockMessages = [];
 
-            const text = await res.text();
-            try {
-              result = JSON.parse(text);
-            } catch {
-              console.error("後端回來的不是 JSON：", text);
-              throw new Error("伺服器沒有回傳有效的 JSON，可能是 500 錯誤");
+            for (const folder of folderRows) {
+              const folderId = folder.id || folder.FolderId;
+              const res = await fetch("/SYS/Images/DeleteFolder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify( folderId )
+              });
+              const result = await res.json();
+
+              if (result.success) {
+                folderDeleted++;
+              } else {
+                folderBlockMessages.push(result.message || `資料夾(ID:${folderId}) 刪除失敗`);
+              }
             }
 
+            // === 2️ 刪除檔案 === (原本邏輯不變)
+            let fileDeleted = 0;
+            if (fileRows.length > 0) {
+              const fileIds = fileRows.map(f => f.id || f.FileId);
+              const res = await fetch("/SYS/Images/BatchDelete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fileIds)
+              });
+              const result = await res.json();
+              if (result.success) {
+                fileDeleted = result.data?.softDeleted?.length || 0;
+              } else {
+                folderBlockMessages.push(result.message || "部分檔案刪除失敗");
+              }
+            }
+
+            // === 3️⃣ 顯示結果 ===
+            let htmlMsg = `
+              <div class="text-start">
+                已刪除資料夾：${folderDeleted} 個<br/>
+                已刪除檔案：${fileDeleted} 個
+              </div>
+            `;
+
+            if (folderBlockMessages.length > 0) {
+              htmlMsg += `<hr><div class="text-start text-danger" style="font-size:0.9rem;">`
+              + folderBlockMessages.map(m => `• ${m}`).join("<br>")
+              + `</div>`;
+            }
+
+            Swal.fire({
+              icon: folderBlockMessages.length > 0 ? "warning" : "success",
+              title: folderBlockMessages.length > 0 ? "部分未能刪除" : "刪除完成",
+              html: htmlMsg
+            });
+
+            table.ajax.reload(null, false);
           } catch (err) {
             console.error("❌ 刪除發生錯誤：", err);
             Swal.fire({
@@ -895,85 +954,21 @@
               title: "系統錯誤",
               text: "無法連線至伺服器或伺服器發生未預期錯誤。"
             });
-            return;
-          }
-
-          // --- 到這裡 result 一定是 JSON 物件 ---
-          const { success, status, message, data } = result;
-
-          if (!success) {
-            Swal.fire({
-              icon: status === "warning" ? "warning" : "error",
-              title: "刪除失敗",
-              text: message || "伺服器回傳錯誤。"
-            });
-            return;
-          }
-
-          // === 根據狀態動態顯示 ===
-          const deletedCount = data?.softDeleted?.length || 0;
-          const blockedCount = data?.blocked?.length || 0;
-
-          let htmlMsg = `
-            <b>已軟刪除：</b> ${deletedCount} 筆<br>
-          `;
-          if (blockedCount > 0) {
-            htmlMsg += `<b>仍被引用：</b> ${blockedCount} 筆`;
-          }
-
-          Swal.fire({
-            icon: blockedCount > 0 ? "warning" : "success",
-            title: blockedCount > 0 ? "部分刪除" : "刪除完成",
-            html: htmlMsg,
-            confirmButtonText: "確定"
-          });
-
-          // 重新整理 DataTable
-          table.ajax.reload(null, false);
-        });
-
-        // === 移動資料夾（改為 jsTree 樹狀選擇）===
-        $('#btnMove').on('click', async function () {
-          const ids = getSelectedIds();
-          if (ids.length === 0)
-            return Swal.fire("請先選取項目");
-
-          const { value: targetId } = await openFolderTreeSelector({
-            title: "選擇目標資料夾",
-            apiUrl: "/SYS/Images/GetTreeData",
-          });
-
-          if (targetId === undefined) return;
-
-          const res = await fetch("/SYS/Images/MoveToFolder", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids, folderId: targetId }),
-          });
-
-          const result = await res.json();
-          if (result.success) {
-              Swal.fire({ icon: "success", title: "移動成功" });
-
-              // 自動切換到新資料夾（含更新麵包屑）
-              await navigateToFolder(targetId);
-          } else {
-            Swal.fire({ icon: "error", title: "移動失敗", text: result.message });
           }
         });
 
-        // === 新增資料夾（改成樹狀選擇器）===
-        $("#btnAddFolder").on("click", async function () {
+        // === 新增資料夾 ===
+        $('#btnAddFolder').on('click', async function () {
           const currentFolderId = breadcrumbStack.at(-1)?.id || null;
 
-        const treeResult = await openFolderTreeSelector({
-          title: "選擇父層資料夾",
-          apiUrl: "/SYS/Images/GetTreeData",
-          defaultId: currentFolderId,
-        });
+          const treeResult = await openFolderTreeSelector({
+            title: "選擇父層資料夾",
+            apiUrl: "/SYS/Images/GetTreeData",
+            defaultId: currentFolderId,
+          });
 
-        if (!treeResult.isConfirmed) return; // 按取消就結束
-        const parentId = treeResult.value;
+          if (!treeResult.isConfirmed) return;
+          const parentId = treeResult.value;
 
           const { value: folderName } = await Swal.fire({
             title: "輸入新資料夾名稱",
@@ -993,98 +988,20 @@
           const result = await res.json();
 
           if (result.success) {
-              Swal.fire({ icon: "success", title: "建立成功" });
+            Swal.fire({ icon: "success", title: "建立成功" });
 
-              // 若目前頁面就是該父層，就直接刷新
-              const currentFolderId = breadcrumbStack.at(-1)?.id ?? null;
-              if (parentId === currentFolderId) {
-                await loadFolder(parentId);
-              } else {
-                // 若在其他頁面建立，則導航到父層（不自動切入新資料夾）
-                await navigateToFolder(parentId);
-              }
+            // 若目前頁面就是該父層，就直接刷新
+            const currentFolderId = breadcrumbStack.at(-1)?.id ?? null;
+            if (parentId === currentFolderId) {
+              await loadFolder(parentId);
             } else {
+              // 若在其他頁面建立，則導航到父層（不自動切入新資料夾）
+              await navigateToFolder(parentId);
+            }
+          } else {
             Swal.fire({ icon: "error", title: "建立失敗", text: result.message });
           }
         });
-
-        // 開啟樹狀資料夾
-        async function openFolderTreeSelector({
-          title = "選擇資料夾",
-          apiUrl = "/SYS/Images/GetTreeData",
-          defaultId = null
-        }) {
-            return await Swal.fire({
-              title,
-              html: `
-                <div class="text-start">
-                  <label class="form-label fw-semibold">選擇資料夾</label>
-                  <div id="swal-tree-container" 
-                       class="border rounded" 
-                       style="max-height:300px; overflow-y:auto; padding:0.5rem;">
-                  </div>
-                </div>
-              `,
-              focusConfirm: false,
-              showCancelButton: true,
-              confirmButtonText: "下一步",
-              cancelButtonText: "取消",
-              didOpen: async () => {
-                $("#swal-tree-container").jstree({
-                  core: {
-                    data: async function (node, cb) {
-                      const url = node.id === "#" ? apiUrl : `${apiUrl}?parentId=${node.id}`;
-                      const res = await fetch(url);
-                      const data = await res.json();
-                      cb(node.id === "#" ? [{ id: "0", parent: "#", text: "📁 根目錄" }, ...data] : data);
-                    },
-                    themes: { responsive: false },
-                  },
-                  plugins: ["wholerow", "search"],
-                });
-
-                // 🔍 搜尋欄
-                const $tree = $("#swal-tree-container");
-                const searchBox = $(`
-                  <input type="text" id="treeSearchBox" 
-                         class="form-control form-control-sm mb-2" 
-                         placeholder="🔍 搜尋資料夾..." />
-                `);
-                $tree.before(searchBox);
-
-                let to = false;
-                searchBox.on("keyup", function () {
-                  if (to) clearTimeout(to);
-                  to = setTimeout(() => {
-                    const v = $(this).val();
-                    $tree.jstree(true).search(v);
-                  }, 300);
-                });
-
-                $tree.on("loaded.jstree", function (e, data) {
-                  const nodeId = defaultId ? defaultId.toString() : "0";
-                  data.instance.select_node(nodeId);
-                  data.instance.open_node(nodeId);
-                });
-              },
-              // 新增這段清理：Swal 關閉後刪除 jsTree 和搜尋框
-            willClose: () => {
-              try {
-                $("#swal-tree-container").jstree("destroy").empty();
-              } catch {}
-              $("#treeSearchBox").remove();
-              setTimeout(() => {
-                $("#treeSearchBox").remove();
-                $("input[placeholder='搜尋資料夾...']").remove();
-              }, 100);
-            },
-              preConfirm: () => {
-                const tree = $("#swal-tree-container").jstree(true);
-                const selected = tree.get_selected()[0] || "0";
-                return selected === "0" ? null : parseInt(selected);
-              },
-            });
-        }
 
         // 共用轉跳資料夾方法
         async function navigateToFolder(folderId) {

@@ -82,6 +82,11 @@ public partial class SysAssetFile
     /// </summary>
     public bool IsDeleted { get; set; }
 
+    /// <summary>
+    /// 異動時間
+    /// </summary>
+    public DateTime? RevisedDate { get; set; }
+
     public virtual ICollection<CntMedium> CntMedia { get; set; } = new List<CntMedium>();
 
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();
@@ -99,6 +104,8 @@ public partial class SysAssetFile
     public virtual ICollection<SupBrandAccordionContent> SupBrandAccordionContents { get; set; } = new List<SupBrandAccordionContent>();
 
     public virtual ICollection<SupBrandArticle> SupBrandArticles { get; set; } = new List<SupBrandArticle>();
+
+    public virtual ICollection<SupBrand> SupBrands { get; set; } = new List<SupBrand>();
 
     public virtual ICollection<SysSeoMetaAsset> SysSeoMetaAssets { get; set; } = new List<SysSeoMetaAsset>();
 }

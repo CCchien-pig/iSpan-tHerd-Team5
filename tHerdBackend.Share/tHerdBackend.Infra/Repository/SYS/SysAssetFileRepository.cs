@@ -516,41 +516,54 @@ namespace tHerdBackend.Infra.Repository.SYS
         }
 
         /// <summary>
-        /// 刪除資料夾（含內容）
+        /// 刪除資料夾（僅允許刪除空資料夾）
+        /// 條件：
+        /// 1. 不能有任何子資料夾
+        /// 2. 不能有任何未刪除的檔案（IsDeleted = false）
         /// </summary>
         public async Task<object> DeleteFolder(int folderId)
         {
+            // 1. 找資料夾本身
             var folder = await _db.SysFolders.FindAsync(folderId);
             if (folder == null)
             {
                 return new { success = false, message = "找不到資料夾" };
             }
 
-            // 取子資料夾 + 檔案
-            var subFolders = await _db.SysFolders
-                .Where(f => f.ParentId == folderId)
-                .ToListAsync();
+            // 2. 檢查是否有子資料夾
+            bool hasChildFolders = await _db.SysFolders
+                .AnyAsync(f => f.ParentId == folderId);
 
-            var files = await _db.SysAssetFiles
-               .Where(f => f.FolderId == folderId && !f.IsDeleted)
-                .ToListAsync();
-
-            foreach (var file in files)
+            if (hasChildFolders)
             {
-                file.IsDeleted = true;
-                file.IsActive = false;
-                _db.SysAssetFiles.Update(file);
+                return new
+                {
+                    success = false,
+                    message = $"「{folder.FolderName}」內仍有子資料夾，無法刪除。請先刪除子資料夾。"
+                };
             }
 
-            _db.SysFolders.RemoveRange(subFolders);
-            _db.SysFolders.Remove(folder);
+            // 3. 檢查是否有檔案（還沒軟刪除的）
+            bool hasFiles = await _db.SysAssetFiles
+                .AnyAsync(f => f.FolderId == folderId && !f.IsDeleted);
 
+            if (hasFiles)
+            {
+                return new
+                {
+                    success = false,
+                    message = $"「{folder.FolderName}」內仍有檔案，無法刪除。請先刪除或移動檔案。"
+                };
+            }
+
+            // 4. 通過檢查，允許刪除這個資料夾
+            _db.SysFolders.Remove(folder);
             await _db.SaveChangesAsync();
 
             return new
             {
                 success = true,
-                message = $"已刪除資料夾「{folder.FolderName}」及其內容"
+                message = $"已刪除資料夾「{folder.FolderName}」。"
             };
         }
 

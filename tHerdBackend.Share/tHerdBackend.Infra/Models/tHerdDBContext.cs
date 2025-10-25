@@ -2876,6 +2876,10 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.StartDate).HasComment("折扣開始日期");
             entity.Property(e => e.SupplierId).HasComment("關聯供應商");
 
+            entity.HasOne(d => d.Img).WithMany(p => p.SupBrands)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_SUP_Brand_ImgId");
+
             entity.HasOne(d => d.Seo).WithMany(p => p.SupBrands)
                 .HasForeignKey(d => d.SeoId)
                 .HasConstraintName("FK_Brand_SeoId");
@@ -3208,6 +3212,7 @@ public partial class tHerdDBContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasComment("image/jpeg, image/png, video/mp4");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.Width).HasComment("影像寬度（非影像類型可為 NULL）");
         });
 

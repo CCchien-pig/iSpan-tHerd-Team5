@@ -90,6 +90,10 @@ public partial class SupBrand
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    public int? ImgId { get; set; }
+
+    public virtual SysAssetFile Img { get; set; }
+
     public virtual ICollection<OrdOrderAdjustment> OrdOrderAdjustments { get; set; } = new List<OrdOrderAdjustment>();
 
     public virtual ICollection<ProdProduct> ProdProducts { get; set; } = new List<ProdProduct>();
