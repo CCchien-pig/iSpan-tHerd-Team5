@@ -213,7 +213,7 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// <summary>
     /// 主商品SkuId
     /// </summary>
-    public new string MainSkuId { get; set; } = string.Empty;
+    public new int? MainSkuId { get; set; }
 
     /// <summary>
     /// 主商品原價
