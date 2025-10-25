@@ -53,8 +53,8 @@
             <!-- 固定寬度 224px，避免中文被擠壓 -->
             <el-select v-model="sortOrder" class="w-56" placeholder="排序方式">
               <el-option label="原始順序" value="none" />
-              <el-option label="由大到小" value="desc" />
-              <el-option label="由小到大" value="asc" />
+              <el-option label="由小到大" value="desc" />
+              <el-option label="由大到小" value="asc" />
             </el-select>
           </div>
 
@@ -92,26 +92,41 @@
     </el-card>
 
     <!-- 🗂 分類卡片（卡片樣式 + 搜尋過濾） -->
+    <!-- 🗂 分類卡片（可收合 + 全展開／全收合） -->
     <section class="mt-4">
-      <h2 class="section-title main-color-green-text">營養成分（依分類）</h2>
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="section-title main-color-green-text">營養成分（依分類）</h2>
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <el-card
+        <!-- 全展開／全收合 -->
+        <div class="collapse-control">
+          <button class="btn teal-reflect-button text-white px-3 py-1 rounded-pill me-2"
+                  @click="expandAll">
+            全部展開
+          </button>
+          <button class="btn silver-reflect-button px-3 py-1 rounded-pill"
+                  @click="collapseAll">
+            全部收合
+          </button>
+        </div>
+      </div>
+
+      <!-- 🗂 可收合的營養素面板 -->
+      <el-collapse v-model="activeCats" class="nutri-collapse">
+        <el-collapse-item
           v-for="(rows, cat) in filteredGrouped"
           :key="cat"
-          shadow="never"
-          class="group-card"
-          body-class="group-card-body"
+          :name="cat"
         >
-          <header class="group-card-header">
-            <div class="flex items-center gap-2">
-              <span class="group-dot"></span>
-              <span class="group-name">{{ cat }}</span>
+          <template #title>
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-2">
+                <span class="group-dot"></span>
+                <span class="group-name">{{ cat }}</span>
+              </div>
+              <el-tag size="small" round type="info" effect="plain">{{ rows.length }} 項</el-tag>
             </div>
-            <el-tag size="small" round type="info" effect="plain">{{ rows.length }} 項</el-tag>
-          </header>
+          </template>
 
-          <!-- 列表膠囊 -->
           <ul class="nutri-pill-list">
             <li v-for="row in rows" :key="row.name" class="nutri-pill">
               <div class="pill-left">
@@ -123,9 +138,10 @@
               </div>
             </li>
           </ul>
-        </el-card>
-      </div>
+        </el-collapse-item>
+      </el-collapse>
     </section>
+
   </div>
 </template>
 
@@ -147,7 +163,14 @@ const activeChart = ref('bar')
 const top10 = ref(true)       // true=Top10, false=Top5
 const q = ref('')             // 搜尋
 const exporting = ref(false)  // 匯出 loading
-
+// 當前展開的分類
+const activeCats = ref([]) // 當前展開的分類
+function expandAll() {
+  activeCats.value = Object.keys(filteredGrouped.value)
+}
+function collapseAll() {
+  activeCats.value = []
+} 
 // ===== Helpers =====
 const displayVal = (v) => (v === null || v === undefined ? '-' : v)
 
@@ -501,6 +524,51 @@ onBeforeUnmount(() => {
 .pill-name { font-weight: 600; color: #111827; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 56ch; }
 .pill-unit { color: #64748b; font-size: .92rem; }
 .pill-value { min-width: 88px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; color: rgb(0,112,131); }
+
+/* 當前展開的分類（支援多選或單一 accordion） */
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: .75rem;
+}
+
+/* 全展開／收合按鈕列 */
+.collapse-control button {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* 面板整體樣式 */
+.nutri-collapse {
+  border: none;
+}
+
+/* Header（分類標題列） */
+:deep(.el-collapse-item__header) {
+  background: #f1f5f9; /* 比原本 #f8fafc 略深 */
+  border: 1px solid #d9e0e7; /* 加強邊界清晰度 */
+  border-radius: 12px;
+  margin-bottom: 8px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: #22333b;
+  font-size: 1.05rem;
+}
+
+/* 內容區域 */
+:deep(.el-collapse-item__content) {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  padding: 12px 18px;
+}
+
+/* 提升膠囊清晰度 */
+.nutri-pill {
+  background: #f9fafb;
+  border: 1px solid #e3e8ee;
+}
 
 /* ===== Theme notes =====
   使用你的 main.css 主題 class：

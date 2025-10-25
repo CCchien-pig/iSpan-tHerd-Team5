@@ -40,7 +40,7 @@
               :key="idx"
               class="btn btn-sm toc-item"
               :class="{ active: h.id === toc.activeId }"
-              @click="scrollToAnchor(h.id)"
+              @click="onTocClick(h.id)"
             >
               <span class="me-1" v-if="h.level===2">H2｜</span>
               <span class="me-1" v-else>H3｜</span>
@@ -172,6 +172,76 @@ let observer = null;
 // 推薦文章
 const recommended = ref([]);
 
+// === 全域導覽列偏移控制 ===
+let currentNavbarOffset = 80;
+const STICKY_EXTRA = 10; // h2/h3 的 sticky 額外間距，需與 CSS 的 +10px 一致
+function getNavbarOffset() {
+  const nav = document.querySelector(".navbar.fixed-top, header.fixed-top, nav.fixed-top");
+  if (nav) {
+    const rect = nav.getBoundingClientRect();
+    return rect.height + 5;
+  }
+  return 80;
+}
+
+function scrollToWithOffset(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const scroller = getScrollParent(contentRef.value);
+  const isWindow = scroller === window;
+  const scTop = isWindow ? 0 : scroller.getBoundingClientRect().top;
+  const current = isWindow ? window.scrollY : scroller.scrollTop;
+  const offset = (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
+
+  const targetAbs = el.getBoundingClientRect().top - scTop + current;
+  const to = Math.max(0, targetAbs - offset);
+
+  if (isWindow) {
+    window.scrollTo({ top: to, behavior: 'smooth' });
+  } else {
+    scroller.scrollTo({ top: to, behavior: 'smooth' });
+  }
+}
+
+// 模組層級旗標（放在 <script setup> 最上方）
+let isJumping = false;
+let jumpTargetId = null;
+let jumpTimer = null;
+
+function onTocClick(id) {
+  toc.value.activeId = id;  // 先高亮
+  isJumping = true;
+  jumpTargetId = id;
+
+  scrollToWithOffset(id);   // 你的平滑捲動函式
+
+  // 安全閥，最多 2 秒自動解鎖避免卡住
+  clearTimeout(jumpTimer);
+  jumpTimer = setTimeout(() => {
+    isJumping = false;
+    jumpTargetId = null;
+  }, 2000);
+}
+
+
+// === 自動重新計算 offset ===
+function syncNavbarCssVar() {
+  const px = (currentNavbarOffset || getNavbarOffset());
+  document.documentElement.style.setProperty('--navbar-height', `${px}px`);
+}
+
+function handleResize() {
+  currentNavbarOffset = getNavbarOffset();
+  syncNavbarCssVar(); // ← 新增：同步到 CSS 變數，sticky 立刻生效
+}
+window.addEventListener("resize", handleResize);
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", handleResize);
+});
+
+let disposeSticky = null; //加一個變數來接收清理函式，並統一清理
 // ==== lifecycle ====
 onMounted(async () => {
   // 只在本頁動態載入 Bootstrap Icons
@@ -192,23 +262,24 @@ onMounted(async () => {
       blocks.value = Array.isArray(res.data.blocks) ? res.data.blocks : [];
     }
   }
-
+  
   await nextTick();
+
   // ✅ 若從列表/首頁帶入 scroll=body，進入就捲到正文
   if (route.query.scroll === "body") {
     setTimeout(() => {
-      const target = document.getElementById("article-body-start");
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToWithOffset("article-body-start"); // 或傳入第一個 h2 的 id
     }, 300);
   }
-
   buildHeadings();
-  setupObserver();
   await loadRecommended();
+  syncNavbarCssVar();       // 進頁就把 --navbar-height 設準
+  disposeSticky = setupStickyAssist(); // 啟用並保存清理函式
 });
 
 onBeforeUnmount(() => {
   if (observer) observer.disconnect();
+  if (disposeSticky) disposeSticky();    // ✅ 這裡統一清理 sticky 相關監聽
 });
 
 // ==== computed（付費遮罩時顯示部分內容）====
@@ -232,6 +303,166 @@ const displayBlocks = computed(() => {
 });
 
 // ==== methods ====
+// === 工具：找出實際可滾動容器（window 或內層 div） ===
+function getScrollParent(el) {
+  let node = el;
+  while (node && node !== document.body) {
+    const style = getComputedStyle(node);
+    const overflowY = style.overflowY;
+    const canScroll =
+      (overflowY === "auto" || overflowY === "scroll") &&
+      node.scrollHeight > node.clientHeight;
+    if (canScroll) return node;
+    node = node.parentElement;
+  }
+  return window; // 找不到就退回 window
+}
+
+/** 
+ * 加強版：同時處理
+ * 1) H2/H3 在貼頂時加上 .is-stuck（陰影）
+ * 2) TOC 高亮依「視窗頂端 + offset」就近原則更新
+ */
+function setupStickyAssist() {
+  const root = contentRef.value;
+  if (!root) return;
+  
+
+  const headers = Array.from(root.querySelectorAll('h2, h3')).filter(h => h.id);
+  if (!headers.length) return;
+
+  // 取得實際的 scroller（可能是 window，也可能是某個 div）
+  const scroller = getScrollParent(root);
+  console.log("[TOC] 實際滾動容器 =", scroller, "isWindow =", scroller === window);
+  const isWindow = scroller === window;
+
+  // 把「視窗座標」換成「scroller 座標」的量法
+  const getScrollTop = () => (isWindow ? window.scrollY : scroller.scrollTop);
+  const getScrollerTop = () => (isWindow ? 0 : scroller.getBoundingClientRect().top);
+
+  // 你的 navbar 高度 offset（保持原本的函式/變數）
+  const getOffset = () => (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
+
+  // 量錨點的「絕對 Y（以 scroller 的座標系）」
+  let anchorTops = [];
+  const measure = () => {
+    const scTop = getScrollerTop();
+    const sTop = getScrollTop();
+    anchorTops = headers.map(h => ({
+      id: h.id,
+      // 🚩 把 header 的視窗 top 轉成 scroller 座標：rect.top - scrollerRect.top + scrollTop
+      y: h.getBoundingClientRect().top - scTop + sTop,
+      txt: (h.textContent || '').trim().slice(0, 30),
+    }));
+    // console.table(anchorTops); // 需要時打開
+  };
+
+  // 跳轉偏好
+  const NEAR_RANGE = 120;
+
+  const onScroll = () => {
+    const offset = getOffset();
+    const pos = getScrollTop() + offset;
+
+    // 跳轉期間，沒到站就不覆蓋 active
+    if (isJumping && jumpTargetId) {
+      const el = document.getElementById(jumpTargetId);
+      if (el) {
+        const targetAbs = el.getBoundingClientRect().top - getScrollerTop() + getScrollTop();
+        if (Math.abs(targetAbs - pos) <= 6) {
+          isJumping = false;
+          clearTimeout(jumpTimer);
+        } else {
+          return;
+        }
+      }
+    }
+
+    // 近目標優先（避免第一顆 sticky 抢回）
+    if (jumpTargetId) {
+      const el = document.getElementById(jumpTargetId);
+      if (el) {
+        const targetAbs = el.getBoundingClientRect().top - getScrollerTop() + getScrollTop();
+        if (Math.abs(targetAbs - pos) <= NEAR_RANGE) {
+          toc.value.activeId = jumpTargetId;
+          // 貼頂視覺（仍用視窗 rect 計）
+          headers.forEach(h => {
+            const top = h.getBoundingClientRect().top - offset;
+            if (top <= 1 && top > -1 * (h.offsetHeight || 32)) h.classList.add('is-stuck');
+            else h.classList.remove('is-stuck');
+          });
+          return;
+        }
+      }
+    }
+
+    // 一般就近判定（用 scroller 座標）
+    let activeId = anchorTops[0]?.id;
+    for (let i = 0; i < anchorTops.length; i++) {
+      if (anchorTops[i].y <= pos + 1) activeId = anchorTops[i].id;
+      else break;
+    }
+    if (activeId) toc.value.activeId = activeId;
+
+    // 視覺貼頂（與原來相同）
+    headers.forEach(h => {
+      const top = h.getBoundingClientRect().top - offset;
+      if (top <= 1 && top > -1 * (h.offsetHeight || 32)) h.classList.add('is-stuck');
+      else h.classList.remove('is-stuck');
+    });
+  };
+
+  // 防抖 remeasure（避免頻繁重算）
+  let remeasureTimer = null;
+  let remeasurePending = false;
+  const remeasure = () => {
+    if (remeasurePending) return;
+    remeasurePending = true;
+    clearTimeout(remeasureTimer);
+    remeasureTimer = setTimeout(() => {
+      remeasurePending = false;
+      measure();
+      onScroll();
+    }, 80);
+  };
+
+  // 初始化
+  measure();
+  onScroll();
+
+  // 監聽「正確的 scroller」
+  const addScroll = () =>
+    (isWindow
+      ? window.addEventListener('scroll', onScroll, { passive: true })
+      : scroller.addEventListener('scroll', onScroll, { passive: true }));
+  const removeScroll = () =>
+    (isWindow
+      ? window.removeEventListener('scroll', onScroll)
+      : scroller.removeEventListener('scroll', onScroll));
+
+  addScroll();
+  window.addEventListener('resize', remeasure);
+
+  // 🔎 圖片載入/內容變更重新量測（注意不要監聽 attributes，避免自觸發）
+  const imgs = root.querySelectorAll('img');
+  imgs.forEach(img => {
+    if (!img.complete) img.addEventListener('load', remeasure, { once: true });
+  });
+  const mo = new MutationObserver(remeasure);
+  mo.observe(root, { childList: true, subtree: true }); // 不監聽 attributes
+
+  window.addEventListener('load', remeasure);
+  setTimeout(remeasure, 150);
+  setTimeout(remeasure, 600);
+
+  return () => {
+    removeScroll();
+    window.removeEventListener('resize', remeasure);
+    window.removeEventListener('load', remeasure);
+    mo.disconnect();
+  };
+}
+
 function goBack() {
   if (window.history.length > 1) router.back();
   else router.push({ name: "cnt-articles" });
@@ -291,38 +522,6 @@ function buildHeadings() {
 
 function toggleToc() {
   toc.value.open = !toc.value.open;
-}
-
-function scrollToAnchor(id) {
-  const root = contentRef.value;
-  if (!root) return;
-  const target = root.querySelector(`#${CSS.escape(id)}`);
-  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-// ScrollSpy
-function setupObserver() {
-  if (observer) observer.disconnect();
-  const root = contentRef.value;
-  if (!root) return;
-  observer = new IntersectionObserver(handleIntersect, {
-    root: null,
-    rootMargin: "0px 0px -65% 0px",
-    threshold: 0,
-  });
-  root.querySelectorAll("h2, h3").forEach((el) => observer.observe(el));
-}
-
-function handleIntersect(entries) {
-  let topMost = null;
-  for (const entry of entries) {
-    if (entry.isIntersecting) {
-      if (!topMost || entry.boundingClientRect.top < topMost.boundingClientRect.top) {
-        topMost = entry;
-      }
-    }
-  }
-  if (topMost) toc.value.activeId = topMost.target.id;
 }
 
 // 推薦文章：同分類 + 第一個 tag
@@ -496,13 +695,42 @@ function formatDate(d) {
 .article-content {
   line-height: 1.85;
   color: #333;
+  position: relative; /* ✅ 讓 sticky 的 top 有參考點 */
+  z-index: 0;
 }
+/* 1) 統一用 CSS 變數表示導覽列高度，sticky 直接吃這個值 */
+:global(:root) {
+  --navbar-height: 80px; /* ✅ 變數全域生效，sticky 才會動 */
+}
+
+/* 2) 確保富文本容器不破壞 sticky 行為 */
+.richtext-block {
+  position: relative; /* sticky 的祖先不能全是 static */
+  overflow: visible;  /* 不能把 sticky 的區域裁掉 */
+}
+
+/* 3) 讓 h2/h3 真的 sticky 並蓋在文字上方 */
 .article-content h2,
 .article-content h3 {
-  color: var(--main-color-green, #007078);
+  position: sticky;
+  top: calc(var(--navbar-height) + 10px);
+  z-index: 10;
+  background: #fff;
+  padding: 0.25rem 0;
   margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  color: var(--main-color-green, #007078);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
+
+/* 4) 視覺回饋（可選）：真正「貼住」頂端時加陰影 */
+.article-content h2.is-stuck,
+.article-content h3.is-stuck {
+  background: #f8fdfd; /* ✅ 貼頂時背景微變色，更明顯 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
 .article-content p {
   margin-bottom: 1rem;
 }
@@ -527,6 +755,7 @@ function formatDate(d) {
   color: #005a60;
   font-weight: 600;
 }
+.toc-bar .toc-item.active { background:#e9f6f6; }
 
 /* 付費遮罩 */
 .content-mask {

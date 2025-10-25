@@ -116,5 +116,109 @@ namespace tHerdBackend.Services.CNT
 
 		public Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
 			=> _repo.GetFoodCategoriesAsync(ct);
+
+		public async Task<object> CompareAsync(string sampleIds, string analyteIds, CancellationToken ct = default)
+		{
+			// -------------------------------
+			// 1️⃣ 解析輸入參數
+			// -------------------------------
+			if (string.IsNullOrWhiteSpace(sampleIds) || string.IsNullOrWhiteSpace(analyteIds))
+				throw new ArgumentException("必須提供 sampleIds 與 analyteIds");
+
+			var sIds = sampleIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+								.Select(id => int.TryParse(id, out var i) ? i : 0)
+								.Where(i => i > 0)
+								.ToList();
+
+			var aIds = analyteIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+								 .Select(id => int.TryParse(id, out var i) ? i : 0)
+								 .Where(i => i > 0)
+								 .ToList();
+
+			// -------------------------------
+			// 2️⃣ 食材數量限制檢查
+			// -------------------------------
+			if (sIds.Count < 2 || sIds.Count > 6)
+				throw new ArgumentException("食材數量必須介於 2 至 6 之間。");
+
+			// -------------------------------
+			// 3️⃣ 呼叫資料庫查詢
+			// -------------------------------
+			var data = await _repo.CompareNutritionAsync(sIds, aIds, ct);
+
+			// -------------------------------
+			// 4️⃣ 缺值處理 + 單位分組
+			// -------------------------------
+			var groupedByUnit = data
+				.GroupBy(x => (string)(x.Unit ?? "未知單位"))
+				.Select(unitGroup => new
+				{
+					unit = unitGroup.Key,
+					analytes = unitGroup
+						.GroupBy(x => (int)x.AnalyteId)
+						.Select(analyteGroup => new
+						{
+							analyteId = analyteGroup.Key,
+							analyteName = analyteGroup.First().AnalyteName,
+							unit = analyteGroup.First().Unit ?? "",
+							values = sIds.Select(sampleId =>
+							{
+								var row = analyteGroup.FirstOrDefault(r => (int)r.SampleId == sampleId);
+								return new
+								{
+									sampleId,
+									sampleName = row?.SampleName ?? $"Sample {sampleId}",
+									value = row != null ? (decimal)row.ValuePer100g : 0M,
+									hasData = row != null
+								};
+							}).ToList()
+						})
+						.ToList()
+				})
+				.ToList();
+
+			// -------------------------------
+			// 5️⃣ 結果結構
+			// -------------------------------
+			return new
+			{
+				sampleCount = sIds.Count,
+				analyteCount = aIds.Count,
+				groups = groupedByUnit
+			};
+		}
+
+		public async Task<List<NutritionListDto>> GetAllSamplesAsync(
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default)
+		{
+			var rows = await _repo.GetAllSamplesAsync(keyword, categoryId, sort, ct);  // ⬅️ 呼叫新的 Repo 方法
+			return rows.Select(r => new NutritionListDto
+			{
+				SampleId = r.SampleId,
+				SampleName = (r.DisplayName ?? "-").ToString(),
+				AliasName = r.AliasName,
+				CategoryName = r.CategoryName
+			}).ToList();
+		}
+
+
+		public async Task<IReadOnlyList<object>> GetAnalyteListAsync(bool isPopular, CancellationToken ct = default)
+		{
+			var rows = await _repo.GetAnalytesAsync(isPopular, ct);
+			var result = rows.Select(r => new
+			{
+				analyteId = (int)r.AnalyteId,
+				analyteName = r.AnalyteName.ToString(),
+				unit = r.Unit?.ToString() ?? "",
+				category = r.Category?.ToString() ?? ""
+			}).ToList();
+
+			return result;
+		}
+
+
 	}
 }
