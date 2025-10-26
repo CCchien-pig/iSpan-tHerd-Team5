@@ -122,9 +122,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 var formData = Request.Form.ToDictionary(x => x.Key, x => x.Value.ToString());
                 var rawBody = string.Join("&", formData.Select(x => $"{x.Key}={x.Value}"));
 
-                // 記錄 Headers（可選）
-                var rawHeaders = string.Join("; ", Request.Headers.Select(h => $"{h.Key}={h.Value}"));
-
                 _logger.LogDebug("ECPay notification data: {RawBody}", rawBody);
 
                 if (!_ecpayService.ValidateCheckMacValue(formData))
@@ -133,82 +130,35 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     return BadRequest("0|CheckMacValue驗證失敗");
                 }
 
-                // 完整賦值所有欄位
                 var dto = new EcpayNotificationDto
                 {
-                    // 基本資訊
                     MerchantID = GetValue(formData, "MerchantID"),
-                    PlatformID = GetValue(formData, "PlatformID"),
-                    StoreID = GetValue(formData, "StoreID"),
-
-                    // 關鍵：商店訂單編號
-                    MerchantTradeNo = GetValue(formData, "MerchantTradeNo"),
-
-                    // 綠界交易編號
                     TradeNo = GetValue(formData, "TradeNo"),
-
-                    // 付款結果
                     RtnCode = int.Parse(GetValue(formData, "RtnCode") ?? "0"),
                     RtnMsg = GetValue(formData, "RtnMsg"),
-
-                    // 金額資訊
                     TradeAmt = int.Parse(GetValue(formData, "TradeAmt") ?? "0"),
-
-                    // 付款方式
                     PaymentType = GetValue(formData, "PaymentType"),
-                    PaymentTypeChargeFee = decimal.TryParse(GetValue(formData, "PaymentTypeChargeFee"), out var fee)
-                        ? fee
-                        : (decimal?)null,
-
-                    // 日期資訊
                     TradeDate = GetValue(formData, "TradeDate"),
                     PaymentDate = GetValue(formData, "PaymentDate"),
-
-                    // 模擬付款
-                    SimulatePaid = int.TryParse(GetValue(formData, "SimulatePaid"), out var simPaid)
-                        ? simPaid
-                        : (int?)null,
-
-                    // 自訂欄位
-                    CustomField1 = GetValue(formData, "CustomField1"),
-                    CustomField2 = GetValue(formData, "CustomField2"),
-                    CustomField3 = GetValue(formData, "CustomField3"),
-                    CustomField4 = GetValue(formData, "CustomField4"),
-
-                    // 驗證碼
                     CheckMacValue = GetValue(formData, "CheckMacValue"),
-
-                    // 失敗原因（如果有）
-                    FailReason = GetValue(formData, "FailReason"),
-
-                    // 原始資料
-                    RawBody = rawBody,
-                    RawHeaders = rawHeaders
+                    RawBody = rawBody
                 };
 
                 _logger.LogInformation(
-                    "Processing ECPay notification: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}, RtnCode={RtnCode}, RtnMsg={RtnMsg}",
-                    dto.MerchantTradeNo,
+                    "Processing ECPay notification: TradeNo={TradeNo}, RtnCode={RtnCode}",
                     dto.TradeNo,
-                    dto.RtnCode,
-                    dto.RtnMsg);
+                    dto.RtnCode);
 
                 var result = await _ecpayService.ProcessPaymentNotificationAsync(dto);
 
                 if (result)
                 {
-                    _logger.LogInformation(
-                        "ECPay notification processed successfully: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}",
-                        dto.MerchantTradeNo,
-                        dto.TradeNo);
+                    _logger.LogInformation("ECPay notification processed successfully: TradeNo={TradeNo}", dto.TradeNo);
                     return Ok("1|OK");
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "ECPay notification processing failed: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}",
-                        dto.MerchantTradeNo,
-                        dto.TradeNo);
+                    _logger.LogWarning("ECPay notification processing failed: TradeNo={TradeNo}", dto.TradeNo);
                     return BadRequest("0|處理失敗");
                 }
             }
@@ -223,7 +173,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
         {
             return data.ContainsKey(key) ? data[key] : null;
         }
-
     }
 
     public class CreatePaymentRequest

@@ -17,11 +17,12 @@ namespace tHerdBackend.Services.ORD
         private readonly ILogger<ECPayService> _logger;
         private readonly IConfiguration _configuration;
 
+        // 🔥 從設定檔讀取
         private string MerchantID => _configuration["ECPay:MerchantID"] ?? "3002607";
         private string HashKey => _configuration["ECPay:HashKey"] ?? "pwFHCqoQZGmho4w6";
         private string HashIV => _configuration["ECPay:HashIV"] ?? "EkRm7iFT261dpevs";
         private string ActionUrl => _configuration["ECPay:ActionUrl"] ?? "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5";
-        private string ReturnURL => _configuration["ECPay:ReturnURL"] ?? "https://your-domain.com/api/ord/payment/ecpay/notify";
+        private string ReturnURL => _configuration["ECPay:ReturnURL"] ?? "https://your-domain.com/api/ord/payment/notify";
         private string ClientBackURL => _configuration["ECPay:ClientBackURL"] ?? "http://localhost:5173/order/complete";
 
         public ECPayService(
@@ -37,7 +38,7 @@ namespace tHerdBackend.Services.ORD
         public string CreatePaymentForm(string orderNo, int totalAmount, string itemName)
         {
             _logger.LogInformation("============================================================");
-            _logger.LogInformation("開始產生綠界付款表單");
+            _logger.LogInformation("🔥 開始產生綠界付款表單");
             _logger.LogInformation($"訂單編號: {orderNo}");
             _logger.LogInformation($"訂單金額: {totalAmount}");
 
@@ -52,6 +53,7 @@ namespace tHerdBackend.Services.ORD
             _logger.LogInformation($"商品名稱: {itemName}");
             _logger.LogInformation($"商品名稱長度: {itemName.Length} 字元");
 
+            // 🔥 使用屬性讀取設定
             var param = new Dictionary<string, string>
             {
                 ["MerchantID"] = MerchantID,
@@ -61,7 +63,7 @@ namespace tHerdBackend.Services.ORD
                 ["TotalAmount"] = totalAmount.ToString(),
                 ["TradeDesc"] = "tHerd Order",
                 ["ItemName"] = itemName,
-                ["ReturnURL"] = ReturnURL,
+                ["ReturnURL"] = ReturnURL,  // 🔥 從設定檔讀取
                 ["ChoosePayment"] = "Credit",
                 ["EncryptType"] = "1"
             };
@@ -71,8 +73,8 @@ namespace tHerdBackend.Services.ORD
                 param["ClientBackURL"] = ClientBackURL;
             }
 
-            _logger.LogInformation($"ReturnURL: {ReturnURL}");
-            _logger.LogInformation($"ClientBackURL: {ClientBackURL}");
+            _logger.LogInformation($"🔗 ReturnURL: {ReturnURL}");
+            _logger.LogInformation($"🔗 ClientBackURL: {ClientBackURL}");
 
             var mac = GetCheckMacValue(param);
 
@@ -134,10 +136,12 @@ namespace tHerdBackend.Services.ORD
             var raw = $"HashKey={HashKey}&{string.Join("&", sorted)}&HashIV={HashIV}";
 
             _logger.LogInformation($"Step 1 原始字串長度: {raw.Length}");
+            _logger.LogInformation($"Step 1 原始字串: {raw.Substring(0, Math.Min(200, raw.Length))}...");
 
             var encoded = System.Net.WebUtility.UrlEncode(raw);
 
             _logger.LogInformation($"Step 2 URL編碼長度: {encoded.Length}");
+            _logger.LogInformation($"Step 2 URL編碼: {encoded.Substring(0, Math.Min(200, encoded.Length))}...");
 
             encoded = encoded.ToLower();
 
@@ -155,7 +159,7 @@ namespace tHerdBackend.Services.ORD
         {
             if (!parameters.ContainsKey("CheckMacValue"))
             {
-                _logger.LogWarning("缺少 CheckMacValue");
+                _logger.LogWarning("❌ 缺少 CheckMacValue");
                 return false;
             }
 
@@ -168,11 +172,11 @@ namespace tHerdBackend.Services.ORD
 
             if (isValid)
             {
-                _logger.LogInformation("CheckMacValue 驗證成功");
+                _logger.LogInformation("✅ CheckMacValue 驗證成功");
             }
             else
             {
-                _logger.LogWarning("CheckMacValue 驗證失敗");
+                _logger.LogWarning("❌ CheckMacValue 驗證失敗!");
                 _logger.LogWarning($"接收: {received}");
                 _logger.LogWarning($"計算: {calculated}");
             }
@@ -185,12 +189,12 @@ namespace tHerdBackend.Services.ORD
             try
             {
                 await _notificationRepo.CreateAsync(dto);
-                _logger.LogInformation($"綠界通知處理成功: TradeNo={dto.TradeNo}");
+                _logger.LogInformation($"✅ 綠界通知: TradeNo={dto.TradeNo}, RtnCode={dto.RtnCode}");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "處理通知失敗");
+                _logger.LogError(ex, "❌ 處理通知失敗");
                 return false;
             }
         }

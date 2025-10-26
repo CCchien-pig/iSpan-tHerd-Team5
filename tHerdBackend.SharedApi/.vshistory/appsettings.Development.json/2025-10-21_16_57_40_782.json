@@ -1,0 +1,17 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ECPay": {
+    "MerchantID": "2000132",
+    "HashKey": "5294y06JbISpM5x9",
+    "HashIV": "v77hoKGq4kWxNNIS",
+    "PaymentUrl": "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5",
+    "ReturnUrl": "https://localhost:7285/order/complete",
+    "OrderResultUrl": "https://hoarier-jame-intersidereal.ngrok-free.dev/api/ord/payment/ecpay/notify",
+    "IsProduction": false
+  }
+}

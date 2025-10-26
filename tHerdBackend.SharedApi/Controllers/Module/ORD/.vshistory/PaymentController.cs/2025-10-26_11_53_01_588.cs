@@ -133,7 +133,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     return BadRequest("0|CheckMacValue驗證失敗");
                 }
 
-                // 完整賦值所有欄位
+                // ✅ 完整賦值所有欄位
                 var dto = new EcpayNotificationDto
                 {
                     // 基本資訊
@@ -141,7 +141,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     PlatformID = GetValue(formData, "PlatformID"),
                     StoreID = GetValue(formData, "StoreID"),
 
-                    // 關鍵：商店訂單編號
+                    // ✅ 關鍵：商店訂單編號
                     MerchantTradeNo = GetValue(formData, "MerchantTradeNo"),
 
                     // 綠界交易編號
