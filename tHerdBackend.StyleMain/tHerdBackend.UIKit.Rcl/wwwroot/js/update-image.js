@@ -414,8 +414,8 @@
 
     // === 刪除圖片 ===
     window.deleteFile = async function (fileId, btn) {
-        // ✅ 從按鈕或圖片讀取 delete API（或預設）
-        const deleteApi = btn?.dataset.deleteApi || "/SYS/UploadTest/DeleteFile";
+        // 從按鈕或圖片讀取 delete API（或預設）
+        const deleteApi = btn?.dataset.deleteApi || "/SYS/Images/DeleteFile";
 
         const confirm = await Swal.fire({
             title: "確定刪除？",
@@ -473,7 +473,23 @@
             let val = triggerImg.dataset[key];
             if (key === "isActive") {
                 input.checked = val === "true";
-            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                continue;
+            }
+
+            // ✅ 若是檔案大小，要換算單位
+            if (key === "fileSizeBytes") {
+                const bytes = parseInt(val || "0", 10);
+                let formatted;
+                if (isNaN(bytes)) formatted = "--";
+                else if (bytes < 1024) formatted = `${bytes} Bytes`;
+                else if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(1)} KB`;
+                else formatted = `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+
+                input.value = formatted;
+                continue;
+            }
+
+            if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
                 input.value = val || "";
             }
         }

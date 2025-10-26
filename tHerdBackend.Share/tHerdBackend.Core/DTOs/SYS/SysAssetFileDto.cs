@@ -118,6 +118,7 @@ public class AssetFileUploadDto
     public string ModuleId { get; set; } // 模組代號
     public string ProgId { get; set; } // 程式代號
     public int? FolderId { get; set; }
+    public bool IsExternal { get; set; } = true; // T: 雲端; F: 本地
     public List<AssetFileDetailsDto> Meta { get; set; } = new();
 }
 

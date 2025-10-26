@@ -37,7 +37,7 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 text-start">
-                                    <label class="form-label fw-semibold">檔案代號 (Cloudinary 產生)</label>
+                                    <label class="form-label fw-semibold">檔案代號 (自動產生產生)</label>
                                     <input type="text" id="modalFileKey" class="form-control" value="@Model.File.FileKey" readonly />
                                 </div>
 
@@ -54,7 +54,8 @@
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">檔案大小</label>
-                                    <input type="text" id="modalFileSizeBytes" class="form-control" value="@Model.File.FileSizeBytes + " Bytes"" readonly />
+                                    <input type="text" id="modalFileSizeBytes" class="form-control"
+                                           value="@(Model.File.FileSizeBytes + " bytes")" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">

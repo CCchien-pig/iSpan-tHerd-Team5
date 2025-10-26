@@ -13,6 +13,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
         //  檔案 / 圖片操作
         // ============================================================
 
+        Task AddLocalFileAsync(AssetFileUploadDto uploadDto, AssetFileDetailsDto meta, string fileUrl, CancellationToken ct = default);
         Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
         Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default);
         Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);

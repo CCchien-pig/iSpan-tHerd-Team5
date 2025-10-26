@@ -14,6 +14,13 @@
 
 <h2>@ViewData["Title"]</h2>
 
+<!-- 這顆會輸出：上傳按鈕 + Modal -->
+@await Component.InvokeAsync("UploadImageModal", new {
+moduleId = ViewContext.RouteData.Values["area"],
+    progId = ViewContext.RouteData.Values["controller"],
+    modalId = "uploadImageModal"
+})
+@* 
 <form asp-action="Index" asp-controller="UploadTest" method="post" enctype="multipart/form-data">
     <div class="d-flex justify-content-end gap-2">
         <a asp-area="SYS" asp-controller="UploadTest" asp-action="Index"
@@ -23,14 +30,20 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">選擇上傳資料夾</label>
-        <div class="d-flex align-items-center gap-2">
-            <input type="hidden" id="selectedFolderId" name="FolderId" value="">
-            <input type="text" id="selectedFolderName" class="form-control form-control-sm"
-                   placeholder="未選擇資料夾" readonly style="width:300px;">
-            <button type="button" id="btnSelectFolder" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-folder2-open"></i> 選擇資料夾
-            </button>
+        <label class="form-label fw-semibold d-flex align-items-center gap-2">
+            <i class="bi bi-lightbulb text-warning"></i>
+            上傳位置
+        </label>
+        <div class="btn-group upload-mode-group" role="group" aria-label="Upload mode">
+            <input type="radio" class="btn-check" name="IsExternal" id="modeCloud" value="true" checked>
+            <label class="btn btn-upload" for="modeCloud">
+                <i class="bi bi-cloud-upload"></i> Cloudinary
+            </label>
+
+            <input type="radio" class="btn-check" name="IsExternal" id="modeLocal" value="false">
+            <label class="btn btn-upload" for="modeLocal">
+                <i class="bi bi-hdd"></i> 本地上傳
+            </label>
         </div>
     </div>
 
@@ -49,12 +62,9 @@
 
     <!-- 隱藏 input 集合 -->
     <div id="hiddenInputs"></div>
-</form>
-
-@if (ViewBag.Message != null)
-{
-    <div class="alert alert-info mt-3">@ViewBag.Message</div>
-}
+    <input type="hidden" name="ModuleId" value="@ViewContext.RouteData.Values["area"]" />
+    <input type="hidden" name="ProgId" value="@ViewContext.RouteData.Values["controller"]" />
+</form> *@
 
 @if (Model != null && Model.Any())
 {
@@ -90,7 +100,7 @@
 
                 <button type="button"
                         class="toggle-active-btn btn btn-sm"
-                        onclick="toggleActive(@file.FileId, this)">
+                        onclick="toggleActive(this)">
                     @(file.IsActive ? "停用" : "啟用")
                 </button>
 
@@ -113,36 +123,14 @@
 
 @section Scripts {
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
 
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/upload-image-modal.js" asp-append-version="true"></script>
     <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
 
-    <script type="module">
-        import { openFolderTreeSelector } from '/_content/tHerdBackend.UIKit.Rcl/js/folder-tree.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-          const btnSelect = document.getElementById('btnSelectFolder');
-          const folderIdInput = document.getElementById('selectedFolderId');
-          const folderNameInput = document.getElementById('selectedFolderName');
-
-          btnSelect.addEventListener('click', async () => {
-            const result = await openFolderTreeSelector({
-              title: "選擇上傳資料夾",
-              apiUrl: "/SYS/Images/GetTreeData",
-              defaultId: folderIdInput.value || null
-            });
-
-            // 使用 SweetAlert2 結果格式
-            if (!result.isConfirmed) return;
-
-            const selectedId = result.value;
-            const selectedNode = $("#swal-tree-container").jstree(true).get_node(selectedId);
-            const selectedName = selectedNode?.text || "(未命名)";
-
-            folderIdInput.value = selectedId;
-            folderNameInput.value = selectedName;
-          });
+    <script>
+        // 初始化這顆上傳視窗的互動
+        document.addEventListener("DOMContentLoaded", function() {
+            initUploadImageModal("uploadImageModal");
         });
     </script>
 }
