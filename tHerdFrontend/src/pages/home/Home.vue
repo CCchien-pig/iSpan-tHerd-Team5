@@ -25,6 +25,9 @@ import CouponList from '@/components/modules/mkt/CouponList.vue'
 
 //彈出式廣告
 import AdPopup from '@/components/modules/mkt/AdPopup.vue'
+
+//輪播圖
+// import HeroCarousel from '@/components/common/HeroCarousel.vue'
 // ===== 狀態管理 =====
 // 獲取Loading狀態管理實例
 const loadingStore = useLoadingStore()
@@ -123,6 +126,7 @@ const handleQuickView = (product) => {
       功能：展示網站主要價值主張和行動按鈕
       事件：支持Loading測試功能
     -->
+      <!-- <HeroCarousel /> -->
     <HeroSection @test-loading="testLoading" @custom-loading="handleCustomLoading" />
 
     <!--
@@ -130,7 +134,7 @@ const handleQuickView = (product) => {
   功能：顯示使用者可領取的各種活動券
   -->
   <div class="container py-4">
-    <h3 class="mb-3 fw-bold text-center main-color-green-text">熱門優惠券(測試版)</h3>
+    <h3 class="mb-3 fw-bold text-center main-color-green-text">熱門優惠券</h3>
     <CouponList />
   </div>
     <!--
