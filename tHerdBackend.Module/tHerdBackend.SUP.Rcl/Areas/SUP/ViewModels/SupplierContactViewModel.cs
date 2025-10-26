@@ -49,6 +49,9 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
 		public DateTime? RevisedDate { get; set; }
 
 
+		[Display(Name = "名下品牌名稱")]
+		public List<string> BrandNames { get; set; } = new();
+
 		/*
 		// 台灣時間顯示
 		[Display(Name = "建檔時間 (台灣)")]

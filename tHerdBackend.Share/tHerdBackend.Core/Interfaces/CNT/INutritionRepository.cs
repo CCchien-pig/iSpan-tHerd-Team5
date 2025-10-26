@@ -35,5 +35,24 @@ namespace tHerdBackend.Core.Interfaces.Nutrition
 
 		// 既有：GetSamplesAsync / GetSampleByIdAsync / GetNutrientsBySampleIdAsync ...
 		Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default);
+
+		/// <summary>
+		/// 多食材 × 多營養素 比較查詢（Compare）
+		/// </summary>
+		Task<IReadOnlyList<dynamic>> CompareNutritionAsync(
+			IEnumerable<int> sampleIds,
+			IEnumerable<int> analyteIds,
+			CancellationToken ct = default);
+
+		Task<IReadOnlyList<dynamic>> GetAllSamplesAsync(
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default);
+
+		/// <summary>
+		/// 取得營養素清單（可選常見或全部）
+		/// </summary>
+		Task<IReadOnlyList<dynamic>> GetAnalytesAsync(bool isPopular, CancellationToken ct = default);
 	}
 }

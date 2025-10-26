@@ -24,7 +24,11 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
         public async Task AssembleDetailsAsync(ProdProductDetailDto item, IDbConnection conn, IDbTransaction? tx, CancellationToken ct)
         {
             // 1. SEO
-            var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => s.SeoId == item.SeoId, ct);
+            var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => 
+            s.SeoId == item.SeoId && 
+            s.RefTable == "Products" && 
+            s.RefId == item.ProductId, ct);
+
             if (seo != null)
             {
                 item.Seo = new ProdSeoConfigDto
@@ -45,6 +49,22 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
                 .Where(s => s.ProductId == item.ProductId).ToListAsync(ct);
             item.Skus = skus.Select(MapSku).ToList();
 
+            if (item.Skus != null && item.MainSkuId!=null) {
+                var main = item.Skus.FirstOrDefault(x => x.SkuId == item.MainSkuId);
+                if (main != null)
+                {
+                    item.ListPrice = main.ListPrice;
+                    item.UnitPrice = main.UnitPrice;
+                    item.SalePrice = main.SalePrice;
+                }
+                else {
+                    main = item.Skus.First();
+                    item.ListPrice = main.ListPrice;
+                    item.UnitPrice = main.UnitPrice;
+                    item.SalePrice = main.SalePrice;
+                }
+            }
+
             // 3. 規格群組
             item.SpecConfigs = await BuildSpecConfigsAsync(item, _db);
 
@@ -62,7 +82,11 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
                                 WHERE pi.ProductId = @ProductId
                                 ORDER BY pi.IsMain DESC, pi.OrderSeq ASC;";
             var imgCmd = new CommandDefinition(imgSql, new { item.ProductId }, tx, cancellationToken: ct);
-            item.Images = conn.Query<ProductImageDto>(imgCmd).ToList();
+            item.Images = conn.Query<ProductImageDto>(imgCmd).OrderByDescending(x => x.IsMain).ThenBy(x=>x.OrderSeq).ToList();
+
+            if (item.Images != null) {
+                item.ImageUrl = item.Images.Where(x => x.IsMain).Select(x => x.FileUrl).First();
+            }
         }
 
         private ProdProductSkuDto MapSku(ProdProductSku sku) => new()

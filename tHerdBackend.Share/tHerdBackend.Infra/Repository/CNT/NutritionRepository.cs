@@ -217,6 +217,90 @@ ORDER BY
 			}
 		}
 
+		public async Task<IReadOnlyList<dynamic>> CompareNutritionAsync(
+			IEnumerable<int> sampleIds,
+			IEnumerable<int> analyteIds,
+			CancellationToken ct = default)
+		{
+			const string sql = @"
+WITH sid AS (
+  SELECT TRY_CAST(value AS int) AS SampleId
+  FROM STRING_SPLIT(@SampleIds, ',')
+),
+aid AS (
+  SELECT TRY_CAST(value AS int) AS AnalyteId
+  FROM STRING_SPLIT(@AnalyteIds, ',')
+)
+SELECT 
+    s.SampleId,
+    sm.SampleName,
+    a.AnalyteId,
+    a.AnalyteName,
+    ISNULL(m.Unit, a.DefaultUnit) AS Unit,
+    ISNULL(m.ValuePer100g, 0) AS ValuePer100g
+FROM sid s
+JOIN CNT_Sample sm ON sm.SampleId = s.SampleId
+JOIN aid aa ON 1=1
+JOIN CNT_Analyte a ON a.AnalyteId = aa.AnalyteId
+LEFT JOIN CNT_Measurement m 
+       ON m.SampleId = s.SampleId AND m.AnalyteId = aa.AnalyteId
+ORDER BY a.AnalyteCategoryId, a.AnalyteName;
+";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = await conn.QueryAsync(sql, new
+				{
+					SampleIds = string.Join(",", sampleIds),
+					AnalyteIds = string.Join(",", analyteIds)
+				}, tx);
+				return rows.ToList();
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		public async Task<IReadOnlyList<dynamic>> GetAnalytesAsync(bool isPopular, CancellationToken ct = default)
+		{
+			var popularList = new[]
+			{
+		"熱量", "總碳水化合物", "水分", "粗蛋白", "膳食纖維", "粗脂肪", "飽和脂肪", 
+		"鉀","磷", "鎂", "鈣", "鈉","鐵", "鋅", "維生素B1", "維生素C", 
+		"α-維生素E當量(α-TE)", "維生素E總量"
+	};
+
+			var sql = @"
+SELECT 
+    a.AnalyteId,
+    a.AnalyteName,
+    a.DefaultUnit AS Unit,
+    ac.CategoryName AS Category
+FROM dbo.CNT_Analyte a
+JOIN dbo.CNT_AnalyteCategory ac ON ac.AnalyteCategoryId = a.AnalyteCategoryId
+";
+
+			if (isPopular)
+				sql += "WHERE a.AnalyteName IN @Names\n";
+
+			sql += "ORDER BY ac.CategoryName, a.AnalyteName;";
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = await conn.QueryAsync(sql, new { Names = popularList }, tx);
+				return rows.ToList();
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+
+
 		public async Task<IReadOnlyList<FoodCategoryDto>> GetFoodCategoriesAsync(CancellationToken ct = default)
 		{
 			const string sql = @"
@@ -237,6 +321,95 @@ ORDER BY c.CategoryId ASC;";
 				if (needDispose) conn.Dispose();
 			}
 		}
+
+		public async Task<IReadOnlyList<dynamic>> GetAllSamplesAsync(
+			string? keyword,
+			int? categoryId,
+			string? sort,
+			CancellationToken ct = default)
+		{
+			int? nutrientAnalyteId = TryParseNutrientSort(sort);
+
+			var sb = new StringBuilder(@"
+SELECT
+    s.SampleId,
+    CASE 
+        WHEN NULLIF(LTRIM(RTRIM(s.SampleNameEn)),'') IS NOT NULL 
+             THEN CONCAT(s.SampleName, ' (', s.SampleNameEn, ')')
+        ELSE s.SampleName
+    END                 AS DisplayName,
+    NULLIF(LTRIM(RTRIM(s.AliasName)),'')   AS AliasName,
+    s.CategoryId,
+    c.CategoryName,
+    NULLIF(LTRIM(RTRIM(s.ContentDesc)),'') AS ContentDesc");
+
+			if (nutrientAnalyteId.HasValue)
+			{
+				sb.Append(@",
+    MAX(CASE WHEN m.AnalyteId = @NutrientAid THEN m.ValuePer100g END) AS NutrientValue");
+			}
+
+			sb.Append(@"
+FROM dbo.CNT_Sample s
+JOIN dbo.CNT_FoodCategory c ON c.CategoryId = s.CategoryId
+");
+
+			if (nutrientAnalyteId.HasValue)
+			{
+				sb.Append(@"
+LEFT JOIN dbo.CNT_Measurement m 
+       ON m.SampleId = s.SampleId 
+      AND m.AnalyteId = @NutrientAid
+");
+			}
+
+			sb.Append(@"
+WHERE 1=1
+");
+
+			var param = new DynamicParameters();
+
+			if (!string.IsNullOrWhiteSpace(keyword))
+			{
+				param.Add("Keyword", keyword.Trim());
+				sb.Append(@"
+  AND (
+        s.SampleName      LIKE CONCAT('%', @Keyword, '%') OR
+        s.SampleNameEn    LIKE CONCAT('%', @Keyword, '%') OR
+        s.AliasName       LIKE CONCAT('%', @Keyword, '%')
+      )
+");
+			}
+
+			if (categoryId.HasValue)
+			{
+				param.Add("CategoryId", categoryId.Value);
+				sb.Append("  AND s.CategoryId = @CategoryId\n");
+			}
+
+			if (nutrientAnalyteId.HasValue)
+				param.Add("NutrientAid", nutrientAnalyteId.Value);
+
+			sb.Append(@"
+GROUP BY 
+    s.SampleId, s.SampleName, s.SampleNameEn, s.AliasName, s.CategoryId, c.CategoryName, s.ContentDesc
+");
+
+			// ⬅️ 不加 OFFSET/FETCH（不分頁）
+			AppendOrderBy(sb, sort, nutrientAnalyteId.HasValue);
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var rows = (await conn.QueryAsync(sb.ToString(), param, tx)).ToList();
+				return rows;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
 
 		private static int? TryParseNutrientSort(string? sort)
 		{
