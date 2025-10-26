@@ -8,32 +8,57 @@
     <input v-model.trim="q"
            @input="_debouncedFetch"
            @keydown="onKeydown"
-           @keyup.enter="doSearch"
            class="form-control"
-           placeholder="請輸入關鍵字（例：退款、取消訂單、付款失敗）"/>
+           placeholder="請輸入關鍵字"/>
     <button class="btn btn-search" @click="doSearch">
       <span v-if="!loadingSuggest">搜尋</span>
       <span v-else class="spinner-border spinner-border-sm"></span>
     </button>
   </div>
 
-  <!-- 即時建議清單 -->
-  <div v-if="open"
-       class="position-absolute bg-white border rounded-3 shadow-sm w-100"
-       style="z-index:1000; max-height: 320px; overflow:auto;">
-    <button v-for="(s, idx) in suggestions"
-            :key="s.id"
-            type="button"
-           class="suggest-item w-100 text-start px-3 py-2 border-0 "
-          
-            @mouseenter="active = idx"
-            @mouseleave="active = -1"
-            @click="openFeatured(s.id)">
-      <div class="fw-semibold">{{ s.title }}</div>
-      <small class="text-muted">{{ s.categoryName }}</small>
-    </button>
-    <div v-if="!suggestions.length && !loadingSuggest" class="px-3 py-2 text-muted">沒有相關建議</div>
-    <div v-if="loadingSuggest" class="px-3 py-2"><span class="spinner-border spinner-border-sm"></span> 載入中</div>
+  <!-- 即時建議清單（加上 ARIA + 視覺選中態） -->
+<div
+  v-if="open"
+  role="listbox"
+  :aria-activedescendant="active >= 0 ? `sugg-${active}` : null"
+  class="position-absolute bg-white border rounded-3 shadow-sm w-100"
+  style="z-index:1000; max-height: 320px; overflow:auto;"
+>
+  <button
+    v-for="(s, idx) in suggestions"
+    :key="s.id"
+    :id="`sugg-${idx}`"
+    role="option"
+    :aria-selected="active === idx"
+    type="button"
+    class="suggest-item w-100 text-start px-3 py-2 border-0"
+    :class="{ 'is-active': active === idx }"
+    @mouseenter="active = idx"
+    @mouseleave="active = -1"
+    @click="openFeatured(s.id)"
+  >
+    <div class="fw-semibold">{{ s.title }}</div>
+    <small class="text-muted">{{ s.categoryName }}</small>
+  </button>
+
+  <!-- 空態/載入（加上適合的 ARIA） -->
+  <div
+    v-if="!suggestions.length && !loadingSuggest"
+    class="px-3 py-2 text-muted"
+    role="status"
+    aria-live="polite"
+  >沒有相關建議</div>
+
+  <div
+    v-if="loadingSuggest"
+    class="px-3 py-2"
+    role="status"
+    aria-live="polite"
+  >
+    <span class="spinner-border spinner-border-sm"></span> 載入中
+  </div>
+</div>
+
   </div>
 </div>
 
@@ -42,7 +67,8 @@
     <!-- 搜尋結果（保持不動） -->
     <div class="center-narrow" v-if="q && searched">
       <!-- ... -->
-    </div>
+</div>
+
     <!-- ✅ 精選答案卡（點建議後顯示；右上角 X 可關閉） -->
 <div v-if="featuredOpen" class="center-narrow" id="featured-ans">
   <div class="featured-card position-relative p-3 p-md-4 mb-4 bg-white border rounded-3 shadow-sm">
@@ -115,9 +141,29 @@
     </transition>
   </div>
 </div>
+<!-- 聯繫我們區塊 -->
+<div class="contact-help-box text-center mt-5">
+  <h4 class="fw-bold mb-4">還有其他問題嗎？</h4>
 
-
+  <div class="contact-card mx-auto">
+    <div class="d-flex align-items-center justify-content-center mb-3">
+      <div class="contact-icon me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M9.87388 19.219C11.6706 17.7826 13.9025 17.0001 16.2028 17.0001H19C19.5522 17.0001 20 16.5524 20 16.0001V5.00009C20 4.44781 19.5522 4.00009 19 4.00009H4.99995C4.44767 4.00009 3.99995 4.44781 3.99995 5.00009V16.0001C3.99995 16.5524 4.44767 17.0001 4.99995 17.0001H8.99671V19.9203L9.87388 19.219ZM5 19C3.34315 19 2 17.6569 2 16V5C2 3.34315 3.34315 2 5 2H19C20.6569 2 22 3.34315 22 5V16C22 17.6569 20.6569 19 19 19H16.2028C14.3564 19 12.565 19.6281 11.1228 20.7811L9.43342 22.1317C8.78637 22.649 7.84246 22.5438 7.32515 21.8968C7.11256 21.6309 6.99675 21.3006 6.99675 20.9601V19H5ZM6.42647 12.3192C5.97402 12.0025 5.86399 11.379 6.1807 10.9265C6.49741 10.4741 7.12094 10.364 7.57339 10.6808C10.2312 12.5412 13.7687 12.5412 16.4265 10.6808C16.8789 10.364 17.5024 10.4741 17.8192 10.9265C18.1359 11.379 18.0258 12.0025 17.5734 12.3192C14.227 14.6617 9.77291 14.6617 6.42647 12.3192Z" fill="white"></path>
+        </svg>
+      </div>
+      <div class="text-start">
+        <div class="fw-semibold fs-5">聊天和 24/7 電子郵件幫助</div>
+        <div class="text-muted small">即時消息不可用</div>
+      </div>
     </div>
+
+    <button class="btn btn-main px-5 py-2" @click="openChat">聯繫我們</button>
+  </div>
+</div>
+
 </template>
 //CsChat.vue  的聊天機器人程式碼
 <script setup>
@@ -204,12 +250,24 @@ featuredOpen: false,
 
     }
   },
-  mounted() { this.loadCategories()
-      document.addEventListener('click', this._onDocClick)
-   }, //  綁定全域點擊事件
-     beforeUnmount() {
-    document.removeEventListener('click', this._onDocClick) // 元件卸載時移除監聽
-  },
+mounted() {
+  this.loadCategories()
+  document.addEventListener('click', this._onDocClick)
+},
+beforeUnmount() {
+  document.removeEventListener('click', this._onDocClick)
+// 徹底清理：script、氣泡、面板、iframe
+  document.querySelectorAll([
+    '#chatbase-script',
+    '.cb-bubble',
+    '.cb-chat-container',
+    'iframe[src*="chatbase"]'
+  ].join(',')).forEach(el => el.remove())
+
+  if (window.chatbaseConfig) delete window.chatbaseConfig
+  if (window.chatbase) delete window.chatbase
+},
+
   methods: {
     // ---------------- 即時建議 START ----------------
 async fetchSuggest() {
@@ -222,7 +280,7 @@ async fetchSuggest() {
     this.suggestions = (list || []).slice(0, 6).map(x => ({
       id: x.faqId, title: x.title, categoryName: x.categoryName
     }))
-    this.open = this.suggestions.length > 0
+    this.open = true // 只要有輸入就打開，交給 template 判斷空清單
     this.active = -1
   } finally {
     this.loadingSuggest = false
@@ -233,25 +291,36 @@ _debouncedFetch() {
   this.timer = setTimeout(this.fetchSuggest, 200) // 防抖
 },
 onKeydown(e) {
-  if (!this.open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-    this.open = this.suggestions.length > 0
-    return
-  }
-  if (!this.open) return
   if (e.key === 'ArrowDown') {
     e.preventDefault()
+    if (!this.open) { this.open = this.suggestions.length > 0; return }
+    if (!this.suggestions.length) return
     this.active = (this.active + 1) % this.suggestions.length
-  } else if (e.key === 'ArrowUp') {
+    return
+  }
+  if (e.key === 'ArrowUp') {
     e.preventDefault()
+    if (!this.open) { this.open = this.suggestions.length > 0; return }
+    if (!this.suggestions.length) return
     this.active = (this.active - 1 + this.suggestions.length) % this.suggestions.length
-  } else if (e.key === 'Enter') {
+    return
+  }
+  if (e.key === 'Enter') {
     e.preventDefault()
-    if (this.active >= 0) this.select(this.suggestions[this.active])
-    else this.doSearch()
-  } else if (e.key === 'Escape') {
-    this.open = false
+    if (this.open && this.suggestions.length) {
+      // 沒移動過就選第一個
+      if (this.active < 0) this.active = 0
+      this.select(this.suggestions[this.active]) // 內部會呼叫 openFeatured()
+      return
+    }
+    this.doSearch()
+    return
+  }
+  if (e.key === 'Escape') {
+    if (this.open) { this.open = false; e.preventDefault() }
   }
 },
+
 select(item) {
   this.q = item.title
  this.openFeatured(item.id)   // ← 直接開精選答案卡
@@ -274,17 +343,24 @@ _onDocClick(e) {
   toggleFaq(fid) {
     this.openFaqId = this.openFaqId === fid ? null : fid
   },
-  async doSearch() {
-    if (!this.q?.trim()) return
-    this.loading = true
-    try {
-    const list = await searchFaq(this.q.trim())
-    this.results = list
+ async doSearch() {
+  const kw = this.q?.trim()
+  if (!kw) return
+  this.loading = true
+  this.featuredOpen = false // 搜尋時關閉精選答案卡
+  try {
+    const list = await searchFaq(kw)
+    this.results = Array.isArray(list) ? list : (list?.data ?? [])
+  } catch (e) {
+    console.error(e)
+    this.results = [] // 失敗也顯示空態，而不是卡住
+  } finally {
+    this.loading = false
     this.searched = true
-    } finally {
-      this.loading = false
-    }
-  },
+    this.open = false // 關閉下拉
+  }
+},
+
   hl(text) {
     if (!this.q || !text) return text
     const esc = this.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -324,10 +400,76 @@ closeFeatured() {
   this.featuredOpen = false
   this.featuredFaq = null
   this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+},
+ openChat() {
+  if (window.chatbase && typeof window.chatbase.open === 'function') {
+    window.chatbase.open()
+    return
+  }
+  if (!document.getElementById('chatbase-script')) {
+    if (!window.chatbaseConfig) window.chatbaseConfig = {}
+    window.chatbaseConfig.chatbotId = 'BRCpzNGrd5C1SMBsd6zmU'
 
-}
+    const s = document.createElement('script')
+    s.id = 'chatbase-script'
+    s.src = 'https://www.chatbase.co/embed.min.js'
+    s.defer = true
+    s.onload = () => window.chatbase?.open?.()
+    document.head.appendChild(s)
+  }
+},
+_cleanupChatbase() {
+  try {
+    const sel = [
+      '#chatbase-script',
+      '.cb-bubble',
+      '.cb-chat-container',
+      'iframe[src*="chatbase"]'
+    ].join(',')
 
-}
+    document.querySelectorAll(sel).forEach(el => {
+      try {
+        el.remove()
+      } catch (err) {
+        console.warn('移除節點失敗：', err)
+      }
+    })
+
+    if (window.chatbase) window.chatbase = undefined
+    if (window.chatbaseConfig) window.chatbaseConfig = undefined
+  } catch (err) {
+    console.warn('清理 Chatbase 失敗：', err)
+  }
+},
+
+  },
+_cleanupChatbase() {
+  try {
+    const sel = [
+      '#chatbase-script',
+      '.cb-bubble',
+      '.cb-chat-container',
+      'iframe[src*="chatbase"]'
+    ].join(',')
+
+    document.querySelectorAll(sel).forEach(el => {
+      try {
+        el.remove()
+      } catch (err) {
+        console.warn('移除節點失敗：', err)
+      }
+    })
+
+    if (window.chatbase) window.chatbase = undefined
+    if (window.chatbaseConfig) window.chatbaseConfig = undefined
+  } catch (err) {
+    console.warn('清理 Chatbase 失敗：', err)
+  }
+},
+  quickFill(text) {
+  this.q = text
+  this.doSearch()
+},
 }
 </script>
 
@@ -428,9 +570,76 @@ closeFeatured() {
 .suggest-item:hover {
   background-color: #4DB4C1;
 }
+/* === 聯繫我們區塊 === */
+.contact-help-box {
+  background-color: #f8faf8;
+  padding: 60px 20px 80px;
+}
 
+.contact-card {
+  background: #fff;
+  border: 1px solid #e8ece8;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  padding: 32px 24px;
+  max-width: 420px;
+}
 
+.contact-icon {
+  background-color: rgb(0, 112, 131); /* 主色 */
+  color: #fff;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
+/* 主色按鈕 */
+.btn-main {
+  background-color: rgb(0, 112, 131);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
 
+.btn-main:hover {
+  background-color: rgb(77, 180, 193);
+  transform: translateY(-1px);
+}
+/* 手機優化（≤576px） */
+@media (max-width: 576px) {
+  .center-narrow { padding: 0 16px; }             /* 兩側安全邊距 */
+  .quick-area { padding: 20px 0 28px; margin-top: 20px; }
+  .qicon { width: 56px; height: 56px; }           /* 圖示縮一階 */
+  .qcard { padding: 14px 8px; }
+  .pm-box { width: 36px; height: 24px; }          /* +／− 小方塊 */
+  .cat-row { padding: 12px 0; }
+  .ans-wrap { padding: 12px; }
+  .contact-help-box { padding: 40px 16px 56px; }
+  .contact-card { padding: 24px 16px; max-width: 100%; }
+  /* 建議清單高度用視窗比例，避免超出 */
+  #faq-searchbox > .position-absolute { max-height: 60vh; }
+}
+
+/* 中尺寸（≥768px）可以把快捷卡行距拉開一點，看起來更呼吸 */
+@media (min-width: 768px) {
+  .quick-area .row { --bs-gutter-x: 1.25rem; --bs-gutter-y: 1.25rem; }
+}
+/* 鍵盤選中態（與滑鼠 hover 視覺一致） */
+.suggest-item.is-active,
+.suggest-item:hover {
+  background-color: #4DB4C1;
+  color: #fff;
+}
+
+/* 讓內部小字在選中時也變亮（scoped 下要用 :deep） */
+:deep(.suggest-item.is-active .text-muted),
+:deep(.suggest-item:hover .text-muted) {
+  color: #fff !important;
+}
 
 </style>
