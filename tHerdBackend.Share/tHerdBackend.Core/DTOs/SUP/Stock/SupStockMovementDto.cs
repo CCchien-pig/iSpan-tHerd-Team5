@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP
+﻿namespace tHerdBackend.Core.DTOs.SUP.Stock
 {
 	/// <summary>
 	/// 用於每筆異動紀錄

@@ -1,4 +1,4 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Logistics;
 using tHerdBackend.Core.Interfaces.SUP;
 
 namespace tHerdBackend.Services.SUP

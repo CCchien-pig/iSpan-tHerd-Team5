@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
+﻿namespace tHerdBackend.Core.DTOs.SUP.Stock
 {
 	public class StockBatchUpdateDto
 	{

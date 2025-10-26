@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP
+﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 {
 	/// <summary>
 	/// 品牌版面 - 新增用資料傳輸物件
@@ -19,6 +19,7 @@
 		/// 建檔人員（後台登入使用者 ID）
 		/// </summary>
 		public int Creator { get; set; }
+		public int BrandId { get; set; } 
 	}
 }
 

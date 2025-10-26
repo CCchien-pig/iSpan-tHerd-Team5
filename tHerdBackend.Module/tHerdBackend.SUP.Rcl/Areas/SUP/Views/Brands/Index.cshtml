@@ -1,4 +1,6 @@
 ﻿@* Brands Index *@
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
 
 @section Styles {
     <!-- Area 專用 CSS -->
@@ -8,6 +10,7 @@
     </style>
 }
 
+<!-- 按鈕、提示文字區 -->
 <div class="d-flex justify-content-between align-items-center mb-2">
     <div>
         <button id="create" class="btn btn-outline-success me-2">新增品牌</button>
@@ -92,16 +95,35 @@
     </div>
 </div>
 
-
+<!-- 品牌版面編輯 Modal（名稱：brandLayoutModal）-->
+<div id="brandLayoutModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <div class="modal-header">
+                <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandLayoutModalContent" class="modal-body p-4"></div>
+        </div>
+    </div>
+</div>
 
 
 @section Scripts {
-    @* <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> *@
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    @{
+        // 為了避免 Razor 執行順序錯誤，我們在頂部只定義變數，不執行複雜邏輯
+        var antiForgeryTokens = Antiforgery.GetTokens(Context);
+    }
+    
     <script>
         $(document).ready(function() {
+            // 【CSRF 全局變數】
+            const csrfToken = '@(antiForgeryTokens?.RequestToken)';
+            const csrfHeaderName = '@(antiForgeryTokens?.HeaderName ?? "X-Request-Verification-Token")';
+
             // ======= URL 變數 ======= //
             var indexJsonUrl = '@Url.Action("IndexJson", "Brands", new { area = "SUP" })';
             var createUrl    = '@Url.Action("Create", "Brands", new { area = "SUP" })';
@@ -111,6 +133,10 @@
             var toggleStatusUrl = '@Url.Action("ToggleStatus", "Brands", new { area = "SUP" })';
             var createDiscountUrl = '@Url.Action("CreateDiscount", "Brands", new { area = "SUP" })';
 
+            const layoutEditUrl = '@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", layoutId = "__LAYOUTID__" })';
+            const getVersionsUrl = '@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__ID__" })';
+            const createLayoutUrl = '@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__" })'; // 使用 ID 傳遞 BrandId
+
             // ======= 從 sessionStorage 拿到初始品牌名稱 =======
             var initialBrandName = sessionStorage.getItem('selectedBrandName') || '';
 
@@ -119,7 +145,8 @@
 
 
             // 初始化 DataTable
-            var table = $('#brandTable').DataTable({
+            // 將 DataTable 初始化從局部變數改為全局屬性
+            window.table = $('#brandTable').DataTable({
                 serverSide: true,
                 processing: true,
                 ajax: {
@@ -223,6 +250,9 @@
                                 <button class="btn btn-sm discount-btn" data-id="${data}" title="折扣編輯" data-bs-toggle="tooltip">
                                     <i class="fa-solid fa-tags" style="color: #e87439;"></i>
                                 </button>
+                                <button class="btn btn-sm layout-edit-btn" data-id="${data}" title="版面設定" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-layer-group" style="color: #6a63a5;"></i>
+                                </button>
                                 <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除品牌" data-bs-toggle="tooltip">
                                     <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
                                 </button>
@@ -264,6 +294,7 @@
                     });
                 }
             });
+            
             // tooltip 初始化與 redraw
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
@@ -302,6 +333,7 @@
                 this.blur();
                 var id = $(this).data('id');
                 $.get(`${detailsUrl}/${id}`, function(html) {
+                    console.log(`發送的 URL:${detailsUrl}/${id}`);
                     $("#brandModalTitle").text("品牌詳細資料");
                     $('#brandModalContent').html(html);
 
@@ -727,6 +759,181 @@
                     });
             });
 
+            // ======= 編輯品牌版面 Layout (修正為載入版本管理頁面) =======
+            $('#brandTable').on('click', '.layout-edit-btn', function () {
+                this.blur();
+
+                var rowData = table.row($(this).closest('tr')).data();
+                var brandId = rowData.brandId;
+                var brandName = rowData.brandName;
+
+                if (!brandId || brandId <= 0) {
+                    console.error("❌ 錯誤：未取得有效的 brandId。");
+                    Swal.fire('錯誤', '無法取得品牌 ID，請刷新頁面。', 'error');
+                    return;
+                }
+
+                // 1. 替換 URL 中的佔位符
+                // 注意：GetLayoutVersions Action 預期一個名為 id 的參數
+                var finalUrl = getVersionsUrl.replace('__ID__', brandId);
+                console.log(`發送的 URL: ${finalUrl}`);
+
+                // 2. AJAX 載入 GetLayoutVersions Action 回傳的 Partial View
+                $.get(finalUrl).done(function (html) {
+                    console.log("✅ AJAX 成功，接收到 HTML 內容。準備顯示 Modal...");
+
+                    // 設置 Modal 標題
+                    $("#brandLayoutModalTitle").text(`版面管理`);
+
+                    // 插入版本列表 Partial View 到 Modal Body
+                    $('#brandLayoutModalContent').html(html);
+
+                    // 顯示 Modal (因為是第一次載入 Modal 內容)
+                    const $modalElement = $('#brandLayoutModal');
+                    let modalInstance = bootstrap.Modal.getInstance($modalElement[0]);
+                    if (!modalInstance) {
+                        modalInstance = new bootstrap.Modal($modalElement[0]);
+                    }
+                    modalInstance.show();
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    let errorMsg = '無法載入版面編輯器。';
+                    if (jqXHR.status === 404) {
+                         // ...
+                    } else if (jqXHR.responseText) {
+                        errorMsg = jqXHR.responseText;
+                    }
+                    console.error("❌ AJAX 載入失敗詳情:", textStatus, errorThrown, jqXHR.responseText);
+                    Swal.fire('載入失敗', errorMsg, 'error');
+                });
+            });
+
+            // 1. 新增版面按鈕
+            $('#brandLayoutModalContent').on('click', '#addNewVersionBtn', function() {
+                // 獲取 Brand ID 和 Name
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                if (!brandId) return;
+
+                // 【修正】使用 ID 佔位符，並替換，確保是路由參數
+                const url = createLayoutUrl.replace('__ID__', brandId);
+
+                loadLayoutEditor(url, `新增版面版本：${brandName}`);
+            });
+
+            // 2. 編輯特定版本按鈕 (載入 EditLayout)
+            $('#brandLayoutModalContent').on('click', '.edit-layout-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                if (!brandId || !layoutId) return;
+
+                // 【修正】使用 ID 和 LAYOUTID 佔位符，並替換，確保是路由參數
+                // 新：/EditLayout/1001/1000 (路由參數)
+                let url = layoutEditUrl.replace('__ID__', brandId).replace('__LAYOUTID__', layoutId);
+
+                // loadLayoutEditor(url, `編輯版本 (品牌名稱：${brandName}、版本ID：${layoutId})`);
+                loadLayoutEditor(url, `編輯版本`);
+            });
+
+            // 3. 啟用按鈕 (PATCH)
+            $('#brandLayoutModalContent').on('click', '.activate-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+                const indexUrl = `@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__BRANDID__" })`
+                    .replace('__BRANDID__', brandId);
+
+                const url = `/SUP/Brands/ActivateLayout/${layoutId}`;
+                console.log("=== 啟用 DEBUG ===");
+                console.log("layoutId:", layoutId);
+                console.log("brandId:", brandId);
+                console.log("final url:", url);
+
+                Swal.fire({
+                    title: `確認啟用此版本(ID: ${layoutId}) 嗎？`,
+                    text: "啟用後，此版本將立刻成為前台顯示版本，其他版本將被停用。",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '確定啟用',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            headers: {
+                                [csrfHeaderName]: csrfToken
+                                // 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            success: function(data, textStatus, jqXHR) {
+                                console.log("[Activate] 成功，後端回傳:", data);
+                                if (data.success) {
+                                    Swal.fire('啟用成功', data.message, 'success').then(() => {
+                                        // 重新載入版本列表頁面
+                                        loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+                                    });
+                                } else {
+                                    console.error("❌ AJAX 錯誤：", jqXHR.status, jqXHR.responseText);
+                                    Swal.fire('啟用失敗', data.message, 'error');
+                                }
+                            },
+                            error: function(data, textStatus, jqXHR) {
+                                console.error("❌ 錯誤:", jqXHR.status, jqXHR.responseText);
+                                console.error('[Activate] 失敗:', {
+                                    status: data.status, // e.g., 302, 401, 500
+                                    statusText: data.statusText, // e.g., "Found"
+                                    responseText: data.responseText, // 登入頁面的 HTML
+                                    errorThrown: error
+                                });
+                                Swal.fire('伺服器錯誤', '啟用操作失敗。', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // 4. 刪除按鈕 (DELETE/軟刪除)
+            $('#brandLayoutModalContent').on('click', '.delete-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                const url = `/SUP/Brands/layouts/${layoutId}`; 
+
+                Swal.fire({
+                    title: `確定移除 Layout (ID: ${layoutId}) 嗎？`,
+                    text: "此操作將軟刪除此版本紀錄。",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '確定移除',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: url,
+                            type: 'DELETE',
+                            headers: {
+                                [csrfHeaderName]: csrfToken
+                            },
+                            success: function(data) {
+                                if (data.success) {
+                                    Swal.fire('移除成功', data.message, 'success').then(() => {
+                                        // 重新載入版本列表頁面
+                                        reloadVersionIndex(brandId);
+                                    });
+                                } else {
+                                    Swal.fire('移除失敗', data.message, 'error');
+                                }
+                            },
+                            error: function(jqXHR) {
+                                console.error("❌ DELETE 錯誤:", jqXHR.status, jqXHR.responseText);
+                                Swal.fire('伺服器錯誤', '移除操作失敗。', 'error');
+                            }
+                        });
+                    }
+                });
+            });
 
         });
 
@@ -927,6 +1134,37 @@
             }
             return '進行中';
         }
+
+
+        // 輔助函式：載入 Partial View 到 Modal 中
+        function loadLayoutEditor(url, title) {
+            $("#brandLayoutModalTitle").text(title);
+            $.get(url).done(function(html) {
+                $('#brandLayoutModalContent').html(html);
+                // 注意：這裡不需要手動呼叫 initLayoutEditor，因為 Vue 腳本在 HTML 內
+            }).fail(function() {
+                Swal.fire('載入失敗', '無法載入目標頁面。', 'error');
+            });
+        }
+        // 獲取當前 Modal 內容中隱藏欄位的 Brand ID
+        function getCurrentBrandIdFromModal() {
+            return $('#currentBrandId').val() || null;
+        }
+        // 獲取當前 Modal 標題中的品牌名稱 (用於回饋訊息)
+        function getCurrentBrandNameFromModal() {
+            return $('#currentBrandName').val() || '該品牌';
+        }
+        // 重新載入版本列表
+        function reloadVersionIndex(brandId) {
+            // 從 `Url.Action` 獲取基礎 URL
+            const getVersionsUrl = '@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__ID__" })';
+            const indexUrl = getVersionsUrl.replace('__ID__', brandId);
+            const brandName = getCurrentBrandNameFromModal(); // 確保獲取正確的品牌名
+
+            // 呼叫 loadLayoutEditor 重新載入版本列表
+            loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+        }
+
 
     </script>
 }

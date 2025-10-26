@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers.ApiControllers
+﻿namespace tHerdBackend.Core.DTOs.SUP.Logistics
 {
 	public class LogisticsRateRequestDto
 	{
