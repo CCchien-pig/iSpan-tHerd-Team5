@@ -24,7 +24,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
         [HttpGet]
         public IActionResult GetAll()
         {
-            int memberId = 1001; // ⚠️ 先寫死，之後會改 JWT
+            int memberId = 1017; // ⚠️ 先寫死，之後會改 JWT
             var coupons = _couponService.GetAllActiveCouponsWithMemberStatus(memberId);
             return Ok(coupons); // 直接丟 DTO 結構
         }
@@ -40,7 +40,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
             try
             {
                 // TODO: 實務上這裡會從 Token 拿會員ID
-                int memberId = 1001;
+                int memberId = 1017;
 
                 var success = _couponService.ReceiveCoupon(request.CouponId, memberId);
 
