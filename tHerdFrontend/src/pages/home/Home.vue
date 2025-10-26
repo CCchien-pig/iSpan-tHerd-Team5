@@ -20,6 +20,11 @@ import BrandSection from '@/components/sections/BrandSection.vue' // 品牌展�
 import TestimonialSection from '@/components/sections/TestimonialSection.vue' // 客戶評價
 import FeatureSection from '@/components/sections/FeatureSection.vue' // 服務特色
 
+//優惠券
+import CouponList from '@/components/modules/mkt/CouponList.vue'
+
+//彈出式廣告
+import AdPopup from '@/components/modules/mkt/AdPopup.vue'
 // ===== 狀態管理 =====
 // 獲取Loading狀態管理實例
 const loadingStore = useLoadingStore()
@@ -98,6 +103,7 @@ const handleQuickView = (product) => {
 <template>
   <!-- 首頁容器 - 使用組件化設計，每個區塊都是獨立的組件 -->
   <div class="homepage">
+    <AdPopup imageUrl="/images/Ad/Ad1099-FreeFee.png" />
     <!-- 測試商品頁面的快速連結 -->
     <div class="container py-3">
       <div class="alert alert-info d-flex justify-content-between align-items-center">
@@ -112,7 +118,6 @@ const handleQuickView = (product) => {
         </div>
       </div>
     </div>
-
     <!--
       英雄區塊 - 首頁主要展示區域
       功能：展示網站主要價值主張和行動按鈕
@@ -120,6 +125,14 @@ const handleQuickView = (product) => {
     -->
     <HeroSection @test-loading="testLoading" @custom-loading="handleCustomLoading" />
 
+    <!--
+  優惠券區塊 - 展示可領取的優惠券
+  功能：顯示使用者可領取的各種活動券
+  -->
+  <div class="container py-4">
+    <h3 class="mb-3 fw-bold text-center main-color-green-text">熱門優惠券(測試版)</h3>
+    <CouponList />
+  </div>
     <!--
       特色分類區塊 - 展示產品分類
       功能：幫助用戶快速找到感興趣的產品類別
@@ -148,6 +161,8 @@ const handleQuickView = (product) => {
       數據：brands數組，包含品牌名稱和Logo
     -->
     <BrandSection :brands="brands" />
+
+  
 
     <!--
       客戶評價區塊 - 展示用戶評價

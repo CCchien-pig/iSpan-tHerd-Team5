@@ -24,7 +24,7 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
             var query = new ProductFilterQueryDto
             {
                 PageIndex = 1,
-                PageSize = 100 // 一次載入 1000 筆（自行調整）
+                PageSize = 100 // 一次載入 100 筆（自行調整）
             };
             var (list, total) = await _repo.GetAllAsync(query);
 

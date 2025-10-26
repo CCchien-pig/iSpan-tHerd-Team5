@@ -1,0 +1,61 @@
+﻿@{
+    var inputId = ViewData["InputId"] as string ?? "ParentFolderId";
+    var selectedId = ViewData["SelectedId"] as int?;
+}
+
+<div id="folderTreeContainer" class="border rounded p-2 bg-white" style="max-height: 400px; overflow-y: auto;">
+    <div id="folderTree"></div>
+</div>
+
+<input type="hidden" id="@inputId" name="@inputId" value="@selectedId" />
+
+@section Scripts {
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const $tree = $('#folderTree');
+    const $container = $('#folderTreeContainer');
+
+    // 動態建立搜尋框（不直接寫在HTML，避免殘留）
+    const $searchBox = $(`
+      <input type="text" class="form-control form-control-sm mb-2" placeholder="🔍 搜尋資料夾..." />
+    `);
+    $container.prepend($searchBox);
+
+    // === 初始化樹狀結構 ===
+    $tree.jstree({
+        core: {
+            themes: { responsive: false },
+            data: {
+                url: "/SYS/Folders/GetTreeData",
+                dataType: "json"
+            }
+        },
+        plugins: ["wholerow", "search"]
+    });
+
+    // === 點選節點時更新隱藏欄位 ===
+    $tree.on("select_node.jstree", function (e, data) {
+        const nodeId = data.node.id;
+        $('#@inputId').val(nodeId);
+    });
+
+    // === 搜尋邏輯 ===
+    let to = false;
+    $searchBox.on("keyup", function () {
+        if (to) clearTimeout(to);
+        to = setTimeout(() => {
+            const v = $(this).val();
+            $tree.jstree(true).search(v);
+        }, 250);
+    });
+
+    // === 防止多次初始化後殘留 ===
+    $(window).on('unload', function () {
+        try {
+            $tree.jstree("destroy").empty();
+        } catch {}
+        $searchBox.remove();
+    });
+});
+</script>
+}
