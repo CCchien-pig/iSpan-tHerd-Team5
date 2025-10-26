@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SUP.Data.Helpers;
 using System.Diagnostics;
+using System.Text.Json;
 using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.SUP;
-using tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks;
+using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Core.Services.SUP;
@@ -25,6 +26,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		private readonly ISupplierService _supplierService;
 		private readonly IBrandService _brandService;
 		private readonly IBrandLayoutService _layoutService;
+		private readonly IContentService _contentService;
 
 		public BrandsController(
 			tHerdDBContext context,
@@ -32,7 +34,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			UserManager<ApplicationUser> userMgr,
 			ISupplierService supplierService,
 			IBrandService brandService,
-			IBrandLayoutService layoutService)
+			IBrandLayoutService layoutService,
+			IContentService contentService)
 		{
 			_context = context;
 			_me = me;
@@ -40,7 +43,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			_supplierService = supplierService;
 			_brandService = brandService;
 			_layoutService = layoutService;
+			_contentService = contentService;
 		}
+
+		#region Index
 
 		// GET: SUP/Brands/Index
 		[HttpGet]
@@ -151,6 +157,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				data
 			});
 		}
+
+		#endregion
 
 		#region 品牌
 
@@ -853,80 +861,131 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		}
 
 		/// <summary>
-		/// 渲染品牌版面編輯器 Partial View
-		/// 將版面資料傳遞給 View，並讓 Vue 應用接管
+		/// 讀取 JSON 骨架 -> 遍歷 -> 從各 Service 獲取內容 -> 組合成完整的 BaseLayoutBlockDto 列表
 		/// </summary>		
-		// 【修正】接收兩個參數：brandId 仍使用 id 慣例，layoutId 則為可選的 int?
 		// GET: SUP/Brands/EditLayout/{brandId}/{layoutId?}
 		[HttpGet]
 		public async Task<IActionResult> EditLayout(int id, int? layoutId)
 		{
-			// 慣例式路由修正
 			int brandId = id;
-
-			// 1. 取得品牌名稱 (用於標題)
 			var brand = await _brandService.GetByIdAsync(brandId);
 			if (brand == null) return NotFound("找不到該品牌");
 
-			// 2. 獲取原始 Layout 記錄 (BrandLayoutDto)
+			// 用於儲存組合後的、包含完整內容的區塊列表
+			var hydratedBlocks = new List<BaseLayoutBlockDto>();
 			BrandLayoutDto? layoutToEdit = null;
 
 			if (layoutId.HasValue)
 			{
-				// 2-1. 載入指定 ID 的 Layout (用於編輯歷史版本)
-				// 編輯模式：載入指定版本
+				// =================================================
+				// A. 編輯模式：載入指定的 JSON 骨架並組合完整內容
+				// =================================================
 				layoutToEdit = await _layoutService.GetLayoutByLayoutIdAsync(layoutId.Value);
-
-
-				// 如果找不到指定的版本
-				if (layoutToEdit == null)
-				{
-					return NotFound($"找不到 Layout ID 為 {layoutId.Value} 的版面設定版本。");
-				}
 			}
 			else
 			{
-				// 2-2. 載入啟用中的版本，作為「新增」或「複製」的基礎
-				// 新增模式：載入啟用版本作為範本
+				// =================================================
+				// B. 新增模式：先嘗試載入啟用中的版本作為範本
+				// =================================================
 				layoutToEdit = await _layoutService.GetActiveLayoutAsync(brandId);
 			}
 
-			// 3. 解析數據：將 LayoutJson 字串反序列化成 C# 區塊物件列表
-			var layoutBlocks = layoutToEdit != null
-					? _layoutService.DeserializeLayout(layoutToEdit.LayoutJson)
-					: new List<BaseLayoutBlockDto>();
+			// --- 統一的組合 (Hydrate) 邏輯 ---
+			if (layoutToEdit != null && !string.IsNullOrWhiteSpace(layoutToEdit.LayoutJson))
+			{
+				// 【核心修正點 1】在反序列化時，加入 JsonSerializerOptions
+				var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+				var skeletonBlocks = JsonSerializer.Deserialize<List<BrandLayoutSkeletonBlockDto>>(layoutToEdit.LayoutJson, jsonOptions)
+					?? new List<BrandLayoutSkeletonBlockDto>();
 
-			// 4. 映射到 ViewModel：將 DTO 轉換為 View 層的 ViewModel
-			var layoutBlockViewModels = layoutBlocks
-				.Select(b => new BrandLayoutBlockViewModel // 明確指定轉換為 LayoutBlockViewModel
+				// 2. 遍歷骨架，從各自的 Service 獲取完整內容並組合 (Hydrate)
+				foreach (var blockSkeleton in skeletonBlocks) 
 				{
-					Id = b.Id,
-					Type = b.Type,
-					Props = b.Props
-				})
-				.ToList();
+					// 【核心修正點 1】檢查 blockSkeleton 本身是否為 null，並檢查 Type 屬性是否為 null/空
+					if (blockSkeleton == null || string.IsNullOrEmpty(blockSkeleton.Type))
+					{
+						Console.Error.WriteLine("[JSON] Found invalid or null Type in skeleton block, skipping.");
+						continue; // 跳過該無效/不完整區塊
+					}
 
-			// 5. 準備最終 ViewModel
+					// 這裡的 blockSkeleton.ContentId 也必須是合法的 int > 0，否則 GetContentByIdAsync 會失敗
+					if (blockSkeleton.ContentId <= 0)
+					{
+						Console.Error.WriteLine($"[JSON] Found ContentId = {blockSkeleton.ContentId}, skipping.");
+						continue;
+					}
+
+					var uniqueId = $"{blockSkeleton.Type}-{blockSkeleton.ContentId}-{Guid.NewGuid().ToString("N").Substring(0, 4)}";
+
+					switch (blockSkeleton.Type.ToLower())
+					{
+						case "accordion":
+							// 使用新的通用服務 IContentService
+							var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
+
+							// 【核心修正】如果找不到內容，則跳過此區塊
+							if (accordionContent != null)
+							{
+								hydratedBlocks.Add(new BaseLayoutBlockDto
+								{
+									Id = uniqueId,
+									Type = "Accordion",
+									Props = accordionContent
+								});
+							}
+							else
+							{
+								Console.Error.WriteLine($"[Layout Hydrate] Accordion Content ID {blockSkeleton.ContentId} not found, skipping block.");
+							}
+							break;
+
+						case "banner":
+							// 【核心修正點】加入 Banner 的處理邏輯 使用新的通用服務 IContentService
+							var bannerContent = await _contentService.GetContentByIdAsync<BannerDto>(blockSkeleton.ContentId);
+							
+							// 【核心修正】如果找不到內容，則跳過此區塊
+							if (bannerContent != null)
+							{
+								hydratedBlocks.Add(new BaseLayoutBlockDto
+								{
+									Id = uniqueId,
+									Type = "Banner",
+									Props = bannerContent // Props 現在是完整的 BannerDto
+								});
+							}
+							else
+							{
+								Console.Error.WriteLine($"[Layout Hydrate] Banner Content ID {blockSkeleton.ContentId} not found, skipping block.");
+							}
+							break;
+
+							// TODO: case "article": ...
+					}
+				}
+			}
+			else if (!layoutId.HasValue) // 只有在新增模式且找不到新版面時，才讀取舊表
+			{
+				// 如果沒有任何新版資料，則讀取舊表作為初始資料
+				hydratedBlocks = await _layoutService.GetLegacyAccordionBlocksAsync(brandId);
+			}
+
+			// 3. 手動映射到 ViewModel (因為不使用 AutoMapper)
+			var layoutBlockViewModels = hydratedBlocks.Select(b => new BrandLayoutBlockViewModel
+			{
+				Id = b.Id,
+				Type = b.Type,
+				Props = b.Props // 直接傳遞 Props DTO
+			}).ToList();
+
+			// 4. 準備最終 ViewModel
 			var layoutModel = new BrandLayoutEditViewModel
 			{
 				BrandId = brandId,
 				BrandName = brand.BrandName,
-
-				// 核心區塊數據
+				LayoutId = layoutId, // 在新增模式下，layoutId 為 null
+				LayoutVersion = layoutId.HasValue ? layoutToEdit?.LayoutVersion : null, // 新增模式下為 null
 				LayoutBlocks = layoutBlockViewModels,
-
-				// 賦值為空，用於接收前端提交
-				LayoutJson = string.Empty,
-
-				// 如果是新增模式 (layoutId is null)，則 LayoutId 和 LayoutVersion 必須為 null/empty
-				// 這樣 Vue 才會知道要執行 POST (Create) 而不是 PUT (Update)
-				LayoutId = layoutId.HasValue ? layoutToEdit?.LayoutId : null,
-				LayoutVersion = layoutId.HasValue ? layoutToEdit?.LayoutVersion : null,
-
-				// 傳遞所有版本號列表，用於前端驗證
-				AllLayoutVersions = (await _layoutService.GetLayoutsByBrandIdAsync(brandId))
-							  .Select(l => l.LayoutVersion)
-							  .ToList()
+				AllLayoutVersions = (await _layoutService.GetLayoutsByBrandIdAsync(brandId)).Select(l => l.LayoutVersion).ToList()
 			};
 
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", layoutModel);
@@ -974,8 +1033,6 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		#endregion
 
 		#region POST 請求：SaveLayout Action (處理提交)
-		//負責接收前端提交的 LayoutJson 字串，並呼叫 Service 進行儲存（Create 或 Update）。
-
 
 		/// <summary>
 		/// 處理版面編輯器表單提交，儲存 LayoutJson
@@ -995,26 +1052,27 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					return BadRequest(new { success = false, message = "輸入資料驗證失敗", errors });
 				}
 
-				// 2. 【修正點】安全地獲取 reviserId
+				// 2. 安全地獲取 reviserId
 				int reviserId = 1004; // 預設使用匿名 ID 1004
 
 				if (_me.IsAuthenticated)
 				{
-					// 使用您提供的邏輯來安全獲取 UserNumberId
 					var userId = _me.Id;
 					var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 
 					if (user != null)
 					{
-						// 找到使用者後，使用其 UserNumberId
 						reviserId = user.UserNumberId;
 					}
-					// 如果 user == null，則保留預設的 reviserId = 1004
 				}
-				// 如果 _me.IsAuthenticated 為 false，則跳過上述邏輯，reviserId 保持為 1004。
-				// 這避免了在未登入時觸發 _me.UserNumberId 的 InvalidOperationException 或 NotImplementedException。
 
-				// 【新增：版本號重複驗證】
+				// 檢查版本號是否 IsNullOrEmpty
+				if (string.IsNullOrEmpty(dto.LayoutVersion))
+				{
+					return BadRequest(new { success = false, message = "版本號是必填欄位。" });
+				}
+
+				// 【版本號重複驗證】
 				bool versionExists = await _layoutService.VersionExistsAsync(dto.BrandId, dto.LayoutVersion, dto.ActiveLayoutId);
 				if (versionExists)
 				{
@@ -1022,55 +1080,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 
 				// 3. 核心業務邏輯 (Create/Update/Activate)
-				int finalLayoutId;
-				if (dto.ActiveLayoutId.HasValue && dto.ActiveLayoutId.Value > 0)
-				{
-					// A. 更新現有 Layout (PUT 邏輯)
-					var updateDto = new BrandLayoutUpdateDto
-					{
-						LayoutJson = dto.LayoutJson,
-						LayoutVersion = dto.LayoutVersion,
-						Reviser = reviserId // 使用修正後的 reviserId
-					};
+				// 【核心修正點】呼叫新的交易式儲存方法
+				int finalLayoutId = await _layoutService.SaveHybridLayoutAsync(dto, reviserId);
+				// 啟用邏輯現在可以安全地放在交易之外
 
-					var updated = await _layoutService.UpdateLayoutAsync(dto.ActiveLayoutId.Value, updateDto);
-
-					if (!updated)
-						return NotFound(new { success = false, message = "更新失敗：找不到指定的 Layout 紀錄。" });
-
-					finalLayoutId = dto.ActiveLayoutId.Value;
-				}
-				else
-				{
-					// B. 建立新 Layout (POST 邏輯)
-					var createDto = new BrandLayoutCreateDto
-					{
-						LayoutJson = dto.LayoutJson,
-						LayoutVersion = dto.LayoutVersion,
-						Creator = reviserId, // 使用修正後的 reviserId
-						BrandId = dto.BrandId
-					};
-
-					finalLayoutId = await _layoutService.CreateLayoutAsync(dto.BrandId, createDto);
-				}
-
-				// 4. 啟用新版本
-				// 更新=>不自動啟用
-				//try
-				//{
-				//	await _layoutService.ActivateLayoutAsync(finalLayoutId, reviserId);
-				//}
-				//catch (Exception ex)
-				//{
-				//	return Json(new
-				//	{
-				//		success = true,
-				//		message = $"版面內容已儲存，但自動啟用失敗: {ex.Message}。",
-				//		layoutId = finalLayoutId
-				//	});
-				//}
-
-				// 5. 成功回傳
+				// 4. 成功回傳
 				return Json(new
 				{
 					success = true,

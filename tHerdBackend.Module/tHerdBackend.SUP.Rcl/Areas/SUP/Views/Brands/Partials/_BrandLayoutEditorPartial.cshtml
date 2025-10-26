@@ -28,6 +28,7 @@
         <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-primary me-2">新增 Accordion</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
     </div>
+
     @* 【新增輸入框】綁定 v-model="layoutVersion" *@
     <div class="input-group w-50 mb-3">
         <span class="input-group-text">版號 (必填)</span>
@@ -57,21 +58,51 @@
                 @* ================= Banner 區塊編輯 ================= *@
                 <div v-if="block.type === 'Banner'">
                     <h5>Banner 區塊編輯</h5>
+
+                    @* 【新增】錯誤提示區塊 *@
+                    <div v-if="!block.props.fileUrl" class="alert alert-danger py-2 mb-3">
+                        請務必提供圖片 URL 或透過媒體庫選擇圖片！
+                    </div>
+
                     <div class="mb-3">
                         <label>圖片Alt 替代文字：</label>
                         @* [AltText]預設填入品牌名 *@
                         <input type="text" class="form-control" v-model="block.props.altText">
                     </div>
+
                     <div class="mb-3">
                         <label>圖片說明 (Caption)：</label>
                         @* [Caption]預設填入品牌名_Banner_yyyy/mm/dd *@
                         <input type="text" class="form-control" v-model="block.props.caption">
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">點擊連結 URL</label>
                         <input type="url" class="form-control" v-model="block.props.linkUrl" placeholder="/category/product-slug">
                     </div>
-                    @* TODO: 圖片選擇邏輯(將選擇的 fileId, fileUrl 寫回 block.props) *@
+
+                    @* 【圖片選擇區域】 *@
+                    <div class="mb-3 border p-3 rounded" 
+                         :class="{'border-danger': !block.props.fileUrl}"> @* 圖片缺失時邊框變紅 *@
+        
+                        <label class="form-label fw-bold">圖片 URL (必填)</label>
+                        <div class="input-group">
+                            @* 這裡假設 FileUrl 是可編輯或可讀的，並用 v-model 追蹤 *@
+                            <input type="text" class="form-control" v-model="block.props.fileUrl" 
+                                   :class="{'is-invalid': !block.props.fileUrl}" 
+                                   placeholder="請在此貼上圖片 URL 或點擊選擇">
+            
+                            <button type="button" class="btn btn-secondary">
+                                <i class="fa-solid fa-image"></i> 選擇媒體庫圖片 (TODO)
+                            </button>
+                        </div>
+        
+                        <small v-if="!block.props.fileUrl" class="text-danger mt-1">Banner 圖片網址為必填項。</small>
+        
+                        <div v-if="block.props.fileUrl" class="mt-3">
+                            <img :src="block.props.fileUrl" style="max-width: 100%; max-height: 150px; border: 1px solid #eee;" alt="圖片預覽" />
+                        </div>
+                    </div>
                 </div>
 
                 @* ================= Accordion 區塊編輯 ================= *@
@@ -87,9 +118,14 @@
                         @* 這裡未來可以替換成 CKEditor 或 TinyMCE 等富文本編輯器 *@
                         <textarea class="form-control" rows="5" v-model="block.props.content" placeholder="請在此輸入內容。"></textarea>
                     </div>
+                    @* 【新增 Checkbox】 *@
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
+                        <label class="form-check-label">啟用此摺疊內容</label>
+                    </div>
                     @* 提醒：OrderSeq (順序) 將由區塊在列表中的位置決定，儲存時自動產生 *@
+                    
                     @* TODO: 圖片選擇邏輯 (將選擇的 imgId 寫回 block.props.imgId) *@
-                    @* [IsActive] *@
                 </div>
 
                 @* ================= Article 區塊編輯 (新增) ================= *@
@@ -158,7 +194,8 @@
                         caption: `${brandName}_Banner_${dateString}`, // 預設填入品牌名_Banner_日期
                         fileId: null, // 圖片 ID
                         fileUrl: '', // 圖片 URL
-                        linkUrl: '' // 點擊連結
+                        linkUrl: '', // 點擊連結
+                        isActive: true // 預設為啟用
                     };
                 case 'Accordion':
                     return {
@@ -263,11 +300,33 @@
                 // 切換編輯面板
                 const toggleEdit = (id) => { editingId.value = editingId.value === id ? null : id; };
 
+                // 【新增】前端 Banner 驗證邏輯
+                function validateBlocks(blocks) {
+                    for (const block of blocks) {
+                        if (block.type === 'Banner') {
+                            // 檢查 Banner 是否缺少 FileUrl
+                            if (!block.props.fileUrl || block.props.fileUrl.trim() === '') {
+                                return `[Banner 區塊 #${block.id.substring(0, 8)}] 必須提供圖片 URL。`;
+                            }
+                        }
+                        // TODO: 可以在這裡加入 Accordion 的內容驗證等
+                    }
+                    return null; // 驗證通過
+                }
+
                 // 儲存版面配置
                 const saveLayout = async () => {
+                    // 1. 版本號必填檢查
                     if (!layoutVersion.value) {
                             Swal.fire('錯誤', '請輸入版型版本號。', 'warning');
                             return;
+                    }
+                    
+                    // 2. 【核心修正】前端內容驗證
+                    const validationError = validateBlocks(blocks.value);
+                    if (validationError) {
+                        Swal.fire('驗證失敗', validationError, 'warning');
+                        return;
                     }
 
                     isSaving.value = true;
@@ -277,11 +336,15 @@
 
                     try {
                         const currentLayoutId = layoutIdState.value;
+
+                        // 【核心除錯點】在發送前，打印出完整的 payload
+                        console.log("準備發送給後端的資料:", JSON.stringify(blocks.value, null, 2));
+                        
                         const payload = {
                             BrandId: brandId,
                             ActiveLayoutId: currentLayoutId !== 'null' ? parseInt(currentLayoutId) : null,
                             LayoutVersion: layoutVersion.value,
-                            LayoutJson: JSON.stringify(blocks.value),
+                            FullLayoutJson: JSON.stringify(blocks.value),
                         };
 
                         const url = '/SUP/Brands/SaveLayout';

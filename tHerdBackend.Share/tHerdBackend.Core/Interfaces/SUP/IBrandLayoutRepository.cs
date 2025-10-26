@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 
 namespace tHerdBackend.Core.Interfaces.SUP
 {
@@ -87,6 +88,29 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		/// 檢查版本號是否存在，currentLayoutId 用於排除自身
 		/// </summary>
 		Task<bool> VersionExistsAsync(int brandId, string version, int? currentLayoutId);
+
+		#endregion
+
+		#region 舊資料讀取 (Legacy Data Loading)
+
+		/// <summary>
+		/// 【新增】從舊的 Accordion 表中獲取指定品牌的內容，並回傳 DTO 列表。
+		/// </summary>
+		Task<IEnumerable<BrandAccordionContentDto>> GetLegacyAccordionContentAsync(int brandId);
+
+		#endregion
+
+		#region 版面骨架儲存 (混合模式)
+
+		/// <summary>
+		/// 【新增】更新現有的 LayoutJson 骨架。
+		/// </summary>
+		Task UpdateLayoutJsonAsync(int layoutId, string layoutJson, string? version, int reviserId);
+
+		/// <summary>
+		/// 【新增】建立一個新的 LayoutJson 骨架紀錄。
+		/// </summary>
+		Task<int> CreateLayoutJsonAsync(int brandId, string layoutJson, string? version, int creatorId);
 
 		#endregion
 

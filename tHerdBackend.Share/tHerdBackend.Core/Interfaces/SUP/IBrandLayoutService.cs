@@ -1,5 +1,4 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
-using tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks;
+﻿using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 
 namespace tHerdBackend.Core.Services.SUP
 {
@@ -79,5 +78,22 @@ namespace tHerdBackend.Core.Services.SUP
 
 		#endregion
 
+		#region 舊資料讀取 (Legacy Data Loading)
+
+		/// <summary>
+		/// 【新增】獲取舊的 Accordion 內容並轉換為 BaseLayoutBlockDto 列表
+		/// </summary>
+		Task<List<BaseLayoutBlockDto>> GetLegacyAccordionBlocksAsync(int brandId);
+
+		#endregion
+
+		#region 版面骨架儲存 (混合模式)
+
+		/// <summary>
+		/// 【新增】以交易方式儲存完整的混合模式版面配置。
+		/// </summary>
+		Task<int> SaveHybridLayoutAsync(BrandLayoutSaveInputDto dto, int reviserId);
+
+		#endregion
 	}
 }

@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP
+﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 {
 	/// <summary>
 	/// 品牌版面 - 新增用資料傳輸物件

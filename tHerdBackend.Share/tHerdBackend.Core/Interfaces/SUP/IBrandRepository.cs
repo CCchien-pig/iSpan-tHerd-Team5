@@ -1,4 +1,4 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Brand;
 
 namespace tHerdBackend.Core.Interfaces.SUP
 {

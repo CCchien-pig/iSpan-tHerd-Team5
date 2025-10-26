@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace tHerdBackend.Core.DTOs.SUP
+namespace tHerdBackend.Core.DTOs.SUP.Brand
 {
 	public class BrandDto
 	{

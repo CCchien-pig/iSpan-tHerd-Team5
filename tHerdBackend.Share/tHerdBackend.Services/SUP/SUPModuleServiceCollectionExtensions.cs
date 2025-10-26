@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Infra.Repository.SUP;
@@ -34,6 +35,16 @@ namespace tHerdBackend.Services.SUP
 			
 			services.AddScoped<IBrandRepository, BrandRepository>();
 			services.AddScoped<IBrandLayoutRepository, BrandLayoutRepository>();
+
+
+
+			// 1. 註冊通用的內容服務 (用於 Controller 內部的協調)
+			services.AddScoped<IContentService, ContentService>();
+
+			// 2. 註冊所有內容模組的泛型倉儲 (這是關鍵修正，用泛型介面註冊實作)
+			services.AddScoped<IGenericContentRepository<BrandAccordionContentDto>, BrandAccordionRepository>();
+			services.AddScoped<IGenericContentRepository<BannerDto>, BrandBannerRepository>();
+			services.AddScoped<IGenericContentRepository<BrandArticleDto>, BrandArticleRepository>();
 
 
 			return services;

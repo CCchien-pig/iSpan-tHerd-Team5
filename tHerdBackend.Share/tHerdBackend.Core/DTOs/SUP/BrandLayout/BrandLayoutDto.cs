@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP
+﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 {
 	public class BrandLayoutDto
 	{

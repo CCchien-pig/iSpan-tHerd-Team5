@@ -1,4 +1,4 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayoutBlocks
+﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 {
 	// =======================================================
 	// 1. 屬性 DTOs (Props)
@@ -20,9 +20,14 @@
 	// 專門用於 Accordion 區塊的 Props (範例)
 	public class AccordionPropsDto
 	{
-		public string? Title { get; set; }
+		// 【新增】對應 SUP_BrandAccordionContent 的主鍵
+		public int ContentId { get; set; }
+
+		// 【新增】對應 SUP_BrandAccordionContent.ContentTitle
+		public string ContentTitle { get; set; }
 		public string? Content { get; set; }
 		public int? ImgId { get; set; }
+
 	}
 
 	// =======================================================
@@ -52,8 +57,8 @@
 	{
 		public BannerBlockDto()
 		{
-			this.Type = "banner";
-			this.Props = new BannerPropsDto(); // 初始化為強型別的 Props
+			Type = "banner";
+			Props = new BannerPropsDto(); // 初始化為強型別的 Props
 		}
 
 		// [System.Text.Json.Serialization.JsonPropertyName("props")] 

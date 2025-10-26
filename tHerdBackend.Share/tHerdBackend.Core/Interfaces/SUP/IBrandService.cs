@@ -1,4 +1,4 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Brand;
 
 public interface IBrandService
 {

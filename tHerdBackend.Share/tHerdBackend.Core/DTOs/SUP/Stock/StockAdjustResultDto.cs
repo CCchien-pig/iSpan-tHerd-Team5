@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace tHerdBackend.Core.DTOs.SUP
+namespace tHerdBackend.Core.DTOs.SUP.Stock
 {
 	/// <summary>
 	/// 調整庫存後回傳結果

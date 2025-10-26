@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace tHerdBackend.Core.DTOs.SUP
+﻿namespace tHerdBackend.Core.DTOs.SUP.Logistics
 {
 	public class ShippingFeeDto
 	{

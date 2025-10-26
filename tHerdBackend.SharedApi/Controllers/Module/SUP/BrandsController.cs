@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Core.ValueObjects;
 

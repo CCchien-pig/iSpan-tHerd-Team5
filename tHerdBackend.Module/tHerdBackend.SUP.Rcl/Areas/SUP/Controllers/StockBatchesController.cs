@@ -13,7 +13,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.SUP.Stock;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;

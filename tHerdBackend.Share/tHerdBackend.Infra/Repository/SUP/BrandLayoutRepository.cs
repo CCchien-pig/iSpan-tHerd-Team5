@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
 
@@ -203,6 +204,73 @@ namespace tHerdBackend.Infra.Repository.SUP
 			}
 
 			return await query.AnyAsync();
+		}
+
+		#endregion
+
+		#region 舊資料讀取 (Legacy Data Loading)
+
+		/// <summary>
+		/// 【新增實作】從舊的 Accordion 表中獲取指定品牌的內容，並回傳 DTO 列表。
+		/// </summary>
+		public async Task<IEnumerable<BrandAccordionContentDto>> GetLegacyAccordionContentAsync(int brandId)
+		{
+			return await _context.SupBrandAccordionContents
+				.Where(x => x.BrandId == brandId && x.IsActive) // 根據 BrandId 和 IsActive 過濾
+				.OrderBy(x => x.OrderSeq) // 根據 OrderSeq 排序
+				.Select(x => new BrandAccordionContentDto // 手動將 Entity 映射到 DTO
+				{
+					ContentId = x.ContentId,
+					BrandId = x.BrandId,
+					ContentTitle = x.ContentTitle,
+					Content = x.Content,
+					OrderSeq = x.OrderSeq,
+					ImgId = x.ImgId,
+					IsActive = x.IsActive
+				})
+				.AsNoTracking()
+				.ToListAsync();
+		}
+
+		#endregion
+
+		#region 版面骨架儲存 (混合模式)
+
+		/// <summary>
+		/// 【新增實作】更新現有的 LayoutJson 骨架。
+		/// </summary>
+		public async Task UpdateLayoutJsonAsync(int layoutId, string layoutJson, string? version, int reviserId)
+		{
+			var entity = await _context.SupBrandLayoutConfigs.FindAsync(layoutId);
+			if (entity != null)
+			{
+				entity.LayoutJson = layoutJson;
+				entity.LayoutVersion = version;
+				entity.Reviser = reviserId;
+				entity.RevisedDate = DateTime.Now;
+
+				// 這裡只呼叫 SaveChangesAsync，交易由 Service 層控制
+				await _context.SaveChangesAsync();
+			}
+		}
+
+		/// <summary>
+		/// 【新增實作】建立一個新的 LayoutJson 骨架紀錄。
+		/// </summary>
+		public async Task<int> CreateLayoutJsonAsync(int brandId, string layoutJson, string? version, int creatorId)
+		{
+			var newEntity = new SupBrandLayoutConfig
+			{
+				BrandId = brandId,
+				LayoutJson = layoutJson,
+				LayoutVersion = version,
+				Creator = creatorId,
+				CreatedDate = DateTime.Now,
+				IsActive = false // 新建立的版本預設為非啟用狀態
+			};
+			_context.SupBrandLayoutConfigs.Add(newEntity);
+			await _context.SaveChangesAsync();
+			return newEntity.LayoutId;
 		}
 
 		#endregion
