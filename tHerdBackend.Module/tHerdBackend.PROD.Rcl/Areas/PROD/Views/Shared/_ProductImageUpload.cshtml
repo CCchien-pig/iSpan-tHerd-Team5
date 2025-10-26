@@ -1,16 +1,18 @@
-﻿@using tHerdBackend.Core.DTOs.PROD
-@* 可以傳入舊有圖片清單來顯示 *@
+﻿@using tHerdBackend.Core.DTOs
 @using tHerdBackend.Core.DTOs.PROD
 @model IEnumerable<ProductImageDto>
 
 <div class="mb-3">
     <label class="form-label fw-bold">產品圖片</label>
 
-    <!-- 新增圖片 -->
-    <input type="file" class="form-control" id="productImages" name="productImages" multiple />
-    <small class="text-muted">支援多張圖片（jpg, png, gif），單張上限 5MB</small>
+    <!-- 🔹 上傳按鈕 -->
+    @await Component.InvokeAsync("UploadImageModal", new {
+        moduleId = "PROD",
+        progId = "Products",
+        modalId = "uploadImageModal"
+        })
 
-    <!-- 舊有圖片區 -->
+    <!-- 🔹 舊有圖片清單 -->
     <div class="mt-3">
         <h6 class="fw-bold">已上傳圖片</h6>
         <div id="existingImages" class="d-flex flex-wrap gap-3">
@@ -24,12 +26,19 @@
                              class="img-thumbnail w-100 h-100"
                              style="object-fit:cover;" />
 
-                        <!-- 刪除按鈕 -->
+                        <!-- 編輯 -->
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary position-absolute bottom-0 start-0"
+                                onclick="openUpdateImageModal(@img.ImageId)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+
+                        <!-- 刪除 -->
                         <button type="button"
                                 class="btn btn-sm btn-danger position-absolute top-0 end-0"
                                 data-img-id="@img.ImageId"
                                 onclick="removeExistingImage(this)">
-                            <i class="fas fa-times"></i>
+                            <i class="bi bi-x"></i>
                         </button>
                     </div>
                 }
@@ -40,47 +49,13 @@
             }
         </div>
     </div>
-
-    <!-- 新增圖片預覽區 -->
-    <div class="mt-3">
-        <h6 class="fw-bold">新增圖片預覽</h6>
-        <div id="preview" class="d-flex flex-wrap gap-2"></div>
-    </div>
 </div>
 
-@section Scripts {
-    <script>
-        // 新增圖片預覽
-        document.getElementById("productImages")?.addEventListener("change", function (e) {
-            const preview = document.getElementById("preview");
-            preview.innerHTML = "";
-            for (const file of e.target.files) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = document.createElement("img");
-                    img.src = ev.target.result;
-                    img.style.width = "120px";
-                    img.style.height = "120px";
-                    img.classList.add("rounded", "border");
-                    preview.appendChild(img);
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // 刪除舊有圖片（這裡先加 hidden input，後端再判斷要刪）
-        function removeExistingImage(btn) {
-            const imgId = btn.getAttribute("data-img-id");
-
-            // 加 hidden input，傳到後端判斷要刪除
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "DeletedImageIds";
-            input.value = imgId;
-            document.forms[0].appendChild(input);
-
-            // 從畫面移除
-            btn.parentElement.remove();
-        }
-    </script>
-}
+<!-- 🔹 編輯圖片資訊 Modal -->
+@await Component.InvokeAsync("UpdateImage", new {
+modalId = "imgMetaModal",
+    title = "圖片資訊",
+    file = new SysAssetFileDto(),
+    updateApiUrl = "/SYS/Images/UpdateFile",
+    deleteApiUrl = "/SYS/Images/DeleteFile"
+})

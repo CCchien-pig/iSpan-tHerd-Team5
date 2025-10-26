@@ -7,11 +7,6 @@
     const string deleteApiUrl = "/SYS/Images/DeleteFile";
 }
 
-@section Styles {
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
-}
-
 <h2>@ViewData["Title"]</h2>
 
 <!-- 🔹 上傳模組（Modal） -->
@@ -39,11 +34,6 @@
 @await Html.PartialAsync("_GlobalLoadingPartial")
 
 @section Scripts {
-    @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
-
-    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/upload-image-modal.js" asp-append-version="true"></script>
-    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
-
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
             // 初始化上傳模組

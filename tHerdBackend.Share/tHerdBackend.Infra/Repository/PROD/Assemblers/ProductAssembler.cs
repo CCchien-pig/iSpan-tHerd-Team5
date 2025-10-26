@@ -85,7 +85,12 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
             item.Images = conn.Query<ProductImageDto>(imgCmd).OrderByDescending(x => x.IsMain).ThenBy(x=>x.OrderSeq).ToList();
 
             if (item.Images != null) {
-                item.ImageUrl = item.Images.Where(x => x.IsMain).Select(x => x.FileUrl).First();
+                item.ImageUrl = item.Images
+                    .Where(x => x.IsMain)
+                    .Select(x => x.FileUrl)
+                    .FirstOrDefault()
+                    ?? item.Images.Select(x => x.FileUrl).FirstOrDefault()
+                    ?? "/images/no-image.png";
             }
         }
 
