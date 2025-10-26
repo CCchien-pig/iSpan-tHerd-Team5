@@ -143,5 +143,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 				roles
 			});
 		}
+
+		[Authorize(Roles = "Member")]
+		[HttpGet("whoami-member")] public IActionResult OkForMember() => Ok("ok");
 	}
 }

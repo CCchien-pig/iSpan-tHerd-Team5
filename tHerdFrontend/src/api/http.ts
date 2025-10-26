@@ -12,6 +12,7 @@ http.interceptors.request.use((config) => {
   if (token) {
     (config.headers ??= {} as any);
     (config.headers as any).Authorization = `Bearer ${token}`;
+    console.debug('[http] attach token', token.slice(0, 12) + '...');
   }
   return config;
 });

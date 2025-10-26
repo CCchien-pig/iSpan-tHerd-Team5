@@ -2,11 +2,25 @@
 import { defineStore } from 'pinia';
 import { http } from '@/api/http';
 
+type MeDto = {
+  id: string
+  email: string
+  name: string
+  userNumberId: number
+  roles: string[]
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: '' as string,
     accessExpiresAt: '' as string,
+    user: null as MeDto | null,
   }),
+
+  getters: {
+    isAuthenticated: (s) => !!s.accessToken,  // ★ 加這個
+  },
+
   actions: {
     loadFromStorage() {
       this.accessToken = localStorage.getItem('accessToken') ?? '';
@@ -38,6 +52,17 @@ export const useAuthStore = defineStore('auth', {
   }
   this.setToken(accessToken, accessExpiresAt);
   return res.data;
-}
+},
+// ★ 取得/快取目前登入者
+    async ensureUser(force = false) {
+      if (!this.isAuthenticated) {
+        this.user = null
+        return null
+      }
+      if (this.user && !force) return this.user
+      const { data } = await http.get<MeDto>('/auth/me')  // 攔截器會自動帶 Authorization
+      this.user = data
+      return data
+    },
   },
 });

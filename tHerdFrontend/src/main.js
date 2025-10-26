@@ -33,7 +33,20 @@ import { useAuthStore } from '@/stores/auth';
 const auth = useAuthStore();
 auth.loadFromStorage();
 
-// （選擇）開發模式 & 沒 token 時自動拿一次 dev-token
+// ★ 這裡註冊守門員（此時 Pinia 已就緒）
+router.beforeEach(async (to) => {
+  // 可選：避免對 login 頁自我攔截
+  if (to.name === 'login') return
+
+  if (to.meta?.requiresAuth) {
+    await auth.ensureUser()
+    if (!auth.isAuthenticated) {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+  }
+})
+
+// 開發模式 & 沒 token 時自動拿一次 dev-token
 if (import.meta.env.DEV && !auth.accessToken) {
   console.log('[boot] calling devLogin()')
   try {
@@ -44,4 +57,5 @@ if (import.meta.env.DEV && !auth.accessToken) {
   }
 }
 
+app.use(router)
 app.mount('#app')
