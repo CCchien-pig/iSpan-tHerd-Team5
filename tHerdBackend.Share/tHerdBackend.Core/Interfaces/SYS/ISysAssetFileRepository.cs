@@ -11,7 +11,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
         //  Cloudinary 上傳 / 刪除 / 清理
         // ============================================================
         Task AddLocalFileAsync(AssetFileUploadDto uploadDto, AssetFileDetailsDto meta, string fileUrl, CancellationToken ct = default);
-        Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
+        Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default);
         Task<object> DeleteImage(int fileId, CancellationToken ct = default);
         Task<object> DeleteImages(List<int> ids, CancellationToken ct = default);
         Task<object> CleanOrphanCloudinaryFiles(CancellationToken ct = default);

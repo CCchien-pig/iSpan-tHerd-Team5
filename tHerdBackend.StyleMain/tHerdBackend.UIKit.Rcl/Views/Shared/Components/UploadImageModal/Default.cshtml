@@ -5,17 +5,16 @@
         class="btn btn-primary btn-sm mb-3"
         data-bs-toggle="modal"
         data-bs-target="#@Model.ModalId">
-    <i class="bi bi-upload"></i> 上傳新圖片
+    <i class="bi bi-upload"></i> 上傳檔案
 </button>
 
 <!-- Modal -->
 <div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-image"></i> 上傳圖片
+                    <i class="bi bi-file-earmark-arrow-up"></i> 上傳檔案
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -27,7 +26,6 @@
                   enctype="multipart/form-data">
 
                 <div class="modal-body">
-
                     <div class="mb-3">
                         <label class="form-label fw-semibold d-flex align-items-center gap-2">
                             <i class="bi bi-lightbulb text-warning"></i>
@@ -35,21 +33,15 @@
                         </label>
 
                         <div class="btn-group upload-mode-group" role="group" aria-label="Upload mode">
-                            <input type="radio"
-                                   class="btn-check"
-                                   name="IsExternal"
-                                   id="modeCloud_@Model.ModalId"
-                                   value="true"
+                            <input type="radio" class="btn-check" name="IsExternal"
+                                   id="modeCloud_@Model.ModalId" value="true"
                                    @(Model.DefaultIsExternal ? "checked" : "") />
                             <label class="btn btn-upload" for="modeCloud_@Model.ModalId">
                                 <i class="bi bi-cloud-upload"></i> Cloudinary
                             </label>
 
-                            <input type="radio"
-                                   class="btn-check"
-                                   name="IsExternal"
-                                   id="modeLocal_@Model.ModalId"
-                                   value="false"
+                            <input type="radio" class="btn-check" name="IsExternal"
+                                   id="modeLocal_@Model.ModalId" value="false"
                                    @(!Model.DefaultIsExternal ? "checked" : "") />
                             <label class="btn btn-upload" for="modeLocal_@Model.ModalId">
                                 <i class="bi bi-hdd"></i> 本地上傳
@@ -66,48 +58,43 @@
                     <!-- 拖拉區塊 -->
                     <div id="dropArea_@Model.ModalId"
                          class="border border-2 border-primary rounded p-5 text-center mb-3 bg-light">
-                        <p class="mb-2">拖拉圖片到這裡，或點擊下方選擇檔案</p>
+                        <p class="mb-2">拖拉檔案到這裡，或點擊下方選擇檔案</p>
 
                         <input type="file"
                                id="fileInput_@Model.ModalId"
-                               name="Files"
+                               name="Meta[0].File"
                                class="form-control d-none"
-                               multiple />
+                               multiple
+                               accept="image/*,video/*,application/pdf" />
+
                         <button type="button"
                                 id="selectBtn_@Model.ModalId"
                                 class="btn btn-outline-primary">
-                            選擇圖片
+                            選擇檔案
                         </button>
                     </div>
 
-                    <!-- 隱藏 input 集合（AltText / Caption / 單檔） -->
                     <div id="hiddenInputs_@Model.ModalId"></div>
 
-                    <!-- 後端用：ModuleId / ProgId -->
                     <input type="hidden" name="ModuleId" value="@Model.ModuleId" />
                     <input type="hidden" name="ProgId" value="@Model.ProgId" />
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm"
-                            data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
                         取消
                     </button>
-
-                    <button type="submit"
-                            class="btn btn-success btn-sm">
+                    <button type="submit" class="btn btn-success btn-sm">
                         <i class="bi bi-check-lg"></i> 確認上傳
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 </div>
 
 <style>
-    /* 跟你現在頁面一樣的紫色 toggle group */
+    /* 一樣的紫色 toggle group */
     .upload-mode-group .btn-upload {
         border: 2px solid #a970ff;
         color: #a970ff;

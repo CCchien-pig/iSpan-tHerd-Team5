@@ -30,8 +30,8 @@ namespace tHerdBackend.Services.Common.SYS
         public async Task AddLocalFileAsync(AssetFileUploadDto uploadDto, AssetFileDetailsDto meta, string fileUrl, CancellationToken ct = default)
             => await _frepo.AddLocalFileAsync(uploadDto, meta, fileUrl, ct);
 
-        public Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default)
-            => _frepo.AddImages(uploadDto, ct);
+        public Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default)
+            => _frepo.AddFilesAsync(uploadDto, ct);
 
         public Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
         {

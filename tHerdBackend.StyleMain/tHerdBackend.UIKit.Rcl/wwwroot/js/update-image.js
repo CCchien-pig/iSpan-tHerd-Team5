@@ -95,52 +95,126 @@
         const startIndex = currentCount;
 
         [...files].forEach((file, i) => {
-            if (!file.type.startsWith("image/")) return;
-
             const index = startIndex + i;
             const reader = new FileReader();
+            const wrapper = document.createElement("div");
+            wrapper.className = "img-item border rounded p-3 mb-3 bg-white shadow-sm";
 
-            reader.onload = e => {
-                const wrapper = document.createElement("div");
-                wrapper.className = "img-item";
+            const mime = file.type;
 
-                wrapper.innerHTML = `
-                    <img src="${e.target.result}" alt="" class="preview-img" />
-                    <button type="button" class="btn-close-custom" aria-label="Close">
-                        <i class="bi bi-x-lg"></i>
+            // === 圖片 ===
+            if (mime.startsWith("image/")) {
+                reader.onload = e => {
+                    wrapper.innerHTML = `
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0" style="width:120px;height:120px;overflow:hidden;border-radius:6px;">
+                        <img src="${e.target.result}" class="preview-img" 
+                             style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-1 text-muted small">${file.name}</p>
+                        <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                            placeholder="AltText (可選)" name="Meta[${index}].AltText">
+                        <textarea class="form-control form-control-sm caption-input"
+                            rows="2" placeholder="Caption (可選)" name="Meta[${index}].Caption"></textarea>
+                    </div>
+                    <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                        <i class="bi bi-x-lg text-muted"></i>
                     </button>
-                    <input type="text" class="form-control mt-2 alt-input"
-                        placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
-                    <textarea class="form-control mt-2 caption-input"
-                        placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
-                `;
+                </div>`;
+                    bindRemove(wrapper);
+                };
+                reader.readAsDataURL(file);
+            }
 
-                wrapper.querySelector(".btn-close-custom").addEventListener("click", () => {
-                    wrapper.remove();
-                    showReset();
-                    if (preview.children.length === 0) togglePreviewArea(false);
-                });
+            // === 影片 ===
+            else if (mime.startsWith("video/")) {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark-play fs-1 text-info"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">${file.name}</p>
+                    <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                        placeholder="影片描述 (可選)" name="Meta[${index}].AltText">
+                    <textarea class="form-control form-control-sm caption-input"
+                        rows="2" placeholder="影片說明 (可選)" name="Meta[${index}].Caption"></textarea>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                preview.appendChild(wrapper);
+            // === PDF ===
+            else if (mime === "application/pdf") {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">${file.name}</p>
+                    <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                        placeholder="文件標題 (可選)" name="Meta[${index}].AltText">
+                    <textarea class="form-control form-control-sm caption-input"
+                        rows="2" placeholder="文件說明 (可選)" name="Meta[${index}].Caption"></textarea>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                // 隱藏 input 存檔案
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
+            // === 其他檔案 ===
+            else {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark fs-1 text-secondary"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">不支援預覽：${file.name}</p>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                const fileInputHidden = document.createElement("input");
-                fileInputHidden.type = "file";
-                fileInputHidden.name = `Meta[${index}].File`;
-                fileInputHidden.files = dataTransfer.files;
-                fileInputHidden.hidden = true;
-                hiddenInputs.appendChild(fileInputHidden);
-            };
+            preview.appendChild(wrapper);
 
-            reader.readAsDataURL(file);
+            // 隱藏 input 存檔案
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            const fileInputHidden = document.createElement("input");
+            fileInputHidden.type = "file";
+            fileInputHidden.name = `Meta[${index}].File`;
+            fileInputHidden.files = dataTransfer.files;
+            fileInputHidden.hidden = true;
+            hiddenInputs.appendChild(fileInputHidden);
         });
 
         if (files.length > 0) {
             togglePreviewArea(true);
             showReset();
+        }
+
+        // 綁定刪除事件
+        function bindRemove(wrapper) {
+            const closeBtn = wrapper.querySelector(".btn-close-custom");
+            if (!closeBtn) return;
+            closeBtn.addEventListener("click", () => {
+                wrapper.remove();
+                if (preview.children.length === 0) togglePreviewArea(false);
+            });
         }
     }
 
@@ -163,17 +237,6 @@
         dropArea.addEventListener("drop", e => {
             const files = e.dataTransfer.files;
             if (files.length > 0) showPreview(files);
-        });
-    }
-
-    // === 選擇檔案按鈕 ===
-    if (selectBtn && fileInput) {
-        selectBtn.addEventListener("click", () => fileInput.click());
-        fileInput.addEventListener("change", () => {
-            if (fileInput.files.length > 0) {
-                showPreview(fileInput.files);
-                fileInput.value = "";
-            }
         });
     }
 
@@ -201,56 +264,93 @@
         const modalImg = modal.querySelector(".img-zoomable");
         const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
 
-        // === 更新欄位 ===
+        // === 同步所有欄位（含 checkbox） ===
         for (const [key, selector] of Object.entries(fieldMap)) {
             const input = modal.querySelector(selector);
             if (!input) continue;
 
-            let val = fileData[key] ?? fileData[key.charAt(0).toLowerCase() + key.slice(1)];
-            if (key === "createdDate") {
-                val = fileData.formateCreatedDate || fileData.FormateCreatedDate || val;
-            }
+            // 支援 dataset 小寫 / 駝峰 / Pascal 三種型態
+            let val =
+                fileData[key] ??
+                fileData[key.toLowerCase()] ??
+                fileData[key.charAt(0).toLowerCase() + key.slice(1)];
 
+            // ✅ 是否啟用
             if (key === "isActive") {
                 input.checked = val === true || val === "true";
-            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                continue;
+            }
+
+            // ✅ 檔案大小自動轉換
+            if (key === "fileSizeBytes") {
+                const bytes = parseInt(val || "0", 10);
+                let formatted;
+                if (isNaN(bytes)) formatted = "--";
+                else if (bytes < 1024) formatted = `${bytes} Bytes`;
+                else if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(1)} KB`;
+                else formatted = `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+                input.value = formatted;
+                continue;
+            }
+
+            if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
                 input.value = val ?? "";
             }
         }
 
-        // === 圖片安全載入 + dataset ===
-        const fileUrl =
-            fileData.PublicUrl || fileData.publicUrl ||
-            fileData.FileUrl || fileData.fileUrl ||
-            "/images/No-Image.svg";
-        const fileId = fileData.FileId ?? fileData.fileId ?? "";
+        // === 同步圖片 / 影片預覽 ===
+        const mimeType = fileData.mimeType || fileData.MimeType || "";
+        const previewContainer = modal.querySelector(".preview-container");
+        if (previewContainer) {
+            previewContainer.innerHTML = "";
+            let previewEl;
 
-        if (modalImg) {
-            modalImg.src = fileUrl;
-            modalImg.dataset.fileId = fileId;
-            modalImg.dataset.isExternal = (
-                fileData.IsExternal === true ||
-                fileData.isExternal === true ||
-                fileData.IsExternal === "true" ||
-                fileData.isExternal === "true" ||
-                fileUrl.startsWith("http")
-            ).toString();
+            if (mimeType.startsWith("video/")) {
+                previewEl = document.createElement("video");
+                previewEl.src = fileData.fileUrl || fileData.FileUrl || "";
+                previewEl.controls = true;
+                previewEl.muted = true;
+                previewEl.preload = "metadata";
+                previewEl.className = "dynamic-preview rounded shadow-sm";
+                previewEl.style = "max-width:600px;max-height:400px;object-fit:contain;cursor:pointer;border:1px solid #ccc;border-radius:8px;";
+                previewEl.addEventListener("click", () => window.open(previewEl.src, "_blank"));
+            } else if (mimeType.startsWith("image/")) {
+                previewEl = document.createElement("img");
+                previewEl.src = fileData.fileUrl || fileData.FileUrl || "/images/No-Image.svg";
+                previewEl.className = "dynamic-preview rounded shadow-sm img-zoomable";
+                previewEl.style = "max-width:600px;max-height:400px;object-fit:contain;cursor:zoom-in;border:1px solid #ccc;border-radius:8px;";
+                previewEl.addEventListener("click", () => window.open(previewEl.src, "_blank"));
+            } else {
+                previewEl = document.createElement("div");
+                previewEl.className = "text-muted small mt-3";
+                previewEl.textContent = `無法預覽 (${mimeType || "未知"})`;
+            }
 
-            // 更新 API dataset
-            if (fileData.UpdateApiUrl) modalImg.dataset.updateApi = fileData.UpdateApiUrl;
-            if (fileData.DeleteApiUrl) modalImg.dataset.deleteApi = fileData.DeleteApiUrl;
+            previewContainer.appendChild(previewEl);
         }
 
-        // === ⬇️ 移到這裡：在 src 已更新後再檢查外部連結 ===
-        const badge = modal.querySelector(".badge.fs-6");
-        if (badge && modalImg) {
+        // === ✅ 同步外部連結 Badge ===
+        const badge = modal.querySelector("#modalIsExternalBadge");
+        if (badge) {
             const isExternal =
-                modalImg.dataset.isExternal === "true" ||
-                (modalImg.src?.startsWith("http") && !modalImg.src.includes(window.location.hostname));
+                fileData.isExternal === true ||
+                fileData.IsExternal === true ||
+                fileData.isExternal === "true" ||
+                fileData.IsExternal === "true" ||
+                (fileData.fileUrl || fileData.FileUrl || "").startsWith("http");
 
             badge.textContent = isExternal ? "外部連結" : "自有檔案";
-            badge.classList.toggle("bg-success", isExternal);
-            badge.classList.toggle("bg-secondary", !isExternal);
+            badge.classList.remove("bg-success", "bg-secondary");
+            badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+        }
+
+        // === ✅ 更新圖片 dataset ===
+        if (modalImg) {
+            modalImg.dataset.fileId = fileData.fileId || fileData.FileId || "";
+            modalImg.dataset.isActive =
+                fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
+            modalImg.dataset.isExternal =
+                fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
         }
 
         bsModal.show();
@@ -459,24 +559,81 @@
     // === 修正版本：正確更新 Modal 內容 ===
     document.addEventListener("shown.bs.modal", function (event) {
         const modal = event.target;
+        if (!modal.id.startsWith("imgMetaModal")) return;
+
         const triggerImg = event.relatedTarget;
         if (!triggerImg) return;
 
-        const modalImg = modal.querySelector(".img-zoomable");
-        modalImg.src = triggerImg.src;
+        const fileData = triggerImg.dataset; // ✅ 關鍵：從 dataset 抓資料
+        const mimeType = fileData.mimeType || "";
+        const previewContainer = modal.querySelector(".preview-container");
+        if (!previewContainer) return;
 
-        // 逐一更新欄位
+        // === 🔹 清空舊內容（避免殘影或多重預覽） ===
+        previewContainer.innerHTML = "";
+
+        let previewEl;
+        if (mimeType.startsWith("video/")) {
+            // 🎬 影片預覽
+            previewEl = document.createElement("video");
+            previewEl.src = fileData.fileUrl || triggerImg.src;
+            previewEl.controls = true;
+            previewEl.preload = "metadata";
+            previewEl.muted = true;
+            previewEl.playsInline = true;
+            previewEl.className = "dynamic-preview mb-3 rounded shadow-sm";
+            previewEl.style = `
+            max-width: 600px;
+            max-height: 400px;
+            object-fit: contain;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        `;
+            previewEl.title = "點擊開啟完整影片";
+            previewEl.addEventListener("click", () => window.open(previewEl.src, "_blank"));
+        } else if (mimeType.startsWith("image/")) {
+            // 🖼️ 圖片預覽
+            previewEl = document.createElement("img");
+            previewEl.src = triggerImg.src || "/images/No-Image.svg";
+            previewEl.alt = fileData.altText || "圖片預覽";
+            previewEl.className = "dynamic-preview img-zoomable mb-3 rounded shadow-sm";
+            previewEl.style = `
+            max-width: 600px;
+            max-height: 400px;
+            object-fit: contain;
+            cursor: zoom-in;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        `;
+            previewEl.title = "點擊開啟完整圖片";
+            previewEl.addEventListener("click", () => window.open(previewEl.src, "_blank"));
+        } else {
+            // 📄 其他類型（不支援預覽）
+            previewEl = document.createElement("div");
+            previewEl.className = "dynamic-preview text-muted small mt-3";
+            previewEl.innerText = `無法預覽此類型 (${mimeType || "未知"})`;
+        }
+
+        previewContainer.appendChild(previewEl);
+
+        // === 🔹 更新欄位資料 ===
         for (const [key, selector] of Object.entries(fieldMap)) {
             const input = modal.querySelector(selector);
             if (!input) continue;
 
-            let val = triggerImg.dataset[key];
+            let val =
+                fileData[key] ??
+                fileData[key.toLowerCase()] ??
+                fileData[key.charAt(0).toLowerCase() + key.slice(1)];
+
+            // 是否啟用（checkbox）
             if (key === "isActive") {
                 input.checked = val === "true";
                 continue;
             }
 
-            // ✅ 若是檔案大小，要換算單位
+            // 檔案大小（Bytes → KB/MB 格式化）
             if (key === "fileSizeBytes") {
                 const bytes = parseInt(val || "0", 10);
                 let formatted;
@@ -484,26 +641,58 @@
                 else if (bytes < 1024) formatted = `${bytes} Bytes`;
                 else if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(1)} KB`;
                 else formatted = `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-
                 input.value = formatted;
                 continue;
             }
 
+            // 其他一般欄位
             if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
-                input.value = val || "";
+                input.value = val ?? "";
             }
         }
 
-        // 把縮圖的 API 屬性同步進 dataset 圖片
-        modalImg.dataset.fileId = triggerImg.dataset.fileId;
-        modalImg.dataset.updateApi = triggerImg.dataset.updateApi;
-        modalImg.dataset.deleteApi = triggerImg.dataset.deleteApi;
+        // === ✅ 是否啟用開關 ===
+        const activeSwitch = modal.querySelector("#modalIsActive");
+        if (activeSwitch && fileData.isActive !== undefined) {
+            activeSwitch.checked = fileData.isActive === "true";
+        }
+
+        // === ✅ 是否外部連結 Badge ===
+        const badge = modal.querySelector("#modalIsExternalBadge");
+        if (badge) {
+            const isExternal = fileData.isExternal === "true";
+            console.log("🧩 isExternal 值:", fileData.isExternal, "→ 判斷結果:", isExternal);
+
+            // 強制更新樣式與文字
+            badge.textContent = isExternal ? "外部連結" : "自有檔案";
+            badge.classList.remove("bg-success", "bg-secondary");
+            badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+        }
+
+        // === ✅ 額外防呆（如果沒抓到 triggerImg） ===
+        if (!fileData || !fileData.fileId) {
+            console.warn("⚠️ 未取得 fileData，請檢查 data-* 屬性是否完整");
+        }
+    });
+
+    // === 關閉時自動暫停影片並清除預覽 ===
+    document.addEventListener("hidden.bs.modal", function (event) {
+        if (!event.target.id.startsWith("imgMetaModal")) return;
+
+        const previewContainer = event.target.querySelector(".preview-container");
+        if (!previewContainer) return;
+
+        const video = previewContainer.querySelector("video");
+        if (video) video.pause();
+
+        previewContainer.innerHTML = "";
     });
 
     document.addEventListener("hidden.bs.modal", () => {
         if (document.activeElement && document.activeElement.classList.contains("btn-close")) {
             document.activeElement.blur();
         }
+        document.querySelectorAll("video").forEach(v => v.pause());
     });
 
     window.openImageModal = openImageModal;

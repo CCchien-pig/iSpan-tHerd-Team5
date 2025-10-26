@@ -2,6 +2,7 @@
 
 @{
     bool isExternal = false;
+
     if (Model.File?.IsExternal is bool b)
         isExternal = b;
     else if (Model.File?.IsExternal.ToString().ToLower() == "true")
@@ -15,18 +16,12 @@
                 <h5 class="modal-title">@Model.Title</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="modalImg"
-                     src="@Model.File.FileUrl"
-                     alt="@Model.File.AltText"
-                     class="img-fluid mb-3 rounded img-zoomable"
-                     style="max-width:600px; max-height:400px; object-fit:contain; cursor: zoom-in;"
-                     data-file-id="@Model.File.FileId"
-                     data-alt="@Model.File.AltText"
-                     data-caption="@Model.File.Caption"
-                     data-is-active="@Model.File.IsActive.ToString().ToLower()"
-                     data-update-api="@Model.UpdateApiUrl"
-                     data-delete-api="@Model.DeleteApiUrl" />
+            <div class="modal-body">
+
+                <!-- 🔹動態預覽容器：圖片或影片都會放進這裡 -->
+                <div class="preview-container text-center mb-4">
+                    <div class="text-muted small">(點擊縮圖可預覽完整檔案)</div>
+                </div>
 
                 <div class="row g-4">
                     <!-- 左側：檔案資訊 -->
@@ -37,25 +32,24 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 text-start">
-                                    <label class="form-label fw-semibold">檔案代號 (自動產生產生)</label>
+                                    <label class="form-label fw-semibold">檔案代號 (Cloudinary 產生)</label>
                                     <input type="text" id="modalFileKey" class="form-control" value="@Model.File.FileKey" readonly />
                                 </div>
 
                                 <div class="row">
                                     <div class="col-6 mb-3 text-start">
                                         <label class="form-label fw-semibold">寬度 (px)</label>
-                                        <input type="number" id="modalWidth" name="Width" class="form-control" value="@Model.File.Width" />
+                                        <input type="number" id="modalWidth" class="form-control" value="@Model.File.Width" />
                                     </div>
                                     <div class="col-6 mb-3 text-start">
                                         <label class="form-label fw-semibold">高度 (px)</label>
-                                        <input type="number" id="modalHeight" name="Height" class="form-control" value="@Model.File.Height" />
+                                        <input type="number" id="modalHeight" class="form-control" value="@Model.File.Height" />
                                     </div>
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">檔案大小</label>
-                                    <input type="text" id="modalFileSizeBytes" class="form-control"
-                                           value="@(Model.File.FileSizeBytes + " bytes")" readonly />
+                                    <input type="text" id="modalFileSizeBytes" class="form-control" value="@Model.File.FileSizeBytes + " Bytes"" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">
@@ -65,13 +59,13 @@
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">建檔時間</label>
-                                    <input type="text" id="modalCreatedDate" class="form-control" value="@Model.File.FormateCreatedDate?.ToString()" readonly />
+                                    <input type="text" id="modalCreatedDate" class="form-control" value="@Model.File.FormateCreatedDate" readonly />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 右側：編輯資訊 -->
+                    <!-- 右側：說明與狀態 -->
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-header bg-light fw-bold">
@@ -79,12 +73,12 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 text-start">
-                                    <label for="modalFileId" class="form-label fw-semibold text-danger">檔案編號</label>
+                                    <label class="form-label fw-semibold text-danger">檔案編號</label>
                                     <input type="text" id="modalFileId" class="form-control" value="@Model.File.FileId" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">
-                                    <label for="modalAlt" class="form-label fw-semibold">AltText（圖片替代文字）</label>
+                                    <label for="modalAlt" class="form-label fw-semibold">AltText（替代文字）</label>
                                     <input type="text" id="modalAlt" class="form-control" value="@Model.File.AltText" />
                                 </div>
 
@@ -100,7 +94,8 @@
 
                                 <div class="mb-3 d-flex align-items-center">
                                     <label class="form-label fw-semibold me-2">是否外部連結：</label>
-                                    <span class="badge @(isExternal ? "bg-success" : "bg-secondary") fs-6">
+                                    <span id="modalIsExternalBadge"
+                                          class="badge @(isExternal ? "bg-success" : "bg-secondary") fs-6">
                                         @(isExternal ? "外部連結" : "自有檔案")
                                     </span>
                                 </div>
@@ -108,7 +103,6 @@
                         </div>
                     </div>
                 </div>
-
 
             </div>
             <div class="modal-footer">
@@ -133,6 +127,12 @@
                 e.stopPropagation();
                 window.open(img.src, "_blank");
             });
+        });
+
+        // 當 Modal 關閉時暫停影片播放
+        document.addEventListener("hidden.bs.modal", (event) => {
+            const video = event.target.querySelector("video");
+            if (video) video.pause();
         });
     </script>
 }
