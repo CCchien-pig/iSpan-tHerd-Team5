@@ -1,0 +1,93 @@
+﻿@using tHerdBackend.Core.DTOs
+@model List<SysAssetFileDto>
+
+@{
+    const string updateApiUrl = "/SYS/Images/UpdateFile";
+    const string deleteApiUrl = "/SYS/Images/DeleteFile";
+}
+
+@if (Model != null && Model.Any())
+{
+    <div class="img-grid">
+        @foreach (var file in Model)
+        {
+            <div class="img-item position-relative @(file.IsActive ? "" : "inactive")">
+                @if (file.MimeType != null && file.MimeType.StartsWith("video/"))
+                {
+                    <video src="@file.FileUrl"
+                           class="thumb-clickable img-zoomable"
+                           controls
+                           muted
+                           preload="metadata"
+                           poster="/images/video-placeholder.jpg"
+                           style="width:100%;height:200px;object-fit:cover;border-radius:6px;"
+                           data-bs-toggle="modal"
+                           data-bs-target="#imgMetaModal"
+                           data-file-id="@file.FileId"
+                           data-file-key="@file.FileKey"
+                           data-file-url="@file.FileUrl"
+                           data-file-ext="@file.FileExt"
+                           data-mime-type="@file.MimeType"
+                           data-width="@file.Width"
+                           data-height="@file.Height"
+                           data-file-size-bytes="@file.FileSizeBytes"
+                           data-alt-text="@file.AltText"
+                           data-caption="@file.Caption"
+                           data-folder-id="@file.FolderId"
+                           data-is-active="@file.IsActive.ToString().ToLower()"
+                           data-is-external="@file.IsExternal.ToString().ToLower()"
+                           data-created-date="@file.FormateCreatedDate"
+                           data-update-api="@updateApiUrl"
+                           data-delete-api="@deleteApiUrl">
+                        您的瀏覽器不支援影片預覽。
+                    </video>
+                }
+                else
+                {
+                    <img loading="lazy" src="@file.FileUrl"
+                         alt="@file.AltText"
+                         class="thumb-clickable img-zoomable"
+                         data-bs-toggle="modal"
+                         data-bs-target="#imgMetaModal"
+                         data-file-id="@file.FileId"
+                         data-file-key="@file.FileKey"
+                         data-file-url="@file.FileUrl"
+                         data-file-ext="@file.FileExt"
+                         data-mime-type="@file.MimeType"
+                         data-width="@file.Width"
+                         data-height="@file.Height"
+                         data-file-size-bytes="@file.FileSizeBytes"
+                         data-alt-text="@file.AltText"
+                         data-caption="@file.Caption"
+                         data-folder-id="@file.FolderId"
+                         data-is-active="@file.IsActive.ToString().ToLower()"
+                         data-is-external="@file.IsExternal.ToString().ToLower()"
+                         data-created-date="@file.FormateCreatedDate"
+                         data-update-api="@updateApiUrl"
+                         data-delete-api="@deleteApiUrl" />
+                }
+
+                <button type="button"
+                        class="btn-close-custom"
+                        aria-label="Close"
+                        onclick="deleteFile(@file.FileId, this)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <button type="button"
+                        class="toggle-active-btn btn btn-sm"
+                        onclick="toggleActive(this)">
+                    @(file.IsActive ? "停用" : "啟用")
+                </button>
+
+                <div class="disabled-overlay">
+                    <i class="bi bi-slash-circle"></i>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">目前沒有圖片。</p>
+}

@@ -3,6 +3,28 @@
 // =======================================================
 window.UploadImageModal = (function () {
 
+    // === 🌀 顯示全域 Loading ===
+    function showGlobalLoading(message = "處理中，請稍候...") {
+        const loader = document.getElementById("globalLoading");
+        if (!loader) return;
+        const text = loader.querySelector(".loading-text");
+        if (text) text.textContent = message;
+
+        loader.style.display = "flex";
+        loader.style.opacity = "1";
+        loader.style.pointerEvents = "auto";
+        loader.style.transition = "opacity 0.2s ease";
+    }
+
+    // === 關閉全域 Loading ===
+    function hideGlobalLoading() {
+        const loader = document.getElementById("globalLoading");
+        if (!loader) return;
+        loader.style.opacity = "0";
+        loader.style.pointerEvents = "none";
+        setTimeout(() => loader.style.display = "none", 200);
+    }
+
     // === 初始化 ===
     function init(modalId) {
         const modal = document.getElementById(modalId);
@@ -81,7 +103,6 @@ window.UploadImageModal = (function () {
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            // === 前端預檢查 ===
             const MAX_SIZE = 100 * 1024 * 1024; // 100MB
             const bigFiles = allFiles.filter(f => f.size > MAX_SIZE);
             if (bigFiles.length > 0) {
@@ -94,7 +115,6 @@ window.UploadImageModal = (function () {
             }
 
             const formData = new FormData();
-
             formData.append("IsExternal", form.querySelector("input[name='IsExternal']:checked").value);
             formData.append("ModuleId", form.querySelector("input[name='ModuleId']").value);
             formData.append("ProgId", form.querySelector("input[name='ProgId']").value);
@@ -109,11 +129,13 @@ window.UploadImageModal = (function () {
 
             console.log("📤 準備上傳:", allFiles.length, "個檔案");
 
+            // === 🌀 顯示全域 Loading ===
+            showGlobalLoading("正在上傳檔案...");
+
             try {
                 const response = await fetch(form.action, { method: "POST", body: formData });
-
-                // 🔍 檢查伺服器是否真的有回應內容
                 const text = await response.text();
+
                 if (!response.ok || !text.trim()) {
                     throw new Error("伺服器拒絕請求或回應無效");
                 }
@@ -121,9 +143,37 @@ window.UploadImageModal = (function () {
                 Swal.fire({
                     title: "✅ 上傳成功",
                     text: "檔案已成功送出",
-                    icon: "success"
+                    icon: "success",
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => {
+                    // === ✅ 關閉 Modal ===
+                    modal.querySelector(".btn-close")?.click();
+
+                    // === 🔄 局部刷新列表區塊 ===
+                    const container = document.getElementById("fileListContainer");
+                    const moduleId = form.querySelector("input[name='ModuleId']").value;
+                    const progId = form.querySelector("input[name='ProgId']").value;
+
+                    if (container) {
+                        container.classList.add("opacity-50");
+                        fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}`)
+                            .then(res => res.text())
+                            .then(html => {
+                                container.innerHTML = html;
+                                container.classList.remove("opacity-50");
+                            })
+                            .catch(err => console.error("❌ 局部刷新失敗:", err));
+                    }
+
+                    // === 🧹 清空預覽區與暫存 ===
+                    preview.innerHTML = "";
+                    allFiles.length = 0;
+                    const hiddenInputs = modal.querySelector(`#hiddenInputs_${modalId}`);
+                    if (hiddenInputs) hiddenInputs.innerHTML = "";
+                    const previewArea = modal.querySelector(`#previewArea_${modalId}`);
+                    if (previewArea) previewArea.classList.add("d-none");
                 });
-                modal.querySelector(".btn-close")?.click();
             } catch (err) {
                 console.error("❌ 上傳錯誤:", err);
                 Swal.fire({
@@ -131,6 +181,9 @@ window.UploadImageModal = (function () {
                     text: err.message || "網路或伺服器異常，可能是檔案太大",
                     icon: "error"
                 });
+            } finally {
+                // === 🟢 關閉 Loading ===
+                hideGlobalLoading();
             }
         });
     }

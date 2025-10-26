@@ -209,14 +209,14 @@
     deleteApiUrl = "/SYS/Images/DeleteFile"
 })
 
-<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-body text-center p-0">
-        <img id="previewImg" src="/images/No-Image.svg" class="img-preview rounded shadow-sm" alt="預覽圖">
-      </div>
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-dark">
+            <div class="modal-body text-center p-0">
+                <div id="previewContainer"></div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 @section Scripts {
@@ -241,7 +241,7 @@
         let previewModal;
 
         document.addEventListener('DOMContentLoaded', () => {
-          const modalEl = document.getElementById('imagePreviewModal');
+          const modalEl = document.getElementById('previewModal');
           // 建立或取得實例
           previewModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
             backdrop: true,
@@ -249,25 +249,31 @@
           });
         });
 
-        // 圖片預覽
-        $(document).on("click", ".image-thumb", function () {
+        // === 通用預覽（圖片 + 影片）===
+        $(document).on("click", ".image-thumb, .video-thumb", function () {
           const url = $(this).data("url");
-          const $img = $("#previewImg");
+          const mime = $(this).attr("data-mime") || ""; // 稍後加上
+          const $container = $("#previewContainer");
+          $container.empty(); // 清空舊內容
 
-          $img.attr("src", "/images/loading.gif");
+          // 建立預覽元素
+          let element;
+          if (mime.startsWith("video/")) {
+            element = $(`<video controls autoplay style="max-width:100%;max-height:80vh;border-radius:8px;">
+                           <source src="${url}" type="${mime}">
+                           您的瀏覽器不支援影片播放。
+                         </video>`);
+          } else {
+            element = $(`<img src="${url}" class="img-preview"
+                           onerror="this.src='/images/No-Image.svg'" />`);
+          }
 
-          // 改用 Bootstrap 5 原生 Modal API
-          const modalEl = document.getElementById("imagePreviewModal");
-          const modal = new bootstrap.Modal(modalEl, {
-            backdrop: true,
-            keyboard: true
-          });
+          $container.append(element);
+
+          // 顯示 Modal
+          const modalEl = document.getElementById("previewModal");
+          const modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
           modal.show();
-
-          const temp = new Image();
-          temp.onload = () => $img.attr("src", url);
-          temp.onerror = () => $img.attr("src", "/images/No-Image.svg");
-          temp.src = url;
         });
 
         // 完全靜默版：不再發 HEAD 請求，不會報紅字
@@ -305,7 +311,7 @@
         }
 
         // DataTable 初始化（含固定表頭 + 分頁）
-        const table = $('#fileTable').DataTable({
+        window.table = $('#fileTable').DataTable({
             serverSide: true,
             processing: true,
             searching: false,
@@ -526,24 +532,20 @@
 
         // DataTable 重繪後補載圖片
         table.on('draw', async () => {
-            const thumbs = document.querySelectorAll('.image-thumb[data-url]');
-            for (const img of thumbs) {
-                const url = img.dataset.url;
+            const thumbs = document.querySelectorAll('.image-thumb[data-url], .video-thumb[data-url]');
+            for (const media of thumbs) {
+                const url = media.dataset.url;
                 if (!url) continue;
 
-                // YouTube 圖片：靜默檢查
-                if (url.includes("img.youtube.com/vi/")) {
-                    const videoId = url.split("/vi/")[1]?.split("/")[0];
-                    const validUrl = await getValidYoutubeThumb(videoId);
-                    img.src = validUrl;
-                }
-                // 一般圖片：直接載入（用 onerror fallback）
-                else {
-                    img.src = url;
+                if (media.classList.contains('image-thumb')) {
+                    media.src = url;
+                } else if (media.classList.contains('video-thumb')) {
+                    // 載入第一幀做為縮圖
+                    media.addEventListener('mouseenter', () => media.play());
+                    media.addEventListener('mouseleave', () => media.pause());
                 }
             }
-
-            $('#selectAll').prop('checked', false); // 重新繪製後取消全選
+            $('#selectAll').prop('checked', false);
         });
 
         $('#btnGoto').on('click', function () {
@@ -573,21 +575,39 @@
         function renderName(data, type, row) {
             const isFolder = row.isFolder || row.IsFolder;
             const url = row.url || row.fileUrl || row.FileUrl || null;
+            const placeholder = "/images/No-Image.svg";
 
+            // 🟡 資料夾顯示
             if (isFolder) {
                 return `<i class="bi bi-folder-fill text-warning me-2"></i>
                         <a href="#" class="folder-link text-decoration-none" data-id="${row.id || row.folderId}">${data}</a>`;
             }
 
-            const placeholder = "/images/No-Image.svg";
-
-            if (row.mimeType?.startsWith("image/") || (url && url.includes("img.youtube.com/vi/"))) {
-                return `<img src="${placeholder}"
-                             onerror="this.onerror=null;this.src='${placeholder}'"
-                             class="thumb me-2 image-thumb"
-                             data-url="${url}" /> ${data}`;
+            // 🟢 本地圖片或 Cloudinary 圖片
+            if (row.mimeType?.startsWith("image/")) {
+                const imgSrc = url?.startsWith("http") ? url : (url ? `${url}` : placeholder);
+                return `
+                    <img src="${imgSrc}"
+                         onerror="this.src='${placeholder}'"
+                         class="thumb me-2 image-thumb"
+                         data-url="${imgSrc}" />
+                    ${data}`;
             }
 
+            // 🔵 本地影片預覽
+            if (row.mimeType?.startsWith("video/")) {
+              const videoSrc = url?.startsWith("http") ? url : (url ? `${url}` : "");
+              return `
+                  <video src="${videoSrc}"
+                         class="thumb me-2 video-thumb"
+                         data-url="${videoSrc}"
+                         data-mime="${row.mimeType}"
+                         muted
+                         playsinline></video>
+                  ${data}`;
+            }
+
+            // ⚪ 其他檔案
             return `<i class="bi bi-file-earmark text-secondary me-2"></i>${data}`;
         }
 
@@ -1073,6 +1093,13 @@
         document.getElementById('imgMetaModal').addEventListener('hidden.bs.modal', function () {
             if (window.table) {
                 table.ajax.reload(null, false); // false = 保留目前頁碼
+            }
+        });
+
+        // === 🔄 全域事件：收到圖片更新 → 自動刷新 DataTable ===
+        window.document.addEventListener("imageMetaUpdated", async () => {
+            if (window.table) {
+                await table.ajax.reload(null, false);
             }
         });
 

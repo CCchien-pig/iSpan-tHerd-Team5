@@ -20,6 +20,12 @@
 
                 <!-- 🔹動態預覽容器：圖片或影片都會放進這裡 -->
                 <div class="preview-container text-center mb-4">
+                    <img src="@Model.File?.FileUrl ?? " /images/No-Image.svg""
+                         class="img-zoomable rounded shadow-sm"
+                         style="max-width: 600px; max-height: 400px; object-fit: contain; cursor: zoom-in; border: 1px solid #ccc; border-radius: 8px;"
+                         data-file-id="@Model.File?.FileId"
+                         data-update-api="/SYS/UploadTest/UpdateFile"
+                         alt="預覽圖片" />
                     <div class="text-muted small">(點擊縮圖可預覽完整檔案)</div>
                 </div>
 

@@ -90,7 +90,7 @@ namespace tHerdBackend.Infra.Repository.SYS
             {
                 FileKey = $"{uploadDto.ModuleId}/{uploadDto.ProgId}/{fileName}",
                 IsExternal = false,
-                FileUrl = $"/Uploads/{uploadDto.ModuleId}/{uploadDto.ProgId}/{fileName}",
+                FileUrl = $"/uploads/{uploadDto.ModuleId}/{uploadDto.ProgId}/{fileName}",
                 FileExt = fileExt,
                 MimeType = meta.File?.ContentType ?? "image/*",
                 Width = width,
@@ -1086,7 +1086,18 @@ namespace tHerdBackend.Infra.Repository.SYS
                     Name = Path.GetFileName(f.FileKey) ?? f.FileKey,
                     Url = f.IsExternal
                         ? f.FileUrl
-                        : $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
+                        : Path.Combine(
+                            "/uploads",
+                            // === 動態取得對應模組 / 程式資料夾 ===
+                            _db.SysFolders
+                                .Where(p2 => p2.FolderId == f.FolderId)
+                                .Select(p2 => _db.SysFolders
+                                    .Where(p1 => p1.FolderId == p2.ParentId)
+                                    .Select(p1 => p1.FolderName + "/" + p2.FolderName)
+                                    .FirstOrDefault())
+                                .FirstOrDefault() ?? "",
+                            Path.GetFileName(f.FileKey)
+                          ).Replace("\\", "/"),
                     MimeType = f.MimeType,
                     IsFolder = false,
                     AltText = f.AltText,

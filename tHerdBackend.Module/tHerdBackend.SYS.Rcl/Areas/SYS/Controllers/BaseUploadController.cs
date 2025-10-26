@@ -20,7 +20,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         /// <summary>
-        /// 上傳檔案（由子類指定 ModuleId / ProgId）
+        /// 上傳檔案邏輯
         /// </summary>
         protected async Task<IActionResult> HandleUploadAsync(string moduleId, string progId)
         {
@@ -52,10 +52,8 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 if (uploadDto.Meta.Count == 0)
                 {
                     TempData["ErrorMessage"] = "請至少選擇一個檔案";
-                    var files = await _fileService.GetFilesByProg(moduleId, progId);
-                    return View("Index", files);
+                    return await ReturnIndexViewAsync(moduleId, progId);
                 }
-
 
                 if (uploadDto.IsExternal)
                 {
@@ -92,7 +90,17 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
                 TempData["ErrorMessage"] = $"❌ 上傳失敗：{ex.Message}";
             }
 
-            return RedirectToAction("Index");
+            // 回傳子類別的最新資料畫面
+            return await ReturnIndexViewAsync(moduleId, progId);
+        }
+
+        /// <summary>
+        /// 可由子類別覆寫，用於回傳最新檔案清單
+        /// </summary>
+        protected virtual async Task<IActionResult> ReturnIndexViewAsync(string moduleId, string progId)
+        {
+            var files = await _fileService.GetFilesByProg(moduleId, progId);
+            return RedirectToAction("Index", new { area = "SYS" });
         }
     }
 }
