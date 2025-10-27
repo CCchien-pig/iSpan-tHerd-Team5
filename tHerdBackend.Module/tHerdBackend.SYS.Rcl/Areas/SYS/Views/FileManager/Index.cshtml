@@ -1,0 +1,11 @@
+﻿@{
+    ViewData["Title"] = "檔案管理測試";
+}
+
+<h2 class="fw-bold mb-3">📁 FileManager 範例</h2>
+
+<button type="button" class="btn btn-success" onclick="openFileManager(files => console.log('✅ 選取：', files))">
+    <i class="bi bi-folder-symlink"></i> 開啟檔案管理
+</button>
+
+@await Html.PartialAsync("_FileManagerModal")

@@ -1,0 +1,102 @@
+﻿@using Syncfusion.EJ2.FileManager
+@{
+    var moduleName = "Images"; // 可換成你想要的模組名
+}
+
+<div class="modal fade" id="fileManagerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 overflow-hidden">
+
+            <div class="modal-header bg-white border-bottom shadow-sm sticky-top">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-folder2-open me-2 text-primary"></i> 檔案管理 - @moduleName
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-0">
+                <div id="globalLoading"
+                     class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center"
+                     style="background: rgba(0,0,0,0.5); color:white; z-index:1055; display:none;">
+                    <div class="spinner-border text-light" role="status"></div>
+                    <div class="mt-3">載入中...</div>
+                </div>
+
+                <ejs-filemanager id="ejsFileManager"
+                                 height="70vh"
+                                 allowMultiSelection="true"
+                                 ajaxSettings-read="/SYS/FileManager/FileOperations"
+                                 ajaxSettings-create="/SYS/FileManager/FileOperations"
+                                 ajaxSettings-delete="/SYS/FileManager/FileOperations"
+                                 ajaxSettings-rename="/SYS/FileManager/FileOperations"
+                                 ajaxSettings-upload="/SYS/FileManager/Upload"
+                                 ajaxSettings-download="/SYS/FileManager/Download"
+                                 ajaxSettings-getImage="/SYS/FileManager/GetImage">
+                    <e-filemanager-toolbarsettings items="@(new List<string> { "NewFolder", "Upload", "Delete", "Download", "Rename", "Refresh" })"></e-filemanager-toolbarsettings>
+                    <e-filemanager-contextmenusettings file="@(new List<string> { "Open", "Download", "Delete", "Rename" })"
+                                                       folder="@(new List<string> { "Open", "NewFolder", "Delete", "Rename" })"></e-filemanager-contextmenusettings>
+                </ejs-filemanager>
+            </div>
+
+            <div class="modal-footer bg-white border-top">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button id="btnSelectFile" type="button" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i> 確定選取
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ✅ 全域 Loading 函式
+        window.showLoading = function (message = "處理中...", mode = "global") {
+            const loader = document.getElementById("globalLoading");
+            if (!loader) return;
+            loader.querySelector("div.mt-3").textContent = message;
+            loader.style.display = "flex";
+            loader.style.opacity = "1";
+            loader.dataset.mode = mode;
+        };
+        window.hideLoading = function () {
+            const loader = document.getElementById("globalLoading");
+            if (!loader) return;
+            loader.style.opacity = "0";
+            setTimeout(() => loader.style.display = "none", 300);
+        };
+
+        // ✅ 開啟 FileManager Modal
+        let _fileManagerModal;
+        let _onConfirmFileSelect;
+
+        window.openFileManager = function (onConfirm) {
+            _onConfirmFileSelect = onConfirm;
+            const modalEl = document.getElementById("fileManagerModal");
+            _fileManagerModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            _fileManagerModal.show();
+        };
+
+        // ✅ 確定選取檔案
+        document.getElementById("btnSelectFile").addEventListener("click", function () {
+            const manager = document.getElementById("ejsFileManager").ej2_instances[0];
+            const selected = manager.selectedItems || [];
+            console.log("✅ Selected:", selected);
+
+            if (typeof _onConfirmFileSelect === "function") {
+                _onConfirmFileSelect(selected);
+            }
+            _fileManagerModal.hide();
+        });
+
+        // ✅ Loading 事件綁定（自動顯示/隱藏）
+        document.addEventListener("DOMContentLoaded", () => {
+            const fm = document.getElementById("ejsFileManager").ej2_instances?.[0];
+            if (!fm) return;
+
+            fm.beforeSend = () => showLoading("同步資料中...");
+            fm.success = () => hideLoading();
+            fm.failure = () => hideLoading();
+        });
+    </script>
+}
