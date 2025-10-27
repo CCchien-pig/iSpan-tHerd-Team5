@@ -4,12 +4,12 @@
 <button type="button"
         class="btn btn-primary btn-sm mb-3"
         data-bs-toggle="modal"
-        data-bs-target="#@Model.ModalId">
+        data-bs-target="#uploadImageModal">
     <i class="bi bi-upload"></i> 上傳檔案
 </button>
 
 <!-- Modal -->
-<div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="uploadImageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -34,47 +34,47 @@
 
                         <div class="btn-group upload-mode-group" role="group" aria-label="Upload mode">
                             <input type="radio" class="btn-check" name="IsExternal"
-                                   id="modeCloud_@Model.ModalId" value="true"
+                                   id="modeCloud_uploadImageModal" value="true"
                                    @(Model.DefaultIsExternal ? "checked" : "") />
-                            <label class="btn btn-upload" for="modeCloud_@Model.ModalId">
+                            <label class="btn btn-upload" for="modeCloud_uploadImageModal">
                                 <i class="bi bi-cloud-upload"></i> Cloudinary
                             </label>
 
                             <input type="radio" class="btn-check" name="IsExternal"
-                                   id="modeLocal_@Model.ModalId" value="false"
+                                   id="modeLocal_uploadImageModal" value="false"
                                    @(!Model.DefaultIsExternal ? "checked" : "") />
-                            <label class="btn btn-upload" for="modeLocal_@Model.ModalId">
+                            <label class="btn btn-upload" for="modeLocal_uploadImageModal">
                                 <i class="bi bi-hdd"></i> 本地上傳
                             </label>
                         </div>
                     </div>
 
                     <!-- 預覽區 -->
-                    <fieldset id="previewArea_@Model.ModalId" class="border rounded p-3 mt-4 d-none">
+                    <fieldset id="previewArea_uploadImageModal" class="border rounded p-3 mt-4 d-none">
                         <legend class="w-auto px-2">預覽區</legend>
-                        <div id="preview_@Model.ModalId" class="img-grid"></div>
+                        <div id="preview_uploadImageModal" class="img-grid"></div>
                     </fieldset>
 
                     <!-- 拖拉區塊 -->
-                    <div id="dropArea_@Model.ModalId"
+                    <div id="dropArea_uploadImageModal"
                          class="border border-2 border-primary rounded p-5 text-center mb-3 bg-light">
                         <p class="mb-2">拖拉檔案到這裡，或點擊下方選擇檔案</p>
 
                         <input type="file"
-                               id="fileInput_@Model.ModalId"
+                               id="fileInput_uploadImageModal"
                                name="Meta[0].File"
                                class="form-control d-none"
                                multiple
                                accept="image/*,video/*,application/pdf" />
 
                         <button type="button"
-                                id="selectBtn_@Model.ModalId"
+                                id="selectBtn_uploadImageModal"
                                 class="btn btn-outline-primary">
                             選擇檔案
                         </button>
                     </div>
 
-                    <div id="hiddenInputs_@Model.ModalId"></div>
+                    <div id="hiddenInputs_uploadImageModal"></div>
 
                     <input type="hidden" name="ModuleId" value="@Model.ModuleId" />
                     <input type="hidden" name="ProgId" value="@Model.ProgId" />

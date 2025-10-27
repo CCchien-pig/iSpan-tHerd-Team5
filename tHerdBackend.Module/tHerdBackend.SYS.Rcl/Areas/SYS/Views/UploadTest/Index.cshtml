@@ -12,8 +12,7 @@
 <!-- 🔹 上傳模組（Modal） -->
 @await Component.InvokeAsync("UploadImageModal", new {
     moduleId = ViewContext.RouteData.Values["area"],
-    progId = ViewContext.RouteData.Values["controller"],
-    modalId = "uploadImageModal"
+    progId = ViewContext.RouteData.Values["controller"]
 })
 
 <!-- 🔹 檔案清單容器（Partial 可被 AJAX 刷新） -->

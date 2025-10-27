@@ -4,6 +4,7 @@
 
 <div class="mb-3">
     <label class="form-label fw-bold">產品圖片</label>
+
     <!-- 🔹 選擇圖片（從共用 Images 模組中挑圖綁定） -->
     <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnBindProductImage">
         <i class="bi bi-images"></i> 選擇圖片
@@ -25,9 +26,6 @@
                              data-file-url="@img.x.FileUrl"
                              data-alt-text="@img.x.AltText"
                              data-caption="@img.x.AltText"
-                             data-is-active="true"
-                             data-mime-type="image/jpeg"
-                             data-update-api="/SYS/Images/UpdateFile"
                              style="object-fit:cover; cursor:pointer;" />
 
                         <!-- 編輯 -->
@@ -37,14 +35,14 @@
                             <i class="bi bi-pencil"></i>
                         </button>
 
-                        <!-- 移除綁定 -->
+                        <!-- 移除 -->
                         <button type="button"
                                 class="btn btn-sm btn-danger position-absolute top-0 end-0"
                                 onclick="removeBoundImage(this)">
                             <i class="bi bi-x"></i>
                         </button>
 
-                        <!-- 後端綁定對應 -->
+                        <!-- 後端綁定 -->
                         <input type="hidden" name="Images[@img.i].ImageId" value="@img.x.ImageId" />
                         <input type="hidden" name="Images[@img.i].FileUrl" value="@img.x.FileUrl" />
                         <input type="hidden" name="Images[@img.i].AltText" value="@img.x.AltText" />
@@ -60,7 +58,7 @@
     </div>
 </div>
 
-<!-- 🔹 編輯圖片資訊 Modal -->
+<!-- 🔹 編輯圖片 Modal -->
 @await Component.InvokeAsync("UpdateImage", new {
 modalId = "imgMetaModal",
     title = "圖片資訊",
@@ -69,63 +67,80 @@ modalId = "imgMetaModal",
     deleteApiUrl = "/SYS/Images/DeleteFile"
 })
 
-<!-- 🔹 圖片選擇器 Modal（取代舊 _ImageSelectorModal） -->
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） -->
 @await Html.PartialAsync("_FileSelectPartial", new List<SysAssetFileDto>())
 
 <script>
-    // === 防止任何 modal 裡的按鈕誤觸表單提交 ===
-    document.addEventListener("click", function (e) {
-        const btn = e.target.closest("button");
-        if (!btn) return;
-
-        // 只攔截：在 form 裡 & 在 modal 裡 & 沒明確 type 或 type=submit 的按鈕
-        const isInModal = btn.closest(".modal");
-        const isInForm = btn.closest("form");
-
-        if (isInModal && isInForm && (!btn.type || btn.type.toLowerCase() === "submit")) {
-            e.preventDefault();
-            console.warn("🛑 已攔截 modal 誤觸提交：", btn);
-        }
-    }, true);
-
     document.addEventListener("DOMContentLoaded", () => {
-        // === 綁定產品圖片（從共用 Images 模組選取） ===
-        document.getElementById("btnBindProductImage")?.addEventListener("click", () => {
-            if (typeof openImageSelector === "function") {
-                openImageSelector(
-                    selectedFiles => {
-                        console.log("已選取:", selectedFiles);
-                    },
-                    "PROD",
-                    "Products"
-                );
+        console.log("🟣 ProductImageUpload ready");
 
-            } else {
-                Swal.fire("錯誤", "找不到圖片選擇器模組 (openImageSelector)", "error");
-            }
+        const btnSelect = document.getElementById("btnBindProductImage");
+
+        // === 綁定圖片選擇器 ===
+        if (btnSelect) {
+            btnSelect.addEventListener("click", e => {
+                e.preventDefault();
+                if (typeof openImageSelector === "function") {
+                    openImageSelector(selectedFiles => {
+                        console.log("🖼️ 已選取:", selectedFiles);
+                        appendSelectedImages(selectedFiles);
+                    }, "PROD", "Products");
+                } else {
+                    Swal.fire("錯誤", "找不到圖片選擇器模組 openImageSelector", "error");
+                }
             });
+        }
+
+        // ✅ 初始化上傳模組（統一不帶參數）
+        if (window.UploadImageModal && typeof UploadImageModal.init === "function") {
+            UploadImageModal.init();
+            console.log("✅ UploadImageModal initialized");
+        } else {
+            console.warn("⚠️ UploadImageModal.init 未定義");
+        }
     });
 
-    // === 🖋️ 編輯圖片資訊 ===
+    // === 動態插入選取圖片 ===
+    function appendSelectedImages(selectedFiles) {
+        const list = document.getElementById("boundImages");
+        if (!selectedFiles?.length) return;
+
+        if (list.querySelector("span.text-muted")) list.innerHTML = "";
+
+        selectedFiles.forEach(f => {
+            const idx = list.querySelectorAll(".position-relative").length;
+            const div = document.createElement("div");
+            div.className = "position-relative";
+            div.style = "width:120px;height:120px;";
+            div.innerHTML = `
+                <img src="${f.fileUrl}" class="img-thumbnail w-100 h-100" style="object-fit:cover;cursor:pointer;">
+                <button type="button" class="btn btn-sm btn-outline-primary position-absolute bottom-0 start-0"
+                    onclick="editBoundImage(this)"><i class="bi bi-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0"
+                    onclick="removeBoundImage(this)"><i class="bi bi-x"></i></button>
+                <input type="hidden" name="Images[${idx}].FileUrl" value="${f.fileUrl}">
+                <input type="hidden" name="Images[${idx}].AltText" value="${f.altText || ''}">
+                <input type="hidden" name="Images[${idx}].ImageId" value="${f.fileId || 0}">
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    // === 編輯圖片資訊 ===
     function editBoundImage(btn) {
         const container = btn.closest(".position-relative");
         const img = container.querySelector("img");
-
-        if (!img) {
-            Swal.fire("錯誤", "找不到圖片元素", "error");
-            return;
-        }
+        if (!img) return Swal.fire("錯誤", "找不到圖片元素", "error");
 
         const fileData = {
-            fileId: img.dataset.fileId,
-            fileUrl: img.dataset.fileUrl,
-            altText: img.dataset.altText,
+            fileId: img.dataset.fileId || 0,
+            fileUrl: img.src,
+            altText: img.alt || "",
             caption: img.dataset.caption || "",
-            mimeType: img.dataset.mimeType || "image/jpeg",
+            mimeType: "image/jpeg",
             isActive: true
         };
 
-        // ✅ 呼叫共用更新模組（update-image-modal.js）
         if (typeof openImageModal === "function") {
             openImageModal(fileData, "#imgMetaModal");
         } else {
@@ -133,16 +148,12 @@ modalId = "imgMetaModal",
         }
     }
 
-    // === ❌ 移除綁定圖片 ===
+    // === 移除圖片 ===
     function removeBoundImage(btn) {
         btn.closest("div").remove();
-
-        // 重新命名 input 索引
         document.querySelectorAll("#boundImages input[name]").forEach((inp, i) => {
             inp.name = inp.name.replace(/Images\[\d+\]/, `Images[${i}]`);
         });
-
-        // 若都刪光 → 顯示 placeholder
         const list = document.getElementById("boundImages");
         if (!list.querySelector("img")) {
             list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';

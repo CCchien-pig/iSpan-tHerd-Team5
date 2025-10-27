@@ -27,11 +27,7 @@
                     <div class="fw-bold text-secondary mb-2 mb-sm-0">
                         <i class="bi bi-upload me-2"></i>上傳新圖片
                     </div>
-                    @await Component.InvokeAsync("UploadImageModal", new {
-                                        moduleId = "PROD",
-                                        progId = "Products",
-                                        modalId = "uploadImageModal"
-                                        })
+                    @await Component.InvokeAsync("UploadImageModal")
                 </div>
             </div>
 
@@ -172,7 +168,11 @@
         }
 
         const html = data.map(f => `
-            <div class="col img-item" data-id="${f.fileId}" data-url="${f.fileUrl}" data-name="${f.altText}">
+            <div class="col img-item"
+                 data-id="${f.fileId}"
+                 data-url="${f.fileUrl}"
+                 data-alt="${f.altText || ''}"
+                 data-caption="${f.caption || ''}">
                 <img src="${f.fileUrl}" alt="${f.altText || ''}" class="w-100" style="height:200px;object-fit:cover;">
                 <div class="filename-label">${f.altText || f.fileKey || ''}</div>
             </div>
@@ -191,5 +191,35 @@
     $("#btnClearSelection").on("click", function () {
         $(".img-item").removeClass("selected");
         $("#selectedCount").text("0 已選");
+    });
+
+    // ✅ 確定選取
+    $("#btnConfirmSelectImages").on("click", function () {
+        const selected = $(".img-item.selected").map(function () {
+            return {
+                fileId: $(this).data("id"),
+                fileUrl: $(this).data("url"),
+                altText: $(this).data("alt") || "",
+                caption: $(this).data("caption") || ""
+            };
+        }).get();
+
+        console.log("✅ 使用者選取：", selected);
+
+        if (typeof _onFileSelectConfirm === "function") {
+            _onFileSelectConfirm(selected);
+        }
+
+        if (_fileSelectModal) _fileSelectModal.hide();
+    });
+
+    // ✅ 初始化上傳 modal（只初始化一次）
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.UploadImageModal && typeof UploadImageModal.init === "function") {
+            UploadImageModal.init(); // ✅ 不再傳參數
+            console.log("✅ UploadImageModal initialized");
+        } else {
+            console.warn("⚠️ UploadImageModal.init 未定義");
+        }
     });
 </script>

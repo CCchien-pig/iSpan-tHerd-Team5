@@ -6,7 +6,6 @@ namespace tHerdBackend.UIKit.Rcl.ViewComponents.UploadImageModal
     {
         public class UploadImageModalViewModel
         {
-            public string ModalId { get; set; } = "uploadImageModal";
             public string ModuleId { get; set; } = "";
             public string ProgId { get; set; } = "";
 
@@ -16,13 +15,7 @@ namespace tHerdBackend.UIKit.Rcl.ViewComponents.UploadImageModal
 
         public IViewComponentResult Invoke(string moduleId, string progId, string modalId = "uploadImageModal")
         {
-            var vm = new UploadImageModalViewModel
-            {
-                ModalId = modalId,
-                ModuleId = moduleId ?? "",
-                ProgId = progId ?? "",
-                DefaultIsExternal = true // 預設 Cloudinary
-            };
+            var vm = new UploadImageModalViewModel();
 
             return View("Default", vm);
         }
