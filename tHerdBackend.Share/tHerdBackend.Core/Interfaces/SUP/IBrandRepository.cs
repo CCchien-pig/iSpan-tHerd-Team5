@@ -1,4 +1,4 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Brand;
 
 namespace tHerdBackend.Core.Interfaces.SUP
 {
@@ -27,16 +27,6 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		#endregion
 
 
-		#region 品牌版面
-
-		Task<IEnumerable<BrandLayoutDto>> GetLayoutsByBrandIdAsync(int brandId);
-		Task<BrandLayoutDto?> GetActiveLayoutAsync(int brandId);
-		Task<int> CreateLayoutAsync(int brandId, BrandLayoutCreateDto dto);
-		Task<bool> UpdateLayoutAsync(int layoutId, BrandLayoutUpdateDto dto);
-		Task<bool> ActivateLayoutAsync(int layoutId, int reviserId);
-		Task<bool> SoftDeleteLayoutAsync(int layoutId, int reviserId);
-
-		#endregion
 	}
 
 }

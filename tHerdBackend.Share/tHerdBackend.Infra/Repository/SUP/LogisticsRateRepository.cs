@@ -1,7 +1,7 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
+using tHerdBackend.Core.DTOs.SUP.Logistics;
 
 public class LogisticsRateRepository : ILogisticsRateRepository
 {

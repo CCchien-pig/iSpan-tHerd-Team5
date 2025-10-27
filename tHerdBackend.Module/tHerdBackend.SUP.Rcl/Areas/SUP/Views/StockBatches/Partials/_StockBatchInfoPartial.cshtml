@@ -1,8 +1,9 @@
-﻿@using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
+﻿@using tHerdBackend.Core.DTOs.SUP.Stock
+@using tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
 
 @* _StockBatchInfoPartial.cshtml 唯讀欄位 *@
 
-@model tHerdBackend.SUP.Rcl.Areas.SUP.Controllers.StockBatchEditDto
+@model StockBatchEditDto
 
 <form id="stockBatchEditForm">
     <input type="hidden" name="SkuId" value="@Model.SkuId" />
