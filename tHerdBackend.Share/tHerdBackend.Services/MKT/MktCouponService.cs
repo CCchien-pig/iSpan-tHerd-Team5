@@ -67,7 +67,7 @@ namespace tHerdBackend.Infra.Services.MKT
                 CouponId = coupon.CouponId,
                 UserNumberId = memberId,
                 ClaimedDate = DateTime.Now,
-                Status = "未使用"
+                Status = "unused"
             };
 
             _db.UserCouponWallets.Add(wallet);

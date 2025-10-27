@@ -12,7 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.SUP.Rcl\tHerdBackend.SUP.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Composition\tHerdBackend.Composition.csproj" />
+    <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Core\tHerdBackend.Core.csproj" />
     <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
     <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Services\tHerdBackend.Services.csproj" />
   </ItemGroup>

@@ -2,6 +2,7 @@
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
 using Microsoft.EntityFrameworkCore;
+using tHerdBackend.Core.DTOs.SUP.Stock;
 
 namespace tHerdBackend.Services.SUP
 {
