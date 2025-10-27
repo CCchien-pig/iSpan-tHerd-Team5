@@ -886,3 +886,25 @@ document.addEventListener("click", async (e) => {
         }
     }
 });
+
+// === ✅ 針對圖片選擇器的事件統一註冊 ===
+document.addEventListener("click", e => {
+    const item = e.target.closest(".img-item");
+    if (!item) return;
+
+    // 若是直接點 checkbox，就不做多餘處理
+    if (e.target.classList.contains("select-file")) return;
+
+    const chk = item.querySelector(".select-file");
+    if (chk) chk.click(); // 觸發 change 事件
+});
+
+// ✅ change 時切換高亮
+document.addEventListener("change", e => {
+    if (e.target.classList.contains("select-file")) {
+        const item = e.target.closest(".img-item");
+        if (item) {
+            item.classList.toggle("selected", e.target.checked);
+        }
+    }
+});

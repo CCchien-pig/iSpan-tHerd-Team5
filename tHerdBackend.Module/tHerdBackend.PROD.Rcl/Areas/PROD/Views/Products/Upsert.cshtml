@@ -321,6 +321,16 @@
             color: #fff;
             margin: 0;
         }
+
+        .img-item.selected {
+            outline: 3px solid #007bff;
+            border-radius: 6px;
+        }
+
+        .select-file:checked + img,
+        .select-file:checked + video {
+            outline: 3px solid #0d6efd;
+        }
     </style>
 }
 
@@ -1436,6 +1446,14 @@
             // 初始強制同步一次（避免第一次點要按兩次）
             btn.setAttribute('aria-expanded', tgt.classList.contains('show') ? 'true' : 'false');
           });
+
+            // 🔒 防止 Enter 鍵觸發送出（僅在非 textarea 內）
+            document.getElementById("productCreateForm").addEventListener("keydown", function (e) {
+              if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+                e.preventDefault();
+                return false;
+              }
+            });
         });
     </script>
 }

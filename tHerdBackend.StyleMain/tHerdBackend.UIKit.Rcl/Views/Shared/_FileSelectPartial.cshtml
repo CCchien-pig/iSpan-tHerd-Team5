@@ -1,0 +1,195 @@
+﻿@using tHerdBackend.Core.DTOs
+@model List<SysAssetFileDto>
+
+<!-- ✅ 局部補 jQuery（若全域沒載入） -->
+<script>
+    if (typeof window.jQuery === "undefined") {
+        document.write('<script src="https://code.jquery.com/jquery-3.6.4.min.js"><\/script>');
+        console.warn("⚠️ jQuery 已在 _FileSelectPartial 局部載入");
+    }
+</script>
+
+<div class="modal fade" id="imageSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 overflow-hidden">
+
+            <!-- Header -->
+            <div class="modal-header sticky-top bg-white border-bottom shadow-sm" style="z-index:10;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-images me-2 text-primary"></i>選擇圖片或資料夾
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- ✅ 上傳功能區塊 -->
+            <div class="p-3 border-bottom bg-light">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="fw-bold text-secondary mb-2 mb-sm-0">
+                        <i class="bi bi-upload me-2"></i>上傳新圖片
+                    </div>
+                    @await Component.InvokeAsync("UploadImageModal", new {
+                                        moduleId = "PROD",
+                                        progId = "Products",
+                                        modalId = "uploadImageModal"
+                                        })
+                </div>
+            </div>
+
+            <!-- 🧭 麵包屑 + 搜尋 -->
+            <div class="p-3 border-bottom sticky-top bg-light" style="z-index:9;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <nav aria-label="breadcrumb" class="flex-grow-1">
+                        <ol id="imgBreadcrumb" class="breadcrumb mb-0 small">
+                            <li class="breadcrumb-item"><a href="javascript:void(0)" class="crumb" data-id="0">根目錄</a></li>
+                        </ol>
+                    </nav>
+
+                    <div class="input-group input-group-sm" style="max-width: 260px;">
+                        <input id="filterInput" type="text" class="form-control" placeholder="搜尋 AltText / Caption / 資料夾...">
+                        <button id="btnClearFilter" class="btn btn-outline-secondary" title="清除搜尋"><i class="bi bi-x-circle"></i></button>
+                    </div>
+
+                    <div class="ms-auto d-flex gap-2">
+                        <button type="button" id="btnClearSelection" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-x-lg"></i> 取消選取
+                        </button>
+                        <span id="selectedCount" class="badge bg-primary align-self-center">0 已選</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主體 -->
+            <div class="modal-body p-4" style="max-height:70vh; overflow-y:auto;">
+                <div id="imageGrid" class="text-center text-muted">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">載入中...</span>
+                    </div>
+                    <div>載入中...</div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer sticky-bottom bg-white border-top shadow-sm">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" id="btnConfirmSelectImages">
+                    <i class="bi bi-check-circle me-1"></i>確定選取
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .img-item {
+        position: relative;
+        background: #fff;
+        border-radius: 6px;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+        .img-item:hover {
+            box-shadow: 0 0 10px rgba(13,110,253,0.25);
+            transform: translateY(-3px);
+        }
+
+        .img-item.selected {
+            outline: 3px solid #0d6efd;
+            box-shadow: 0 0 10px rgba(13,110,253,0.4);
+        }
+
+    .filename-label {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        color: #fff;
+        background: rgba(0,0,0,0.6);
+        text-align: center;
+        font-size: 13px;
+        padding: 3px 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+
+<script>
+    let _onFileSelectConfirm = null;
+    let _fileSelectModal = null;
+    let _allData = [];
+    let breadcrumbStack = [{ id: 0, name: "根目錄" }];
+    let _currentModuleId = "PROD";
+    let _currentProgId = "Products";
+
+    // 🟦 開啟圖片選擇器
+    window.openImageSelector = async function (onConfirm, moduleId = "PROD", progId = "Products") {
+        _onFileSelectConfirm = onConfirm;
+        _currentModuleId = moduleId;
+        _currentProgId = progId;
+
+        breadcrumbStack = [
+            { id: 0, name: "根目錄" },
+            { id: `${moduleId}/${progId}`, name: `${moduleId}/${progId}` }
+        ];
+
+        const modalEl = document.getElementById("imageSelectorModal");
+        if (!_fileSelectModal) _fileSelectModal = new bootstrap.Modal(modalEl);
+
+        await loadModuleImages(moduleId, progId);
+        _fileSelectModal.show();
+    };
+
+    // 🧩 載入模組圖片
+    async function loadModuleImages(moduleId, progId) {
+        const grid = document.getElementById("imageGrid");
+        grid.innerHTML = `<div class="spinner-border text-primary"></div><div>載入中...</div>`;
+        try {
+            const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}&json=true`);
+            const data = await res.json();
+            _allData = data.map(f => ({
+                fileId: f.fileId ?? f.FileId,
+                fileUrl: f.fileUrl ?? f.FileUrl,
+                altText: f.altText ?? f.AltText,
+                caption: f.caption ?? f.Caption,
+                fileKey: f.fileKey ?? f.FileKey,
+                isFolder: false,
+                name: f.altText ?? f.AltText ?? f.fileKey
+            }));
+            renderFileGrid(_allData);
+        } catch (err) {
+            grid.innerHTML = `<p class="text-danger">載入失敗，請稍後再試。</p>`;
+        }
+    }
+
+    // 🖼️ 渲染圖片
+    function renderFileGrid(data) {
+        const grid = document.getElementById("imageGrid");
+        if (!data?.length) {
+            grid.innerHTML = `<p class="text-muted">目前沒有任何資料。</p>`;
+            return;
+        }
+
+        const html = data.map(f => `
+            <div class="col img-item" data-id="${f.fileId}" data-url="${f.fileUrl}" data-name="${f.altText}">
+                <img src="${f.fileUrl}" alt="${f.altText || ''}" class="w-100" style="height:200px;object-fit:cover;">
+                <div class="filename-label">${f.altText || f.fileKey || ''}</div>
+            </div>
+        `).join("");
+
+        grid.innerHTML = `<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">${html}</div>`;
+    }
+
+    // 🖱️ 點擊選取
+    $(document).on("click", ".img-item", function () {
+        $(this).toggleClass("selected");
+        $("#selectedCount").text($(".img-item.selected").length + " 已選");
+    });
+
+    // ❌ 清除選取
+    $("#btnClearSelection").on("click", function () {
+        $(".img-item").removeClass("selected");
+        $("#selectedCount").text("0 已選");
+    });
+</script>

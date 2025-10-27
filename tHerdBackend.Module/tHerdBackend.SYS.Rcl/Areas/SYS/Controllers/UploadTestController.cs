@@ -47,10 +47,35 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetFilesByProg(string moduleId, string progId)
+        public async Task<IActionResult> GetFilesByProg(string moduleId, string progId, bool json = false)
+        {
+            try
+            {
+                moduleId ??= "SYS";
+                progId ??= "UploadTest";
+
+                var files = await _fileService.GetFilesByProg(moduleId, progId);
+
+                if (json)
+                    return Json(files); // 使用原本的 DTO 命名
+
+                return PartialView("_FileListPartial", files);
+            }
+            catch (Exception ex)
+            {
+                // 若要除錯，這行可以暫時開啟
+                // return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+
+                // 正式環境建議用這行
+                return StatusCode(500, "伺服器內部錯誤，請稍後再試。");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSelectableFiles(string moduleId, string progId)
         {
             var files = await _fileService.GetFilesByProg(moduleId, progId);
-            return PartialView("~/Views/Shared/_FileListPartial.cshtml", files);
+            return PartialView("~/Views/Shared/_FileSelectPartial.cshtml", files);
         }
     }
 }
