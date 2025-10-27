@@ -1,0 +1,1082 @@
+﻿@using tHerdBackend.Core.DTOs
+@using tHerdBackend.Core.DTOs.SYS
+@model IEnumerable<FolderItemDto>
+
+@section Styles {
+    <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.bootstrap5.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/colresize/1.6.1/colResize.dataTables.min.css" rel="stylesheet" />
+    @* jsTree *@
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
+
+    <style>
+        .file-browser {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+            width: 100%;
+            max-width: none; /* 取消最大寬度限制 */
+            margin-left: 20px; /* 左邊保留一點空間 */
+        }
+
+        .breadcrumb {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+        }
+
+            .breadcrumb a {
+                position: relative;
+                transition: color 0.2s ease-in-out;
+            }
+
+                .breadcrumb a:hover {
+                    color: #0d6efd;
+                    text-decoration: underline;
+                }
+
+                .breadcrumb a:active {
+                    color: #0a58ca;
+                }
+
+        .file-row:hover {
+            background-color: #f1f5ff !important;
+            cursor: pointer;
+        }
+
+        .thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .img-preview {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+
+        /* 表格凍結窗格樣式 */
+        .dataTables_scrollHead {
+            background-color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .dataTables_wrapper tbody tr {
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            transform-origin: center center;
+        }
+
+        .dataTables_wrapper tbody {
+            overflow-x: hidden; /* 防止橫向捲軸 */
+        }
+
+        .dataTables_scrollBody {
+            overflow-x: hidden !important; /* 強制覆蓋 DataTables 設定 */
+        }
+
+        .dataTables_wrapper tbody tr:hover {
+            background-color: #f1f5ff;
+            box-shadow: inset 0 0 0 9999px rgba(111, 66, 193, 0.03); /* 柔和高亮 */
+        }
+         
+        /* 群組按鈕 */
+        :root {
+            --main-purple: #6f42c1; /* Bootstrap 紫色主色 */
+        }
+
+        /* 統一群組按鈕主題 */
+        .btn-outline-primary {
+            color: var(--main-purple);
+            border-color: var(--main-purple);
+            background-color: #fff;
+        }
+
+            .btn-outline-primary:hover,
+            .btn-outline-primary:focus,
+            .btn-outline-primary.active {
+                background-color: var(--main-purple);
+                color: #fff;
+                border-color: var(--main-purple);
+            }
+
+        /* 圓角群組美化 */
+        .btn-group .btn {
+            border-radius: 0 !important;
+        }
+
+            .btn-group .btn:first-child {
+                border-top-left-radius: 50px !important;
+                border-bottom-left-radius: 50px !important;
+            }
+
+            .btn-group .btn:last-child {
+                border-top-right-radius: 50px !important;
+                border-bottom-right-radius: 50px !important;
+            }
+
+        /* 讓 DataTables 底部資訊和跳頁區在同一排 */
+       .dataTables_paginate {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .goto-wrapper input {
+          width: 80px;
+          height: 30px;
+          padding: 2px 6px;
+        }
+
+        .goto-wrapper button {
+          height: 30px;
+          line-height: 1;
+          padding: 0 10px;
+        }
+
+    </style>
+}
+
+<div class="container-fluid py-4 file-browser">
+    <div class="d-flex justify-content-between align-items-center mb-3 sticky-top bg-white pb-2" style="z-index:10;">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-3" id="breadcrumb">
+                <li class="breadcrumb-item"><a href="#" class="crumb" data-id="">根目錄</a></li>
+            </ol>
+        </nav>
+        <div class="btn-group rounded-pill shadow-sm overflow-hidden" role="group" aria-label="圖片操作">
+            <button id="btnEnable" class="btn btn-outline-primary btn-sm fw-semibold">
+                <i class="bi bi-check2-circle me-1"></i> 啟用
+            </button>
+            <button id="btnDisable" class="btn btn-outline-primary btn-sm fw-semibold">
+                <i class="bi bi-slash-circle me-1"></i> 停用
+            </button>
+            <button id="btnDelete" class="btn btn-outline-primary btn-sm fw-semibold">
+                <i class="bi bi-trash me-1"></i> 刪除
+            </button>
+            <button id="btnMove" class="btn btn-outline-primary btn-sm fw-semibold">
+                <i class="bi bi-folder2-open me-1"></i> 移動資料夾
+            </button>
+            <button id="btnAddFolder" class="btn btn-outline-primary btn-sm fw-semibold">
+                <i class="bi bi-folder-plus me-1"></i> 新增資料夾
+            </button>
+
+                <!-- 新增紅色「清理未使用檔案」按鈕 -->
+            <button id="btnCleanOrphanFiles" class="btn btn-danger btn-sm fw-semibold d-none">
+                <i class="bi bi-exclamation-triangle me-1"></i> 清理未使用檔案
+            </button>
+        </div>
+        <div class="d-flex align-items-center">
+            <input id="searchBox" class="form-control form-control-sm" placeholder="搜尋檔名或關鍵字..." style="width:250px;">
+            <button id="btnSearch" class="btn btn-primary btn-sm ms-2"><i class="bi bi-search"></i> 搜尋</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table id="fileTable" class="table table-hover align-middle w-100">
+            <thead class="table-light">
+                <tr>
+                    <th><input type="checkbox" id="selectAll" /></th>
+                    <th>編輯</th>
+                    <th>名稱</th>
+                    <th>狀態</th>
+                    <th>類型</th>
+                    <th>AltText</th>
+                    <th>Caption</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div class="goto-wrapper">
+          <input id="gotoPage" type="number" class="form-control form-control-sm" style="width: 100px;" placeholder="跳至頁數">
+          <button id="btnGoto" class="btn btn-sm btn-outline-primary">Go</button>
+        </div>
+    </div>
+</div>
+
+@* 編輯圖片頁面 *@
+@await Component.InvokeAsync("UpdateImage", new { 
+    modalId = "imgMetaModal", 
+    title = "圖片資訊", 
+    file = new SysAssetFileDto(), 
+    updateApiUrl = "/SYS/Images/UpdateFile", 
+    deleteApiUrl = "/SYS/Images/DeleteFile"
+})
+
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body text-center p-0">
+        <img id="previewImg" src="/images/No-Image.svg" class="img-preview rounded shadow-sm" alt="預覽圖">
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/colresize/1.6.1/dataTables.colResize.min.js"></script>
+    @* jsTree *@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+
+    @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
+
+    <script type="module">
+        import { openFolderTreeSelector } from '/_content/tHerdBackend.UIKit.Rcl/js/folder-tree.js';
+        window.openFolderTreeSelector = openFolderTreeSelector;
+
+        let breadcrumbStack = [{ id: null, name: "根目錄" }];
+
+        // 建立全域實例（或用 let 存起來）
+        let previewModal;
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const modalEl = document.getElementById('imagePreviewModal');
+          // 建立或取得實例
+          previewModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+            backdrop: true,
+            keyboard: true
+          });
+        });
+
+        // 圖片預覽
+        $(document).on("click", ".image-thumb", function () {
+          const url = $(this).data("url");
+          const $img = $("#previewImg");
+
+          $img.attr("src", "/images/loading.gif");
+
+          // 改用 Bootstrap 5 原生 Modal API
+          const modalEl = document.getElementById("imagePreviewModal");
+          const modal = new bootstrap.Modal(modalEl, {
+            backdrop: true,
+            keyboard: true
+          });
+          modal.show();
+
+          const temp = new Image();
+          temp.onload = () => $img.attr("src", url);
+          temp.onerror = () => $img.attr("src", "/images/No-Image.svg");
+          temp.src = url;
+        });
+
+        // 完全靜默版：不再發 HEAD 請求，不會報紅字
+        async function getValidYoutubeThumb(videoId) {
+            if (!videoId) return "/images/No-Image.svg";
+            const base = `https://img.youtube.com/vi/${videoId}/`;
+            const versions = ["maxresdefault.jpg", "hqdefault.jpg", "mqdefault.jpg", "default.jpg"];
+
+            for (const v of versions) {
+                const url = base + v;
+                const ok = await preloadImage(url); // 用 <img> 靜默測試
+                if (ok) return url;
+            }
+            return "/images/No-Image.svg";
+        }
+
+        // 以 <img> 預載方式靜默測試，絕對不印紅字
+        function preloadImage(url) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+                img.src = url;
+            });
+        }
+
+        // 通用圖片驗證（非 YouTube）
+        async function isImageValid(url) {
+            try {
+                const res = await fetch(url, { method: "HEAD" });
+                return res.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        // DataTable 初始化（含固定表頭 + 分頁）
+        const table = $('#fileTable').DataTable({
+            serverSide: true,
+            processing: true,
+            searching: false,
+            paging: true,
+            searching: false,
+            info: true,
+            pageLength: 10,
+            lengthChange: false,
+            scrollY: "60vh",
+            scrollCollapse: true,
+            fixedHeader: true,
+            order: [],
+            columnDefs: [
+                {
+                    targets: 0,
+                    render: function (data, type, row) {
+                        if (type === 'sort') return row.isFolder ? '0_' + data : '1_' + data;
+                        return renderName(data, type, row);
+                    }
+                },
+                { targets: "_all", className: "align-middle" }
+            ],
+            ajax: {
+                url: '/SYS/Images/GetPagedFolderItems',
+                type: 'GET',
+                data: function (d) {
+                    const last = breadcrumbStack[breadcrumbStack.length - 1];
+                    d.parentId = last?.id ?? null;
+                    d.keyword = $("#searchBox").val();
+
+                    // 加入排序欄位與方向
+                    if (d.order && d.order.length > 0) {
+                        const order = d.order[0];
+                        const column = d.columns[order.column].data;
+                        d.orderColumn = column;
+                        d.orderDir = order.dir;
+                    }
+                    // DataTables 自動傳 start/length/draw，這裡只補 parentId 與 keyword
+                    // const last = breadcrumbStack[breadcrumbStack.length - 1];
+                    // d.parentId = last?.id ?? null;
+                    // d.keyword = $("#searchBox").val();
+                },
+                dataSrc: function (json) {
+                    // DataTables 模式
+                    if (Array.isArray(json.data)) {
+                        if (json.breadcrumb) renderBreadcrumb(json.breadcrumb);
+                        return json.data;  // 這裡直接回傳陣列
+                    }
+
+                    // 一般模式（非 DataTables 呼叫 loadFolder 時用）
+                    if (json.data && Array.isArray(json.data.items)) {
+                        if (json.data.breadcrumb) renderBreadcrumb(json.data.breadcrumb);
+                        return json.data.items;
+                    }
+
+                    return []; // fallback
+                },
+                error: function (xhr, status, error) {
+                    console.error("載入資料發生錯誤：", error);
+                }
+            },
+            columns: [
+                {
+                    data: null,
+                    orderable: false,
+                    className: "text-center",
+                    width: "40px",
+                    render: (data, type, row) =>
+                        `<input type="checkbox" class="row-select" value="${row.id}" />`
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    className: "text-center",
+                    width: "60px",
+                    render: (data, type, row) =>
+                        `<button class="btn btn-sm btn-outline-warning btn-edit" data-id="${row.id}">
+                            <i class="bi bi-pencil"></i>
+                         </button>`
+                },
+                { data: "name", render: renderName },
+                {
+                    data: "isActive",
+                    className: "text-center",
+                    width: "90px",
+                    render: (isActive, type, row) => {
+                        if (row.isFolder || row.IsFolder) return "-";
+                        const badgeClass = isActive ? "bg-success" : "bg-secondary";
+                        const text = isActive ? "啟用" : "停用";
+                        return `<span class="badge ${badgeClass} fw-semibold px-3 py-2">${text}</span>`;
+                    }
+                },
+                { data: "mimeType", title: "類型", width: "120px" },
+                { data: "altText", title: "AltText", width: "200px", render: a => a ?? "" },
+                { data: "caption", title: "Caption", width: "250px", render: c => c ?? "" }
+            ],
+            colResize: {
+                tableWidthFixed: false,  // 可自由拖曳
+                handleWidth: 8,          // 拖曳區域寬度
+                hoverClass: 'dt-colresizable-hover',
+                resizeCallback: function(column) {
+                    console.log('Resized:', column.idx, column.width);
+                }
+            },
+            language: {
+                processing: "資料讀取中...",
+                emptyTable: "目前沒有任何資料",
+                info: "顯示第 _START_ 筆到第 _END_ 筆，共 _TOTAL_ 筆資料",
+                infoEmpty: "顯示第 0 筆到第 0 筆，共 0 筆",
+                paginate: { first: "第一頁", last: "最後一頁", next: "下一頁", previous: "上一頁" }
+            }
+        });
+
+        // === 雙擊 AltText / Caption 可直接編輯（排除資料夾） ===
+        $('#fileTable tbody').on('dblclick', 'td', function () {
+          const cell = table.cell(this);
+          const column = table.column(this).dataSrc();
+          const editableCols = ["altText", "caption"];
+          if (!editableCols.includes(column)) return; // 不是這兩欄就略過
+
+          const rowData = table.row(this).data();
+
+          // 🧱 檢查是否為資料夾，資料夾禁止編輯
+          if (rowData.isFolder || rowData.IsFolder) {
+            Swal.fire({
+              toast: true,
+              icon: "info",
+              title: "資料夾無法編輯 AltText / Caption",
+              position: "top-end",
+              timer: 1500,
+              showConfirmButton: false
+            });
+            return;
+          }
+
+          const fileId = rowData.fileId || rowData.FileId || rowData.id || rowData.Id;
+          const originalValue = cell.data() || "";
+          const td = $(this);
+          if (td.find('input').length > 0) return; // 防止重複
+
+          // 🔒暫停 DataTables 的 redraw（避免 removeChild 衝突）
+          $.fn.dataTable.ext.errMode = 'none';
+          table.settings()[0].oFeatures.bSort = false;
+
+          const $input = $(`<input type="text" class="form-control form-control-sm"
+            style="width:100%;border:none;outline:none;padding:2px 4px;" value="${originalValue}">`);
+          td.empty().append($input);
+          $input.trigger("focus").select();
+
+          let isSaving = false;
+
+          async function saveValue(newValue) {
+            try {
+              const res = await fetch("/SYS/Images/UpdateFileMetaField", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ FileId: fileId, Field: column, Value: newValue })
+              });
+              const result = await res.json();
+              if (!result.success) throw new Error(result.message || "更新失敗");
+              cell.data(newValue);
+              td.text(newValue);
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: `${column} 已更新`,
+                showConfirmButton: false,
+                timer: 1200
+              });
+            } catch (err) {
+              td.text(originalValue);
+              Swal.fire({ icon: "error", title: "更新失敗", text: err.message });
+            } finally {
+              isSaving = false;
+              table.settings()[0].oFeatures.bSort = true;
+            }
+          }
+
+          $input.on("keydown", async function (e) {
+            if (e.key === "Escape") {
+              td.text(originalValue);
+              return;
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (isSaving) return;
+              isSaving = true;
+              const newValue = $(this).val().trim();
+              td.text("儲存中...");
+              await saveValue(newValue);
+            }
+          });
+
+          $input.on("blur", function () {
+            if (isSaving) return;
+            const val = $(this).val().trim();
+            td.text(val || originalValue);
+          });
+        });
+
+        // === 把跳頁欄位移到分頁器左邊 ===
+        table.on('init', function () {
+          const $paginate = $('#fileTable_paginate');
+          const $goto = $('.goto-wrapper');
+
+          if ($paginate.length && $goto.length) {
+            // 插入到分頁器的最後面
+            $paginate.append($goto.removeClass('d-none'));
+            $goto.css({
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginLeft: '60px'
+            });
+          }
+        });
+
+        // DataTable 重繪後補載圖片
+        table.on('draw', async () => {
+            const thumbs = document.querySelectorAll('.image-thumb[data-url]');
+            for (const img of thumbs) {
+                const url = img.dataset.url;
+                if (!url) continue;
+
+                // YouTube 圖片：靜默檢查
+                if (url.includes("img.youtube.com/vi/")) {
+                    const videoId = url.split("/vi/")[1]?.split("/")[0];
+                    const validUrl = await getValidYoutubeThumb(videoId);
+                    img.src = validUrl;
+                }
+                // 一般圖片：直接載入（用 onerror fallback）
+                else {
+                    img.src = url;
+                }
+            }
+
+            $('#selectAll').prop('checked', false); // 重新繪製後取消全選
+        });
+
+        $('#btnGoto').on('click', function () {
+          const pageInput = parseInt($('#gotoPage').val(), 10);
+          if (isNaN(pageInput) || pageInput < 1) {
+            alert('請輸入有效的頁碼');
+            return;
+          }
+
+          // 每頁筆數
+          const pageLength = table.page.len();
+
+          // 計算起始筆數
+          const start = (pageInput - 1) * pageLength;
+
+          // 直接修改 DataTables 的設定（用 draw 重新載入）
+          table.settings()[0]._iDisplayStart = start;
+
+          // 重新呼叫伺服器端 API
+          table.ajax.reload(null, false);
+
+          // 自動捲回頂部（可選）
+          $('html, body').animate({ scrollTop: 0 }, 300);
+        });
+
+        // 圖片 + 資料夾名稱渲染
+        function renderName(data, type, row) {
+            const isFolder = row.isFolder || row.IsFolder;
+            const url = row.url || row.fileUrl || row.FileUrl || null;
+
+            if (isFolder) {
+                return `<i class="bi bi-folder-fill text-warning me-2"></i>
+                        <a href="#" class="folder-link text-decoration-none" data-id="${row.id || row.folderId}">${data}</a>`;
+            }
+
+            const placeholder = "/images/No-Image.svg";
+
+            if (row.mimeType?.startsWith("image/") || (url && url.includes("img.youtube.com/vi/"))) {
+                return `<img src="${placeholder}"
+                             onerror="this.onerror=null;this.src='${placeholder}'"
+                             class="thumb me-2 image-thumb"
+                             data-url="${url}" /> ${data}`;
+            }
+
+            return `<i class="bi bi-file-earmark text-secondary me-2"></i>${data}`;
+        }
+
+        // 麵包屑
+        function renderBreadcrumb(list) {
+          const $bc = $('#breadcrumb').empty();
+          $bc.append(`<li class="breadcrumb-item"><a href="#" class="crumb" data-id="0">根目錄</a></li>`);
+
+          if (!Array.isArray(list) || list.length === 0) return;
+
+          list.forEach((p, i) => {
+            // 同時支援 folderName / FolderName
+            const name = p.folderName ?? p.FolderName;
+            const id = p.folderId ?? p.FolderId;
+            if (!name) return;
+
+            const isLast = i === list.length - 1;
+            $bc.append(`<li class="breadcrumb-item ${isLast ? 'active' : ''}">
+              ${isLast ? name : `<a href="#" class="crumb" data-id="${id}">${name}</a>`}
+            </li>`);
+          });
+        }
+
+        // 點擊資料夾
+        $(document).on("click", ".folder-link", async function (e) {
+            e.preventDefault();
+            const id = $(this).data("id");
+            const name = $(this).text();
+            if (!id) return;
+
+            breadcrumbStack.push({ id, name });
+            await loadFolder(id);
+        });
+
+        // 點擊麵包屑
+        $(document).on("click", ".crumb", async function (e) {
+          e.preventDefault();
+          const id = $(this).data("id");
+
+          // 根目錄特例
+          if (id === 0) {
+            breadcrumbStack = [{ id: null, name: "根目錄" }];
+            await loadFolder(null);
+            return;
+          }
+
+          breadcrumbStack = breadcrumbStack.slice(0, breadcrumbStack.findIndex(x => x.id === id) + 1);
+          await loadFolder(id);
+        });
+
+        // 點擊麵包屑（含根目錄）
+        async function loadFolder(folderId = null, keyword = "") {
+            const $table = $('#fileTable');
+            $table.addClass("opacity-50"); // 半透明效果
+            $("#btnSearch").prop("disabled", true).html('<i class="bi bi-hourglass-split"></i> 載入中...');
+
+            try {
+                // 改成呼叫新的統一 API
+                const url = `/SYS/Images/GetPagedFolderItems?parentId=${folderId ?? ''}&keyword=${encodeURIComponent(keyword)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                // 根據是否有 data.items (非 DataTables 模式) 或 data.data (DataTables 模式)
+                let items = [];
+                if (Array.isArray(data.data)) {
+                  items = data.data;
+                } else if (data.data && Array.isArray(data.data.items)) {
+                  items = data.data.items;
+                }
+
+
+                // === 分開資料夾與檔案 ===
+                const folders = items.filter(x => x.isFolder);
+                const files = items.filter(x => !x.isFolder);
+                const combined = [...folders, ...files];
+
+                // === 更新 DataTable ===
+                table.clear().rows.add(combined).draw();
+
+                // === 更新麵包屑 ===
+                if (data.breadcrumb)
+                    renderBreadcrumb(data.breadcrumb);
+            } catch (err) {
+                console.error("載入資料夾失敗：", err);
+                Swal.fire("錯誤", "載入資料夾時發生錯誤", "error");
+            } finally {
+                $table.removeClass("opacity-50");
+                $("#btnSearch").prop("disabled", false).html('<i class="bi bi-search"></i> 搜尋');
+            }
+        }
+
+        $("#previewImg").on("error", function () {
+            $(this).attr("src", "/images/No-Image.svg");
+        });
+
+        // 搜尋
+        $("#btnSearch").click(() => {
+            table.ajax.reload(null, false); // 第二參數 false => 保留目前頁碼
+        });
+
+        $("#searchBox").on("keypress", function (e) {
+            if (e.which === 13) $("#btnSearch").click();
+        });
+
+        // 功能按鈕
+
+        // 全選 / 全不選
+        $('#selectAll').on('change', function () {
+            const isChecked = this.checked;
+            $('.row-select').prop('checked', isChecked);
+        });
+
+        // 單筆選擇時，若全部勾選則同步全選
+        $(document).on('change', '.row-select', function () {
+          const all = $('.row-select').length;
+          const checked = $('.row-select:checked').length;
+          $('#selectAll').prop('checked', all > 0 && all === checked);
+        });
+
+        // 取得選取的 ID 陣列
+        function getSelectedIds() {
+            return $('.row-select:checked').map(function () {
+                return $(this).val();
+            }).get();
+        }
+
+        // 啟用 / 停用
+        $('#btnEnable, #btnDisable').on('click', async function () {
+            const selectedRows = table.rows('.selected, tr').data().toArray().length
+                ? table.rows('.selected, tr').data().toArray()
+                : table.rows().data().toArray();
+
+            // 改用從 DOM 抓 checked 的 row
+            const checkedRows = $('.row-select:checked').map(function () {
+                return table.row($(this).closest('tr')).data();
+            }).get();
+
+            if (checkedRows.length === 0) {
+                Swal.fire({ icon: 'warning', title: '請先選取項目' });
+                return;
+            }
+
+            // 過濾掉資料夾，只保留檔案
+            const fileRows = checkedRows.filter(r => !(r.isFolder || r.IsFolder));
+
+            if (fileRows.length === 0) {
+                Swal.fire({ icon: 'info', title: '沒有可啟用或停用的檔案', text: '資料夾不支援啟用/停用功能。' });
+                return;
+            }
+
+            const enable = this.id === 'btnEnable';
+            const confirmText = `確定要${enable ? '啟用' : '停用'}這 ${fileRows.length} 筆檔案嗎？`;
+
+            const confirmResult = await Swal.fire({
+                icon: 'question',
+                title: enable ? '啟用檔案' : '停用檔案',
+                text: confirmText,
+                showCancelButton: true,
+                confirmButtonText: enable ? '啟用' : '停用',
+                cancelButtonText: '取消'
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            const ids = fileRows.map(f => f.id || f.Id || f.fileId || f.FileId);
+
+            try {
+                const res = await fetch('/SYS/Images/BatchSetActive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids, isActive: enable })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '操作完成',
+                        text: `成功${enable ? '啟用' : '停用'} ${fileRows.length} 筆檔案`
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '操作失敗',
+                        text: result.message || '伺服器回傳錯誤'
+                    });
+                }
+            } catch (err) {
+                console.error('❌ 更新狀態錯誤：', err);
+                Swal.fire({ icon: 'error', title: '錯誤', text: '無法連線至伺服器。' });
+            } finally {
+                table.ajax.reload(null, false);
+            }
+        });
+
+        // 點擊編輯圖片資訊
+        $(document).on('click', '.btn-edit', async function () {
+            const id = $(this).data('id');
+            const rowData = table.row($(this).closest("tr")).data(); // 取得當前列的資料
+
+            // 如果是資料夾：改用 SweetAlert2 修改名稱
+            if (rowData.isFolder || rowData.IsFolder) {
+                const { value: newName } = await Swal.fire({
+                    title: "重新命名資料夾",
+                    input: "text",
+                    inputValue: rowData.name,
+                    inputPlaceholder: "輸入新的資料夾名稱",
+                    showCancelButton: true,
+                    confirmButtonText: "儲存",
+                    cancelButtonText: "取消",
+                    preConfirm: (value) => {
+                        if (!value.trim()) {
+                            Swal.showValidationMessage("請輸入資料夾名稱");
+                            return false;
+                        }
+                        return value.trim();
+                    }
+                });
+
+                if (!newName) return;
+
+                try {
+                    const res = await fetch("/SYS/Images/RenameFolder", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ folderId: id, folderName: newName })
+                    });
+
+                    const result = await res.json();
+                    if (result.success) {
+                        Swal.fire({ icon: "success", title: "修改成功", text: "資料夾名稱已更新" });
+                        table.ajax.reload(null, false);
+                    } else {
+                        Swal.fire({ icon: "error", title: "修改失敗", text: result.message });
+                    }
+                } catch (err) {
+                    Swal.fire({ icon: "error", title: "錯誤", text: err.message || "無法連線至伺服器" });
+                }
+
+                return; // 不執行後面的圖片編輯邏輯
+            }
+
+            // 如果是檔案 → 呼叫原本圖片資訊邏輯
+            try {
+                const res = await fetch(`${window.location.origin}/SYS/Images/GetFileDetail?id=${id}`);
+                const raw = await res.json();
+
+                if (!res.ok || raw.success === false) {
+                    throw new Error(raw.message || "伺服器回傳錯誤");
+                }
+
+                const data = raw.data || raw;
+                await openImageModal(data, "#imgMetaModal");
+            } catch (err) {
+                console.error("❌ 載入圖片資訊錯誤:", err);
+                Swal.fire({
+                    icon: "error",
+                    title: "載入失敗",
+                    text: "無法載入圖片資訊，請稍後再試。"
+                });
+            }
+        });
+
+        // 刪除
+        $('#btnDelete').on('click', async function () {
+          const ids = getSelectedIds();
+          if (ids.length === 0) {
+            Swal.fire({ icon: "warning", title: "請先選取要刪除的項目" });
+            return;
+          }
+
+          // 分開出資料夾與檔案
+          const rows = ids.map(id => table.row($(`.row-select[value="${id}"]`).closest('tr')).data());
+          const folderRows = rows.filter(r => r.isFolder || r.IsFolder);
+          const fileRows = rows.filter(r => !(r.isFolder || r.IsFolder));
+
+          if (folderRows.length === 0 && fileRows.length === 0) {
+            Swal.fire({ icon: "info", title: "沒有可刪除的項目" });
+            return;
+          }
+
+          // 二次確認
+          const confirm = await Swal.fire({
+            icon: "warning",
+            title: "確定要刪除？",
+            html: `
+              <div class="text-start">
+                將刪除以下項目：<br>
+                <b>${folderRows.length}</b> 個資料夾（含其內容）<br>
+                <b>${fileRows.length}</b> 個檔案（含雲端圖片）
+              </div>`,
+            showCancelButton: true,
+            confirmButtonText: "確定刪除",
+            cancelButtonText: "取消",
+            reverseButtons: true
+          });
+
+          if (!confirm.isConfirmed) return;
+
+          try {
+            // === 1 刪除資料夾 ===
+            let folderDeleted = 0;
+            let folderBlockMessages = [];
+
+            for (const folder of folderRows) {
+              const folderId = folder.id || folder.FolderId;
+              const res = await fetch("/SYS/Images/DeleteFolder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify( folderId )
+              });
+              const result = await res.json();
+
+              if (result.success) {
+                folderDeleted++;
+              } else {
+                folderBlockMessages.push(result.message || `資料夾(ID:${folderId}) 刪除失敗`);
+              }
+            }
+
+            // === 2️ 刪除檔案 === (原本邏輯不變)
+            let fileDeleted = 0;
+            if (fileRows.length > 0) {
+              const fileIds = fileRows.map(f => f.id || f.FileId);
+              const res = await fetch("/SYS/Images/BatchDelete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fileIds)
+              });
+              const result = await res.json();
+              if (result.success) {
+                fileDeleted = result.data?.softDeleted?.length || 0;
+              } else {
+                folderBlockMessages.push(result.message || "部分檔案刪除失敗");
+              }
+            }
+
+            // === 3️⃣ 顯示結果 ===
+            let htmlMsg = `
+              <div class="text-start">
+                已刪除資料夾：${folderDeleted} 個<br/>
+                已刪除檔案：${fileDeleted} 個
+              </div>
+            `;
+
+            if (folderBlockMessages.length > 0) {
+              htmlMsg += `<hr><div class="text-start text-danger" style="font-size:0.9rem;">`
+              + folderBlockMessages.map(m => `• ${m}`).join("<br>")
+              + `</div>`;
+            }
+
+            Swal.fire({
+              icon: folderBlockMessages.length > 0 ? "warning" : "success",
+              title: folderBlockMessages.length > 0 ? "部分未能刪除" : "刪除完成",
+              html: htmlMsg
+            });
+
+            table.ajax.reload(null, false);
+          } catch (err) {
+            console.error("❌ 刪除發生錯誤：", err);
+            Swal.fire({
+              icon: "error",
+              title: "系統錯誤",
+              text: "無法連線至伺服器或伺服器發生未預期錯誤。"
+            });
+          }
+        });
+
+        // === 新增資料夾 ===
+        $('#btnAddFolder').on('click', async function () {
+          const currentFolderId = breadcrumbStack.at(-1)?.id || null;
+
+          const treeResult = await openFolderTreeSelector({
+            title: "選擇父層資料夾",
+            apiUrl: "/SYS/Images/GetTreeData",
+            defaultId: currentFolderId,
+          });
+
+          if (!treeResult.isConfirmed) return;
+          const parentId = treeResult.value;
+
+          const { value: folderName } = await Swal.fire({
+            title: "輸入新資料夾名稱",
+            input: "text",
+            inputPlaceholder: "例如：2025行銷圖庫",
+            showCancelButton: true,
+          });
+
+          if (!folderName) return;
+
+          const res = await fetch("/SYS/Images/CreateFolder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folderName, parentId }),
+          });
+
+          const result = await res.json();
+
+          if (result.success) {
+            Swal.fire({ icon: "success", title: "建立成功" });
+
+            // 若目前頁面就是該父層，就直接刷新
+            const currentFolderId = breadcrumbStack.at(-1)?.id ?? null;
+            if (parentId === currentFolderId) {
+              await loadFolder(parentId);
+            } else {
+              // 若在其他頁面建立，則導航到父層（不自動切入新資料夾）
+              await navigateToFolder(parentId);
+            }
+          } else {
+            Swal.fire({ icon: "error", title: "建立失敗", text: result.message });
+          }
+        });
+
+        // 共用轉跳資料夾方法
+        async function navigateToFolder(folderId) {
+          try {
+            const res = await fetch(`/SYS/Images/GetBreadcrumbPath?folderId=${folderId}`);
+            const breadcrumb = await res.json();
+
+            breadcrumbStack = breadcrumb.map(b => ({
+              id: b.folderId ?? b.FolderId,
+              name: b.folderName ?? b.FolderName
+            }));
+
+            renderBreadcrumb(breadcrumbStack);
+            await loadFolder(folderId);
+          } catch (err) {
+            console.error("❌ 無法更新麵包屑：", err);
+          }
+        }
+
+        // === 清理 Cloudinary 未使用檔案 ===
+        $('#btnCleanOrphanFiles').on('click', async function () {
+            const confirmResult = await Swal.fire({
+                icon: 'warning',
+                title: '清理 Cloudinary 未使用檔案',
+                text: '此操作會刪除 Cloudinary 上資料庫未登記的所有檔案，確定要繼續嗎？',
+                showCancelButton: true,
+                confirmButtonText: '確定清理',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#dc3545',
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            try {
+                const res = await fetch('/SYS/Images/CleanCloudinaryOrphans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '清理完成',
+                        html: `
+                            已檢查 ${result.totalChecked} 筆<br>
+                            成功刪除 ${result.deletedCount} 筆
+                        `,
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '清理失敗',
+                        text: result.message || '伺服器回傳錯誤',
+                    });
+                }
+            } catch (err) {
+                console.error('❌ 清理時發生錯誤:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: '連線錯誤',
+                    text: '無法連線至伺服器，請稍後再試。',
+                });
+            }
+        });
+
+        // === 當圖片資訊視窗關閉時，自動刷新 DataTable ===
+        document.getElementById('imgMetaModal').addEventListener('hidden.bs.modal', function () {
+            if (window.table) {
+                table.ajax.reload(null, false); // false = 保留目前頁碼
+            }
+        });
+
+        // 初始化
+        loadFolder();
+    </script>
+}

@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.Abstractions;
+﻿using System.Security.Claims;
+using tHerdBackend.Core.Abstractions;
 
 namespace tHerdBackend.SharedApi.Infrastructure.Auth
 {
@@ -14,18 +15,13 @@ namespace tHerdBackend.SharedApi.Infrastructure.Auth
             _http = http;
         }
 
-        private string? GetClaim(string type)
-        {
-            return _http.HttpContext?.User?.FindFirst(type)?.Value;
-        }
+		private ClaimsPrincipal? P => _http.HttpContext?.User;
+		private string? Get(string t) => P?.FindFirst(t)?.Value;
 
-        public bool IsAuthenticated => _http.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
-
-        public string Id => GetClaim("sub") ?? "0"; // JWT 的 subject (sub)
-        public string? Email => GetClaim("email");
-        public string? FullName => GetClaim("name");
-
-        // 因為前台沒有 Identity，不會有 UserNumberId，固定回傳 0。
-        public int UserNumberId => 0;
-    }
+		public bool IsAuthenticated => P?.Identity?.IsAuthenticated ?? false;
+		public string Id => Get("sub") ?? "0";
+		public string? Email => Get("email");
+		public string? FullName => Get("name");
+		public int UserNumberId => int.TryParse(Get("user_number_id"), out var n) ? n : 0;
+	}
 }

@@ -1,0 +1,95 @@
+﻿@* 品牌版面版本管理頁面 (_BrandLayoutVersionIndexPartial.cshtml) - 靜態 HTML 結構版 *@
+@model tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels.BrandLayoutVersionsViewModel
+
+@* 引入必要的 URL 輔助函式 *@
+@{
+    // 這裡的 URL 變數主要用於生成按鈕的 href 或 data 屬性，但我們將在 Index.cshtml 中重新生成
+    // 為了簡潔和避免混淆，這裡只計算一次 indexUrl 的基礎，方便 JS 讀取。
+    var indexUrl = Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = Model.BrandId });
+}
+
+@* 【關鍵】加入隱藏欄位，供 Index.cshtml 的 JS 讀取 BrandId、BrandName *@
+<input type="hidden" id="currentBrandId" value="@Model.BrandId" />
+<input type="hidden" id="currentBrandName" value="@Model.BrandName" /> @* 增加 Name 獲取，更穩定 *@
+
+
+<div class="brand-layout-version-index px-3">
+    @* <h4 class="mb-4">品牌版面版本管理：@Model.BrandName (@Model.BrandId)</h4> *@
+    <h5 class="mb-4">品牌ID：@Model.BrandId、品牌名稱：@Model.BrandName</h5>
+
+    <div class="d-flex justify-content mb-3">
+        @* 【操作按鈕】ID: addNewVersionBtn - 依靠 Index.cshtml 的事件委派 *@
+        <button id="addNewVersionBtn" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> 新增版面版本
+        </button>
+        @if (!Model.Layouts.Any())
+        {
+            <p class="text-muted fst-italic ps-5 pt-2">目前沒有任何版面設定紀錄。</p>
+        }
+    </div>
+
+    @if (Model.Layouts.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>狀態</th>
+                        <th>版本號 / ID</th>
+                        <th>最後異動時間</th>
+                        @* <th>異動人員</th> *@
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var layout in Model.Layouts)
+                    {
+                        var statusClass = layout.IsActive ? "text-success fw-bold" : "text-muted";
+                        var statusText = layout.IsActive ? "✅ 啟用中" : "❌ 停用";
+                        var isCurrent = layout.IsActive ? "table-success" : "";
+
+                        <tr class="@isCurrent" data-layout-id="@layout.LayoutId">
+                            <td class="@statusClass">@statusText</td>
+                            <td>
+                                @(layout.LayoutVersion ?? "未命名版本") 
+                                <span class="text-muted small">(ID: @layout.LayoutId)</span>
+                            </td>
+                            <td>@(layout.RevisedDate?.ToString("yyyy/MM/dd HH:mm") ?? layout.CreatedDate.ToString("yyyy/MM/dd HH:mm"))</td>
+                            @* <td>@(layout.Reviser)</td> 假設 Reviser/Creator ID 在 View 中有對應的名稱查找 *@
+                            <td>
+                                @* 編輯按鈕：依靠 Index.cshtml 的事件委派 *@
+                                <button class="btn btn-sm btn-outline-info edit-layout-btn me-2"  
+                                                            data-layout-id="@layout.LayoutId"  
+                                                            title="編輯此版本">
+                                    <i class="fa-regular fa-pen-to-square"></i> 編輯
+                                </button>
+
+                                @* 啟用按鈕：依靠 Index.cshtml 的事件委派 *@
+                                @if (!layout.IsActive)
+                                {
+                                    <button class="btn btn-sm btn-outline-success activate-btn me-2"  
+                                                                  data-layout-id="@layout.LayoutId"  
+                                                                  title="設為啟用版本">
+                                        <i class="fa-solid fa-power-off"></i> 啟用
+                                    </button>
+                                }
+
+                                @* 刪除/停用按鈕：依靠 Index.cshtml 的事件委派 *@
+                                @* @if (!layout.IsActive)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger delete-btn"  
+                                                                  data-layout-id="@layout.LayoutId"  
+                                                                  title="移除紀錄">
+                                        <i class="fa-solid fa-trash-can"></i> 刪除
+                                    </button>
+                                } *@
+                            </td>
+                        </tr>
+                        @* 如果您需要更細緻的 LayoutDto，請確保在 Service 層進行了 DTO 映射 *@
+                        @* 目前假設 LayoutId, LayoutVersion, IsActive 等屬性存在於 BrandLayoutVersionDto 中 *@
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

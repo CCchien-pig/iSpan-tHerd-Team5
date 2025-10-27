@@ -7,12 +7,19 @@
 
 .main-color-green {
   background: linear-gradient(135deg, rgb(0, 112, 131), rgb(0, 112, 131)) !important;
+  color:rgb(248, 249, 250)!important
 }
 .main-color-lightgreen {
   background: rgb(77, 180, 193) !important;
+  color:rgb(0, 112, 131)!important
+}
+
+.main-color-cyanblue {
+  background: rgb(0, 147, 171) !important;
 }
 .main-color-white {
   background: linear-gradient(90deg, rgb(248, 249, 250), rgb(248, 249, 250)) !important;
+  color:rgb(0, 112, 131)!important
 }
 
 .main-color-white-text {
@@ -152,6 +159,7 @@
     0 4px 14px rgba(0, 0, 0, 0.3),
     inset 0 2px 4px rgba(255, 255, 255, 0.4),
     inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+    color:rgb(248,249,250);
 }
 
 /* 🪄 點擊時壓下效果 */
@@ -193,17 +201,25 @@
 
 
 /* 覆蓋bs-primary */
+/* 🟩 一般狀態 */
+.btn-primary,
 .btn-outline-primary {
   color: rgb(0, 112, 131);
+  background-color: transparent;
   border-color: rgb(255, 255, 255);
 }
 
+/* 🟡 hover 狀態 */
+.btn-primary:hover,
 .btn-outline-primary:hover {
   color: #fff;
-  background-color: rgb(0, 112, 131);
-  border-color: rgb(0, 112, 131);
+  background-color: rgb(77, 180, 193);
+  border-color: rgb(77, 180, 193);
 }
 
+/* 🟠 focus / active 狀態 */
+.btn-primary:focus,
+.btn-primary:active,
 .btn-outline-primary:focus,
 .btn-outline-primary:active {
   color: #fff;
@@ -212,8 +228,14 @@
   box-shadow: 0 0 0 0.25rem rgba(0, 112, 131, 0.4);
 }
 
+/* ⚪ disabled 狀態 */
+.btn-primary.disabled,
+.btn-primary:disabled,
 .btn-outline-primary.disabled,
 .btn-outline-primary:disabled {
   color: rgb(0, 112, 131);
   background-color: transparent;
+  border-color: rgb(255, 255, 255);
+  opacity: 0.65;
+  /* Bootstrap 預設 disabled 透明度 */
 }

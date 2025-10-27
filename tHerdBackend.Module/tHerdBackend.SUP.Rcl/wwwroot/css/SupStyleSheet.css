@@ -29,8 +29,8 @@
 
     /* ====== 表頭 ====== */
     .table thead th {
-/*        background: linear-gradient(135deg, #4a90e2, #007bff);*/
-/*        background-color:#f9fbff;*/
+        /*        background: linear-gradient(135deg, #4a90e2, #007bff);*/
+        /*        background-color:#f9fbff;*/
         color: #2c3e50;
         font-weight: 600;
         text-align: center;
@@ -42,11 +42,11 @@
     }
 
     /* ====== 奇偶行條紋 ====== */
-    .table tbody tr:nth-child(even) td{
+    .table tbody tr:nth-child(even) td {
         background-color: #fff;
     }
 
-    .table tbody tr:nth-child(odd) td{
+    .table tbody tr:nth-child(odd) td {
         background-color: #f9f4fc;
     }
 
@@ -56,88 +56,253 @@
         color: #fff !important;
         transition: background-color 0.2s ease;
     }
-/*        background-color: #e6f0ff !important;*/
 
-#stockBatchTable {
-    border-collapse: separate !important;
-    border-spacing: 0;
-    border: 1px solid #e5e9f0;
-    border-top-left-radius: 0; /* 表格上方左直角 */
-    border-top-right-radius: 0; /* 表格上方右直角 */
-    border-bottom-left-radius: 0.75rem !important; /* 表格下方左圓角 */
-    border-bottom-right-radius: 0.75rem !important; /* 表格下方右圓角 */
-    overflow: hidden;
-    background-clip: padding-box;
+    .table td,
+    .table th {
+        vertical-align: middle !important;
+        text-align: center;
+    }
+
+/* 展開列 hover 背景色 */
+#logisticsTable tbody tr[data-dt-row]:hover td {
+    background-color: #ffffff !important;
+    color: #333;
+    transition: background-color 0.2s ease;
 }
 
 
+/*#stockBatchTable {
+    border-collapse: separate !important;
+    border-spacing: 0;
+    border: 1px solid #e5e9f0;
+    border-top-left-radius: 0;*/ /* 表格上方左直角 */
+/*border-top-right-radius: 0;*/ /* 表格上方右直角 */
+/*border-bottom-left-radius: 0.75rem !important;*/ /* 表格下方左圓角 */
+/*border-bottom-right-radius: 0.75rem !important;*/ /* 表格下方右圓角 */
+/*overflow: hidden;
+    background-clip: padding-box;
+}*/
 
-    /* ====== 供應商名稱 & 聯絡人 ====== */
-    #supplierTable td:nth-child(1) {
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    #supplierTable td:nth-child(2) {
-        color: #2c3e50;
-    }
+/* ====== 供應商名稱 & 聯絡人 ====== */
+#supplierTable td:nth-child(1) {
+    font-weight: 600;
+    color: #2c3e50;
+}
 
-    /* ====== 電話 & Email ====== */
-    #supplierTable td:nth-child(3),
-    #supplierTable td:nth-child(4) { 
+#supplierTable td:nth-child(2) {
+    color: #2c3e50;
+}
+
+/* ====== 電話 & Email ====== */
+#supplierTable td:nth-child(3),
+#supplierTable td:nth-child(4) {
     /* text-align: center;*/
-        font-family: monospace;
-        color: #555;
+    font-family: monospace;
+    color: #555;
+}
+
+
+/* ====== 啟用 switch 置中 ====== */
+#supplierTable td .form-check,
+.table td .form-check {
+    display: flex;
+    justify-content: center;
+}
+
+#supplierTable .form-check-input,
+.table td .form-check-input {
+    cursor: pointer;
+    width: 2.5rem;
+    height: 1.2rem;
+}
+
+/* 取消被選中時預設的焦點外框 */
+input[type='checkbox']:focus,
+input[type='radio']:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+#brandTable .discountStatus :checked {
+    background-color: #ffc107;
+    border-color: #ffe596;
+}
+
+#brandTable .bannerStatus :checked {
+    background-color: #64e9a6;
+    border-color: #82fdbf;
+}
+
+#supplierTable .form-check-input:checked,
+.table td .form-check-input:checked {
+    background-color: #4eb7d6;
+    border-color: #77d2ed;
+}
+
+/* ====== 操作按鈕 ====== */
+#supplierTable .inventory-btn,
+#brandTable .discount-btn {
+    background-color: #fff8e1;
+    border: 1px solid #f0c14b;
+    font-family: monospace;
+    color: #dca91e;
+}
+
+    #supplierTable .inventory-btn:hover,
+    #brandTable .discount-btn:hover {
+        background-color: #ffa900ff;
+        color: #fff;
     }
 
-
-    /* ====== 啟用 switch 置中 ====== */
-    #supplierTable td .form-check {
-        display: flex;
-        justify-content: center;
-    }
-
-    #supplierTable .form-check-input {
-        cursor: pointer;
-        width: 2.5rem;
-        height: 1.2rem;
-    }
-
-        #supplierTable .form-check-input:checked {
-            background-color: #4eb7d6;
-            border-color: #4eb7d6;
+        #supplierTable .inventory-btn:hover svg,
+        #brandTable .discount-btn:hover svg {
+            color: #fff !important;
         }
 
-    /* ====== 操作按鈕 ====== */
-    #supplierTable .inventory-btn {
-        background-color: #fff8e1;
-        border: 1px solid #f0c14b;
-        font-family: monospace;
-        color: #dca91e;
+    #brandTable .discount-btn svg {
+        /*        height: 1em;
+        width: 1em;*/
+        vertical-align: middle;
+        width: 17px;
+        height: 17px
     }
 
-        #supplierTable .inventory-btn:hover {
-            background-color: #ffd04dbe;
-        }
+#supplierTable .details-btn:hover svg,
+#brandTable .details-btn:hover svg {
+    transform: scale(1.3);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
 
-    #supplierTable .edit-btn {
-        background-color: #f5f0ff;
+#stockBatchTable .brand-btn:hover svg,
+#brandTable .supplier-btn:hover svg {
+    transform: scale(1.3);
+    transition: transform 0.2s ease, color 0.2s ease;
+    color: azure !important;
+}
+
+#supplierTable tr:hover .details-btn svg,
+#brandTable tr:hover .details-btn svg {
+    color: #89ffef !important;
+}
+
+#brandTable tr:hover .supplier-btn svg,
+#stockBatchTable tr:hover .brand-btn svg {
+    color: #88f2fd !important;
+}
+
+#logisticsTable tbody tr:hover > td.dt-control svg.fa-plus {
+    color: #88f2fd !important;
+}
+
+#stockBatchTable .edit-stock-btn,
+#historyTable .stock-text-btn,
+#logisticsTable .edit-btn,
+#supplierTable .edit-btn,
+#brandTable .layout-edit-btn,
+#brandTable .edit-btn {
+    background-color: #f5f0ff;
+    border: 1px solid #ac99ff;
+    color: #9073e8;
+}
+
+    #stockBatchTable .edit-stock-btn:hover,
+    #historyTable .stock-text-btn:hover,
+    #logisticsTable .edit-btn:hover,
+    #supplierTable .edit-btn:hover,
+    #brandTable .layout-edit-btn:hover,
+    #brandTable .edit-btn:hover {
+        background-color: #ded2fc;
         border: 1px solid #c3b8f3;
-        color: #9073e8;
     }
 
-        #supplierTable .edit-btn:hover {
-            background-color: #ded2fc;
+        #stockBatchTable .edit-stock-btn:hover svg,
+        #historyTable .stock-text-btn:hover svg,
+        #logisticsTable .edit-btn:hover svg,
+        #supplierTable .edit-btn:hover svg,
+        #brandTable .layout-edit-btn:hover svg,
+        #brandTable .edit-btn:hover svg {
+            color: #9700a2 !important;
         }
 
-    #supplierTable .delete-btn {
-        background-color: #f8f9fa;
-        border: 1px solid #adb5bd;
-        color: #6688b7;
+
+#stockBatchTable .stock-history-btn,
+#supplierTable .brand-btn,
+#logisticsTable .history-btn,
+#logisticsTable .delete-btn,
+#supplierTable .delete-btn,
+#brandTable .delete-btn {
+    background-color: #f8f9fa;
+    border: 1px solid #adb5bd;
+    color: #084496;
+}
+
+    #stockBatchTable .stock-history-btn:hover,
+    #supplierTable .brand-btn:hover,
+    #logisticsTable .history-btn:hover,
+    #logisticsTable .delete-btn:hover,
+    #supplierTable .delete-btn:hover,
+    #brandTable .delete-btn:hover {
+        background-color: #cee1f4;
+        border: 1px solid #007bff;
     }
 
-        #supplierTable .delete-btn:hover {
-            background-color: #cee1f4;
-        }
+    #stockBatchTable .stock-history-btn svg,
+    #logisticsTable .history-btn svg,
+    #logisticsTable .delete-btn svg,
+    #supplierTable .delete-btn svg {
+        color: #084496;
+    }
+
+    #stockBatchTable .stock-history-btn:hover svg,
+    #supplierTable .brand-btn:hover svg,
+    #supplierTable .delete-btn:hover svg,
+    #logisticsTable .history-btn:hover svg,
+    #logisticsTable .delete-btn:hover svg,
+    #brandTable .delete-btn:hover svg {
+        color: #1c0e88 !important;
+    }
+
+
+/* ====== 跳轉品牌btn動畫 ====== */
+#brandListContainer .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+    #brandListContainer .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+    }
+
+/* ====== 品牌表格 無供應商文字 ====== */
+#brandTable .no-supplier {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+#brandTable tr:hover .no-supplier {
+    color: #ffc4c4;
+}
+
+/* ====== 品牌表格 折扣狀態文字 ====== */
+#brandTable tr:hover .text-success {
+    color: #6dff79 !important;
+}
+#brandTable tr:hover .text-warning {
+    color: #ffd061 !important;
+}
+#brandTable tr:hover .text-danger {
+    color: #ffc4e1 !important;
+}
+#brandTable .text-warning {
+    color: #ff8108 !important;
+}
+
+/* ====== 庫存表格 庫存量 ====== */
+#stockBatchTable tr:hover .stock-danger svg {
+    color: #ff707e !important;
+}
+#stockBatchTable tr:hover .stock-danger {
+    color: #ffb5bc !important;
+}
 
 /* ====== 控制元件: 顯示筆數 dropdown ====== */
 .dataTables_length select {
@@ -174,27 +339,27 @@
     text-align: center;
 }
 
-    /* 所有分頁按鈕 */
-    .dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button {
-        display: inline-block;
-        padding: 0.35rem 0.75rem;
-        margin: 0 0.15rem;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        background-color: #fff;
-        color: #007bff;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
+/* 所有分頁按鈕 */
+.dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    margin: 0 0.15rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    color: #007bff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
-        /* 當前頁 */
-        .dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button.current {
-            background-color: #0984d9; /* 藍底 */
-            color: #fff !important; /* 白字 */
-            border-color: #007bff;
-            font-weight: 600;
-        }
+    /* 當前頁 */
+    .dt-layout-row .dt-layout-cell.dt-layout-end .dt-paging .dt-paging-button.current {
+        background-color: #0984d9; /* 藍底 */
+        color: #fff !important; /* 白字 */
+        border-color: #007bff;
+        font-weight: 600;
+    }
 
 /* 全部按鈕 hover 淺藍 */
 button.dt-paging-button:not(:disabled):hover {
@@ -224,7 +389,7 @@ button.dt-paging-button.current:not(:disabled):hover {
 
 /* 修改 tooltip 背景色與文字顏色 */
 .tooltip-inner {
-    background-color: #4a90e2 !important; /* 深藍色背景 */
+    background-color: #68aaf7 !important; /* 深藍色背景 */
     color: #fff !important; /* 白色文字 */
     font-size: 0.85rem; /* 字體大小 */
     padding: 0.35rem 0.75rem; /* 內距 */
@@ -234,7 +399,7 @@ button.dt-paging-button.current:not(:disabled):hover {
 
 /* 修改 tooltip 背景色與文字顏色 */
 .tooltip {
-    --bs-tooltip-bg: #4a90e2; /* 深藍色背景，箭頭也會跟著 */
+    --bs-tooltip-bg: #68aaf7; /* 深藍色背景，箭頭也會跟著 */
     --bs-tooltip-color: #fff; /* 文字顏色 */
     font-size: 0.85rem;
 }
@@ -400,3 +565,4 @@ button.dt-paging-button.current:not(:disabled):hover {
         background-color: #a349a4 !important;
         box-shadow: none;
     }
+

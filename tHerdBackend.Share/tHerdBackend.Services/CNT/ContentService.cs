@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using tHerdBackend.Core.DTOs.CNT;
 using tHerdBackend.Core.Interfaces.CNT;
 using tHerdBackend.Infra.Repository.CNT;   // 為了使用推薦功能的 Repository 方法
 using tHerdBackend.Share.DTOs.CNT;
@@ -20,6 +21,15 @@ namespace tHerdBackend.Services.CNT
 		public ContentService(ICntQueryRepository repo)
 		{
 			_repo = repo;
+		}
+
+		/// <summary>
+		/// 取得所有文章分類（含文章數量）
+		/// </summary>
+		public async Task<IReadOnlyList<ArticleCategoryDto>> GetCategoriesAsync()
+		{
+			var result = await _repo.GetArticleCategoriesAsync();
+			return result.ToList();
 		}
 
 		/// <summary>
