@@ -875,6 +875,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			var hydratedBlocks = new List<BaseLayoutBlockDto>();
 			BrandLayoutDto? layoutToEdit = null;
 
+			// --- 編輯模式/新增模式 ---
 			if (layoutId.HasValue)
 			{
 				// =================================================
@@ -919,26 +920,6 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 					switch (blockSkeleton.Type.ToLower())
 					{
-						case "accordion":
-							// 使用新的通用服務 IContentService
-							var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
-
-							// 【核心修正】如果找不到內容，則跳過此區塊
-							if (accordionContent != null)
-							{
-								hydratedBlocks.Add(new BaseLayoutBlockDto
-								{
-									Id = uniqueId,
-									Type = "Accordion",
-									Props = accordionContent
-								});
-							}
-							else
-							{
-								Console.Error.WriteLine($"[Layout Hydrate] Accordion Content ID {blockSkeleton.ContentId} not found, skipping block.");
-							}
-							break;
-
 						case "banner":
 							// 【核心修正點】加入 Banner 的處理邏輯 使用新的通用服務 IContentService
 							var bannerContent = await _contentService.GetContentByIdAsync<BannerDto>(blockSkeleton.ContentId);
@@ -959,7 +940,43 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 							}
 							break;
 
-							// TODO: case "article": ...
+						case "accordion":
+							// 使用新的通用服務 IContentService
+							var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
+
+							// 【核心修正】如果找不到內容，則跳過此區塊
+							if (accordionContent != null)
+							{
+								hydratedBlocks.Add(new BaseLayoutBlockDto
+								{
+									Id = uniqueId,
+									Type = "Accordion",
+									Props = accordionContent
+								});
+							}
+							else
+							{
+								Console.Error.WriteLine($"[Layout Hydrate] Accordion Content ID {blockSkeleton.ContentId} not found, skipping block.");
+							}
+							break;
+
+						case "article":
+							// 【核心修正點】加入 Article 的處理邏輯
+							var articleContent = await _contentService.GetContentByIdAsync<BrandArticleDto>(blockSkeleton.ContentId);
+							if (articleContent != null)
+							{
+								hydratedBlocks.Add(new BaseLayoutBlockDto
+								{
+									Id = uniqueId,
+									Type = "Article",
+									Props = articleContent
+								});
+							}
+							else
+							{
+								Console.Error.WriteLine($"[Layout Hydrate] Article Content ID {blockSkeleton.ContentId} not found, skipping block.");
+							}
+							break;
 					}
 				}
 			}

@@ -307,7 +307,7 @@ namespace tHerdBackend.Services.SUP
 								break;
 						}
 					}
-					catch (System.Text.Json.JsonException ex)
+					catch (JsonException ex)
 					{
 						// 捕獲 JSON 轉換錯誤，記錄到 Console，並跳過此區塊
 						Console.Error.WriteLine($"[JSON CONFLICT] 無法解析區塊 {block.Type} (ID: {block.Id}) 的內容。錯誤: {ex.Message}");

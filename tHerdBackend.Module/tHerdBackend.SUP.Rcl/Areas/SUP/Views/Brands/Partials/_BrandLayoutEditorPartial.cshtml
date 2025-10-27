@@ -26,10 +26,11 @@
     <div id="component-palette" class="mb-3">
         <button @@click="addBlock('Banner')" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
         <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-primary me-2">新增 Accordion</button>
+        <button @@click="addBlock('Article')" class="btn btn-sm btn-outline-info me-2">新增 Article</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
     </div>
 
-    @* 【新增輸入框】綁定 v-model="layoutVersion" *@
+    @* 【新增版號輸入框】綁定 v-model="layoutVersion" *@
     <div class="input-group w-50 mb-3">
         <span class="input-group-text">版號 (必填)</span>
         <input type="text" class="form-control"
@@ -41,6 +42,7 @@
     <div id="layout-blocks-container">
         <div v-for="(block, index) in blocks" :key="block.id" class="draggable-block card mb-2">
 
+            @* 區塊header *@
             <div class="card-header block-header" @@click="toggleEdit(block.id)">
                 <i class="fa-solid fa-grip-vertical me-2"></i>
                 <strong class="me-2">
@@ -54,9 +56,10 @@
                 <i :class="['fa-solid', 'float-end', { 'fa-chevron-down': editingId !== block.id, 'fa-chevron-up': editingId === block.id }]"></i>
             </div>
 
+            @* 編輯區塊 *@
             <div v-if="editingId === block.id" class="card-body">
                 @* ================= Banner 區塊編輯 ================= *@
-                <div v-if="block.type === 'Banner'">
+                <template v-if="block.type === 'Banner'">
                     <h5>Banner 區塊編輯</h5>
 
                     @* 【新增】錯誤提示區塊 *@
@@ -103,10 +106,10 @@
                             <img :src="block.props.fileUrl" style="max-width: 100%; max-height: 150px; border: 1px solid #eee;" alt="圖片預覽" />
                         </div>
                     </div>
-                </div>
+                </template>
 
                 @* ================= Accordion 區塊編輯 ================= *@
-                <div v-if="block.type === 'Accordion'">
+                <template v-if="block.type === 'Accordion'">
                     @* 存回[SUP_BrandAccordionContent]表 *@
                     <h5>摺疊區塊編輯</h5>
                     <div class="mb-3">
@@ -126,10 +129,10 @@
                     @* 提醒：OrderSeq (順序) 將由區塊在列表中的位置決定，儲存時自動產生 *@
                     
                     @* TODO: 圖片選擇邏輯 (將選擇的 imgId 寫回 block.props.imgId) *@
-                </div>
+                </template>
 
-                @* ================= Article 區塊編輯 (新增) ================= *@
-                <div v-if="block.type === 'Article'">
+                @* ================= Article 區塊編輯 ================= *@
+                <template v-if="block.type === 'Article'">
                     <h5>品牌文章區塊編輯</h5>
                     <div class="mb-3">
                         <label class="form-label">文章標題</label>
@@ -137,11 +140,16 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">文章內容：</label>
-                        <textarea class="form-control" rows="8" v-model="block.props.content"></textarea>
+                        @* <textarea class="form-control" rows="8" v-model="block.props.content"></textarea> *@
+                        <textarea :id="'editor-' + block.id"></textarea>
                     </div>
-                </div>
+                    @* TODO: 文章圖片選擇邏輯 *@        
+                
+                </template>
 
+                @* 移除按鈕 *@
                 <button @@click="removeBlock(block.id)" class="btn btn-sm btn-danger mt-2">移除區塊</button>
+
             </div>
 
         </div>
@@ -168,7 +176,7 @@
     // ---------------------------------------------------------------------
     (function () {
         // 在局部作用域中安全地解構賦值
-        const { createApp, ref, onMounted, nextTick } = Vue;
+        const { createApp, ref, onMounted, nextTick, watch } = Vue;
 
         // 1. Razor 變數 (這些是靜態值，但在 IIFE 內被視為局部變數)
         const csrfToken = '@requestToken';
@@ -313,16 +321,16 @@
                     }
                     return null; // 驗證通過
                 }
-
+                
                 // 儲存版面配置
                 const saveLayout = async () => {
                     // 1. 版本號必填檢查
                     if (!layoutVersion.value) {
-                            Swal.fire('錯誤', '請輸入版型版本號。', 'warning');
-                            return;
+                        Swal.fire('錯誤', '請輸入版型版本號。', 'warning');
+                        return;
                     }
-                    
-                    // 2. 【核心修正】前端內容驗證
+
+                    // 2. 前端內容驗證
                     const validationError = validateBlocks(blocks.value);
                     if (validationError) {
                         Swal.fire('驗證失敗', validationError, 'warning');
@@ -330,21 +338,53 @@
                     }
 
                     isSaving.value = true;
-
-                    // 【修正 1】將 savedLayoutId 提升到 try 區塊的頂部
                     let savedLayoutId = null;
 
                     try {
+                        // =================================================================
+                        // 【核心修正點】數據淨化 (Data Sanitization)
+                        // =================================================================
+                        // 在 stringify 之前，創建一個乾淨的、只包含純數據的 blocks 副本
+                        const cleanBlocks = blocks.value.map(block => {
+                            return {
+                                id: block.id,
+                                type: block.type,
+                                // 只提取 props 中我們需要的欄位，確保它們是純粹的 JS 類型
+                                props: {
+                                    // 通用欄位
+                                    contentId: block.props.contentId || 0,
+                                    isActive: block.props.isActive,
+
+                                    // Accordion & Article 欄位
+                                    contentTitle: block.props.contentTitle,
+                                    content: block.props.content,
+
+                                    // Banner 欄位
+                                    altText: block.props.altText,
+                                    caption: block.props.caption,
+                                    fileId: block.props.fileId,
+                                    fileUrl: block.props.fileUrl,
+                                    linkUrl: block.props.linkUrl,
+
+                                    // 其他您需要的欄位...
+                                    imgId: block.props.imgId
+                                }
+                            };
+                        });
+
+                        // 打印出淨化後的數據，用於最終確認
+                        console.log("淨化後準備發送的資料:", JSON.stringify(cleanBlocks, null, 2));
+                        // =================================================================
                         const currentLayoutId = layoutIdState.value;
 
-                        // 【核心除錯點】在發送前，打印出完整的 payload
                         console.log("準備發送給後端的資料:", JSON.stringify(blocks.value, null, 2));
-                        
+
                         const payload = {
                             BrandId: brandId,
                             ActiveLayoutId: currentLayoutId !== 'null' ? parseInt(currentLayoutId) : null,
                             LayoutVersion: layoutVersion.value,
-                            FullLayoutJson: JSON.stringify(blocks.value),
+                            // 【關鍵】使用淨化後的 cleanBlocks 進行序列化
+                            FullLayoutJson: JSON.stringify(cleanBlocks),
                         };
 
                         const url = '/SUP/Brands/SaveLayout';
@@ -353,7 +393,7 @@
                             [csrfHeaderName]: csrfToken
                         };
 
-                        // 1. 執行儲存
+                        // 執行儲存
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: headers,
@@ -363,30 +403,31 @@
                         const resJson = await response.json();
 
                         if (response.ok && resJson.success) {
-                            // 【修正 2】只賦值，不重新宣告
                             savedLayoutId = resJson.layoutId;
                             layoutIdState.value = savedLayoutId.toString();
 
-                            // 2. 跳出 Swal 詢問是否啟用
-                            Swal.fire({
+                            // 儲存成功 → 詢問是否啟用
+                            const result = await Swal.fire({
                                 title: '儲存成功！',
                                 text: "是否要立即啟用此版本？",
                                 icon: 'success',
                                 showCancelButton: true,
                                 confirmButtonText: '立即啟用',
                                 cancelButtonText: '返回列表'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    // 3. 如果使用者確認，則執行啟用 API 呼叫
+                            });
+
+                            if (result.isConfirmed) {
+                                // 使用者選擇啟用 → 執行 AJAX
+                                await new Promise((resolve) => {
                                     $.ajax({
                                         url: `/SUP/Brands/ActivateLayout/${savedLayoutId}`,
                                         type: 'POST',
                                         headers: { [csrfHeaderName]: csrfToken },
-                                        success: function(data) {
+                                        success: function (data) {
                                             console.log("[DEBUG] 啟用成功，後端回傳:", data);
                                             if (data.success) {
                                                 Swal.fire('啟用成功', data.message, 'success').then(() => {
-                                                    const indexUrl = `@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__BRANDID__" })`
+                                                    const indexUrl = `/SUP/Brands/GetLayoutVersions/__BRANDID__`
                                                         .replace('__BRANDID__', brandId);
                                                     loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
                                                 });
@@ -395,7 +436,7 @@
                                                 Swal.fire('啟用失敗', data.message, 'error');
                                             }
                                         },
-                                        error: function(jqXHR, textStatus, errorThrown) {
+                                        error: function (jqXHR, textStatus, errorThrown) {
                                             console.error("[DEBUG] 啟用 AJAX 錯誤:", jqXHR.status, jqXHR.responseText, errorThrown);
                                             Swal.fire('伺服器錯誤', '啟用操作失敗。', 'error');
                                         },
@@ -403,14 +444,16 @@
                                             if (typeof reloadVersionIndex === 'function') {
                                                 reloadVersionIndex(brandId);
                                             }
+                                            resolve(); // ✅ 結束 Promise
                                         }
                                     });
-                                } else {
-                                    if (typeof reloadVersionIndex === 'function') {
-                                        reloadVersionIndex(brandId);
-                                    }
+                                });
+                            } else {
+                                // 使用者選擇不啟用 → 回列表
+                                if (typeof reloadVersionIndex === 'function') {
+                                    reloadVersionIndex(brandId);
                                 }
-                            });
+                            }
                         } else {
                             const message = resJson.message || `API 錯誤: ${response.status} ${response.statusText}`;
                             Swal.fire('操作失敗', message, 'error');
@@ -422,6 +465,7 @@
                         isSaving.value = false;
                     }
                 };
+
 
                 // 返回版本管理
                 const goToVersions = () => {
@@ -437,6 +481,46 @@
                         $('#brandLayoutModal').modal('hide');
                     }
                 };
+
+                // 【核心修正點】使用 watch 來監聽 editingId 的變化
+                watch(editingId, (newId, oldId) => {
+                    // 1. 如果之前有打開的編輯器，先銷毀它
+                    if (oldId) {
+                        const oldEditor = tinymce.get('editor-' + oldId);
+                        if (oldEditor) {
+                            oldEditor.destroy();
+                        }
+                    }
+
+                    // 2. 如果有新的編輯器要打開
+                    if (newId) {
+                        // 找到正在編輯的區塊
+                        const currentBlock = blocks.value.find(b => b.id === newId);
+
+                        // 只有當區塊類型是 Article 時，才初始化 TinyMCE
+                        if (currentBlock && currentBlock.type === 'Article') {
+                            // 使用 nextTick 確保 textarea 已經被 Vue 渲染到 DOM 中
+                            nextTick(() => {
+                                tinymce.init({
+                                    selector: '#editor-' + newId,
+                                    plugins: 'lists link image table code help wordcount',
+                                    toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code | help',
+                                    setup: function (editor) {
+                                        // 初始化時，設定編輯器內容
+                                        editor.on('init', function () {
+                                            editor.setContent(currentBlock.props.content || '');
+                                        });
+
+                                        // 當編輯器內容改變時，手動更新 Vue 的數據
+                                        editor.on('input change', function () {
+                                            currentBlock.props.content = editor.getContent();
+                                        });
+                                    }
+                                });
+                            });
+                        }
+                    }
+                });
 
                 onMounted(() => {
                     initSortable();

@@ -5,7 +5,7 @@
 @section Styles {
     <!-- Area 專用 CSS -->
     <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+    @* <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" /> *@
     <style>
     </style>
 }
@@ -113,6 +113,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    @* 【新增】TinyMCE CDN Script *@
+    <script src="https://cdn.tiny.cloud/1/evvuqtan82drarrrms6chtn8qnyyyuc850vh8wj4gt4wnhtd/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     @{
         // 為了避免 Razor 執行順序錯誤，我們在頂部只定義變數，不執行複雜邏輯
         var antiForgeryTokens = Antiforgery.GetTokens(Context);
