@@ -4,6 +4,7 @@
       <div class="row align-items-center g-2">
         <!-- ✅ Logo區 -->
         <div class="col-6 col-md-2 col-lg-2 d-flex align-items-center flex-shrink-0">
+
           <router-link
             to="/"
             class="navbar-brand text-white text-decoration-none d-flex align-items-center"
@@ -29,7 +30,7 @@
               @keyup.enter="handleSearch"
             />
             <button
-              class="btn btn-outline-primary rounded-circle search-btn d-flex align-items-center justify-content-center"
+              class="btn search-btn rounded-circle search-btn d-flex align-items-center justify-content-center"
               @click="handleSearch"
             >
               <i class="bi bi-search"></i>
@@ -42,39 +43,30 @@
           <!-- 用戶登入 -->
           <div class="dropdown">
             <button
-              class="btn btn-md dropdown-toggle main-color-green main-color-white-text"
+              class="btn btn-md dropdown-toggle main-color-green"
               type="button"
-              id="userDropdown"
               data-bs-toggle="dropdown"
-              data-bs-auto-close="true"
-              aria-expanded="false"
             >
-              <i class="bi bi-person me-1"></i>
-              <span>登入</span>
+              <i class="bi bi-person me-1 main-color-white-text"></i>
+              <span class="main-color-white-text">登入</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-              <li><a class="dropdown-item" href="/login"><i class="bi bi-box-arrow-in-right me-2"></i>登入</a></li>
-              <li><a class="dropdown-item" href="/register"><i class="bi bi-person-plus me-2"></i>註冊</a></li>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#">登入</a></li>
+              <li><a class="dropdown-item" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i>我的帳戶</a></li>
+              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
             </ul>
           </div>
-          
           <!-- 訂單 -->
           <button class="btn btn-md position-relative main-color-green">
             <i class="bi bi-bag main-color-white-text"></i>
             <span class="main-color-white-text ms-1">訂單</span>
           </button>
-          
           <!-- 購物車 -->
-          <button 
-            @click="goToCart" 
-            class="btn btn-md position-relative main-color-green"
-          >
+          <button class="btn btn-md position-relative main-color-green">
             <i class="bi bi-cart3 me-1 main-color-white-text"></i>
             <span class="main-color-white-text">購物車</span>
             <span
-              v-if="cartCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
               {{ cartCount }}
@@ -122,39 +114,19 @@
       <!-- ✅ 手機選單 -->
       <div class="collapse mt-2 d-md-none" id="mobileMenu">
         <div class="d-flex flex-column gap-2 align-items-start px-2">
-          <div class="dropdown w-100">
-            <button 
-              class="btn btn-md w-100 main-color-green main-color-white-text text-start dropdown-toggle"
-              type="button"
-              id="mobileUserDropdown"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <i class="bi bi-person me-2"></i> 登入 / 註冊
-            </button>
-            <ul class="dropdown-menu w-100" aria-labelledby="mobileUserDropdown">
-              <li><a class="dropdown-item" href="/login">登入</a></li>
-              <li><a class="dropdown-item" href="/register">註冊</a></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="/profile">我的帳戶</a></li>
-            </ul>
-          </div>
-          <button 
-            @click="goToCart"
-            class="btn btn-md w-100 main-color-green text-start position-relative"
-          >
-            <i class="bi bi-cart3 me-2 main-color-white-text"></i>
-            <span class="main-color-white-text">購物車</span>
+          <button class="btn btn-md w-100 main-color-green text-start">
+            <i class="bi bi-person me-2"></i> 登入 / 註冊
+          </button>
+          <button class="btn btn-md w-100 main-color-green text-start position-relative">
+            <i class="bi bi-cart3 me-2"></i> 購物車
             <span
-              v-if="cartCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
               {{ cartCount }}
             </span>
           </button>
           <button class="btn btn-md w-100 main-color-green text-start">
-            <i class="bi bi-bag me-2 main-color-white-text"></i>
-            <span class="main-color-white-text">訂單</span>
+            <i class="bi bi-bag me-2"></i> 訂單
           </button>
         </div>
       </div>
@@ -180,34 +152,7 @@ export default {
         });
       }
     },
-    goToCart() {
-      this.$router.push('/cart');
-    },
-    async loadCartCount() {
-      try {
-        const response = await fetch('/ORD/CartTest/GetCartCount');
-        if (response.ok) {
-          this.cartCount = await response.json();
-        }
-      } catch (error) {
-        console.error('載入購物車數量失敗:', error);
-      }
-    }
   },
-  mounted() {
-    this.loadCartCount();
-    
-    // 確保 Bootstrap Dropdown 初始化
-    this.$nextTick(() => {
-      // 強制初始化所有 dropdown
-      const dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
-      if (window.bootstrap && window.bootstrap.Dropdown) {
-        dropdownElementList.forEach(dropdownToggleEl => {
-          new window.bootstrap.Dropdown(dropdownToggleEl);
-        });
-      }
-    });
-  }
 };
 </script>
 
@@ -226,6 +171,7 @@ export default {
   min-width: 120px; /* ✅ 避免被壓扁 */
 }
 
+
 .search-container {
   max-width: 800px;      /* 限制搜尋欄最長不超過 800px */
   width: 100%;           /* 小螢幕時可彈性縮小 */
@@ -235,6 +181,26 @@ export default {
   flex: 1 1 auto;
 }
 
+.search-btn {
+  background-color: rgb(255, 255, 255);
+  color: rgb(0,112,131);
+  border: none;
+  width: 40px;
+  height: 40px;
+  transition: all 0.5s ease;
+}
+
+.search-btn:hover {
+  background-color: rgb(0, 112, 131);
+  color:rgb(255, 255, 255)
+}
+
+/* 🖥️ 桌面 Header 內容置中 */
+.main-header .container-fluid {
+  max-width: 1200px; /* 可依實際設計調整 */
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
 @media (max-width: 1250px) {
   .main-header .row {
     display: flex;
@@ -263,7 +229,13 @@ export default {
   .search-container {
     max-width: 500px; /* 更小螢幕再縮短 */
   }
+  .main-header .container-fluid {
+    max-width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
 }
+
 
 /* ✅ 小螢幕調整 */
 @media (max-width: 768px) {
