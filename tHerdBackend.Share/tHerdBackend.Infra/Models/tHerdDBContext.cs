@@ -2833,7 +2833,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.TokenHash).IsRequired();
             entity.Property(e => e.UserId).IsRequired();
 
-            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens).HasForeignKey(d => d.UserId);
+            entity.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId);
         });
 
         modelBuilder.Entity<SupBrand>(entity =>
