@@ -1,11 +1,22 @@
 ﻿@using System.Text.Json
+@using tHerdBackend.Core.DTOs
 @using tHerdBackend.Core.DTOs.PROD
 @using tHerdBackend.UIKit.Rcl.Views.Shared.Components.DataTable
-@model IEnumerable<ProdProductDto>
+@model IEnumerable<ProdProductDetailDto>
 
 @{
     ViewData["Title"] = "商品管理";
 }
+
+@await Component.InvokeAsync("UpdateImage", new { 
+    modalId = "imgMetaModal", 
+    title = "圖片資訊", 
+    file = new SysAssetFileDto { FileId = 1038, FileUrl = "https://cloudinary.images-iherb.com/image/upload/f_auto,q_auto:eco/images/atn/atn00611/r/97.jpg", AltText = "主圖", Caption = "封面", IsActive = true }
+})
+
+<button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#imgMetaModal">
+    打開圖片視窗
+</button>
 
 <div class="d-flex justify-content-between mb-2">
     <div>
@@ -19,18 +30,28 @@
 
 @section Scripts {
     <script>
+
+        document.addEventListener("click", function (e) {
+            if (e.target && e.target.id === "modalImg") {
+                e.preventDefault();
+                e.stopPropagation();
+                const imgUrl = e.target.src;
+                if (imgUrl) window.open(imgUrl, "_blank");
+            }
+        });
+
         async function importTypeExcelAsync() {
-            const response = await fetch('/PROD/Productstemp/importTypeExcelAsync', { method: 'POST' }), {
+            const response = await fetch('/PROD/Productstemp/importTypeExcelAsync', {
                 method: 'POST'
             });
+
             if (response.ok) {
                 alert("匯入成功");
                 location.reload();
             } else {
                 alert("匯入失敗");
             }
-        }
-        
+        }        
     </script>
 }
 
@@ -38,7 +59,7 @@
 @{
     // 1) 資料 → JSON（保留 PascalCase）
     var dataJson = JsonSerializer.Serialize(
-        Model ?? Enumerable.Empty<ProdProductDto>(),
+        Model ?? Enumerable.Empty<ProdProductDetailDto>(),
         new JsonSerializerOptions { PropertyNamingPolicy = null }
     );
 

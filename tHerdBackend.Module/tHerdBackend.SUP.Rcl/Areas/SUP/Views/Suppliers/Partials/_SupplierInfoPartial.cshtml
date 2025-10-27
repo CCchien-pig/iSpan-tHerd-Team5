@@ -28,6 +28,22 @@
         <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.IsActive)：</div>
         <div>@(Model.IsActive ? "啟用" : "停用")</div>
     </div>
+
+    <div class="d-flex mb-2">
+        <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.BrandNames)：</div>
+        <div>
+            @if (Model.BrandNames != null && Model.BrandNames.Any())
+            {
+                @string.Join("、", Model.BrandNames)
+            }
+            else
+            {
+                <span class="text-muted">無關聯品牌</span>
+            }
+        </div>
+    </div>
+
+
     <div class="d-flex mb-2">
         <div class="fw-bold me-2">@Html.DisplayNameFor(m => m.Creator)：</div>
         <div>@Model.Creator</div>

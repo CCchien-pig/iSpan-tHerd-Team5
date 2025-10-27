@@ -22,11 +22,9 @@
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
     <Folder Include="DTOs\CNT\" />
-    <Folder Include="DTOs\CS\" />
     <Folder Include="DTOs\ORD\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />
-    <Folder Include="Interfaces\MKT\" />
     <Folder Include="Interfaces\ORD\" />
     <Folder Include="Interfaces\USER\" />
     <Folder Include="ValueObjects\CNT\" />
@@ -43,6 +41,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.19" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.19" />
   </ItemGroup>

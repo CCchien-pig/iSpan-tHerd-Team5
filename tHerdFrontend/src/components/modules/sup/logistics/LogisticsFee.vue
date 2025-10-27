@@ -14,7 +14,8 @@ onMounted(async () => {
   loading.value = true
   try {
     const { data } = await axios.get(`${baseAddress}/api/sup/Logistics`)
-    logisticsList.value = data
+    logisticsList.value = data.data
+    // console.log('logisticsList:', logisticsList.value)
   } catch (err) {
     error.value = '物流商載入失敗: ' + (err?.response?.data?.message || err.message)
   } finally {
@@ -26,9 +27,13 @@ function isOpen(id) {
   return openIds.value.includes(id)
 }
 async function fetchRates(id) {
+  if (!id || id === undefined) {
+    console.error('fetchRates() 收到無效的 logisticsId：', id)
+    return
+  }
   if (ratesMap.value[id]) return
   const { data } = await axios.get(`${baseAddress}/api/sup/LogisticsRate/bylogistics/${id}`)
-  ratesMap.value[id] = data
+  ratesMap.value[id] = data.data ?? data
 }
 function toggle(id) {
   if (isOpen(id)) {
@@ -122,7 +127,9 @@ function toggle(id) {
 }
 /* 外層表頭 */
 .tcat-table thead th {
-  background: #feec99;
+  /* background: #feec99; */
+  background: rgb(0, 112, 131);
+  color: rgb(248, 249, 250);
   font-size: 17px;
   font-weight: bold;
 }
@@ -143,7 +150,7 @@ function toggle(id) {
 }
 /* 展開行整段底色 */
 .tcat-table .expand-area {
-  background: #ddf4f9; /* 改為指定色 */
+  background: #ddf4f9; /*改為指定色*/
   padding: 0;
 }
 
@@ -161,7 +168,7 @@ function toggle(id) {
   box-sizing: border-box;
 }
 .rate-inner-table thead th {
-  background: #d3ece8;
+  background: #4db4c1;
   font-size: 15px;
   font-weight: bold;
 }
@@ -184,6 +191,7 @@ function toggle(id) {
 .arrow {
   display: inline-block;
   transition: transform 0.2s;
+  color: rgb(0, 112, 131);
 }
 .arrow.open {
   transform: rotate(90deg);

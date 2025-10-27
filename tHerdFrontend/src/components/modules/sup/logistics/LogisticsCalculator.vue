@@ -16,7 +16,7 @@ onMounted(async () => {
   loading.value = true
   try {
     const { data } = await axios.get(`${baseAddress}/api/sup/Logistics`)
-    logisticsList.value = data
+    logisticsList.value = data.data
   } catch (err) {
     error.value = '物流商載入失敗: ' + (err?.response?.data?.message || err.message)
   } finally {
@@ -33,7 +33,7 @@ watch(selectedMethod, async (val) => {
     const { data } = await axios.get(
       `${baseAddress}/api/sup/LogisticsRate/bylogistics/${val.logisticsId}`,
     )
-    rates.value = data
+    rates.value = data.data
   } catch (err) {
     error.value = '運費分級載入失敗: ' + (err?.response?.data?.message || err.message)
   } finally {
@@ -108,7 +108,7 @@ function calcFee() {
   margin: 16px auto;
   padding: 12px 8px;
   border-radius: 18px;
-  box-shadow: 0 0 10px #e1e0e080;
+  box-shadow: 0 0 10px rgb(203, 229, 235);
   background: #fff;
   font-family: 'Microsoft JhengHei', 'Apple LiGothic Medium', Arial, Helvetica, sans-serif;
 }
@@ -117,6 +117,7 @@ function calcFee() {
   font-weight: bold;
   text-align: center;
   margin-bottom: 10px;
+  padding-top: 10px;
   line-height: 1;
 }
 .form-zone {
@@ -125,7 +126,7 @@ function calcFee() {
   gap: 18px;
   justify-content: center;
   align-items: center;
-  margin-bottom: 10px;
+  margin: 10px 10px 0 10px;
   min-height: 40px; /* 固定高度，避免跳動 */
   position: relative;
 }

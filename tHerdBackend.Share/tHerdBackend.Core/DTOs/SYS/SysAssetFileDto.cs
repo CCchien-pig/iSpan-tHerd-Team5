@@ -3,6 +3,8 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.Core.DTOs;
 
@@ -71,10 +73,41 @@ public partial class SysAssetFileDto
     /// </summary>
     public DateTime CreatedDate { get; set; }
 
+    public string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
+
     /// <summary>
     /// 是否有效
     /// </summary>
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// 關聯資料夾 ID
+    /// </summary>
+    public int? FolderId { get; set; }
+
+    /// <summary>
+    /// 該檔案的階層（根 → 子 → ...）
+    /// </summary>
+    public List<FolderLevelItem> FolderPaths { get; set; } = new();
+
+    /// <summary>
+    /// 前端實際可載入的網址（會自動判斷內外部）
+    /// </summary>
+    public string PublicUrl =>
+        string.IsNullOrWhiteSpace(FileUrl)
+            ? "/images/No-Image.svg"
+            : (IsExternal || FileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                ? FileUrl
+                : $"/Images/{Path.GetFileName(FileUrl)}");
+}
+
+/// <summary>
+/// 階層資料結構
+/// </summary>
+public class FolderLevelItem
+{
+    public int Seq { get; set; }        // 階層序號（0 = 根）
+    public string Folder { get; set; } = string.Empty; // 資料夾名稱
 }
 
 /// <summary>
@@ -84,7 +117,8 @@ public class AssetFileUploadDto
 {
     public string ModuleId { get; set; } // 模組代號
     public string ProgId { get; set; } // 程式代號
-    public List<AssetFileDetailsDto> Files { get; set; } = new();
+    public int? FolderId { get; set; }
+    public List<AssetFileDetailsDto> Meta { get; set; } = new();
 }
 
 /// <summary>

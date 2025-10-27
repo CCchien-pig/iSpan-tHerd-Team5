@@ -33,14 +33,14 @@
           <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
             <li>
-              <a href="#" class="text-light text-decoration-none">聯絡我們</a>
+             <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
             </li>
             <li>
-              <a href="#" class="text-light text-decoration-none">常見問題</a>
+             <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
             </li>
             <li>
               <router-link to="/sup/logistics-info" class="text-light text-decoration-none"
-                >運送資訊</router-link
+                >配送資訊</router-link
               >
             </li>
             <li>
@@ -104,11 +104,7 @@
                 placeholder="輸入您的電子郵件"
                 v-model="email"
               />
-              <button
-                class="btn silver-reflect-button"
-                type="button"
-                @click="subscribeNewsletter"
-              >
+              <button class="btn silver-reflect-button" type="button" @click="subscribeNewsletter">
                 訂閱
               </button>
             </div>
@@ -138,16 +134,10 @@
       <!-- 法律條款 -->
       <div class="row mt-3">
         <div class="col-12">
-          <div class="legal-links text-center ">
-            <a href="#" class="text-muted text-decoration-none me-3"
-              >隱私政策</a
-            >
-            <a href="#" class="text-muted text-decoration-none me-3"
-              >服務條款</a
-            >
-            <a href="#" class="text-muted text-decoration-none me-3"
-              >Cookie政策</a
-            >
+          <div class="legal-links text-center">
+            <a href="#" class="text-muted text-decoration-none me-3">隱私政策</a>
+            <a href="#" class="text-muted text-decoration-none me-3">服務條款</a>
+            <a href="#" class="text-muted text-decoration-none me-3">Cookie政策</a>
             <a href="#" class="text-muted text-decoration-none">網站地圖</a>
           </div>
         </div>
@@ -199,8 +189,7 @@ export default {
 
 <style scoped>
 .main-footer {
-    background: rgb(15, 120, 135);
-
+  background: rgb(15, 120, 135);
 }
 
 .social-links a {

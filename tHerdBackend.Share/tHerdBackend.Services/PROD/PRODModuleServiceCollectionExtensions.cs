@@ -4,6 +4,7 @@ using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Repository.PROD;
 using tHerdBackend.Infra.Repository.SYS;
 using Microsoft.Extensions.DependencyInjection;
+using tHerdBackend.Services.PROD.API;
 
 namespace tHerdBackend.Services.PROD
 {
@@ -14,7 +15,7 @@ namespace tHerdBackend.Services.PROD
             // 註冊 Service
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IProductQueryService, ProductQueryService>();
-			services.AddScoped<IProductListForApiService, ProductListForApiService>();
+			services.AddScoped<IProductsForApiService, ProductsForApiService>();
 
 			// 註冊 Repository (實作在 Infra)
 			services.AddScoped<IProdProductRepository, ProdProductRepository>();

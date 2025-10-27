@@ -1,7 +1,8 @@
-﻿using tHerdBackend.Core.DTOs.PROD;
-using tHerdBackend.Core.Interfaces.PROD;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.Interfaces.PROD;
+using tHerdBackend.Core.Models;
 
 namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 {
@@ -23,7 +24,7 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
             var query = new ProductFilterQueryDto
             {
                 PageIndex = 1,
-                PageSize = 100 // 一次載入 1000 筆（自行調整）
+                PageSize = 100 // 一次載入 100 筆（自行調整）
             };
             var (list, total) = await _repo.GetAllAsync(query);
 
@@ -50,7 +51,7 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		{
 			var Types = await _repo.GetAllProductTypesAsync();
 			ViewBag.TypeDtos = Types.Select(b => new ProdProductTypeConfigDto
-            {
+			{
                 ProductTypeId = b.ProductTypeId,
                 ProductTypeCode = b.ProductTypeCode,
                 ProductTypeName = b.ProductTypeName
@@ -109,14 +110,14 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		[HttpGet]
         public async Task<IActionResult> Upsert(int? id)
         {
-            var dto = id.HasValue ? await _repo.GetByIdAsync((int)id) : new ProdProductDto();
+            var dto = id.HasValue ? await _repo.GetByIdAsync((int)id) : new ProdProductDetailDto();
             await GetData();
             return View("Upsert", dto);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Upsert(ProdProductDto dto)
+        public async Task<IActionResult> Upsert(ProdProductDetailDto dto)
         {
             foreach (var k in new[]
             {

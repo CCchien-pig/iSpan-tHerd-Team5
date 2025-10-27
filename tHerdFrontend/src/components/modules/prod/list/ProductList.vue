@@ -16,11 +16,7 @@
       <!-- 產品卡片網格 -->
       <div class="row g-4">
         <!-- 遍歷產品數據，生成產品卡片 -->
-        <div
-          v-for="product in products"
-          :key="product.id"
-          class="col-lg-3 col-md-6"
-        >
+        <div v-for="product in products" :key="product.id" class="col-lg-3 col-md-6">
           <!-- 產品卡片組件 -->
           <ProductCard
             :product="product"
@@ -36,7 +32,7 @@
 
 <script>
 // 導入產品卡片組件
-import ProductCard from '@/components/modules/prod/card/ProductCard.vue';
+import ProductCard from '@/components/modules/prod/card/ProductCard.vue'
 
 /**
  * ProductList.vue 組件配置
@@ -86,7 +82,7 @@ export default {
      * 發送add-to-cart事件給父組件
      */
     handleAddToCart(product) {
-      this.$emit('add-to-cart', product);
+      this.$emit('add-to-cart', product)
     },
 
     /**
@@ -96,7 +92,7 @@ export default {
      * 發送toggle-wishlist事件給父組件
      */
     handleToggleWishlist(product, isInWishlist) {
-      this.$emit('toggle-wishlist', product, isInWishlist);
+      this.$emit('toggle-wishlist', product, isInWishlist)
     },
 
     /**
@@ -105,10 +101,10 @@ export default {
      * 發送quick-view事件給父組件
      */
     handleQuickView(product) {
-      this.$emit('quick-view', product);
+      this.$emit('quick-view', product)
     },
   },
-};
+}
 </script>
 
 <style scoped>

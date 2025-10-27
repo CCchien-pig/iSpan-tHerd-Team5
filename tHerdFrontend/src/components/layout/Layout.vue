@@ -21,14 +21,16 @@
     <ScrollToTop />
 
     <!-- 促銷橫幅 - 特殊促銷活動展示 -->
-    <SitePromoBanner />
+    <!-- <SitePromoBanner /> -->
+     <!-- ✅ 跑馬燈區塊 -->
+      <Marquee />
 
     <!-- 麵包屑導航 - 頁面路徑導航 -->
     <!-- <BreadcrumbNav /> -->
 
     <!-- 主要內容區域 - 頁面內容插槽 -->
     <main class="flex-fill py-4">
-      <slot />
+      <router-view />
     </main>
 
     <!-- Footer - 頁腳信息和鏈接 -->
@@ -54,6 +56,7 @@ import BreadcrumbNav from '@/components/ui/BreadcrumbNav.vue'; // 麵包屑導�
 import AppLoading from '@/components/ui/AppLoading.vue'; // Loading組件
 
 import ScrollToTop from '@/components/common/ScrollToTop.vue'
+import Marquee from '@/components/modules/mkt/Marquee.vue'
 /**
  * Layout.vue 組件配置
  * 功能：應用主布局組件，定義整體頁面結構
@@ -74,6 +77,7 @@ export default {
     BreadcrumbNav,
     AppLoading,
     ScrollToTop,
+    Marquee,
   },
   data(){
     return{

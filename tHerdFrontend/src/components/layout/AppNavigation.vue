@@ -1,91 +1,104 @@
 <!--
-  AppNavigation.vue - 主導航組件
-  功能：展示主要導航菜單，包含產品分類和功能頁面
-  特色：響應式設計、動態高亮、Mega Menu
-  用途：作為所有頁面的主要導航區域
+  AppNavigation.vue - 響應式導航組件
+  特色：桌面版橫向導航 + 手機版漢堡選單
 -->
 <template>
   <nav class="main-navigation bg-white border-bottom">
     <div class="container-fluid">
-      <div class="row">
+      <div class="row align-items-center">
         <div class="col-12">
-          <ul class="nav nav-pills justify-content-center flex-wrap py-2">
-            <!-- 🔸 一般導航項目 -->
+          <!-- 🍔 手機版漢堡按鈕 -->
+          <button 
+            class="hamburger-btn d-lg-none"
+            @click="toggleMobileMenu"
+            :class="{ active: showMobileMenu }"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <!-- 🖥️ 桌面版導航 -->
+          <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
             <li
               v-for="item in navigationItemsWithIcon"
               :key="item.name"
               class="nav-item position-relative"
             >
               <router-link
-              :to="item.path"
-              class="nav-link fw-medium rounded-pill d-flex align-items-center gap-2"
-              :class="{ active: $route.path.startsWith(item.path) }"
-            >
-              <div class="nav-icon-wrapper">
-                <img v-if="item.icon" :src="item.icon" alt="" class="nav-icon" />
-              </div>
-              <span>{{ item.name }}</span>
-            </router-link>
-
+                :to="item.path"
+                class="nav-link fw-medium rounded-pill d-flex align-items-center"
+                :class="{ 
+                  active: $route.path.startsWith(item.path),
+                  'has-icon': item.icon,
+                  'text-only': !item.icon
+                }"
+              >
+                <div v-if="item.icon" class="nav-icon-wrapper">
+                  <img :src="item.icon" alt="" class="nav-icon" />
+                </div>
+                <span>{{ item.name }}</span>
+              </router-link>
             </li>
-            <!-- 🏷 品牌 A-Z Mega Menu -->
+
+            <!-- 品牌 A-Z -->
             <li
-              class="nav-item position-relative "
+              class="nav-item position-relative mega-menu-container"
               @mouseenter="showBrands = true"
               @mouseleave="showBrands = false"
             >
               <button
                 type="button"
-                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center gap-2"
+                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center text-only"
                 :class="{ active: showBrands }"
                 @click="toggleBrands"
               >
-                <div class="nav-icon-wrapper"></div>
                 <span>品牌 A-Z</span>
               </button>
 
               <transition name="fade">
-                <div v-if="showBrands" class="mega-menu shadow-lg bg-white p-4">
-                  <div
-                    class="container"
-                    @mouseenter="showBrands = true"
-                    @mouseleave="showBrands = false"
-                  >
-                    <div class="row">
+                <div 
+                  v-if="showBrands" 
+                  class="mega-menu shadow-lg bg-white"
+                  @mouseenter="showBrands = true"
+                  @mouseleave="showBrands = false"
+                >
+                  <div class="container-fluid py-4 px-4">
+                    <div class="row g-4">
                       <div
-                        class="col-6 col-md-3"
+                        class="col-6 col-md-2"
                         v-for="(group, gIdx) in brandGroups"
                         :key="gIdx"
                       >
-                        <ul class="list-unstyled">
-                          <li
-                            v-for="brand in group"
-                            :key="brand"
-                            class="mb-2"
-                          >
+                        <ul class="list-unstyled mb-0">
+                          <li v-for="brand in group" :key="brand" class="mb-2">
                             <router-link
-                              :to="`/brands/${brand.toLowerCase()}`"
-                              class="text-dark text-decoration-none"
+                              :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                              class="text-dark text-decoration-none brand-link"
+                              @click="showBrands = false"
                             >
                               {{ brand }}
                             </router-link>
                           </li>
                         </ul>
                       </div>
-                      <div class="col-12 col-md-3 border-start">
-                        <h6 class="fw-bold text-success">推薦品牌</h6>
-                        <div
-                          v-for="rec in recommendedBrands"
-                          :key="rec.name"
-                          class="mb-3"
-                        >
-                          <img
-                            :src="rec.logo"
-                            alt=""
-                            class="img-fluid mb-1"
-                            style="max-height: 40px"
-                          />
-                          <div class="small">{{ rec.name }}</div>
+
+                      <div class="col-12 col-md-4 border-start ps-4">
+                        <h6 class="fw-bold text-success mb-3">
+                          <i class="bi bi-star-fill me-2"></i>推薦品牌
+                        </h6>
+                        <div class="recommended-brands">
+                          <router-link
+                            v-for="rec in recommendedBrands"
+                            :key="rec.name"
+                            :to="rec.url"
+                            class="recommended-brand-item"
+                            @click="showBrands = false"
+                          >
+                            <i class="bi bi-award-fill text-warning me-2"></i>
+                            <span class="fw-medium">{{ rec.name }}</span>
+                            <i class="bi bi-chevron-right ms-auto"></i>
+                          </router-link>
                         </div>
                       </div>
                     </div>
@@ -94,6 +107,96 @@
               </transition>
             </li>
           </ul>
+
+          <!-- 📱 手機版側邊選單 -->
+<transition name="slide">
+  <div v-if="showMobileMenu" class="mobile-menu">
+    <div class="mobile-menu-header">
+      <h5 class="mb-0 fw-bold text-white">選單</h5>
+      <button class="close-btn" @click="closeMobileMenu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="mobile-menu-body">
+      <!-- 有圖標的分類 -->
+      <div class="menu-section">
+        <h6 class="menu-section-title">產品分類</h6>
+        <router-link
+          v-for="item in navigationItemsWithIcon.filter(i => i.icon)"
+          :key="item.name"
+          :to="item.path"
+          class="mobile-menu-item"
+          :class="{ active: $route.path.startsWith(item.path) }"
+          @click="closeMobileMenu"
+        >
+          <div class="mobile-icon-wrapper">
+            <img :src="item.icon" alt="" />
+          </div>
+          <span>{{ item.name }}</span>
+          <i class="bi bi-chevron-right ms-auto"></i>
+        </router-link>
+      </div>
+
+      <!-- 無圖標的分類 -->
+      <div class="menu-section">
+        <h6 class="menu-section-title">快速連結</h6>
+        <router-link
+          v-for="item in navigationItemsWithIcon.filter(i => !i.icon)"
+          :key="item.name"
+          :to="item.path"
+          class="mobile-menu-item text-only-item"
+          :class="{ active: $route.path.startsWith(item.path) }"
+          @click="closeMobileMenu"
+        >
+          <i class="bi bi-dot"></i>
+          <span>{{ item.name }}</span>
+          <i class="bi bi-chevron-right ms-auto"></i>
+        </router-link>
+      </div>
+
+      <!-- ✅ 品牌選單（修正版） -->
+      <div class="menu-section">
+        <h6 
+          class="menu-section-title clickable" 
+          @click="toggleBrandsInMobile"
+        >
+          <span>品牌 A-Z</span>
+          <i 
+            class="bi" 
+            :class="showBrandsInMobile ? 'bi-chevron-up' : 'bi-chevron-down'"
+          ></i>
+        </h6>
+        
+        <transition name="expand">
+          <div v-if="showBrandsInMobile" class="brands-list">
+            <!-- ✅ 正確的雙層 v-for 結構 -->
+            <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
+              <router-link
+                v-for="brand in group"
+                :key="brand"
+                :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                class="brand-item"
+                @click="closeMobileMenu"
+              >
+                {{ brand }}
+              </router-link>
+            </template>
+          </div>
+        </transition>
+      </div>
+    </div>
+  </div>
+</transition>
+
+          <!-- 🎭 背景遮罩 -->
+          <transition name="fade-mask">
+            <div 
+              v-if="showMobileMenu" 
+              class="mobile-menu-overlay"
+              @click="closeMobileMenu"
+            ></div>
+          </transition>
         </div>
       </div>
     </div>
@@ -105,7 +208,10 @@ export default {
   name: 'AppNavigation',
   data() {
     return {
-      // 🔸 一般導航項目（不含品牌 A-Z）
+      showMobileMenu: false,
+      showBrands: false,
+      showBrandsInMobile: false,
+
       navigationItemsWithIcon: [
         { name: '補充劑', path: '/supplements', icon: '/homePageIcon/supplement.png' },
         { name: '運動營養', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
@@ -120,13 +226,9 @@ export default {
         { name: '暢銷', path: '/bestsellers' },
         { name: '試用', path: '/trials' },
         { name: '新產品', path: '/new-products' },
-        { name: '健康中心', path: '/health-hub' },
+        { name: '健康中心', path: '/cnt' },
       ],
-      
-      // 🏷 Mega Menu 狀態
-      showBrands: false,
 
-      // 📦 品牌清單分組
       brandGroups: [
         ['21st Century', 'ACURE', 'ALLMAX', 'Beauty of Joseon'],
         ["Doctor's Best", 'Eucerin', 'Fairhaven Health', 'Garden of Life'],
@@ -134,53 +236,254 @@ export default {
         ['Solgar', 'Thorne', 'Vital Proteins', 'The Vitamin Shoppe'],
       ],
 
-      // 🏆 推薦品牌
       recommendedBrands: [
-        { name: "Nature's Bounty", logo: 'https://via.placeholder.com/80x40' },
-        { name: '21st Century', logo: 'https://via.placeholder.com/80x40' },
-        { name: 'Fairhaven', logo: 'https://via.placeholder.com/80x40' },
+        { name: "Nature's Bounty", url: '/brands/natures-bounty' },
+        { name: '21st Century', url: '/brands/21st-century' },
+        { name: 'Fairhaven Health', url: '/brands/fairhaven-health' },
       ],
     };
   },
   methods: {
+    toggleMobileMenu() {
+      this.showMobileMenu = !this.showMobileMenu;
+      // 防止背景滾動
+      document.body.style.overflow = this.showMobileMenu ? 'hidden' : '';
+    },
+    closeMobileMenu() {
+      this.showMobileMenu = false;
+      document.body.style.overflow = '';
+    },
     toggleBrands() {
-      // 手機點擊時用來開/關 mega menu
       this.showBrands = !this.showBrands;
     },
+    toggleBrandsInMobile() {
+      this.showBrandsInMobile = !this.showBrandsInMobile;
+    },
+  },
+  beforeUnmount() {
+    // 清理
+    document.body.style.overflow = '';
   },
 };
 </script>
 
 <style scoped>
-.mega-menu {
-  top: 100%;
-  left: 0;
-  z-index: 1050;
-  width: 100%;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
 
 .main-navigation {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* 🍔 漢堡按鈕 */
+.hamburger-btn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 10000;
+  width: 50px;
+  height: 50px;
+  background: rgb(77, 180, 193);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.hamburger-btn:hover {
+  background: rgb(0, 112, 131);
+  transform: scale(1.05);
+}
+
+.hamburger-btn span {
+  width: 28px;
+  height: 3px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-btn.active span:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(8px, -8px);
+}
+
+/* 📱 手機版側邊選單 */
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 85%;
+  max-width: 350px;
+  height: 100vh;
+  background: white;
+  z-index: 9999;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-header {
+  background: linear-gradient(135deg, rgb(77, 180, 193), rgb(0, 112, 131));
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.mobile-menu-body {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+/* 選單區塊 */
+.menu-section {
+  margin-bottom: 25px;
+}
+
+.menu-section-title {
+  color: rgb(0, 112, 131);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 15px 5px;
+  margin-bottom: 5px;
+  border-bottom: 2px solid rgb(77, 180, 193);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 5px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #333;
+  transition: all 0.3s ease;
+  gap: 12px;
+}
+
+.mobile-menu-item:hover,
+.mobile-menu-item.active {
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  color: rgb(0, 112, 131);
+  transform: translateX(5px);
+}
+
+.mobile-icon-wrapper {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-icon-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.text-only-item {
+  padding-left: 10px;
+}
+
+/* 品牌列表 */
+.brands-list {
+  padding: 10px 0;
+}
+
+.brand-item {
+  display: block;
+  padding: 10px 20px;
+  color: #666;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin-bottom: 3px;
+}
+
+.brand-item:hover {
+  background: #f0f8ff;
+  color: rgb(77, 180, 193);
+  padding-left: 30px;
+}
+
+/* 背景遮罩 */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  backdrop-filter: blur(3px);
+}
+
+/* 🖥️ 桌面版樣式（保持原樣） */
+.nav-pills {
+  align-items: center !important;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
 }
 
 .nav-link {
   color: rgb(0, 112, 131) !important;
   transition: all 0.3s ease;
   font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.5rem 1rem;
+  min-height: 52px;
 }
 
 .nav-link:hover {
@@ -193,13 +496,24 @@ export default {
   color: white !important;
 }
 
+.nav-link.has-icon {
+  gap: 0.5rem;
+  padding-left: 0.75rem;
+  padding-right: 1rem;
+}
+
+.nav-link.text-only {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 .nav-icon-wrapper {
   width: 40px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* 避免被壓縮 */
+  flex-shrink: 0;
 }
 
 .nav-icon {
@@ -209,39 +523,141 @@ export default {
 }
 
 .nav-link span {
-  line-height: 1;  /* 🔸 確保文字不撐高 */
-  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-/* 📱 RWD */
-@media (max-width: 768px) {
-  .nav {
-    flex-direction: column;
-    align-items: center;
+/* Mega Menu（桌面版） */
+.mega-menu-container {
+  position: static !important;
+}
+
+.mega-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  width: 100vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-top: 3px solid rgb(77, 180, 193);
+}
+
+.brand-link {
+  display: block;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.brand-link:hover {
+  background-color: #f0f8ff;
+  color: rgb(77, 180, 193) !important;
+  padding-left: 1rem;
+}
+
+.recommended-brands {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recommended-brand-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  text-decoration: none;
+  color: #212529;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.recommended-brand-item:hover {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: rgb(77, 180, 193);
+  transform: translateX(5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  color: rgb(0, 112, 131);
+}
+
+/* 🎬 動畫 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(-100%);
+}
+
+.slide-leave-to {
+  transform: translateX(-100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-mask-enter-active,
+.fade-mask-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-mask-enter-from,
+.fade-mask-leave-to {
+  opacity: 0;
+}
+
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 500px;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.main-navigation .container-fluid {
+  max-width: 1200px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+
+/* 📱 響應式 */
+@media (min-width: 992px) {
+  .hamburger-btn {
+    display: none;
   }
-  .nav-item {
-    width: 100%;
-    text-align: center;
-    margin-bottom: 0.25rem;
-  }
-  .nav-link {
-    width: 100%;
-    text-align: center;
-    font-size: 1.7rem;
+  .main-navigation .container-fluid {
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
-@media (max-width: 576px) {
-  .nav {
-    flex-wrap: wrap;
-    justify-content: space-around;
-  }
-  .nav-item {
-    flex: 0 0 auto;
-    margin-bottom: 0.5rem;
-  }
-  .nav-link{
-    font-size: 1.5rem;
+@media (max-width: 991px) {
+  .nav-pills {
+    display: none !important;
   }
 }
 </style>

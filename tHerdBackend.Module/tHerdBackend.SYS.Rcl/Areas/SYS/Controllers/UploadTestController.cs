@@ -1,9 +1,6 @@
-﻿using CloudinaryDotNet;
+﻿using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.Interfaces.SYS;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {
@@ -11,21 +8,25 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
     public class UploadTestController : Controller
     {
         private readonly ISysAssetFileService _frepo;
-        private readonly Cloudinary _cloudinary;
 
-        public UploadTestController(ISysAssetFileService frepo, Cloudinary cloudinary)
+        public UploadTestController(ISysAssetFileService frepo)
         {
-            _cloudinary = cloudinary;
             _frepo = frepo;
         }
 
+        /// <summary>
+        /// 上傳檔案
+        /// </summary>
+        /// <param name="uploadDto"></param>
+        /// <returns></returns>
         [HttpPost]
         public async Task<IActionResult> Index(AssetFileUploadDto uploadDto)
         {
-            if (uploadDto.Files == null || uploadDto.Files.Count == 0)
+            if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
             {
                 ViewBag.Message = "請至少選擇一個檔案";
-                return View();
+                var files = await _frepo.GetFilesByProg("SYS", "UploadTest");
+                return View(files);
             }
 
             uploadDto.ModuleId = "SYS";
@@ -33,7 +34,7 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 
             try
             {
-                var imageUrls = await _frepo.AddImages(uploadDto);
+                var imageUrls = await _frepo.AddImages(uploadDto); // 呼叫服務上傳圖片
 
                 ViewBag.ImageUrls = imageUrls; // 將圖片 URL 傳遞到 View
 
@@ -47,10 +48,14 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
             return RedirectToAction("Index"); // 建議 Redirect，避免重新整理重送
         }
 
+        /// <summary>
+        /// 預設載入
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var files = await _frepo.GetFiles("SYS", "UploadTest");
+            var files = await _frepo.GetFilesByProg("SYS", "UploadTest"); // 依據模組及程式，取得已上傳的檔案
             return View(files);
         }
     }

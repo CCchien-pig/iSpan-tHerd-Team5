@@ -2,88 +2,14 @@
 @using System.Linq
 @model List<SysAssetFileDto>
 
+@{
+    const string updateApiUrl = "/SYS/Images/UpdateFile";
+    const string deleteApiUrl = "/SYS/Images/DeleteFile";
+}
+
 @section Styles {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
-    <style>
-        .img-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px; /* 縮圖間距 */
-        }
-
-        .img-item {
-            position: relative;
-            overflow: hidden;
-        }
-
-            .img-item img {
-                width: 100%;
-                height: 200px;
-                object-fit: cover;
-                border-radius: 6px;
-                cursor: pointer;
-                display: block;
-            }
-
-        .btn-close-custom {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(0,0,0,0.6); /* 半透明黑底 */
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-            .btn-close-custom i {
-                color: white; /* 白色叉叉 */
-                font-size: 16px;
-            }
-
-        .img-item:hover .btn-close-custom {
-            opacity: 1;
-        }
-
-        /* 預覽區 */
-        #preview .img-item {
-            position: relative;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 8px;
-            background: #fafafa;
-        }
-
-            #preview .img-item img {
-                width: 100%;
-                height: 200px;
-                object-fit: cover;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-
-            #preview .img-item input,
-            #preview .img-item textarea {
-                margin-top: 5px;
-            }
-
-        fieldset {
-            border: 1px solid #ccc !important;
-            padding: 1rem;
-        }
-
-            fieldset legend {
-                font-size: 1rem;
-                font-weight: 600;
-                color: #333;
-            }
-    </style>
+    <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
 }
 
 <h2>@ViewData["Title"]</h2>
@@ -93,7 +19,19 @@
         <a asp-area="SYS" asp-controller="UploadTest" asp-action="Index"
            id="resetBtn"
            class="btn btn-outline-secondary btn-sm d-none">復原更改</a>
-        <button type="submit" class="btn btn-success btn-sm">儲存</button>
+        <button type="submit" class="btn btn-success btn-sm">上傳</button>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-semibold">選擇上傳資料夾</label>
+        <div class="d-flex align-items-center gap-2">
+            <input type="hidden" id="selectedFolderId" name="FolderId" value="">
+            <input type="text" id="selectedFolderName" class="form-control form-control-sm"
+                   placeholder="未選擇資料夾" readonly style="width:300px;">
+            <button type="button" id="btnSelectFolder" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-folder2-open"></i> 選擇資料夾
+            </button>
+        </div>
     </div>
 
     <!-- 預覽區 -->
@@ -121,248 +59,90 @@
 @if (Model != null && Model.Any())
 {
     <div class="img-grid">
-        @for (int i = 0; i < Model.Count; i++)
+        @foreach (var file in Model)
         {
-            var file = Model[i];
-            <div class="img-item position-relative">
+            <div class="img-item position-relative @(file.IsActive ? "" : "inactive")">
                 <img src="@file.FileUrl"
                      alt="@file.AltText"
-                     class="thumb-clickable"
-                     data-alt="@file.AltText"
-                     data-caption="@file.Caption" />
+                     class="thumb-clickable img-zoomable"
+                     data-bs-toggle="modal"
+                     data-bs-target="#imgMetaModal"
+                     data-file-id="@file.FileId"
+                     data-file-key="@file.FileKey"
+                     data-file-url="@file.FileUrl"
+                     data-file-ext="@file.FileExt"
+                     data-mime-type="@file.MimeType"
+                     data-width="@file.Width"
+                     data-height="@file.Height"
+                     data-file-size-bytes="@file.FileSizeBytes"
+                     data-alt-text="@file.AltText"
+                     data-caption="@file.Caption"
+                     data-folder-id="@file.FolderId"
+                     data-is-active="@file.IsActive.ToString().ToLower()"
+                     data-is-external="@file.IsExternal.ToString().ToLower()"
+                     data-created-date="@file.FormateCreatedDate"
+                     data-update-api="@updateApiUrl"
+                     data-delete-api="@deleteApiUrl" />
 
-                <!-- X 移除按鈕 -->
-                <button type="button" class="btn-close-custom" aria-label="Close">
+                <button type="button" class="btn-close-custom" aria-label="Close" onclick="deleteFile(@file.FileId)">
                     <i class="bi bi-x-lg"></i>
                 </button>
+
+                <button type="button"
+                        class="toggle-active-btn btn btn-sm"
+                        onclick="toggleActive(@file.FileId, this)">
+                    @(file.IsActive ? "停用" : "啟用")
+                </button>
+
+                <div class="disabled-overlay">
+                    <i class="bi bi-slash-circle"></i>
+                </div>
             </div>
         }
     </div>
 }
 
-<!-- Bootstrap Modal -->
-<div class="modal fade" id="imgMetaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">圖片資訊</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalImg"
-                     src=""
-                     alt=""
-                     class="img-fluid mb-3 rounded"
-                     style="max-width:600px; max-height:400px; object-fit:contain; cursor: zoom-in;" />
-
-                <div class="mb-3 text-start">
-                    <label for="modalAlt" class="form-label">AltText</label>
-                    <input type="text" id="modalAlt" class="form-control" />
-                </div>
-                <div class="mb-3 text-start">
-                    <label for="modalCaption" class="form-label">Caption</label>
-                    <textarea id="modalCaption" class="form-control" rows="2"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" id="confirmMetaBtn" class="btn btn-primary">確定</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- 編輯圖片 -->
+@await Component.InvokeAsync("UpdateImage", new { 
+    modalId = "imgMetaModal",
+    title = "圖片資訊",
+    file = new SysAssetFileDto(),
+    updateApiUrl = updateApiUrl,
+    deleteApiUrl = deleteApiUrl
+})
 
 @section Scripts {
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const modal = new bootstrap.Modal(document.getElementById("imgMetaModal"));
-            const modalImg = document.getElementById("modalImg");
-            const modalAlt = document.getElementById("modalAlt");
-            const modalCaption = document.getElementById("modalCaption");
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
 
-            const resetBtn = document.getElementById("resetBtn");
-            const selectBtn = document.getElementById("selectBtn");
-            const fileInput = document.getElementById("fileInput");
-            const preview = document.getElementById("preview");
-            const previewArea = document.getElementById("previewArea");
+    <script type="module">
+        import { openFolderTreeSelector } from '/_content/tHerdBackend.UIKit.Rcl/js/folder-tree.js';
 
-            const confirmBtn = document.getElementById("confirmMetaBtn");
+        document.addEventListener('DOMContentLoaded', () => {
+          const btnSelect = document.getElementById('btnSelectFolder');
+          const folderIdInput = document.getElementById('selectedFolderId');
+          const folderNameInput = document.getElementById('selectedFolderName');
 
-            if (confirmBtn) {
-                confirmBtn.addEventListener("click", function () {
-                    const activeThumb = document.querySelector(`.thumb-clickable[src="${modalImg.src}"]`);
-                    let changed = false;
-
-                    if (activeThumb) {
-                        const oldAlt = activeThumb.dataset.alt || "";
-                        const oldCaption = activeThumb.dataset.caption || "";
-
-                        // 更新值
-                        activeThumb.alt = modalAlt.value;
-                        activeThumb.dataset.alt = modalAlt.value;
-                        activeThumb.dataset.caption = modalCaption.value;
-
-                        // 判斷是否有修改
-                        if (oldAlt !== modalAlt.value || oldCaption !== modalCaption.value) {
-                            changed = true;
-                        }
-                    }
-
-                    // 如果有預覽模式的圖片，也要同步
-                    const previewImg = document.querySelector(`.preview-img[src="${modalImg.src}"]`);
-                    if (previewImg) {
-                        const oldAlt = previewImg.dataset.alt || "";
-                        const oldCaption = previewImg.dataset.caption || "";
-
-                        previewImg.alt = modalAlt.value;
-                        previewImg.dataset.alt = modalAlt.value;
-                        previewImg.dataset.caption = modalCaption.value;
-
-                        if (oldAlt !== modalAlt.value || oldCaption !== modalCaption.value) {
-                            changed = true;
-                        }
-                    }
-
-                    // 有修改才顯示「復原更改」
-                    if (changed) {
-                        showReset();
-                    }
-
-                    modal.hide();
-                });
-            }
-
-            // === 工具函式 ===
-            function showReset() {
-                if (resetBtn) resetBtn.classList.remove("d-none");
-            }
-
-            function togglePreviewArea(show) {
-                if (previewArea) {
-                    previewArea.classList.toggle("d-none", !show);
-                }
-            }
-
-            // === 預覽功能 ===
-            function showPreview(files) {
-                preview.innerHTML = ""; // 先清空舊的，避免疊加
-                hiddenInputs.innerHTML = "";  // ⚡ 每次清空再重建
-
-                [...files].forEach((file, index) => {
-                    if (!file.type.startsWith("image/")) return;
-
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        const wrapper = document.createElement("div");
-                        wrapper.className = "img-item";
-
-                        wrapper.innerHTML = `
-                            <img src="${e.target.result}" alt="" class="preview-img" />
-                            <button type="button" class="btn-close-custom" aria-label="Close">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                            <input type="text" class="form-control mt-2 alt-input"
-                                   placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
-                            <textarea class="form-control mt-2 caption-input"
-                                      placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
-                        `;
-
-                        // 移除按鈕
-                        wrapper.querySelector(".btn-close-custom").addEventListener("click", () => {
-                            wrapper.remove();
-                            if (preview.children.length === 0) {
-                                togglePreviewArea(false);
-                            }
-                            showReset();
-                        });
-
-                        preview.appendChild(wrapper);
-
-                        // 把檔案也加進隱藏 input
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        const fileInput = document.createElement("input");
-                        fileInput.type = "file";
-                        fileInput.name = "Files";
-                        fileInput.files = dataTransfer.files;
-                        fileInput.hidden = true;
-                        hiddenInputs.appendChild(fileInput);
-                    };
-                    reader.readAsDataURL(file);
-                });
-
-                if (files.length > 0) {
-                    togglePreviewArea(true);
-                    showReset();
-                }
-            }
-
-            // === 綁定事件 ===
-
-            // 選擇圖片按鈕
-            if (selectBtn && fileInput) {
-                selectBtn.addEventListener("click", () => fileInput.click());
-
-                // 選擇檔案 → 預覽
-                fileInput.addEventListener("change", () => {
-                    showPreview(fileInput.files);
-                });
-
-                // 第二個用途（保留其他邏輯）
-                fileInput.addEventListener("change", () => {
-                    console.log("其他用途：例如即時上傳或驗證");
-                });
-            }
-
-            // 偵測 input/textarea 改變
-            document.addEventListener("input", function (e) {
-                if (e.target.matches("#preview input, #preview textarea")) {
-                    showReset();
-                }
+          btnSelect.addEventListener('click', async () => {
+            const result = await openFolderTreeSelector({
+              title: "選擇上傳資料夾",
+              apiUrl: "/SYS/Images/GetTreeData",
+              defaultId: folderIdInput.value || null
             });
 
-            // 偵測刪除圖片（動態生成的 close 按鈕也算）
-            document.addEventListener("click", function (e) {
-                if (e.target.closest(".btn-close-custom")) {
-                    showReset();
-                }
-            });
+            // 使用 SweetAlert2 結果格式
+            if (!result.isConfirmed) return;
 
-            // 點縮圖 → 開 modal
-            document.querySelectorAll(".thumb-clickable").forEach(img => {
-                img.addEventListener("click", function () {
-                    modalImg.src = this.src;
-                    modalImg.alt = this.alt;
-                    modalAlt.value = this.dataset.alt || "";
-                    modalCaption.value = this.dataset.caption || "";
-                    modal.show();
-                });
-            });
+            const selectedId = result.value;
+            const selectedNode = $("#swal-tree-container").jstree(true).get_node(selectedId);
+            const selectedName = selectedNode?.text || "(未命名)";
 
-            // 點擊大圖 → 直接開新分頁看原圖
-            modalImg.addEventListener("click", function () {
-                if (modalImg.src) {
-                    window.open(modalImg.src, "_blank");
-                }
-            });
-
-            // 更新按鈕（modal 裡的 Alt/Caption 更新）→ 即時反映到縮圖
-            const saveBtn = document.getElementById("saveMetaBtn");
-            if (saveBtn) {
-                saveBtn.addEventListener("click", function () {
-                    const activeThumb = document.querySelector(`.thumb-clickable[src="${modalImg.src}"]`);
-                    if (activeThumb) {
-                        activeThumb.alt = modalAlt.value;
-                        activeThumb.dataset.alt = modalAlt.value;
-                        activeThumb.dataset.caption = modalCaption.value;
-                    }
-                    showReset();
-                    modal.hide();
-                });
-            }
+            folderIdInput.value = selectedId;
+            folderNameInput.value = selectedName;
+          });
         });
     </script>
 }
-

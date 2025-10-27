@@ -13,7 +13,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using tHerdBackend.Core.Abstractions;
-using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.SUP.Stock;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
@@ -56,10 +56,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		// POST: /SUP/StockBatches/IndexJson
 		[HttpPost("SUP/StockBatches/IndexJson")]
 		public async Task<IActionResult> IndexJson(
-			[FromForm] string supplierId = null,
-			[FromForm] string expireFilter = null,
-			[FromForm] string startDate = null,
-			[FromForm] string endDate = null)
+			[FromForm] string? supplierId = null,
+			[FromForm] string? expireFilter = null,
+			[FromForm] string? startDate = null,
+			[FromForm] string? endDate = null)
 		{
 			try
 			{
@@ -80,11 +80,11 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 							join b in _context.SupBrands on p.BrandId equals b.BrandId
 							select new
 							{
-								SupplierId = b.SupplierId,
+								b.SupplierId,
 
 								sb.StockBatchId,
 								skuId = sku.SkuId,
-								SkuCode = sku.SkuCode,
+								sku.SkuCode,
 								sb.BatchNumber,
 								sb.ExpireDate,
 								sb.Qty,
@@ -93,15 +93,15 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 								//sb.IsSellable,
 								p.IsPublished,
 
-								CreatedDate = sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
-								RevisedDate = sb.RevisedDate,
+								sb.CreatedDate, // <-- 用來排序 BatchNumber 的日期部分
+								sb.RevisedDate,
 								// 非 null 排序欄位
 								SortDate = sb.RevisedDate ?? sb.CreatedDate,
 
 								// 展開要的
-								ProductName = p.ProductName,
-								BrandName = b.BrandName,
-								BrandCode = b.BrandCode,
+								p.ProductName,
+								b.BrandName,
+								b.BrandCode,
 
 								// SKU 總庫存
 								TotalStock = sku.StockQty,
@@ -152,13 +152,13 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				// 建立日期篩選
 				if (DateTime.TryParse(startDate, out var sDate))
 				{
-					query = query.Where(x => x.CreatedDate != null && x.CreatedDate >= sDate);
+					query = query.Where(x => x.CreatedDate >= sDate);
 				}
 				if (DateTime.TryParse(endDate, out var eDate))
 				{
 					// 包含當天整天
 					var endOfDay = eDate.AddDays(1);
-					query = query.Where(x => x.CreatedDate != null && x.CreatedDate < endOfDay);
+					query = query.Where(x => x.CreatedDate < endOfDay);
 				}
 
 				// 搜尋功能
@@ -203,21 +203,21 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					d.StockBatchId,
 					SkuCode = d.SkuCode ?? "",   // 保護 null
-					skuId = d.skuId,
+					d.skuId,
 					d.BatchNumber,
 					//d.ExpireDate,
 					ExpireDate = d.ExpireDate?.ToString("yyyy-MM-dd"),
 					RevisedDate = d.RevisedDate?.ToString("yyyy-MM-dd HH:mm:ss"),
 					SortDate = d.RevisedDate ?? d.CreatedDate,
 					d.Qty,
-					SafetyStockQty = d.SafetyStockQty,  // 保護 null
-					ReorderPoint = d.ReorderPoint,      // 保護 null
+					d.SafetyStockQty,  // 保護 null
+					d.ReorderPoint,      // 保護 null
 
 					// 展開列需要的
 					d.BrandName,
 					d.ProductName,
 
-					TotalStock = d.TotalStock,
+					d.TotalStock,
 
 					// 陣列版規格
 					// 將 Specifications 轉成陣列，前端 render 時可用 map
@@ -304,10 +304,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					return Json(new { success = false, message = "異動數量必須大於 0" });
 
 				// 上限
-				int requestedQty = vm.ChangeQty.Value;
+				int requestedQty = vm.ChangeQty ?? 0;
 
 				// 非Adjust視為增加 (例如 Purchase)
-				bool isAdd = vm.MovementType != "Adjust" ? true : vm.IsAdd;
+				bool isAdd = vm.MovementType != "Adjust" || vm.IsAdd;
 
 				// 計算上限
 				int maxAllowed;
@@ -378,7 +378,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 
 				// 初始化回傳
-				List<SupStockMovementDto> batchMovements = new();
+				List<SupStockMovementDto> batchMovements = [];
 				int appliedChangeQty = 0;
 				int totalStockQty = sku.StockQty;
 
@@ -394,7 +394,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 							vm.IsAdd,
 							vm.MovementType, // 傳入異動類型
 							currentUserId,
-							vm.Remark
+							vm.Remark ?? string.Empty
 						);
 
 						if (!result.Success)
@@ -422,7 +422,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					batchNumber = stockBatch.BatchNumber,
 					newQty = stockBatch.Qty,
 					appliedChangeQty,   // 實際套用數量
-					totalStockQty = totalStockQty       // 實際總庫存
+					totalStockQty       // 實際總庫存
 				});
 			}
 			catch (Exception ex)
@@ -467,16 +467,17 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		public async Task<IActionResult> GetBrandNameBySupplier(int supplierId)
 		{
 			var brandNames = await _context.SupBrands
-				.Where(b => b.SupplierId == supplierId && b.IsActive)
+				.Where(b => b.SupplierId == supplierId)
 				.Select(b => new
 				{
 					b.BrandId,
-					b.BrandName
+					b.BrandName,
+					b.IsActive // 回傳啟用狀態
 				})
 				.ToListAsync();
 
-			if (brandNames == null || !brandNames.Any())
-				return NotFound("找不到對應的品牌");
+			//if (brandNames == null || !brandNames.Any())
+			//	return NotFound("找不到對應的品牌");
 
 			return Ok(brandNames);
 		}
@@ -491,9 +492,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				//.Where(b => b.IsActive)
 				.Select(b => new
 				{
-					BrandId = b.BrandId,
-					BrandName = b.BrandName,
-					IsSupplierActive = b.Supplier.IsActive  // 取得供應商狀態
+					b.BrandId,
+					b.BrandName,
+
+					IsSupplierActive = b.Supplier != null ? b.Supplier.IsActive : (bool?)null  // 取得供應商狀態
 				})
 				.ToListAsync();
 			return Ok(brands);
@@ -596,10 +598,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		// POST： /SUP/StockBatches/GetAllStockHistory
 		[HttpPost("SUP/StockBatches/GetAllStockHistory")]
 		public async Task<IActionResult> GetAllStockHistory(
-			[FromForm] string supplierId = null,
-			[FromForm] string expireFilter = null,
-			[FromForm] string startDate = null,
-			[FromForm] string endDate = null)
+			[FromForm] string? supplierId = null,
+			[FromForm] string? expireFilter = null,
+			[FromForm] string? startDate = null,
+			[FromForm] string? endDate = null)
 		{
 			// 1. DataTables 參數
 			var draw = Request.Form["draw"].FirstOrDefault() ?? "1";
@@ -619,18 +621,18 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 						{
 							h.StockHistoryId,
 							sb.StockBatchId,
-							SkuCode = sku.SkuCode,
+							sku.SkuCode,
 							sb.BatchNumber,
 							b.BrandName,
-							ExpireDate = sb.ExpireDate,
+							sb.ExpireDate,
 							h.ChangeType,
 							h.BeforeQty,
 							h.ChangeQty,
 							h.AfterQty,
-							RevisedDate = h.RevisedDate,
-							Reviser = h.Reviser,
-							BrandCode = b.BrandCode,
-							SupplierId = b.SupplierId
+							h.RevisedDate,
+							h.Reviser,
+							b.BrandCode,
+							b.SupplierId
 						};
 
 			// 3. 篩選供應商
@@ -772,7 +774,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		{
 			public int ChangeQty { get; set; }
 			public bool IsAdd { get; set; }
-			public string Remark { get; set; }
+			public string? Remark { get; set; }
 		}
 
 		// POST: /SUP/StockBatches/Update
@@ -839,10 +841,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				{
 					sb.StockBatchId,
 					sb.BatchNumber,
-					BrandName = brand.BrandName,
-					ProductName = prod.ProductName,
-					SkuCode = sku.SkuCode,
-					ManufactureDate = sb.ManufactureDate,
+					brand.BrandName,
+					prod.ProductName,
+					sku.SkuCode,
+					sb.ManufactureDate,
 					CurrentQty = sb.Qty
 				}
 			).FirstOrDefaultAsync();
@@ -870,7 +872,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					stockBatch.ManufactureDate,
 					stockBatch.CurrentQty,
 					Remark = lastHistory?.Remark ?? "",
-					StockHistoryId = lastHistory?.StockHistoryId
+					lastHistory?.StockHistoryId
 				}
 			});
 		}
@@ -1291,10 +1293,10 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		#region 匯出功能
 		[HttpGet]
 		public async Task<IActionResult> ExportStockFiltered(
-			string searchValue = null,
-			string startDate = null,
-			string endDate = null,
-			string expireFilter = null,
+			string? searchValue = null,
+			string? startDate = null,
+			string? endDate = null,
+			string? expireFilter = null,
 			string type = "csv")
 		{
 			var query = from sb in _context.SupStockBatches
@@ -1306,9 +1308,9 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 							sb.StockBatchId,
 							SKU = sku.SkuCode,
 							sb.BatchNumber,
-							ProductName = p.ProductName,
-							BrandName = b.BrandName,
-							BrandCode = b.BrandCode,
+							p.ProductName,
+							b.BrandName,
+							b.BrandCode,
 							sb.Qty,
 							sb.ExpireDate,
 							sb.ManufactureDate,
@@ -1333,12 +1335,12 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 			// 建立日期篩選
 			if (DateTime.TryParse(startDate, out var sDate))
-				query = query.Where(x => x.CreatedDate != null && x.CreatedDate >= sDate);
+				query = query.Where(x => x.CreatedDate >= sDate);
 
 			if (DateTime.TryParse(endDate, out var eDate))
 			{
 				var endOfDay = eDate.AddDays(1);
-				query = query.Where(x => x.CreatedDate != null && x.CreatedDate < endOfDay);
+				query = query.Where(x => x.CreatedDate < endOfDay);
 			}
 
 			// 全局搜尋
@@ -1359,17 +1361,22 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				"csv" => ExportCsv(data),
 				"excel" => ExportExcel(data),
-				"pdf" => await ExportPdf(searchValue, startDate, endDate, expireFilter), // 傳搜尋與篩選條件
+				"pdf" => await ExportPdf(
+					searchValue ?? string.Empty,
+					startDate ?? string.Empty,
+					endDate ?? string.Empty,
+					expireFilter ?? string.Empty
+				), // 傳搜尋與篩選條件
 				_ => BadRequest("未知匯出類型")
 			};
 		}
 
 		[HttpGet]
 		public async Task<IActionResult> ExportHistoryFiltered(
-			string searchValue = null,
-			string startDate = null,
-			string endDate = null,
-			string expireFilter = null,
+			string? searchValue = null,
+			string? startDate = null,
+			string? endDate = null,
+			string? expireFilter = null,
 			string type = "csv")
 		{
 			var query = from h in _context.SupStockHistories
@@ -1433,7 +1440,12 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				"csv" => ExportCsv(data),
 				"excel" => ExportExcel(data),
-				"pdf" => await ExportHistoryPdf(searchValue, startDate, endDate, expireFilter),
+				"pdf" => await ExportPdf(
+					searchValue ?? string.Empty,
+					startDate ?? string.Empty,
+					endDate ?? string.Empty,
+					expireFilter ?? string.Empty
+				), // 傳搜尋與篩選條件
 				_ => BadRequest("未知匯出類型")
 			};
 		}
@@ -1461,7 +1473,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "StockBatch.xlsx");
 		}
 
-		private PdfFont GetChineseFont()
+		private static PdfFont GetChineseFont()
 		{
 			string[] fontPaths = new[]
 			{
@@ -1794,7 +1806,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			await _context.SaveChangesAsync();
 		}
 
-		private string GenerateBatchNumber(string brandCode, DateTime today, ref int nextSeq)
+		private static string GenerateBatchNumber(string brandCode, DateTime today, ref int nextSeq)
 		{
 			if (string.IsNullOrEmpty(brandCode))
 				brandCode = "XX";
@@ -1837,7 +1849,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				if ((vm.ChangeQty ?? 0) <= 0)
 					return Json(new { success = false, message = "異動數量必須大於 0" });
 
-				int expireQty = vm.ChangeQty.Value;
+				int expireQty = vm.ChangeQty ?? 0;
 
 				var userId = _me.Id;
 				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
@@ -1851,7 +1863,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					isAdd: false,
 					movementType: "Expire",
 					reviserId: currentUserId,
-					remark: vm.Remark
+					remark: vm.Remark ?? string.Empty
 				);
 
 				if (!result.Success)
@@ -1905,7 +1917,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				if ((vm.ChangeQty ?? 0) <= 0)
 					return Json(new { success = false, message = "異動數量必須大於 0" });
 
-				int requestedQty = vm.ChangeQty.Value;
+				int requestedQty = vm.ChangeQty ?? 0;
 
 				if (sku.StockQty < requestedQty)
 					return Json(new { success = false, message = "庫存不足，無法出庫" });
@@ -1922,7 +1934,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					isAdd: false,
 					movementType: "Sale",
 					reviserId: currentUserId,
-					remark: vm.Remark,
+					remark: vm.Remark ?? string.Empty,
 					//orderItemId: vm.OrderItemId
 					orderItemId: 2521  // TODO:目前寫死對應訂單明細
 
@@ -1986,7 +1998,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				if ((vm.ChangeQty ?? 0) <= 0)
 					return Json(new { success = false, message = "異動數量必須大於 0" });
 
-				int requestedQty = vm.ChangeQty.Value;
+				int requestedQty = vm.ChangeQty ?? 0;
 
 				var userId = _me.Id;
 				var user = await _userMgr.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
@@ -2002,7 +2014,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					isAdd: true,
 					movementType: "Return",
 					reviserId: currentUserId,
-					remark: vm.Remark,
+					remark: vm.Remark ?? string.Empty,
 					//orderItemId: vm.OrderItemId
 					orderItemId: 2521  // TODO:目前寫死對應訂單明細
 				);

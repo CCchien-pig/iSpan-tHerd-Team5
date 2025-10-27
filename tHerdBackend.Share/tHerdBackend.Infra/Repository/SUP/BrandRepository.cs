@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.DTOs.SUP;
+using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models;
 
@@ -11,6 +11,9 @@ public class BrandRepository : IBrandRepository
 		_context = context;
 	}
 
+
+	#region 品牌
+
 	public async Task<List<BrandDto>> GetAllAsync()
 	{
 		return await _context.SupBrands.AsNoTracking()
@@ -20,7 +23,7 @@ public class BrandRepository : IBrandRepository
 				BrandName = b.BrandName,
 				BrandCode = b.BrandCode,
 				SupplierId = b.SupplierId,
-				SeoId = b.SeoId,
+				//SeoId = b.SeoId.HasValue ? b.SeoId.Value.ToString() : null,
 				DiscountRate = b.DiscountRate,
 				IsDiscountActive = b.IsDiscountActive,
 				StartDate = b.StartDate,
@@ -46,7 +49,7 @@ public class BrandRepository : IBrandRepository
 				BrandName = b.BrandName,
 				BrandCode = b.BrandCode,
 				SupplierId = b.SupplierId,
-				SeoId = b.SeoId,
+				//SeoId = b.SeoId.HasValue ? b.SeoId.Value.ToString() : null,
 				DiscountRate = b.DiscountRate,
 				IsDiscountActive = b.IsDiscountActive,
 				StartDate = b.StartDate,
@@ -62,17 +65,34 @@ public class BrandRepository : IBrandRepository
 			.FirstOrDefaultAsync();
 	}
 
-	public async Task<List<BrandDto>> GetActiveAsync()
+	public async Task<List<BrandDto>> GetFilteredAsync(
+		bool? isActive = null,
+		bool? isDiscountActive = null,
+		bool? isFeatured = null)
 	{
-		return await _context.SupBrands.AsNoTracking()
-			.Where(b => b.IsActive)
+		var query = _context.SupBrands.AsNoTracking().AsQueryable();
+
+		// 篩選品牌啟用狀態
+		if (isActive.HasValue)
+			query = query.Where(b => b.IsActive == isActive.Value);
+
+		// 篩選折扣活動，只依 IsDiscountActive
+		if (isDiscountActive.HasValue)
+			query = query.Where(b => b.IsDiscountActive == isDiscountActive.Value);
+
+		// 篩選精選品牌
+		if (isFeatured.HasValue)
+			query = query.Where(b => b.IsFeatured == isFeatured.Value);
+
+		// 投影成 DTO
+		return await query
 			.Select(b => new BrandDto
 			{
 				BrandId = b.BrandId,
 				BrandName = b.BrandName,
 				BrandCode = b.BrandCode,
 				SupplierId = b.SupplierId,
-				SeoId = b.SeoId,
+				//SeoId = b.SeoId.HasValue ? b.SeoId.Value.ToString() : null,
 				DiscountRate = b.DiscountRate,
 				IsDiscountActive = b.IsDiscountActive,
 				StartDate = b.StartDate,
@@ -86,64 +106,15 @@ public class BrandRepository : IBrandRepository
 				RevisedDate = b.RevisedDate
 			})
 			.ToListAsync();
+	}
+	public async Task<bool> CheckBrandExistsAsync(int brandId)
+	{
+		return await _context.Set<SupBrand>()
+			.AsNoTracking()
+			.AnyAsync(b => b.BrandId == brandId);
 	}
 
-	public async Task<List<BrandDto>> GetActiveDiscountAsync()
-	{
-		var today = DateOnly.FromDateTime(DateTime.UtcNow);
-		return await _context.SupBrands.AsNoTracking()
-			.Where(b => b.IsActive &&
-						b.IsDiscountActive &&
-						(b.DiscountRate > 0) &&
-						(b.StartDate == null || b.StartDate <= today) &&
-						(b.EndDate == null || b.EndDate >= today))
-			.Select(b => new BrandDto
-			{
-				BrandId = b.BrandId,
-				BrandName = b.BrandName,
-				BrandCode = b.BrandCode,
-				SupplierId = b.SupplierId,
-				SeoId = b.SeoId,
-				DiscountRate = b.DiscountRate,
-				IsDiscountActive = b.IsDiscountActive,
-				StartDate = b.StartDate,
-				EndDate = b.EndDate,
-				IsFeatured = b.IsFeatured,
-				LikeCount = b.LikeCount,
-				IsActive = b.IsActive,
-				Creator = b.Creator,
-				CreatedDate = b.CreatedDate,
-				Reviser = b.Reviser,
-				RevisedDate = b.RevisedDate
-			})
-			.ToListAsync();
-	}
-
-	public async Task<List<BrandDto>> GetActiveFeaturedAsync()
-	{
-		return await _context.SupBrands.AsNoTracking()
-			.Where(b => b.IsActive && b.IsFeatured)
-			.Select(b => new BrandDto
-			{
-				BrandId = b.BrandId,
-				BrandName = b.BrandName,
-				BrandCode = b.BrandCode,
-				SupplierId = b.SupplierId,
-				SeoId = b.SeoId,
-				DiscountRate = b.DiscountRate,
-				IsDiscountActive = b.IsDiscountActive,
-				StartDate = b.StartDate,
-				EndDate = b.EndDate,
-				IsFeatured = b.IsFeatured,
-				LikeCount = b.LikeCount,
-				IsActive = b.IsActive,
-				Creator = b.Creator,
-				CreatedDate = b.CreatedDate,
-				Reviser = b.Reviser,
-				RevisedDate = b.RevisedDate
-			})
-			.ToListAsync();
-	}
+	#endregion
 
 	public async Task<int?> GetLikeCountAsync(int id)
 	{
@@ -152,4 +123,42 @@ public class BrandRepository : IBrandRepository
 			.Select(b => (int?)b.LikeCount)
 			.FirstOrDefaultAsync();
 	}
+
+
+	#region 品牌折扣
+
+	public async Task<List<BrandDiscountDto>> GetAllDiscountsAsync()
+	{
+		return await _context.Set<SupBrand>().AsNoTracking()
+			.Select(b => new BrandDiscountDto
+			{
+				BrandId = b.BrandId,
+				BrandName = b.BrandName,
+				DiscountRate = b.DiscountRate,
+				IsDiscountActive = b.IsDiscountActive,
+				StartDate = b.StartDate,
+				EndDate = b.EndDate
+			})
+			.ToListAsync();
+	}
+
+	public async Task<BrandDiscountDto?> GetDiscountByBrandIdAsync(int brandId)
+	{
+		return await _context.SupBrands.AsNoTracking()
+			.Where(b => b.BrandId == brandId)
+			.Select(b => new BrandDiscountDto
+			{
+				BrandId = b.BrandId,
+				BrandName = b.BrandName,
+				DiscountRate = b.DiscountRate,
+				IsDiscountActive = b.IsDiscountActive,
+				StartDate = b.StartDate,
+				EndDate = b.EndDate
+			})
+			.FirstOrDefaultAsync();
+	}
+
+	#endregion
+
+
 }

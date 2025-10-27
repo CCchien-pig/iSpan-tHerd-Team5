@@ -1,9 +1,10 @@
-﻿using tHerdBackend.Core.DTOs.SUP;
+﻿using tHerdBackend.Core.DTOs.SUP.Logistics;
 
 namespace tHerdBackend.Core.Interfaces.SUP
 {
 	public interface ILogisticsRateRepository
 	{
+		Task<bool> CheckLogisticsExistsAsync(int logisticsId);
 		Task<List<LogisticsRateDto>> GetByLogisticsIdAsync(int logisticsId);
 	}
 }

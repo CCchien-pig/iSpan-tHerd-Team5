@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs.SUP.Logistics;
+using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
 	[Route("api/[folder]/[controller]")]
+	[Authorize]
 	public class LogisticsRateController : ControllerBase
 	{
 		private readonly ILogisticsRateService _service;
@@ -20,26 +23,104 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 		//GET /api/sup/LogisticsRate/token
+		/// <summary>
+		/// 取得 AntiForgery Token （如前端需用，可保留此匿名）
+		/// </summary>
 		[HttpGet("token")]
+		[AllowAnonymous]
 		public IActionResult GetToken()
 		{
 			var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-			return Ok(new { token = tokens.RequestToken });
+			return Ok(ApiResponse<string>.Ok(tokens.RequestToken, "取得成功"));
 		}
 
 		//GET /api/sup/LogisticsRate/bylogistics/{logisticsId}
+		/// <summary>
+		/// 依物流商ID查詢所有運費率（可匿名）
+		/// </summary>
 		[HttpGet("bylogistics/{logisticsId}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> GetByLogisticsId(int logisticsId)
 		{
 			try
 			{
+				// 檢查資料庫中是否存在該 logisticsId
+				var exists = await _service.CheckLogisticsExistsAsync(logisticsId);
+				if (!exists)
+				{
+					return Ok(ApiResponse<List<LogisticsRateDto>>.Fail("找不到該物流商ID"));
+				}
+
 				var rates = await _service.GetByLogisticsIdAsync(logisticsId);
-				return Ok(rates);
+
+				// 若查不到資料
+				if (rates == null || !rates.Any())
+				{
+					return Ok(ApiResponse<List<LogisticsRateDto>>.Fail("沒有找到該物流商的運費率資料"));
+				}
+				return Ok(ApiResponse<List<LogisticsRateDto>>.Ok(rates, "查詢成功"));
 			}
 			catch (Exception ex)
 			{
-				return StatusCode(500, new { message = ex.Message, stack = ex.StackTrace });
+				// 統一回傳失敗格式
+				return Ok(ApiResponse<List<LogisticsRateDto>>.Fail("系統錯誤：" + ex.Message));
+			}
+		}
+
+		//POST /api/sup/LogisticsRate/order-shipping-fee
+		/// <summary>
+		/// 訂單運費計算（需授權?），現在先用[AllowAnonymous]
+		/// </summary>
+		[HttpPost("order-shipping-fee")]
+		[AllowAnonymous]
+		public async Task<IActionResult> CalculateShippingFee(
+			[FromBody] ShippingFeeDto.ShippingFeeRequestDto request)
+		{
+			try
+			{
+				// 檢查 request 是否為 null
+				if (request == null)
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail("請提供計算參數"));
+				}
+
+				// 建立錯誤訊息列表
+				var errorMessages = new List<string>();
+
+				if (request.SkuId <= 0)
+					errorMessages.Add("SKU Id 無效");
+
+				if (request.LogisticsId <= 0)
+					errorMessages.Add("Logistics Id 無效");
+
+				if (request.Qty <= 0)
+					errorMessages.Add("Qty 必須大於 0");
+
+				// 若有錯誤，回傳訊息
+				if (errorMessages.Any())
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail(
+						string.Join("；", errorMessages)
+					));
+				}
+
+				// 呼叫計算服務
+				var result = await _service.CalculateShippingFeeAsync(request);
+
+				// 如果計算結果為 null 或無效
+				if (result == null)
+				{
+					return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail("運費計算失敗，請檢查輸入資料"));
+				}
+
+				// 成功回傳
+				return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Ok(
+					result, result.Message ?? "計算完成"
+				));
+			}
+			catch (Exception ex)
+			{
+				return Ok(ApiResponse<ShippingFeeDto.ShippingFeeResponseDto>.Fail("系統錯誤：" + ex.Message));
 			}
 		}
 	}

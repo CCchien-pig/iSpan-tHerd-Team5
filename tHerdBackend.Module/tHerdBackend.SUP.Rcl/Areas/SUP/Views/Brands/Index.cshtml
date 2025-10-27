@@ -1,0 +1,1170 @@
+﻿@* Brands Index *@
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+
+@section Styles {
+    <!-- Area 專用 CSS -->
+    <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+    <style>
+    </style>
+}
+
+<!-- 按鈕、提示文字區 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <button id="create" class="btn btn-outline-success me-2">新增品牌</button>
+        <button id="createBrandDiscount" class="btn btn-outline-warning me-2">新增全館品牌折扣</button>
+        <button id="refreshDiscountStatusBtn" class="btn btn-outline-primary btn-sm" title="批次刷新全部品牌折扣狀態">
+            <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+    </div>
+
+    <div class="text-muted small fst-italic">
+        點擊「折扣狀態」欄內文字可查看品牌折扣詳情
+    </div>
+</div>
+
+@* 渲染 DataTable：#brandTable *@
+<div class="card brand-card">
+    <h5>品牌資料</h5>
+    <table id="brandTable" class="display table" style="width:100%">
+        <thead>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- 新增/修改/詳情品牌 Modal -->
+<div id="brandModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 id="brandModalTitle" class="modal-title">品牌</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- Body -->
+            <div id="brandModalContent" class="modal-body p-4">
+                <!-- 透過 AJAX 載入 *Partial.cshtml -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增/編輯 全館折扣 Modal -->
+<div id="brandDiscountModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="brandDiscountModalTitle" class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandDiscountModalContent" class="modal-body p-4">
+                <!-- AJAX 載入 Partial View -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 品牌折扣詳情 Modal（名稱：brandDiscountDetailModal）-->
+<div id="brandDiscountDetailModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="brandDiscountDetailModalTitle" class="modal-title">品牌折扣詳情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandDiscountDetailModalContent" class="modal-body p-4">
+                <!-- AJAX 裝填折扣資訊 & 月曆 -->
+                <div id="discountDetailInfo"></div>
+                <div class="mt-4">
+                    <h6 class="mt-4">折扣期間月曆</h6>
+                    <div id="discountCalendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 品牌版面編輯 Modal（名稱：brandLayoutModal）-->
+<div id="brandLayoutModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-white container">
+            <div class="modal-header">
+                <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="brandLayoutModalContent" class="modal-body p-4"></div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    @{
+        // 為了避免 Razor 執行順序錯誤，我們在頂部只定義變數，不執行複雜邏輯
+        var antiForgeryTokens = Antiforgery.GetTokens(Context);
+    }
+    
+    <script>
+        $(document).ready(function() {
+            // 【CSRF 全局變數】
+            const csrfToken = '@(antiForgeryTokens?.RequestToken)';
+            const csrfHeaderName = '@(antiForgeryTokens?.HeaderName ?? "X-Request-Verification-Token")';
+
+            // ======= URL 變數 ======= //
+            var indexJsonUrl = '@Url.Action("IndexJson", "Brands", new { area = "SUP" })';
+            var createUrl    = '@Url.Action("Create", "Brands", new { area = "SUP" })';
+            var editUrl      = '@Url.Action("Edit", "Brands", new { area = "SUP" })';
+            var detailsUrl   = '@Url.Action("Details", "Brands", new { area = "SUP" })';
+            var deleteUrl    = '@Url.Action("DeleteAjax", "Brands", new { area = "SUP" })';
+            var toggleStatusUrl = '@Url.Action("ToggleStatus", "Brands", new { area = "SUP" })';
+            var createDiscountUrl = '@Url.Action("CreateDiscount", "Brands", new { area = "SUP" })';
+
+            const layoutEditUrl = '@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", layoutId = "__LAYOUTID__" })';
+            const getVersionsUrl = '@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__ID__" })';
+            const createLayoutUrl = '@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__" })'; // 使用 ID 傳遞 BrandId
+
+            // ======= 從 sessionStorage 拿到初始品牌名稱 =======
+            var initialBrandName = sessionStorage.getItem('selectedBrandName') || '';
+
+            // 初始化完就清掉，避免刷新又填入
+            sessionStorage.removeItem('selectedBrandName');
+
+
+            // 初始化 DataTable
+            // 將 DataTable 初始化從局部變數改為全局屬性
+            window.table = $('#brandTable').DataTable({
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: indexJsonUrl,
+                    type: 'POST',
+                    // dataSrc: 'data',
+                    dataSrc: function (json) {
+                        //console.log(json);      // 印出整個 JSON
+                        console.log(json.data); // 印出每筆 row
+                        return json.data;
+                    },
+                    error: function (xhr, error, thrown) {
+                        console.log(xhr.responseText); // 印出後端錯誤訊息
+                        alert("資料載入失敗，請檢查後端或 console");
+                    }
+                },
+                columns: [
+                    {
+                        data: 'sortDate',          // 後端給每筆資料一個排序用時間
+                        title: '#',
+                        className: 'text-center',
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return meta.row + 1 + meta.settings._iDisplayStart; // 顯示序號
+                        }
+                    },
+                    {
+                        data: 'brandName',
+                        title: '品牌名稱',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            return `${data} <button class="btn btn-link btn-sm details-btn" data-id="${row.brandId}" title="詳細資料" data-bs-toggle="tooltip"><i class="fa-solid fa-circle-info" style="color: #15b49f;"></i></button>`;
+                        }
+                    },
+                    {
+                        data: 'supplierName',
+                        title: '供應商名稱',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            if (!data) {
+                                return '<span class="no-supplier">尚未指定供應商</span>';
+                            }
+                            return `${data} <button class="btn btn-link btn-sm supplier-btn" data-name="${row.supplierName}" title="跳轉供應商頁" data-bs-toggle="tooltip">
+                                        <i class="fa-regular fa-copyright" style="color: #176afa;"></i>
+                                    </button>`;
+                        }
+                    },
+                    {
+                        data: 'discountStatus',
+                        title: '折扣狀態',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            let colorClass = 'text-secondary';
+                            if (data.startsWith('進行中')) {
+                                colorClass = 'text-success';
+                            } else if (data.includes('尚未')) {
+                                colorClass = 'text-warning';
+                            } else if (data.includes('結束')) {
+                                colorClass = 'text-danger';
+                            }
+                            // 加上 discount-status class 及 data-id
+                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;">${data}</span>`;
+                        }
+                    },
+                    {
+                        data: 'isFeatured',
+                        title: '精選品牌',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            return `
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-status" type="checkbox"
+                                           data-id="${row.brandId}" data-type="featured" ${row.isFeatured ? 'checked' : ''}>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'isActive',
+                        title: '品牌啟用狀態',
+                        className: 'text-center',
+                        render: function (data, type, row) {
+                            return `
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-status" type="checkbox"
+                                           data-id="${row.brandId}" data-type="active" ${row.isActive ? 'checked' : ''}>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'brandId',
+                        title: '操作',
+                        className: 'text-center',
+                        orderable: false,
+                        render: function (data) {
+                            return `
+                                <button class="btn btn-sm edit-btn" data-id="${data}" title="品牌編輯" data-bs-toggle="tooltip">
+                                    <i class="fa-regular fa-pen-to-square" style="color: #9073e8;"></i>
+                                </button>
+                                <button class="btn btn-sm discount-btn" data-id="${data}" title="折扣編輯" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-tags" style="color: #e87439;"></i>
+                                </button>
+                                <button class="btn btn-sm layout-edit-btn" data-id="${data}" title="版面設定" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-layer-group" style="color: #6a63a5;"></i>
+                                </button>
+                                <button class="btn btn-sm delete-btn" data-id="${data}" title="刪除品牌" data-bs-toggle="tooltip">
+                                    <i class="fa-solid fa-trash" style="color: #6688b7;"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
+                scrollY: "500px",
+                scrollCollapse: true,
+                colReorder: true,
+                columnDefs: [
+                    { targets: '_all', type: 'string' }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/2.3.3/i18n/zh-HANT.json',
+                    processing: '<i class="fa-solid fa-dog fa-bounce fa-3x"></i>'
+                },
+                initComplete: function (settings, json) {
+                    // 從 sessionStorage 取初始品牌
+                    // ===== 自動填入搜尋品牌名稱 =====
+                    var api = this.api(); // DataTable 內建方法取得當前表格實例
+                    if (initialBrandName) {
+                        var searchInput = $('#dt-search-0');
+                        searchInput.val(initialBrandName).trigger('input');
+                        api.search(initialBrandName).draw();
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: '已篩選',
+                            text: `目前顯示供應商 "${initialBrandName}" 的品牌`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+
+                    // 初始化 tooltip
+                    $('[data-bs-toggle="tooltip"]').each(function () {
+                        new bootstrap.Tooltip(this);
+                    });
+                }
+            });
+            
+            // tooltip 初始化與 redraw
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+            table.on('draw', function() {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+            });
+
+            // 新增品牌
+            $("#create").click(function() {
+                this.blur();
+                //console.log("click create")
+                $.get(createUrl,  function(html) {
+                    //console.log("ajax success"); // <- 看是否有進來
+                    $("#brandModalTitle").text("新增品牌");
+                    $('#brandModalContent').html(html);
+                    $.validator.unobtrusive.parse('#brandModalContent');
+                    $('#brandModal').modal('show');
+                });
+            });
+
+            // 編輯品牌
+            $('#brandTable').on('click', '.edit-btn', function () {
+                this.blur();
+                var id = $(this).data('id');
+                $.get(`${editUrl}/${id}`, function (html) {
+                    $("#brandModalTitle").text("修改品牌");
+                    $('#brandModalContent').html(html);
+                    $.validator.unobtrusive.parse('#brandModalContent');
+                    $('#brandModal').modal('show');
+                });
+            });
+
+            // 詳細資料
+            $('#brandTable').on('click', '.details-btn', function() {
+                this.blur();
+                var id = $(this).data('id');
+                $.get(`${detailsUrl}/${id}`, function(html) {
+                    console.log(`發送的 URL:${detailsUrl}/${id}`);
+                    $("#brandModalTitle").text("品牌詳細資料");
+                    $('#brandModalContent').html(html);
+
+                    // Bootstrap 5 modal show
+                    var myModal = new bootstrap.Modal(document.getElementById('brandModal'));
+                    myModal.show();
+                });
+            });
+
+            // 刪除品牌
+            $('#brandTable').on('click', '.delete-btn', function() {
+                var $thisBtn = $(this);
+                var id = $(this).data('id');
+                var rowData = table.row($(this).closest('tr')).data();
+                var brandName = rowData.brandName;
+
+                Swal.fire({
+                    title: `確定要刪除品牌：<br>"${brandName}" 嗎？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: '刪除',
+                    cancelButtonText: '取消',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `${deleteUrl}/${id}`,
+                            type: 'POST',
+                            success: function(res) {
+                                if (res.success) {
+                                    Swal.fire('刪除成功', '', 'success');
+                                    table.ajax.reload(null, false);
+                                } else {
+                                    Swal.fire('刪除失敗', res.message || '', 'error');
+                                }
+                            },
+                            error: function(xhr) {
+                                var msg = xhr.responseJSON?.message || '刪除失敗';
+                                Swal.fire('刪除失敗', msg, 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // ======= 提交品牌表單 (新增/修改) =======
+            $('#brandModalContent').on('submit', '#BrandForm', function (e) {
+                // console.log('submit event triggered');
+                e.preventDefault();
+
+                var form = $(this);
+                // console.log('form found:', form.length);
+
+                var isActive = $('#IsActive').prop('checked');
+                $('input[name="IsActive"][type="hidden"]', form).val(isActive);
+                var isFeatured = $('#IsFeatured').prop('checked');
+                $('input[name="IsFeatured"][type="hidden"]', form).val(isFeatured);
+
+                // console.log('form serialized:', form.serialize());
+                // console.log('form action:', form.attr('action'));
+
+                $.post(form.attr('action'), form.serialize())
+                    .done(function (res) {
+                        // console.log('AJAX .done triggered');
+                        var isJson = false;
+                        try {
+                            if (typeof res === "string" && res.trim().startsWith("{")) {
+                                res = JSON.parse(res);
+                                isJson = true;
+                            } else if (typeof res === "object") {
+                                isJson = true;
+                            }
+                        } catch (e) { }
+                        // console.log('AJAX response type isJson:', isJson, res);
+
+                        if (isJson && res.success) {
+                            $('#brandModal').modal('hide');
+                            Swal.fire({
+                                position: 'center',
+                                icon: 'success',
+                                title: res.isCreate ? '新增成功' : '修改成功',
+                                showConfirmButton: false,
+                                timer: 1200
+                            });
+
+                            if (res.brand) {
+                                // console.log('Add row: ', res.brand);
+                                table.row.add({
+                                    brandId: res.brand.brandId,
+                                    brandName: res.brand.brandName,
+                                    supplierName: res.brand.supplierName,
+                                    isActive: res.brand.isActive
+                                }).draw(false);
+                            }
+                        }
+                        else if (isJson && res.errors) {
+                            // 彈窗顯示所有錯誤訊息
+                            Swal.fire('表單有誤', res.errors.join('<br>'), 'error');
+                        }
+                        else if (typeof res === "string") {
+                            console.log('res is string, putting into #brandModalContent');
+                            $('#brandModalContent').html(res);
+                            $.validator.unobtrusive.parse('#brandModalContent');
+                        }
+                            else {
+                            console.log('Unhandled error branch, res=', res);
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function (jqXHR, textStatus, errorThrown) {
+                        console.log('AJAX failed:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('操作失敗', '', 'error');
+                    });
+            });
+
+            // toggle 事件
+            $('#brandTable').on('change', '.toggle-status', function() {
+                var checkbox = $(this);
+                var id = checkbox.data('id');
+                var type = checkbox.data('type'); // "featured" 或 "active"
+                var rowData = table.row(checkbox.closest('tr')).data();
+                var brandName = rowData.brandName;
+                var newStatus = checkbox.prop('checked');
+
+                // 先回復 checkbox，等確認後再改
+                checkbox.prop('checked', !newStatus);
+
+                Swal.fire({
+                    title: newStatus
+                        ? `確定啟用${type === 'featured' ? '精選品牌' : '品牌'}：<br>"${brandName}"？`
+                        : `確定停用${type === 'featured' ? '精選品牌' : '品牌'}：<br>"${brandName}"？`,
+                    icon: newStatus ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: newStatus ? '啟用' : '停用',
+                    cancelButtonText: '取消',
+                    confirmButtonColor: newStatus ? '#3085d6' : '#d33',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        checkbox.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
+                }).then((result) => {
+                    if(result.isConfirmed){
+                        $.post(`${toggleStatusUrl}`, { brandId: id, type: type, status: newStatus })
+                        .done(function(res){
+                            if(res.success){
+                                // 非精選品牌時，不直接打勾
+                                if (!(type === 'featured' && !newStatus)) {
+                                    checkbox.prop('checked', newStatus);
+                                }
+
+                                let message = '';
+                                let iconType = 'success';
+
+                                if (type === 'featured') {
+                                    if (newStatus) {
+                                        message = `已啟用成為精選品牌`;
+                                    } else {
+                                        message = `已設為非精選品牌`;
+                                        iconType = 'info'; // 用 info 或 question icon 表示非精選
+                                    }
+                                } else {
+                                    message = `已${newStatus ? '啟用' : '停用'}`;
+                                    iconType = newStatus ? 'success' : 'warning';
+                                }
+
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: iconType,
+                                    title: `品牌：${brandName}<br>${message}`,
+                                    showConfirmButton: false,
+                                    timer: 1800
+                                });
+
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('操作失敗', res.message || '', 'error');
+                            }
+                        })
+                        .fail(function(){
+                            Swal.fire('操作失敗', '', 'error');
+                        });
+                    }
+                });
+            });
+
+            // jQuery Validation 解析
+            $(function () {
+                $.validator.unobtrusive.parse('#brandForm');
+            });
+
+            // 自動填入
+            $(function () {
+                // 重新解析 jQuery Validation
+                $.validator.unobtrusive.parse('#brandForm');
+
+                // 事件委派 - 綁定在表單容器上（確保 partial 載入後仍有效）
+                $('#brandModalContent').on('click', '#fillNameContact', function () {
+                    const brands = [
+                        //{ name: 'Aura Cacia', shortCode: 'AC', seoId: 'aura-cacia' },
+                        //{ name: 'Davinci Laboratories', shortCode: 'DL', seoId: 'davinci-laboratories' },
+                        //{ name: 'Happy Family Organics', shortCode: 'HFO', seoId: 'happy-family-organics' },
+                        //{ name: "Oregon's Wild Harvest", shortCode: 'OWH', seoId: 'oregons-wild-harvest' },
+                        //{ name: 'Physicians Formula', shortCode: 'PF', seoId: 'physicians-formula' }
+                        { name: 'Aura Cacia', shortCode: 'AC' },
+                        { name: 'Davinci Laboratories', shortCode: 'DL' },
+                        { name: 'Happy Family Organics', shortCode: 'HFO' },
+                        { name: "Oregon's Wild Harvest", shortCode: 'OWH' },
+                        { name: 'Physicians Formula', shortCode: 'PF' }
+                    ];
+
+                    // 隨機選取一組品牌資料
+                    const randomBrand = brands[Math.floor(Math.random() * brands.length)];
+
+                    // 將選取結果填入欄位
+                    $('#BrandName').val(randomBrand.name);
+                    $('#BrandCode').val(randomBrand.shortCode);
+                    $('#SeoId').val(randomBrand.seoId);
+                });
+            });
+
+            // ======= 點品牌欄位的供應商按鈕跳轉 =======
+            $('#brandTable').on('click', '.supplier-btn', function () {
+                var $thisBtn = $(this);
+                var supplierName = $(this).data('name');
+                // console.log('點擊供應商按鈕，取得 supplierName:', supplierName);
+
+                if (!supplierName) {
+                    console.error('❌ supplierName 為空，無法跳轉');
+                    return;
+                }
+
+                Swal.fire({
+                    title: `確認要前往供應商頁面：<br>"${supplierName}"？`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '前往',
+                    cancelButtonText: '取消',
+                    didClose: () => {
+                        // Swal 關閉後才清除焦點（更穩定）
+                        $thisBtn.blur();
+                        document.activeElement.blur();
+                        document.body.focus();
+                        // 甚至強制 focus 到某個表格外元素
+                        $('#someSafeElement').focus(); // 可設一個隱藏 input 或主容器
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // 存入 sessionStorage
+                        sessionStorage.setItem('selectedSupplierName', supplierName);
+                        console.log('✅ 存入 sessionStorage: selectedSupplierName =', sessionStorage.getItem('selectedSupplierName'));
+
+                        // 跳轉到供應商頁面
+                        window.location.href = '/SUP/Suppliers/Index';
+                    }
+                });
+            });
+
+            // ======= 點新增全館折扣 =======
+            $("#createBrandDiscount").click(function() {
+                this.blur();
+                $.get(createDiscountUrl, function(html) {
+                $("#brandDiscountModalTitle").text("新增全館品牌折扣");
+                $('#brandDiscountModalContent').html(html);
+                $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                $('#brandDiscountModal').modal('show');
+                setupDateLogic();
+                });
+            });
+
+            // 點擊表格的「折扣狀態」顯示詳細折扣資訊 modal
+            $('#brandTable').on('click', '.discount-status', function () {
+                var brandId = $(this).data('id');
+                console.log('點擊折扣狀態，brandId:', brandId);
+                $.get(`/SUP/Brands/GetBrandDiscountDetail?brandId=${brandId}`, function (detail) {
+                    console.log('取得品牌折扣 detail:', detail);
+                    showDiscountDetailModal(detail);
+                });
+            });
+
+            // 點擊操作欄「編輯折扣」btn
+            $('#brandTable').on('click', '.discount-btn', function () {
+                this.blur();
+                var brandId = $(this).data('id');
+                $.get(`/SUP/Brands/EditDiscount?brandId=${brandId}`, function (html) {
+                    $("#brandDiscountModalTitle").text("編輯品牌活動折扣");
+                    $('#brandDiscountModalContent').html(html);
+                    $('#brandDiscountModal').modal('show');
+                    $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                    setupDateLogic();
+                });
+            });
+
+            // 批次刷新所有品牌的折扣狀態
+            $('#refreshDiscountStatusBtn').on('click', function() {
+                this.blur();
+                $.post('/SUP/Brands/RefreshAllBrandDiscountStatus', function(result) {
+                    if (result.success) {
+                        $('#brandTable').DataTable().ajax.reload(); // 刷新表格
+                    } else {
+                        alert('品牌折扣狀態刷新失敗');
+                    }
+                });
+            });
+
+            // ======= 新增折扣 submit 事件 =======
+            $('#brandDiscountModalContent').on('submit', '#brandDiscountForm', function (e) {
+                e.preventDefault();
+
+                var form = $(this);
+                console.log("送出折扣欄位", form.serializeArray());
+
+                $.post('/SUP/Brands/CreateDiscount', form.serialize())
+                    .done(function(res) {
+                        // 判斷是否 HTML
+                        var isHtml = typeof res === "string" && res.trim().startsWith("<form");
+                        var isJson = typeof res === "object" || (typeof res === "string" && res.trim().startsWith("{"));
+
+                        console.log("CreateDiscount response:", res);
+
+                        if (isHtml) {
+                            // 這是 partial view，覆蓋 modal 內容
+                            $('#brandDiscountModalContent').html(res);
+                            $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                            setupDateLogic();
+                        }
+                        else if (isJson) {
+                            // JSON情境（解析為object後處理）
+                            if (typeof res === "string") {
+                                res = JSON.parse(res);
+                            }
+                            if (res.success) {
+                                $('#brandDiscountModal').modal('hide');
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: '新增折扣成功',
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload();
+                            } else if (res.errors) {
+                                console.log("Model errors:", res.errors);
+                                // 也可彈窗顯示錯誤
+                                Swal.fire('表單錯誤', res.errors.join('<br>'), 'error');
+                            } else {
+                                Swal.fire('新增折扣失敗', '', 'error');
+                            }
+                        }
+                        else {
+                            console.log('AJAX回傳非預期型態');
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('新增折扣 AJAX fail:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('新增折扣失敗', '', 'error');
+                    });
+
+
+            });
+
+            // ======= 編輯折扣 submit 事件 =======
+            $('#brandDiscountModalContent').on('submit', '#brandDiscountEditForm', function (e) {
+                e.preventDefault();
+
+                var form = $(this);
+                console.log("送出編輯折扣", form.serializeArray());
+
+                $.post('/SUP/Brands/EditDiscount', form.serialize())
+                    .done(function(res) {
+                        var isHtml = typeof res === "string" && res.trim().startsWith("<form");
+                        var isJson = typeof res === "object" || (typeof res === "string" && res.trim().startsWith("{"));
+
+                        // console.log("EditDiscount response:", res);
+
+                        if (isHtml) {
+                            $('#brandDiscountModalContent').html(res);
+                            $.validator.unobtrusive.parse('#brandDiscountModalContent');
+                            setupDateLogic();
+                        }
+                        else if (isJson) {
+                            if (typeof res === "string") {
+                                res = JSON.parse(res);
+                            }
+                            if (res.success) {
+                                $('#brandDiscountModal').modal('hide');
+                                Swal.fire({
+                                    position: 'center',
+                                    icon: 'success',
+                                    title: '折扣編輯成功',
+                                    showConfirmButton: false,
+                                    timer: 1200
+                                });
+                                table.ajax.reload();
+                            } else if (res.errors) {
+                                Swal.fire('表單錯誤', res.errors.join('<br>'), 'error');
+                            } else {
+                                Swal.fire('編輯折扣失敗', '', 'error');
+                            }
+                        } else {
+                            Swal.fire('操作失敗', '', 'error');
+                        }
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('編輯折扣 AJAX fail:', textStatus, errorThrown);
+                        console.log('Response text:', jqXHR.responseText);
+                        Swal.fire('編輯折扣失敗', '', 'error');
+                    });
+            });
+
+            // ======= 編輯品牌版面 Layout (修正為載入版本管理頁面) =======
+            $('#brandTable').on('click', '.layout-edit-btn', function () {
+                this.blur();
+
+                var rowData = table.row($(this).closest('tr')).data();
+                var brandId = rowData.brandId;
+                var brandName = rowData.brandName;
+
+                if (!brandId || brandId <= 0) {
+                    console.error("❌ 錯誤：未取得有效的 brandId。");
+                    Swal.fire('錯誤', '無法取得品牌 ID，請刷新頁面。', 'error');
+                    return;
+                }
+
+                // 1. 替換 URL 中的佔位符
+                // 注意：GetLayoutVersions Action 預期一個名為 id 的參數
+                var finalUrl = getVersionsUrl.replace('__ID__', brandId);
+                console.log(`發送的 URL: ${finalUrl}`);
+
+                // 2. AJAX 載入 GetLayoutVersions Action 回傳的 Partial View
+                $.get(finalUrl).done(function (html) {
+                    console.log("✅ AJAX 成功，接收到 HTML 內容。準備顯示 Modal...");
+
+                    // 設置 Modal 標題
+                    $("#brandLayoutModalTitle").text(`版面管理`);
+
+                    // 插入版本列表 Partial View 到 Modal Body
+                    $('#brandLayoutModalContent').html(html);
+
+                    // 顯示 Modal (因為是第一次載入 Modal 內容)
+                    const $modalElement = $('#brandLayoutModal');
+                    let modalInstance = bootstrap.Modal.getInstance($modalElement[0]);
+                    if (!modalInstance) {
+                        modalInstance = new bootstrap.Modal($modalElement[0]);
+                    }
+                    modalInstance.show();
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    let errorMsg = '無法載入版面編輯器。';
+                    if (jqXHR.status === 404) {
+                         // ...
+                    } else if (jqXHR.responseText) {
+                        errorMsg = jqXHR.responseText;
+                    }
+                    console.error("❌ AJAX 載入失敗詳情:", textStatus, errorThrown, jqXHR.responseText);
+                    Swal.fire('載入失敗', errorMsg, 'error');
+                });
+            });
+
+            // 1. 新增版面按鈕
+            $('#brandLayoutModalContent').on('click', '#addNewVersionBtn', function() {
+                // 獲取 Brand ID 和 Name
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                if (!brandId) return;
+
+                // 【修正】使用 ID 佔位符，並替換，確保是路由參數
+                const url = createLayoutUrl.replace('__ID__', brandId);
+
+                loadLayoutEditor(url, `新增版面版本：${brandName}`);
+            });
+
+            // 2. 編輯特定版本按鈕 (載入 EditLayout)
+            $('#brandLayoutModalContent').on('click', '.edit-layout-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                if (!brandId || !layoutId) return;
+
+                // 【修正】使用 ID 和 LAYOUTID 佔位符，並替換，確保是路由參數
+                // 新：/EditLayout/1001/1000 (路由參數)
+                let url = layoutEditUrl.replace('__ID__', brandId).replace('__LAYOUTID__', layoutId);
+
+                // loadLayoutEditor(url, `編輯版本 (品牌名稱：${brandName}、版本ID：${layoutId})`);
+                loadLayoutEditor(url, `編輯版本`);
+            });
+
+            // 3. 啟用按鈕 (PATCH)
+            $('#brandLayoutModalContent').on('click', '.activate-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+                const indexUrl = `@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__BRANDID__" })`
+                    .replace('__BRANDID__', brandId);
+
+                const url = `/SUP/Brands/ActivateLayout/${layoutId}`;
+                console.log("=== 啟用 DEBUG ===");
+                console.log("layoutId:", layoutId);
+                console.log("brandId:", brandId);
+                console.log("final url:", url);
+
+                Swal.fire({
+                    title: `確認啟用此版本(ID: ${layoutId}) 嗎？`,
+                    text: "啟用後，此版本將立刻成為前台顯示版本，其他版本將被停用。",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '確定啟用',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            headers: {
+                                [csrfHeaderName]: csrfToken
+                                // 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            success: function(data, textStatus, jqXHR) {
+                                console.log("[Activate] 成功，後端回傳:", data);
+                                if (data.success) {
+                                    Swal.fire('啟用成功', data.message, 'success').then(() => {
+                                        // 重新載入版本列表頁面
+                                        loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+                                    });
+                                } else {
+                                    console.error("❌ AJAX 錯誤：", jqXHR.status, jqXHR.responseText);
+                                    Swal.fire('啟用失敗', data.message, 'error');
+                                }
+                            },
+                            error: function(data, textStatus, jqXHR) {
+                                console.error("❌ 錯誤:", jqXHR.status, jqXHR.responseText);
+                                console.error('[Activate] 失敗:', {
+                                    status: data.status, // e.g., 302, 401, 500
+                                    statusText: data.statusText, // e.g., "Found"
+                                    responseText: data.responseText, // 登入頁面的 HTML
+                                    errorThrown: error
+                                });
+                                Swal.fire('伺服器錯誤', '啟用操作失敗。', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // 4. 刪除按鈕 (DELETE/軟刪除)
+            $('#brandLayoutModalContent').on('click', '.delete-btn', function() {
+                const layoutId = $(this).data('layout-id');
+                const brandId = getCurrentBrandIdFromModal();
+                const brandName = getCurrentBrandNameFromModal();
+
+                const url = `/SUP/Brands/layouts/${layoutId}`; 
+
+                Swal.fire({
+                    title: `確定移除 Layout (ID: ${layoutId}) 嗎？`,
+                    text: "此操作將軟刪除此版本紀錄。",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '確定移除',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: url,
+                            type: 'DELETE',
+                            headers: {
+                                [csrfHeaderName]: csrfToken
+                            },
+                            success: function(data) {
+                                if (data.success) {
+                                    Swal.fire('移除成功', data.message, 'success').then(() => {
+                                        // 重新載入版本列表頁面
+                                        reloadVersionIndex(brandId);
+                                    });
+                                } else {
+                                    Swal.fire('移除失敗', data.message, 'error');
+                                }
+                            },
+                            error: function(jqXHR) {
+                                console.error("❌ DELETE 錯誤:", jqXHR.status, jqXHR.responseText);
+                                Swal.fire('伺服器錯誤', '移除操作失敗。', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+        });
+
+
+        // ======= function =======
+
+        // ======= 新增全館折扣 品牌下拉 =======
+        function loadBrandsBySupplier(supplierId, selectedBrandId) {
+            $.get('/SUP/Brand/GetBrandNameBySupplier?supplierId=' + supplierId, function(brands) {
+                var brandSelect = $('#brandSelect');
+                brandSelect.empty().append('<option value="">請選擇品牌</option>');
+                brands.forEach(function(b) {
+                    if(b.isActive) {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.brandName}
+                            </option>`
+                        );
+                    } else {
+                        brandSelect.append(
+                            `<option value="${b.brandId}" ${b.brandId == selectedBrandId ? 'selected' : ''}>
+                                ${b.supplierActive ? b.brandName : b.brandName + ' (其供應商目前未啟用)'}
+                            </option>`
+                        );
+                    }
+                });
+                if(selectedBrandId) brandSelect.trigger('change');
+            });
+        }
+
+        // ======= 品牌的詳細折扣資訊 ==========
+        function showDiscountDetailModal(detail) {
+            // 折扣率格式
+            let discountText = detail.discountRate
+                ? (parseFloat(detail.discountRate * 10).toFixed(1).replace(/\.0$/, '')) + '折'
+                : '未設定';
+
+            // 狀態 + 進度條
+            // 統一使用後端傳過來的狀態字串，除非沒提供
+            let status = detail.discountStatus || '未設定狀態';
+            let percent = 0, progressBar = '';
+
+            if (status.includes('進行中')) {
+                const oneDay = 24 * 60 * 60 * 1000;
+
+                const start = new Date(detail.startDate);
+                const end = new Date(detail.endDate);
+                const today = new Date();
+
+                // 強制取地方日期 (去時區偏差)
+                const startYMD = new Date(getLocalYMD(start));
+                const endYMD = new Date(getLocalYMD(end));
+                const todayYMD = new Date(getLocalYMD(today));
+
+                const totalDays = Math.max(1, Math.round((endYMD - startYMD) / oneDay) + 1);
+                const passedDays = Math.min(totalDays, Math.max(0, Math.round((todayYMD - startYMD) / oneDay) + 1));
+
+                let percent = Math.round((passedDays / totalDays) * 100);
+                percent = Math.max(0, Math.min(percent, 100));
+
+                progressBar = `
+                    <div class="mb-2">進度：${percent}%</div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-success" role="progressbar"
+                            style="width: ${percent}%;" aria-valuenow="${percent}"
+                            aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>`;
+            }
+
+
+            // 顯示基本訊息
+            let info = `
+                <div class="mb-2"><b>品牌名稱：</b> ${detail.brandName}</div>
+                <div class="mb-2"><b>折扣率：</b> ${discountText}</div>
+                <div class="mb-2"><b>狀態：</b> ${status}</div>
+                <div class="mb-2"><b>折扣期間：</b> ${detail.startDate ?? '--'} ~ ${detail.endDate ?? '--'}</div>
+                ${progressBar}
+            `;
+            $('#discountDetailInfo').html(info);
+
+            // FullCalendar 事件資料
+            let events = [];
+            if (detail.startDate && detail.endDate) {
+                let start = detail.startDate.split('T')[0];
+                let end = addOneDay(detail.endDate.split('T')[0]); // 顯示到結束日含當天
+                events.push({
+                    title: `${detail.brandName} (${discountText})`,
+                    start: start,
+                    end: end,
+                    color: detail.discountRate <= 0.8 ? '#22bb33' : '#ffbb33'
+                });
+            }
+
+            // 顯示 modal
+            $('#brandDiscountDetailModal').modal('show');
+            $('#discountCalendar').empty();
+
+            // 等 modal 顯示完成再 render calendar
+            $('#brandDiscountDetailModal').one('shown.bs.modal', function () {
+                const calendarEl = document.getElementById('discountCalendar');
+                if (window.brandDiscountCalendarInstance) {
+                    window.brandDiscountCalendarInstance.destroy();
+                }
+
+                window.brandDiscountCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    events: events,
+                    height: 350,
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek' // 加回 month/week
+                    },
+                    locale: 'zh-tw',
+                    eventDisplay: 'block'
+                });
+                window.brandDiscountCalendarInstance.render();
+                console.log('FullCalendar rendered');
+            });
+        }
+
+        // ======= 折扣 日期設定 =======
+        function setupDateLogic() {
+            // const today = new Date().toISOString().split('T')[0];
+            const today = getLocalYMD();
+
+            const $startDate = $('#StartDate');
+            const $endDate = $('#EndDate');
+
+            // 預設起始日為今天，如果沒填
+            if (!$startDate.val()) $startDate.val(today);
+            $startDate.attr('min', today);
+
+            // 預設結束日為「起始日隔天」
+            let startVal = $startDate.val() || today;
+            let defaultEndVal = addOneDay(startVal);
+            $endDate.attr('min', defaultEndVal);
+
+            // 若未填結束日，或結束日早於起始日，自動填「起始日隔天」
+            if (!$endDate.val() || $endDate.val() < defaultEndVal) {
+                $endDate.val(defaultEndVal);
+            }
+
+            // 起始日變更監聽
+            $startDate.off('change').on('change', function() {
+                const val = $(this).val();
+                const nextDay = addOneDay(val);
+                $endDate.attr('min', nextDay);
+                if ($endDate.val() < nextDay) $endDate.val(nextDay);
+            });
+
+            // 必填驗證提示
+            $('#brandDiscountForm, #brandDiscountEditForm').off('submit').on('submit', function (e) {
+                const endVal = $endDate.val();
+                if (!endVal) {
+                    e.preventDefault();
+                    Swal.fire('結束日期為必填項目', '', 'warning');
+                    $endDate.focus();
+                    return false;
+                }
+            });
+        }
+
+        // 日期＋1
+        function addOneDay(dateStr) {
+            let d = new Date(dateStr);
+            d.setDate(d.getDate() + 1);
+            return d.toISOString().split('T')[0];
+        }
+        // 強制用「當地時間 yyyy-MM-dd」生成今天日期
+        function getLocalYMD(dateObj = new Date()) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 折扣狀態判斷
+        function getDiscountStatus(detail) {
+            if (!detail.startDate || !detail.endDate || !detail.discountRate || detail.discountRate <= 0) {
+                return '尚未設定';
+            }
+            const today = new Date();
+            const start = new Date(detail.startDate);
+            const end = new Date(detail.endDate);
+            const todayYMD = today.toISOString().split('T')[0];
+            const startYMD = start.toISOString().split('T')[0];
+            const endYMD = end.toISOString().split('T')[0];
+
+            if (todayYMD < startYMD) {
+                return '尚未開始';
+            }
+            if (todayYMD > endYMD) {
+                return '已結束';
+            }
+            if (!detail.isDiscountActive) {
+                return '未啟用';
+            }
+            return '進行中';
+        }
+
+
+        // 輔助函式：載入 Partial View 到 Modal 中
+        function loadLayoutEditor(url, title) {
+            $("#brandLayoutModalTitle").text(title);
+            $.get(url).done(function(html) {
+                $('#brandLayoutModalContent').html(html);
+                // 注意：這裡不需要手動呼叫 initLayoutEditor，因為 Vue 腳本在 HTML 內
+            }).fail(function() {
+                Swal.fire('載入失敗', '無法載入目標頁面。', 'error');
+            });
+        }
+        // 獲取當前 Modal 內容中隱藏欄位的 Brand ID
+        function getCurrentBrandIdFromModal() {
+            return $('#currentBrandId').val() || null;
+        }
+        // 獲取當前 Modal 標題中的品牌名稱 (用於回饋訊息)
+        function getCurrentBrandNameFromModal() {
+            return $('#currentBrandName').val() || '該品牌';
+        }
+        // 重新載入版本列表
+        function reloadVersionIndex(brandId) {
+            // 從 `Url.Action` 獲取基礎 URL
+            const getVersionsUrl = '@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__ID__" })';
+            const indexUrl = getVersionsUrl.replace('__ID__', brandId);
+            const brandName = getCurrentBrandNameFromModal(); // 確保獲取正確的品牌名
+
+            // 呼叫 loadLayoutEditor 重新載入版本列表
+            loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+        }
+
+
+    </script>
+}

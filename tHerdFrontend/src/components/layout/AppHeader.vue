@@ -10,7 +10,7 @@
             class="navbar-brand text-white text-decoration-none d-flex align-items-center"
           >
             <img
-              src="../../../public/homePageIcon/tHerd-header.png"
+              src="/homePageIcon/tHerd-header.png"
               alt="tHerd Logo"
               class="img-fluid ms-2 ms-md-4"
               style="max-height: 50px;"
@@ -30,7 +30,7 @@
               @keyup.enter="handleSearch"
             />
             <button
-              class="btn btn-outline-primary rounded-circle search-btn d-flex align-items-center justify-content-center"
+              class="btn search-btn rounded-circle search-btn d-flex align-items-center justify-content-center"
               @click="handleSearch"
             >
               <i class="bi bi-search"></i>
@@ -180,6 +180,27 @@ export default {
   min-width: 200px;  /* 👉 給它下限 */
   flex: 1 1 auto;
 }
+
+.search-btn {
+  background-color: rgb(255, 255, 255);
+  color: rgb(0,112,131);
+  border: none;
+  width: 40px;
+  height: 40px;
+  transition: all 0.5s ease;
+}
+
+.search-btn:hover {
+  background-color: rgb(0, 112, 131);
+  color:rgb(255, 255, 255)
+}
+
+/* 🖥️ 桌面 Header 內容置中 */
+.main-header .container-fluid {
+  max-width: 1200px; /* 可依實際設計調整 */
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
 @media (max-width: 1250px) {
   .main-header .row {
     display: flex;
@@ -207,6 +228,11 @@ export default {
 @media (max-width: 992px) {
   .search-container {
     max-width: 500px; /* 更小螢幕再縮短 */
+  }
+  .main-header .container-fluid {
+    max-width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
   }
 }
 
