@@ -32,5 +32,23 @@ public class AppClaimsPrincipalFactory
 		if (!string.IsNullOrWhiteSpace(full)) identity.AddClaim(new Claim(AppClaimTypes.FullName, full));
 
 		return identity;
+
+		//    如果你很想在 Cookie 裡也擁有 'sub' 或 'name'，可以「加上去」，但不要移除既有的：
+		// identity.AddClaim(new Claim("sub", user.Id));
+		// identity.AddClaim(new Claim("name", full));
+		
+		//var id = await base.GenerateClaimsAsync(user);
+
+		//id.RemoveClaim(id.FindFirst(ClaimTypes.NameIdentifier)!); // 移除既有 SID 型別，改用 sub
+		//id.AddClaim(new Claim("sub", user.Id));
+		//if (!string.IsNullOrEmpty(user.Email)) id.AddClaim(new Claim("email", user.Email));
+		//id.AddClaim(new Claim("name", $"{user.LastName}{user.FirstName}"));
+		//id.AddClaim(new Claim("user_number_id", user.UserNumberId.ToString()));
+
+		//// 角色請確保用 "role"
+		//var roles = await UserManager.GetRolesAsync(user);
+		//foreach (var r in roles) id.AddClaim(new Claim("role", r));
+
+		//return id;
 	}
 }

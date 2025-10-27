@@ -4,11 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
 using tHerdBackend.Core.DTOs.USER;
 
+
 namespace tHerdBackend.Infra.Models
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
 	{
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+		public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;
+		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
