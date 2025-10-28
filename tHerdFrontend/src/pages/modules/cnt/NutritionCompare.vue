@@ -527,6 +527,15 @@ async function fetchCompare() {
 }
 
 /* ----------------------- charts ----------------------- */
+// 加個小工具把食材陣列切塊
+function wrapSamples(names, per = 3, sep = '、') {
+  const rows = []
+  for (let i = 0; i < names.length; i += per) {
+    rows.push(names.slice(i, i + per).join(sep))
+  }
+  return rows.join('\n')  // ← 每列之間用 \n
+}
+
 function renderAll() {
   // 清掉舊圖
   Object.values(chartRefs).forEach(el => el?.__chartInstance?.dispose?.())
@@ -559,38 +568,86 @@ function renderAll() {
     }
     // === 標題/副標與版面 ===
     // 1) 顯示用「原始單位」
-    const rawUnit = (grp.unit ?? '').trim()     // <- DB 原字串（例如 "µg RAE", "mg/100g"）
-    const unitKey = normUnit(rawUnit)           // <- 只給 fmtNumber 用來決定小數位
-    const showUnit = rawUnit || '-'             // <- 所有對外顯示都用它
+    const rawUnit  = (grp.unit ?? '').trim()  // 例如 "µg RAE", "mg/100g"
+    const unitKey  = normUnit(rawUnit)
+    const showUnit = rawUnit || '-'
 
-    // 2) 標題 / 副標
-    const titleText = `食材比較（${ui.compareList.map(s => s.sampleName).join('、')}）`
-    const subZh = `依單位分群（每100公克）· 單位：${showUnit}`
-    const subEn = `Per 100g · Unit: ${showUnit}`
-    const subText   = `${subZh} | ${subEn} | 資料來源｜Source: tHerd Nutrition DB`
-
-    // 標題/圖例留空間 //先保留原本 grid，再統一加大邊界
-    const baseGrid = option.grid || {}
+    // 2) 食材名稱 → 多列換行（每列3個，可調 4/5）
+    const names           = ui.compareList.map(s => s.sampleName)
+    const namesPerRow     = 1
+    const namesMultiline  = wrapSamples(names, namesPerRow)  // <-- 真的用上它
+    const titleText       = '食材比較'                        // 主標題就放簡短字
+    const subZh           = `依單位分群（每100公克）· 單位：${showUnit}`
+    const subEn           = `Per 100g · Unit: ${showUnit}`
+    // 把多行食材清單放在副標的第一行
+    // 組成多段文字（rich style）
+    const subText = [
+      `{foods|${namesMultiline}}`,
+      `{info|${subZh} | ${subEn}}`,
+      `{src|資料來源｜Source: tHerd Nutrition DB}`
+    ].join('\n')
+    
+    // 3) 依食材列數拉開上邊距（避免壓到圖）
+    const rows = Math.ceil(names.length / namesPerRow)   // <-- 要在 names 宣告之後
+    const baseGrid = option.grid && !Array.isArray(option.grid) ? option.grid : {}
     option.grid = {
-      left:   Math.max(baseGrid.left   || 0, 64),
-      right:  Math.max(baseGrid.right  || 0, 24),
-      bottom: Math.max(baseGrid.bottom || 0, 72),
-      top:    Math.max(baseGrid.top    || 0, 180), // ← 160~200 皆可；你要像單項那樣就用 180
-      containLabel: true,
-      ...baseGrid
-    }
-    option.title = {
-      left: 'center',
-      top: 10,
-      text: titleText,
-      subtext: subText,
-      subtextGap: 8,
-      textStyle: { fontSize: 15, fontWeight: 360, color: '#1f2937' },
-      subtextStyle: { fontSize: 12, color: '#6b7280' }
+      ...baseGrid,
+      top:    Math.max(baseGrid.top    ?? 0, 120 + (rows - 1) * 22),
+      left:   Math.max(baseGrid.left   ?? 0, 64),
+      right:  Math.max(baseGrid.right  ?? 0, 24),
+      bottom: Math.max(baseGrid.bottom ?? 0, 72),
+      containLabel: true
     }
 
-    // 圖例往下放一些，避免壓到圖
-    option.legend = { ...(option.legend || {}), bottom: 18 }
+    option.title = {
+        left: 'center',
+        top: 10,
+        text: titleText,
+        subtext: subText,
+        subtextGap: 12,
+        textStyle: {
+          fontSize: 18, fontWeight: 500, color: '#1f2937'// 主標題「食材比較」深灰黑
+        },
+        subtextStyle: {
+          rich: {
+            // 🔹 第一行：食材清單（主視覺焦點）→ 灰黑、略粗
+            foods: {
+              fontSize: 15, lineHeight: 24, fontWeight: 600, color: '#374151'},
+                        // ≈ Tailwind slate-700            
+            // 🔹 第二行：單位資訊 → 中灰、略細一點
+            info: {
+              fontSize: 14, lineHeight: 22, fontWeight: 600, color: '#6b7280'},
+                        // ≈ slate-500
+            // 🔹 第三行：資料來源 → 比上面再淺一階，但不會太淡
+            src: {
+              fontSize: 13, lineHeight: 20, fontWeight: 600, color: '#4b5563'}
+                        // ≈ slate-600，比 #9ca3af 深一點更穩重
+          }
+        }
+      }
+
+
+    // 4) 圖例：維持你原本單列/自動換寬的寫法（可保留或之後換成多列版本）
+    const cw = el?.clientWidth || 800
+    option.legend = {
+      ...(option.legend || {}),
+      type: 'plain',
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 14,
+      width: Math.max(320, cw - 160),
+      itemGap: 16,
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 12, lineHeight: 16 }
+    }
+    if (sampleNames.length > 14) {
+      option.legend.type = 'scroll'
+      option.legend.pageIconSize = 10
+      option.legend.pageButtonItemGap = 6
+      option.legend.pageFormatter = '{current}/{total}'
+    }
+
 
     // 3) 軸線：只對 value 軸做數字格式（用 unitKey），類別軸不處理
     const isXValue = option.xAxis && option.xAxis.type === 'value'
@@ -611,16 +668,27 @@ function renderAll() {
     }
 
     // 4) Tooltip / 資料標籤：數字用 unitKey，尾巴單位顯示 rawUnit（showUnit）
-    option.tooltip = {
-      ...(option.tooltip || {}),
-      trigger: option.tooltip?.trigger || 'axis',
-      valueFormatter: v => `${fmtNumber(v, unitKey)} ${showUnit}`.trim()
+    if (ui.chartType === 'stacked') {
+      option.tooltip = {
+        trigger: 'axis',
+        valueFormatter: v => `${v?.toFixed?.(1) ?? v}%`
+      }
+    } else {
+      option.tooltip = {
+        ...(option.tooltip || {}),
+        trigger: option.tooltip?.trigger || 'axis',
+        valueFormatter: v => `${fmtNumber(v, unitKey)} ${showUnit}`.trim()
+      }
     }
 
     if (Array.isArray(option.series) && option.series.length) {
       const isHorizontal = option.yAxis && option.yAxis.type === 'category'
       option.series = option.series.map(s => {
         if (s.type !== 'bar') return s
+
+        // ✅ 如果是堆疊百分比圖，強制顯示為百分比
+        const isPercent = ui.chartType === 'stacked'
+
         return {
           ...s,
           barMaxWidth: 26,
@@ -628,12 +696,14 @@ function renderAll() {
             ...(s.label || {}),
             show: true,
             position: isHorizontal ? 'right' : 'top',
-            formatter: p => `${fmtNumber(p.value, unitKey)} ${showUnit}`.trim()
+            formatter: p =>
+              isPercent
+                ? `${p.value?.toFixed?.(1) ?? p.value}%`
+                : `${fmtNumber(p.value, unitKey)} ${showUnit}`.trim()
           }
         }
       })
     }
-
     chart.setOption(option)
   })
 }
@@ -666,14 +736,56 @@ function optionBar(analyteNames, sampleNames, dataset, unit) {
 }
 
 function optionRadar(analyteNames, sampleNames, dataset) {
-  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2
+  // 計算最大值，避免超出雷達邊界
+  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2;
+
   return {
-    tooltip: {},
-    legend: { data: sampleNames },
-    radar: { indicator: analyteNames.map(n => ({ name: n, max: maxVal })) },
-    series: [{ type: 'radar', data: sampleNames.map((s, i) => ({ name: s, value: dataset[i] })) }]
-  }
+    tooltip: {
+      trigger: 'item',       // ✅ 原生預設：顯示單一樣本全部值
+      confine: true,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      borderColor: '#007083',
+      borderWidth: 1,
+      textStyle: { color: '#333', fontSize: 12 }
+    },
+    legend: {
+      data: sampleNames,
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 12 }
+    },
+    radar: {
+      center: ['50%', '55%'],     // ✅ 下移一點，避免標題擋到數值
+      radius: '65%',
+      splitNumber: 5,
+      splitArea: {
+        areaStyle: { color: ['#f9f9f9', '#fff'] }
+      },
+      axisLine: { lineStyle: { color: '#ccc' } },
+      splitLine: { lineStyle: { color: '#ddd' } },
+      indicator: analyteNames.map(n => ({
+        name: n,
+        max: maxVal
+      }))
+    },
+    series: [
+      {
+        type: 'radar',
+        symbol: 'circle',
+        symbolSize: 4,
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.1 },
+        data: sampleNames.map((s, i) => ({
+          name: s,
+          value: dataset[i]
+        }))
+      }
+    ]
+  };
 }
+
 
 function optionHeatmap(analyteNames, sampleNames, dataset, unit) {
   const data = []
