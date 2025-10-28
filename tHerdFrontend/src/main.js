@@ -41,19 +41,26 @@ app.use(ElementPlus)
 
 // 初始化 auth
 import { useAuthStore } from '@/stores/auth';
-const auth = useAuthStore();
-auth.loadFromStorage();
-
+const auth = useAuthStore()
 // ★ 這裡註冊守門員（此時 Pinia 已就緒）
 router.beforeEach(async (to) => {
   // 可選：避免對 login 頁自我攔截
-  if (to.name === 'login') return
-
-  if (to.meta?.requiresAuth) {
-    await auth.ensureUser()
-    if (!auth.isAuthenticated) {
-      return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.name === 'login') {
+    // 若已登入，導回 redirect / 或首頁
+    if (auth.isAuthenticated) {
+      const back = (to.query.redirect && String(to.query.redirect)) || '/'
+      return { path: back }
     }
+    return
+  }
+
+  // 先等初始化完成（避免一進站就誤判未登入）
+  if (!auth.isReady) {
+    await auth.init()
+  }
+
+  if (to.meta?.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 })
 
@@ -68,5 +75,5 @@ if (import.meta.env.DEV && !auth.accessToken) {
   }
 }
 
-app.use(router)
+
 app.mount('#app')
