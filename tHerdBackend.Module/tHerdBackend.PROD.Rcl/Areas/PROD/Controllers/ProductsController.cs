@@ -172,7 +172,8 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 	        int? productTypeId,
 	        bool? isPublished,
 	        string? keyword = null,
-	        int pageIndex = 1,
+			int? productId = null,
+			int pageIndex = 1,
 	        int pageSize = 20,
 	        string? sortBy = null,
 	        bool sortDesc = false)
@@ -187,7 +188,8 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 					ProductTypeId = productTypeId,
 					Keyword = keyword,
 					SortBy = sortBy,
-					SortDesc = sortDesc
+					SortDesc = sortDesc,
+					ProductId = productId
 				};
 
 				var (list, totalCount) = await _repo.GetAllAsync(query);

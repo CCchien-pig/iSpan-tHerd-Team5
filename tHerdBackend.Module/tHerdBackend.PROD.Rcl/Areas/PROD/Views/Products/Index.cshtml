@@ -45,7 +45,7 @@
                     <option value="">全部</option>
                     @foreach (var b in (List<LoadBrandOptionDto>)ViewBag.BrandDtos)
                     {
-                        <option value="@b.BrandName">@b.BrandName</option>
+                        <option value="@b.BrandId">@b.BrandName</option>
                     }
                 </select>
             </div>
@@ -67,7 +67,15 @@
                     <option value="false">下架</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">商品編號</label>
+                <input type="text" id="productId" class="form-control" placeholder="輸入商品編號">
+            </div>
+        </div>
+
+        <!-- ✅ 單獨放查詢按鈕 -->
+        <div class="row mb-3">
+            <div class="col-md-3">
                 <button id="btnSearch" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> 查詢
                 </button>
@@ -124,7 +132,8 @@ $(function () {
             data: function (d) {
                 d.brandId = $('#brandFilter').val();
                 d.productTypeId = $('#typeFilter').val();
-                d.keyword = $('#keyword').val();
+                d.isPublished = $('#publishFilter').val();
+                d.productId = $('#productId').val(); // ✅ 新增條件
                 d.pageIndex = (d.start / d.length) + 1;
                 d.pageSize = d.length;
             },
@@ -136,38 +145,37 @@ $(function () {
         serverSide: true,
         processing: true,
         columns: [
-          { data: null, defaultContent: "" },
-          {
-            data: null,
-            render: function (data, type, row) {
-              return `<a href="${upsertBase}?id=${row.productId}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-pencil-square"></i> 編輯
-                      </a>`;
-            }
-          },
-          { data: "brandName", defaultContent: "-" },
-          { data: "productId" },
-          {
-            data: "productTypeDesc",
-            render: function (data) {
-              if (!data || !data.length) return "-";
-              return data.join(", ");
-            }
-          },
-          { data: "productCode" },
-          { data: "productName" },
-          { data: "supplierName" },
-          {
-            data: "isPublished",
-            render: function (data) {
-              const checked = data ? "checked" : "";
-              return `<div class="form-check form-switch d-flex justify-content-center">
-                        <input type="checkbox" class="form-check-input" ${checked} disabled>
-                      </div>`;
-            }
-          },
-          { data: "creatorNm" },
-          { data: "formateCreatedDate" }
+            { data: null, defaultContent: "" },
+            {
+                data: null,
+                render: function (data, type, row) {
+                    return `<a href="${upsertBase}?id=${row.productId}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil-square"></i> 編輯
+                            </a>`;
+                }
+            },
+            { data: "brandName", defaultContent: "-" },
+            { data: "productId" },
+            {
+                data: "productTypeDesc",
+                render: function (data) {
+                    return data && data.length ? data.join(", ") : "-";
+                }
+            },
+            { data: "productCode" },
+            { data: "productName" },
+            { data: "supplierName" },
+            {
+                data: "isPublished",
+                render: function (data) {
+                    const checked = data ? "checked" : "";
+                    return `<div class="form-check form-switch d-flex justify-content-center">
+                                <input type="checkbox" class="form-check-input" ${checked} disabled>
+                            </div>`;
+                }
+            },
+            { data: "creatorNm" },
+            { data: "formateCreatedDate" }
         ],
         columnDefs: [
             { targets: [0, 1], orderable: false },
@@ -184,7 +192,6 @@ $(function () {
             info: "第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆",
             infoEmpty: "第 0 ~ 0 筆，共 0 筆",
             infoFiltered: "(從 _MAX_ 筆資料中篩選)",
-            search: "搜尋：",
             paginate: {
                 first: "第一頁",
                 last: "最後一頁",
@@ -194,9 +201,10 @@ $(function () {
         }
     });
 
-    // 🔍 查詢按鈕
+    // ✅ 查詢按鈕重新載入表格
     $('#btnSearch').on('click', function () {
-        table.ajax.reload();
+        console.log('🔍 Reloading table...');
+        table.ajax.reload(null, false);
     });
 });
 </script>

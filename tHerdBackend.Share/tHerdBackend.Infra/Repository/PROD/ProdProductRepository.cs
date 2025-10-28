@@ -137,8 +137,9 @@ namespace tHerdBackend.Infra.Repository.PROD
                 // 查詢參數
                 var parameters = new { 
                     Skip = (query.PageIndex - 1) * query.PageSize, 
-                    Take = query.PageSize, 
-                    query.Keyword, 
+                    Take = query.PageSize,
+					query.ProductId,
+					query.Keyword, 
                     query.BrandId, 
                     query.ProductTypeId, 
                     query.MinPrice, 
@@ -171,7 +172,19 @@ namespace tHerdBackend.Infra.Repository.PROD
 
                 return (list, total);
             }
-            finally
+			catch (Exception ex)
+			{
+				// ✅ 捕捉所有錯誤，輸出詳細資訊
+				Console.WriteLine("❌ [GetAllAsync] SQL Error ---------------------------------");
+				Console.WriteLine($"Message: {ex.Message}");
+				Console.WriteLine($"StackTrace: {ex.StackTrace}");
+				Console.WriteLine($"SQL:\n{sql}");
+				Console.WriteLine("------------------------------------------------------------");
+
+				// ✅ 回傳空集合 + 0 總筆數，避免前端崩潰
+				return (Enumerable.Empty<ProdProductDto>(), 0);
+			}
+			finally
             {
                 if (needDispose) conn.Dispose();
             }
