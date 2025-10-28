@@ -1,7 +1,9 @@
 import './assets/main.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 // import 'bootstrap'
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+// import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+import * as bootstrap from 'bootstrap/dist/js/bootstrap.bundle.min.js' // ← 包含 Popper
+window.bootstrap = bootstrap
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 import { createApp } from 'vue'

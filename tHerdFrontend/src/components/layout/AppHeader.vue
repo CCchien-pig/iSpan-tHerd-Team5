@@ -46,15 +46,16 @@
               class="btn btn-md dropdown-toggle main-color-green"
               type="button"
               data-bs-toggle="dropdown"
+              data-bs-display="static"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
               <span class="main-color-white-text">登入</span>
             </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath } })">登入</a></li>
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })">註冊</a></li>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#">登入</a></li>
+              <li><a class="dropdown-item" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" v-if="isLogin" @click.prevent="$router.push({ name: 'userme' })">我的帳戶</a></li>
+              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
             </ul>
           </div>
           <!-- 訂單 -->
@@ -146,9 +147,25 @@ export default {
   },
 
   mounted() {
-    // 手動把頁面上所有 dropdown-toggle 初始化一次
-    document.querySelectorAll('[data-bs-toggle="dropdown"]')
-      .forEach(el => new Dropdown(el))
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (!btn) return
+
+    const inst = Dropdown.getOrCreateInstance(btn, { autoClose: true })
+
+    // 捕獲階段先攔，避免其他全域 click 監聽吃掉事件
+    this.__onClickCapture = (e) => {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      inst.toggle()
+    }
+    btn.addEventListener('click', this.__onClickCapture, { capture: true })
+  },
+
+  beforeUnmount() {
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (btn && this.__onClickCapture) {
+      btn.removeEventListener('click', this.__onClickCapture, { capture: true })
+    }
   },
   
   methods: {
