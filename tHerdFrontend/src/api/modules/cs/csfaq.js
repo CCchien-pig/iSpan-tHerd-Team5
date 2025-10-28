@@ -1,5 +1,5 @@
-// src/pages/modules/cs/api/csfaq.js
-import http from "./http";
+// src/modules/cs/api/csfaq.js
+import http from "@/api/http";
 /** 取得 FAQ 分類＋問題清單（啟用） */
 export async function getFaqList() {
   const res = await http.get('/api/cs/faqs/list')
