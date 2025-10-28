@@ -101,7 +101,14 @@
         <div class="modal-content bg-white container">
             <div class="modal-header">
                 <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <div class="d-flex align-items-center ms-auto" style="margin-left: 0 !important;">
+                    <button id="toggleFullscreenBtn" class="btn btn-sm me-2" title="切換編輯器全螢幕" style="display:none;">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div id="brandLayoutModalContent" class="modal-body p-4"></div>
         </div>
@@ -114,7 +121,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     @* 【新增】TinyMCE CDN Script *@
-    <script src="https://cdn.tiny.cloud/1/evvuqtan82drarrrms6chtn8qnyyyuc850vh8wj4gt4wnhtd/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.tiny.cloud/1/evvuqtan82drarrrms6chtn8qnyyyuc850vh8wj4gt4wnhtd/tinymce/6/tinymce.min.js"
+            referrerpolicy="origin"></script>
     @{
         // 為了避免 Razor 執行順序錯誤，我們在頂部只定義變數，不執行複雜邏輯
         var antiForgeryTokens = Antiforgery.GetTokens(Context);
@@ -209,9 +217,9 @@
                             } else if (data.includes('結束')) {
                                 colorClass = 'text-danger';
                             }
-                            // 加上 discount-status class 及 data-id
-                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;">${data}</span>`;
-                        }
+                            
+                            // 加上 discount-status class 及 data-id，並新增 title, data-bs-toggle
+                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;" title="顯示折扣詳情" data-bs-toggle="tooltip">${data}</span>`;                        }
                     },
                     {
                         data: 'isFeatured',
@@ -937,6 +945,39 @@
                 });
             });
 
+            // 【新增事件】版面編輯 Modal 全屏切換邏輯
+            $('#toggleFullscreenBtn').on('click', function() {
+                var $thisBtn = $(this);
+                const $modalDialog = $('#brandLayoutModal').find('.modal-dialog');
+                const enteringFullscreen = !$modalDialog.hasClass('modal-fullscreen');
+
+                $thisBtn.blur();
+
+                // 1. 切換 CSS Class
+                if (enteringFullscreen) {
+                    $modalDialog.removeClass('modal-xl').addClass('modal-fullscreen');
+                    $(this).find('i').removeClass('fa-expand').addClass('fa-compress');
+                } else {
+                    $modalDialog.removeClass('modal-fullscreen').addClass('modal-xl');
+                    $(this).find('i').removeClass('fa-compress').addClass('fa-expand');
+                }
+
+                // 2. 【核心修正點】安全地重繪 TinyMCE 編輯器
+                if (typeof tinymce !== 'undefined' && tinymce.editors && tinymce.editors.length > 0) {
+                    // 使用 setTimeout 確保 DOM 調整完成後再重繪
+                    setTimeout(() => {
+                        tinymce.editors.forEach(editor => {
+                            // 檢查編輯器實例是否存在，且編輯器已初始化
+                            if (editor && editor.initialized) {
+                                editor.execCommand('mceFullScreen'); // 讓 TinyMCE 內建邏輯處理全屏切換
+                                editor.execCommand('mceRepaint');    // 強制重繪
+                            }
+                        });
+                    }, 50); // 稍微延遲以確保 DOM 穩定
+                }
+
+                // ... (其他事件) ...
+            });
         });
 
 
@@ -1140,7 +1181,16 @@
 
         // 輔助函式：載入 Partial View 到 Modal 中
         function loadLayoutEditor(url, title) {
+            const isEditor = url.includes('EditLayout'); // 簡單判斷是否為編輯器頁面
             $("#brandLayoutModalTitle").text(title);
+
+            // 【核心修正】控制全屏按鈕的顯示/隱藏
+            if (isEditor) {
+                $('#toggleFullscreenBtn').show();
+            } else {
+                $('#toggleFullscreenBtn').hide();
+            }
+
             $.get(url).done(function(html) {
                 $('#brandLayoutModalContent').html(html);
                 // 注意：這裡不需要手動呼叫 initLayoutEditor，因為 Vue 腳本在 HTML 內

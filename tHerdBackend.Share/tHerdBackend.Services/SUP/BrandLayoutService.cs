@@ -216,7 +216,8 @@ namespace tHerdBackend.Services.SUP
 			try
 			{
 				// 2. 反序列化前端傳來的、包含完整內容的 JSON
-				var fullBlocks = DeserializeLayout(dto.FullLayoutJson);
+				// 【核心修正點】直接使用 DTO 傳來的列表，不再需要 DeserializeLayout
+				var fullBlocks = dto.FullLayoutJson;
 				var cleanLayoutItems = new List<object>(); // 用於儲存乾淨的 JSON 骨架
 
 				// 3. 使用 for 迴圈代替 foreach，以獲取索引作為 OrderSeq

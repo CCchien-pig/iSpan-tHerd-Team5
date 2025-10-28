@@ -160,12 +160,22 @@ input[type='radio']:focus {
         }
 
     #brandTable .discount-btn svg {
-        /*        height: 1em;
-        width: 1em;*/
         vertical-align: middle;
         width: 17px;
         height: 17px
     }
+
+/*品牌編輯全視窗按鈕*/
+#brandLayoutModal #toggleFullscreenBtn svg {
+    color: #7f7f7f;
+    vertical-align: middle;
+    width: 17.5px;
+    height: 17.5px
+}
+#brandLayoutModal #toggleFullscreenBtn:hover svg {
+    color: #404040;
+}
+
 
 #supplierTable .details-btn:hover svg,
 #brandTable .details-btn:hover svg {

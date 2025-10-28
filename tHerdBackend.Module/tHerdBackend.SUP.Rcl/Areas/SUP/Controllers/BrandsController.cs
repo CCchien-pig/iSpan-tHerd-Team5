@@ -871,6 +871,9 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			var brand = await _brandService.GetByIdAsync(brandId);
 			if (brand == null) return NotFound("找不到該品牌");
 
+			// 獲取當前品牌的啟用 ID
+			int? currentActiveLayoutId = await _layoutService.GetActiveLayoutIdAsync(brandId);
+
 			// 用於儲存組合後的、包含完整內容的區塊列表
 			var hydratedBlocks = new List<BaseLayoutBlockDto>();
 			BrandLayoutDto? layoutToEdit = null;
@@ -999,7 +1002,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			{
 				BrandId = brandId,
 				BrandName = brand.BrandName,
-				LayoutId = layoutId, // 在新增模式下，layoutId 為 null
+				LayoutId = layoutId.HasValue ? layoutToEdit?.LayoutId : null, // 傳遞當前編輯的 Layout ID
+				CurrentActiveLayoutId = currentActiveLayoutId, // 傳遞當前啟用中的 Layout ID
 				LayoutVersion = layoutId.HasValue ? layoutToEdit?.LayoutVersion : null, // 新增模式下為 null
 				LayoutBlocks = layoutBlockViewModels,
 				AllLayoutVersions = (await _layoutService.GetLayoutsByBrandIdAsync(brandId)).Select(l => l.LayoutVersion).ToList()
