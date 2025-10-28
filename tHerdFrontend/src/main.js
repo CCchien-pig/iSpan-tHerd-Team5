@@ -40,8 +40,15 @@ app.use(VueGoogleMaps, {
 app.use(ElementPlus)
 
 // 初始化 auth
+import { http } from '@/api/http'
 import { useAuthStore } from '@/stores/auth';
+if (import.meta.env.DEV) {
+  window.__http = http
+  window.__auth = useAuthStore()
+}
 const auth = useAuthStore()
+// 初始化：讀 localStorage 並（有 token 時）嘗試拉 /auth/me
+await auth.init() 
 // ★ 這裡註冊守門員（此時 Pinia 已就緒）
 router.beforeEach(async (to) => {
   // 可選：避免對 login 頁自我攔截
@@ -59,7 +66,11 @@ router.beforeEach(async (to) => {
     await auth.init()
   }
 
-  if (to.meta?.requiresAuth && !auth.isAuthenticated) {
+
+  // 檢查整條 matched 以支援巢狀路由 ⬇⬇⬇
+  const needAuth = to.matched.some(r => r.meta?.requiresAuth)
+
+  if (needAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 })
