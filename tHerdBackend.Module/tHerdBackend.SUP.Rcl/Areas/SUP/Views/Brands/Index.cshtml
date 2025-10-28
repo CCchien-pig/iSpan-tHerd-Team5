@@ -769,6 +769,18 @@
                     });
             });
 
+            // 放在全域 JS (非 TinyMCE init 內)
+            $(document).on('focusin', function(e) {
+                if ($(e.target).closest(".tox-tinymce, .tox-tinymce-aux").length) {
+                e.stopImmediatePropagation();
+                }
+            });
+            // ✅ 當品牌版面 Modal 顯示後，移除 tabindex
+            $('#brandLayoutModal').on('shown.bs.modal', function () {
+              console.log('🩵 移除 tabindex=-1 防止 TinyMCE 鎖焦點');
+              $(this).removeAttr('tabindex');
+            });
+
             // ======= 編輯品牌版面 Layout (修正為載入版本管理頁面) =======
             $('#brandTable').on('click', '.layout-edit-btn', function () {
                 this.blur();
@@ -945,7 +957,7 @@
                 });
             });
 
-            // 【新增事件】版面編輯 Modal 全屏切換邏輯
+            // 【新增事件】版面編輯 Modal 全螢幕切換邏輯
             $('#toggleFullscreenBtn').on('click', function() {
                 var $thisBtn = $(this);
                 const $modalDialog = $('#brandLayoutModal').find('.modal-dialog');

@@ -53,12 +53,28 @@
                 </strong>
                 @* 唯一識別碼ID *@
                 @* <span class="badge bg-secondary">{{ block.id }}</span> *@
+                
                 @* 動態切換顯示向上/向下箭頭 *@
-                <i :class="['fa-solid', 'float-end', { 'fa-chevron-down': editingId !== block.id, 'fa-chevron-up': editingId === block.id }]"></i>
+                <span class="float-end">
+                    <svg v-if="editingId === block.id"
+                         class="svg-inline--fa fa-chevron-up"
+                         aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-up" width="20" height="20" viewBox="0 0 448 512">
+                        <path fill="currentColor"
+                              d="M224 160c-8.188 0-16.38 3.125-22.62 9.375l-192 192c-12.5 12.5-12.5 32.75 0 45.25s32.75 12.5 45.25 0L224 233.4l169.4 173.2c12.5 12.5 32.75 12.5 45.25 0s12.5-32.75 0-45.25l-192-192C240.4 163.1 232.2 160 224 160z" />
+                    </svg>
+                    <svg v-else
+                         class="svg-inline--fa fa-chevron-down"
+                         aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-down" width="20" height="20" viewBox="0 0 448 512">
+                        <path fill="currentColor"
+                              d="M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z" />
+                    </svg>
+                </span>
+                @* <span>{{ editingId === block.id ? "⬆️" : "⬇️" }}</span> *@
             </div>
 
             @* 編輯區塊 *@
             <div v-if="editingId === block.id" class="card-body">
+                
                 @* ================= Banner 區塊編輯 ================= *@
                 <template v-if="block.type === 'Banner'">
                     <h5>Banner 區塊編輯</h5>
@@ -89,7 +105,7 @@
                     <div class="mb-3 border p-3 rounded" 
                          :class="{'border-danger': !block.props.fileUrl}"> @* 圖片缺失時邊框變紅 *@
         
-                        <label class="form-label fw-bold">圖片 URL (必填)</label>
+                        <label class="form-label fw-bold">圖片 URL</label>
                         <div class="input-group">
                             @* 這裡假設 FileUrl 是可編輯或可讀的，並用 v-model 追蹤 *@
                             <input type="text" class="form-control" v-model="block.props.fileUrl" 
@@ -99,6 +115,12 @@
                             <button type="button" class="btn btn-secondary">
                                 <i class="fa-solid fa-image"></i> 選擇媒體庫圖片 (TODO)
                             </button>
+
+                            (SYS_AssetFile.IsActive)
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
+                                <label class="form-check-label">啟用圖片</label>
+                            </div>
                         </div>
         
                         <small v-if="!block.props.fileUrl" class="text-danger mt-1">Banner 圖片網址為必填項。</small>
@@ -122,11 +144,19 @@
                         @* 這裡未來可以替換成 CKEditor 或 TinyMCE 等富文本編輯器 *@
                         <textarea class="form-control" rows="5" v-model="block.props.content" placeholder="請在此輸入內容。"></textarea>
                     </div>
-                    @* 【新增 Checkbox】 *@
+
+                    @* 【Accordion 內容啟用 Switch】 (控制 SUP_BrandAccordionContent.IsActive) *@
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
                         <label class="form-check-label">啟用此摺疊內容</label>
                     </div>
+
+                    @* 【Accordion 圖片啟用 Switch】 (如果 ImgId 有值，控制 SYS_AssetFile.IsActive) *@
+                    <div v-if="block.props.imgId" class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
+                        <label class="form-check-label">啟用摺疊內容圖片</label>
+                    </div>
+
                     @* 提醒：OrderSeq (順序) 將由區塊在列表中的位置決定，儲存時自動產生 *@
                     
                     @* TODO: 圖片選擇邏輯 (將選擇的 imgId 寫回 block.props.imgId) *@
@@ -193,9 +223,10 @@
                                    accept="image/*">
                         </div>
 
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
-                            <label class="form-check-label">啟用此文章</label>
+                        @* 【Article 圖片啟用 Switch】 (如果 imgId 有值，控制 SYS_AssetFile.IsActive) *@
+                        <div v-if="block.props.imgId" class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
+                            <label class="form-check-label">啟用文章圖片</label>
                         </div>
 
                         @* 4. 【核心】確認上傳按鈕 (只有在有檔案待上傳時顯示) *@
@@ -217,6 +248,12 @@
                     <div class="mb-3">
                         <label class="form-label">文章內容：</label>
                         <textarea :id="'editor-' + block.id"></textarea>
+                    </div>
+
+                    @* 【Article 內容啟用 Switch】 (控制 SUP_BrandArticle.IsActive) *@
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
+                        <label class="form-check-label">啟用此文章內容</label>
                     </div>
                 </template>
 
@@ -280,20 +317,24 @@
                         fileId: null, // 圖片 ID
                         fileUrl: '', // 圖片 URL
                         linkUrl: '', // 點擊連結
-                        isActive: true // 預設為啟用
+                        isActive: true, // 預設為啟用
+                        imageIsActive: true
                     };
                 case 'Accordion':
                     return {
                         contentTitle: '', // 對應 [ContentTitle]
                         content: '', // 對應 [Content]
-                        imgId: null // 對應 [ImgId] (可選)
+                        isActive: true, // 內容啟用狀態
+                        imgId: null, // 對應 [ImgId] (可選)
+                        imageIsActive: true
                     };
                 case 'Article': // 品牌文章區塊
                      return {
                         contentTitle: '', // 對應 [ContentTitle]
                         content: '', // 對應 [Content]
                         imgId: null, // 對應 [ImgId]
-                        // 【新增】圖片元數據的預設值
+                        isActive: true, // 內容啟用狀態
+                        // 圖片元數據的預設值
                         imageAltText: brandName + ' 文章圖片',
                         imageCaption: '',
                         imageIsActive: true
@@ -374,6 +415,24 @@
                         const container = document.getElementById('layout-blocks-container');
                         if (container) { container.scrollTop = container.scrollHeight; }
                     });
+                };
+
+                // 【新增】移除文章圖片
+                const removeArticleImage = (block) => {
+                    // 1. 清除核心數據（ImgId 和 Url）
+                    block.props.imgId = null;
+                    block.props.fileUrl = null; 
+    
+                    // 2. 清除暫存區的數據 (如果用戶還沒上傳就點了移除)
+                    pendingUpload.value = null;
+                    pendingFileUrl.value = null;
+
+                    // 3. 清除元數據，讓使用者下次上傳時重新輸入
+                    block.props.imageAltText = '';
+                    block.props.imageCaption = '';
+
+                    // 4. (可選) 提醒使用者移除成功
+                    Swal.fire('圖片已移除', '請點擊儲存，以確認變更。', 'info');
                 };
 
                 // 移除區塊
@@ -660,6 +719,9 @@
                     formData.append('altText', block.props.imageAltText);
                     formData.append('caption', block.props.imageCaption);
                     formData.append('isActive', true); // 或者綁定到 v-model
+                    
+                    // 找到 input[type="file"] 元素
+                    const fileInput = document.querySelector(`div[v-if="block.type === 'Article'"] input[type="file"]`);
 
                     // 顯示上傳中的提示
                     Swal.fire({ title: '上傳中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
@@ -682,6 +744,11 @@
                                 pendingUpload.value = null;
                                 pendingFileUrl.value = null;
 
+                                // 【核心修正點】清除檔案輸入框的值
+                                if (fileInput) {
+                                    fileInput.value = '';
+                                }
+
                                 // 插入編輯器
                                 insertImageIntoEditor(block);
                                 
@@ -691,6 +758,10 @@
                             }
                         },
                         error: function(xhr) {
+                            // 確保錯誤時也清空 input file 的值
+                            if (fileInput) {
+                                fileInput.value = '';
+                            }
                             Swal.fire('上傳失敗', `伺服器錯誤: ${xhr.statusText}`, 'error');
                         }
                     });
@@ -711,13 +782,6 @@
                     }
                 };
 
-                // 【新增】移除文章圖片
-                const removeArticleImage = (block) => {
-                    block.props.imgId = null;
-                    block.props.fileUrl = null;
-                    // 未來可以在這裡加入呼叫後端 API 刪除圖片的邏輯
-                };
-
                 // 返回版本管理
                 const goToVersions = () => {
                     const brandId = @Model.BrandId;
@@ -733,57 +797,80 @@
                     }
                 };
 
-                // 【核心修正點】使用 watch 來監聽 editingId 的變化
+                // 【核心修正版】TinyMCE 初始化於 watch(editingId)
                 watch(editingId, (newId, oldId) => {
-                    // 1. 如果之前有打開的編輯器，先銷毀它
-                    if (oldId) {
-                        const oldEditor = tinymce.get('editor-' + oldId);
-                        if (oldEditor) {
-                            oldEditor.destroy();
-                        }
-                    }
+                  // 1️⃣ 銷毀舊編輯器
+                  if (oldId) {
+                    const oldEditor = tinymce.get('editor-' + oldId);
+                    if (oldEditor) oldEditor.destroy();
+                  }
 
-                    // 2. 如果有新的編輯器要打開
-                    if (newId) {
-                        // 找到正在編輯的區塊
-                        const currentBlock = blocks.value.find(b => b.id === newId);
+                  // 2️⃣ 建立新編輯器
+                  if (newId) {
+                    const currentBlock = blocks.value.find(b => b.id === newId);
+                    if (currentBlock && currentBlock.type === 'Article') {
+                      nextTick(() => {
+                        tinymce.init({
+                          selector: '#editor-' + newId,
+                          plugins: 'lists link image table code help wordcount',
+                          toolbar:
+                            'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code | help',
+                          menubar: false,
+                          branding: false,
+                          height: 500,
 
-                        // 只有當區塊類型是 Article 時，才初始化 TinyMCE
-                        if (currentBlock && currentBlock.type === 'Article') {
-                            // 使用 nextTick 確保 textarea 已經被 Vue 渲染到 DOM 中
-                            nextTick(() => {
-                                tinymce.init({
-                                    selector: '#editor-' + newId,
+                          // 🖼️ 圖片上傳設定
+                          image_title: true,
+                          automatic_uploads: true,
+                          file_picker_types: 'image',
+                          image_dimensions: true,
+                          image_advtab: true,
 
-                                    // 【新增】啟用圖片和連結插件
-                                    plugins: 'lists link image table code help wordcount',
-                                    // 工具欄
-                                    toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link | code | help',
-                                    
-                                    // 【新增】圖片上傳設定
-                                    image_title: true,
-                                    automatic_uploads: true,
-                                    file_picker_types: 'image',
-                                    // 【核心修正點】啟用圖片尺寸調整功能
-                                    image_dimensions: true,
-                                    image_advtab: true, // 啟用高級標籤，包含尺寸輸入
-
-                                    setup: function (editor) {
-                                        // 初始化時，設定編輯器內容
-                                        editor.on('init', function () {
-                                            editor.setContent(currentBlock.props.content || '');
-                                        });
-
-                                        // 當編輯器內容改變時，手動更新 Vue 的數據
-                                        editor.on('input change', function () {
-                                            currentBlock.props.content = editor.getContent();
-                                        });
-                                    }
-                                });
+                          setup: function (editor) {
+                            editor.on('init', function () {
+                                editor.setContent(currentBlock.props.content || '');
                             });
-                        }
+
+                            // ✅ 關鍵：TinyMCE dialog 打開時暫時移除 Bootstrap 的焦點陷阱
+                            editor.on('OpenWindow', function () {
+                              console.log('🟢 TinyMCE 對話框開啟，暫停 Bootstrap 焦點鎖');
+                              const modal = document.querySelector('#brandLayoutModal');
+
+                              if (modal && bootstrap && bootstrap.Modal && bootstrap.Modal.getInstance(modal)) {
+                                const instance = bootstrap.Modal.getInstance(modal);
+                                // 暫時停用Bootstrap Modal 的焦點攔截
+                                instance._focustrap?.deactivate();
+                              }
+
+                              // 延遲清除 TinyMCE 自身 tabindex
+                              setTimeout(() => {
+                                document.querySelectorAll('.tox-dialog, .tox-dialog-wrap, .tox-tinymce-aux [tabindex="-1"]').forEach(el => {
+                                  el.removeAttribute('tabindex');
+                                });
+                              }, 50); //延遲 50ms 清除 tabindex 可確保 TinyMCE 對話框已完全渲染
+                            });
+
+                            // ✅ 對話框關閉時恢復焦點捕獲
+                            editor.on('CloseWindow', function () {
+                              console.log('🔵 TinyMCE 對話框關閉，恢復 Bootstrap 焦點鎖');
+                              const modal = document.querySelector('#brandLayoutModal');
+                              if (modal && bootstrap && bootstrap.Modal && bootstrap.Modal.getInstance(modal)) {
+                                const instance = bootstrap.Modal.getInstance(modal);
+                                //TinyMCE 對話框關閉後，恢復原本的焦點陷阱
+                                instance._focustrap?.activate();
+                              }
+                            });
+
+                            editor.on('input change', function () {
+                                currentBlock.props.content = editor.getContent();
+                            });
+                          },
+                        });
+                      });
                     }
+                  }
                 });
+
 
                 onMounted(() => {
                     initSortable();
