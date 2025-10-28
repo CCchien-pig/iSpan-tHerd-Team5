@@ -14,6 +14,8 @@ namespace tHerdBackend.Services.CS
 			services.AddScoped<IFaqRepository, FaqRepository>();
 			// Service
 			services.AddScoped<IFaqService, FaqService>();
+			services.AddScoped<ITicketService, TicketService>();
+
 			return services;
         }
     }

@@ -24,7 +24,6 @@
     <Folder Include="DTOs\CNT\" />
     <Folder Include="DTOs\ORD\" />
     <Folder Include="Interfaces\CNT\" />
-    <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\ORD\" />
     <Folder Include="Interfaces\USER\" />
     <Folder Include="ValueObjects\CNT\" />
