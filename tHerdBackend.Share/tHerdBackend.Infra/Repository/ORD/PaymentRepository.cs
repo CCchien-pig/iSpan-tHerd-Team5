@@ -1,48 +1,72 @@
 ﻿using System;
-using System.Linq;
+using System.Data;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using tHerdBackend.Core.Interfaces.ORD;
-using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.Infra.Repository.ORD
 {
     public class PaymentRepository : IPaymentRepository
     {
-        private readonly tHerdDBContext _context;
+        private readonly string _connectionString;
         private readonly ILogger<PaymentRepository> _logger;
 
         public PaymentRepository(
-            tHerdDBContext context,
+            IConfiguration configuration,
             ILogger<PaymentRepository> logger)
         {
-            _context = context;
+            _connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' not found");
             _logger = logger;
         }
 
+        /// <summary>
+        /// 建立付款記錄,回傳付款編號 (PaymentId)
+        /// </summary>
         public async Task<int> CreatePaymentAsync(
-        int orderId, int paymentConfigId, int amount, string status, string merchantTradeNo)
+            int orderId,
+            int paymentConfigId,
+            int amount,
+            string status,
+            string merchantTradeNo)
         {
-            var sql = @"
-                INSERT INTO ORD_Payment
-                (OrderId, PaymentConfigId, Amount, Status, MerchantTradeNo, CreatedDate, SimulatePaid)
-                VALUES (@p0, @p1, @p2, @p3, @p4, SYSDATETIME(), 0);
-                SELECT CAST(SCOPE_IDENTITY() as int);";
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
 
-            var result = await _context.Database
-                .SqlQueryRaw<int>(sql,
-                    orderId,
-                    paymentConfigId,
-                    amount,
-                    status,
-                    merchantTradeNo)
-                .ToListAsync();
+                var sql = @"
+                    INSERT INTO [dbo].[ORD_Payment] 
+                        ([OrderId], [PaymentConfigId], [Amount], [Status], [MerchantTradeNo], [CreatedDate])
+                    VALUES 
+                        (@OrderId, @PaymentConfigId, @Amount, @Status, @MerchantTradeNo, GETDATE());
+                    
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-            return result.FirstOrDefault();
+                var paymentId = await connection.ExecuteScalarAsync<int>(sql, new
+                {
+                    OrderId = orderId,
+                    PaymentConfigId = paymentConfigId,
+                    Amount = amount,
+                    Status = status,
+                    MerchantTradeNo = merchantTradeNo
+                });
+
+                _logger.LogInformation($"建立付款記錄成功: PaymentId={paymentId}, OrderId={orderId}");
+                return paymentId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"建立付款記錄失敗: OrderId={orderId}");
+                throw;
+            }
         }
 
-
+        /// <summary>
+        /// 根據 MerchantTradeNo 更新付款狀態
+        /// </summary>
         public async Task<bool> UpdatePaymentByMerchantTradeNoAsync(
             string merchantTradeNo,
             string tradeNo,
@@ -53,39 +77,43 @@ namespace tHerdBackend.Infra.Repository.ORD
         {
             try
             {
+                using var connection = new SqlConnection(_connectionString);
+
                 var sql = @"
-                    UPDATE ORD_Payment 
-                    SET TradeNo = @p1, 
-                        Status = @p2, 
-                        TradeDate = @p3, 
-                        RtnCode = @p4, 
-                        RtnMsg = @p5
-                    WHERE MerchantTradeNo = @p0";
+                    UPDATE [dbo].[ORD_Payment]
+                    SET 
+                        [TradeNo] = @TradeNo,
+                        [Status] = @Status,
+                        [TradeDate] = @PaymentDate,
+                        [RtnCode] = @RtnCode,
+                        [RtnMsg] = @RtnMsg
+                    WHERE [MerchantTradeNo] = @MerchantTradeNo";
 
-                var affectedRows = await _context.Database.ExecuteSqlRawAsync(sql,
-                    merchantTradeNo,
-                    tradeNo ?? "",
-                    status,
-                    paymentDate ?? (object)DBNull.Value,
-                    rtnCode ?? (object)DBNull.Value,
-                    rtnMsg ?? (object)DBNull.Value
-                );
-
-                if (affectedRows > 0)
+                var rowsAffected = await connection.ExecuteAsync(sql, new
                 {
-                    _logger.LogInformation($"✅ 更新付款狀態: MerchantTradeNo={merchantTradeNo}, Status={status}");
-                    return true;
+                    MerchantTradeNo = merchantTradeNo,
+                    TradeNo = tradeNo,
+                    Status = status,
+                    PaymentDate = paymentDate,
+                    RtnCode = rtnCode,
+                    RtnMsg = rtnMsg
+                });
+
+                if (rowsAffected == 0)
+                {
+                    _logger.LogWarning($"找不到付款記錄: MerchantTradeNo={merchantTradeNo}");
+                    return false;
                 }
                 else
                 {
-                    _logger.LogWarning($"⚠️ 找不到付款記錄: MerchantTradeNo={merchantTradeNo}");
-                    return false;
+                    _logger.LogInformation($"更新付款狀態成功: MerchantTradeNo={merchantTradeNo}, TradeNo={tradeNo}, Status={status}, RowsAffected={rowsAffected}");
+                    return true;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"❌ 更新付款狀態失敗: MerchantTradeNo={merchantTradeNo}");
-                return false;
+                _logger.LogError(ex, $"更新付款狀態失敗: MerchantTradeNo={merchantTradeNo}");
+                throw;
             }
         }
     }

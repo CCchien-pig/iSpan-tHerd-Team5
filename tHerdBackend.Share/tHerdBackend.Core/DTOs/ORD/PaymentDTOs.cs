@@ -18,7 +18,7 @@ namespace tHerdBackend.Core.DTOs.ORD
         public int OrderId { get; set; }
 
         /// <summary>
-        /// 付款方式 ID (1000 = 信用卡)
+        /// 付款方式 ID 
         /// </summary>
         public int PaymentConfigId { get; set; }
 

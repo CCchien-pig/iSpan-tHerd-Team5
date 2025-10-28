@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using System.Web;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.Interfaces.ORD;
 
@@ -13,184 +13,179 @@ namespace tHerdBackend.Services.ORD
 {
     public class ECPayService : IECPayService
     {
+        private readonly ECPayConfig _config;
         private readonly IEcpayNotificationRepository _notificationRepo;
+        private readonly IPaymentRepository _paymentRepo;
         private readonly ILogger<ECPayService> _logger;
-        private readonly IConfiguration _configuration;
-
-        private string MerchantID => _configuration["ECPay:MerchantID"] ?? "3002607";
-        private string HashKey => _configuration["ECPay:HashKey"] ?? "pwFHCqoQZGmho4w6";
-        private string HashIV => _configuration["ECPay:HashIV"] ?? "EkRm7iFT261dpevs";
-        private string ActionUrl => _configuration["ECPay:ActionUrl"] ?? "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5";
-        private string ReturnURL => _configuration["ECPay:ReturnURL"] ?? "https://your-domain.com/api/ord/payment/ecpay/notify";
-        private string ClientBackURL => _configuration["ECPay:ClientBackURL"] ?? "http://localhost:5173/order/complete";
 
         public ECPayService(
+            IOptions<ECPayConfig> config,
             IEcpayNotificationRepository notificationRepo,
-            ILogger<ECPayService> logger,
-            IConfiguration configuration)
+            IPaymentRepository paymentRepo,
+            ILogger<ECPayService> logger)
         {
+            _config = config.Value;
             _notificationRepo = notificationRepo;
+            _paymentRepo = paymentRepo;
             _logger = logger;
-            _configuration = configuration;
         }
 
-        public string CreatePaymentForm(string orderNo, int totalAmount, string itemName)
+        /// <summary>
+        /// 建立綠界付款表單 HTML
+        /// </summary>
+        public string CreatePaymentForm(string orderId, int totalAmount, string itemName)
         {
-            _logger.LogInformation("============================================================");
-            _logger.LogInformation("開始產生綠界付款表單");
-            _logger.LogInformation($"訂單編號: {orderNo}");
-            _logger.LogInformation($"訂單金額: {totalAmount}");
+            var merchantTradeNo = $"{orderId}_{DateTime.Now:yyyyMMddHHmmss}";
+            var tradeDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
-            var now = DateTime.Now;
-            var tradeNo = now.ToString("yyyyMMddHHmmss");
-            var tradeDate = now.ToString("yyyy/MM/dd HH:mm:ss");
-
-            itemName = CleanItemName(itemName);
-
-            _logger.LogInformation($"交易編號: {tradeNo}");
-            _logger.LogInformation($"交易時間: {tradeDate}");
-            _logger.LogInformation($"商品名稱: {itemName}");
-            _logger.LogInformation($"商品名稱長度: {itemName.Length} 字元");
-
-            var param = new Dictionary<string, string>
+            var parameters = new SortedDictionary<string, string>
             {
-                ["MerchantID"] = MerchantID,
-                ["MerchantTradeNo"] = tradeNo,
-                ["MerchantTradeDate"] = tradeDate,
-                ["PaymentType"] = "aio",
-                ["TotalAmount"] = totalAmount.ToString(),
-                ["TradeDesc"] = "tHerd Order",
-                ["ItemName"] = itemName,
-                ["ReturnURL"] = ReturnURL,
-                ["ChoosePayment"] = "Credit",
-                ["EncryptType"] = "1"
+                { "MerchantID", _config.MerchantID },
+                { "MerchantTradeNo", merchantTradeNo },
+                { "MerchantTradeDate", tradeDate },
+                { "PaymentType", "aio" },
+                { "TotalAmount", totalAmount.ToString() },
+                { "TradeDesc", "tHerd商城購物" },
+                { "ItemName", itemName },
+                { "ReturnURL", _config.OrderResultUrl },
+                { "ChoosePayment", "Credit" },
+                { "EncryptType", "1" },
+                { "ClientBackURL", _config.ReturnUrl }
             };
 
-            if (!string.IsNullOrEmpty(ClientBackURL))
+            var checkMacValue = GenerateCheckMacValue(parameters);
+            parameters.Add("CheckMacValue", checkMacValue);
+
+            var formHtml = new StringBuilder();
+            formHtml.AppendLine($"<form id='ecpayForm' method='post' action='{_config.PaymentUrl}'>");
+
+            foreach (var param in parameters)
             {
-                param["ClientBackURL"] = ClientBackURL;
+                formHtml.AppendLine($"<input type='hidden' name='{param.Key}' value='{HttpUtility.HtmlEncode(param.Value)}' />");
             }
 
-            _logger.LogInformation($"ReturnURL: {ReturnURL}");
-            _logger.LogInformation($"ClientBackURL: {ClientBackURL}");
+            formHtml.AppendLine("</form>");
+            formHtml.AppendLine("<script>document.getElementById('ecpayForm').submit();</script>");
 
-            var mac = GetCheckMacValue(param);
+            _logger.LogInformation($"建立付款表單: MerchantTradeNo={merchantTradeNo}, Amount={totalAmount}");
+            return formHtml.ToString();
+        }
 
-            _logger.LogInformation($"CheckMacValue: {mac}");
-            _logger.LogInformation("============================================================");
-
+        /// <summary>
+        /// 產生 CheckMacValue
+        /// </summary>
+        private string GenerateCheckMacValue(SortedDictionary<string, string> parameters)
+        {
             var sb = new StringBuilder();
-            sb.AppendLine($"<form id='ecpayForm' method='post' action='{ActionUrl}'>");
+            sb.Append($"HashKey={_config.HashKey}");
 
-            foreach (var kv in param)
+            foreach (var param in parameters)
             {
-                var escapedValue = System.Security.SecurityElement.Escape(kv.Value);
-                sb.AppendLine($"  <input type='hidden' name='{kv.Key}' value='{escapedValue}' />");
+                sb.Append($"&{param.Key}={param.Value}");
             }
 
-            sb.AppendLine($"  <input type='hidden' name='CheckMacValue' value='{mac}' />");
-            sb.AppendLine("</form>");
+            sb.Append($"&HashIV={_config.HashIV}");
 
-            return sb.ToString();
-        }
+            var encodedString = HttpUtility.UrlEncode(sb.ToString()).ToLower();
 
-        private string CleanItemName(string itemName)
-        {
-            if (string.IsNullOrWhiteSpace(itemName))
-                return "Order Items";
-
-            itemName = itemName
-                .Replace("&", " and ")
-                .Replace("'", "")
-                .Replace("\"", "")
-                .Replace("<", "")
-                .Replace(">", "")
-                .Replace("\r", "")
-                .Replace("\n", " ")
-                .Replace("\t", " ")
-                .Replace("|", " ")
-                .Trim();
-
-            while (itemName.Contains("  "))
+            using (var md5 = MD5.Create())
             {
-                itemName = itemName.Replace("  ", " ");
+                var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(encodedString));
+                return BitConverter.ToString(bytes).Replace("-", "").ToUpper();
             }
-
-            if (itemName.Length > 400)
-            {
-                itemName = itemName.Substring(0, 397) + "...";
-                _logger.LogWarning($"商品名稱過長,已截斷至 400 字元");
-            }
-
-            return itemName;
         }
 
-        private string GetCheckMacValue(Dictionary<string, string> param)
-        {
-            var sorted = param
-                .OrderBy(x => x.Key, StringComparer.Ordinal)
-                .Select(x => $"{x.Key}={x.Value}");
-
-            var raw = $"HashKey={HashKey}&{string.Join("&", sorted)}&HashIV={HashIV}";
-
-            _logger.LogInformation($"Step 1 原始字串長度: {raw.Length}");
-
-            var encoded = System.Net.WebUtility.UrlEncode(raw);
-
-            _logger.LogInformation($"Step 2 URL編碼長度: {encoded.Length}");
-
-            encoded = encoded.ToLower();
-
-            using var sha = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(encoded);
-            var hash = sha.ComputeHash(bytes);
-            var result = BitConverter.ToString(hash).Replace("-", "").ToUpper();
-
-            _logger.LogInformation($"Step 3 SHA256: {result}");
-
-            return result;
-        }
-
+        /// <summary>
+        /// 驗證 CheckMacValue
+        /// </summary>
         public bool ValidateCheckMacValue(Dictionary<string, string> parameters)
         {
             if (!parameters.ContainsKey("CheckMacValue"))
-            {
-                _logger.LogWarning("缺少 CheckMacValue");
                 return false;
-            }
 
-            var received = parameters["CheckMacValue"];
+            var receivedCheckMac = parameters["CheckMacValue"];
             parameters.Remove("CheckMacValue");
 
-            var calculated = GetCheckMacValue(parameters);
+            var sortedParams = new SortedDictionary<string, string>(parameters);
+            var calculatedCheckMac = GenerateCheckMacValue(sortedParams);
 
-            bool isValid = received.Equals(calculated, StringComparison.OrdinalIgnoreCase);
-
-            if (isValid)
-            {
-                _logger.LogInformation("CheckMacValue 驗證成功");
-            }
-            else
-            {
-                _logger.LogWarning("CheckMacValue 驗證失敗");
-                _logger.LogWarning($"接收: {received}");
-                _logger.LogWarning($"計算: {calculated}");
-            }
-
-            return isValid;
+            return receivedCheckMac == calculatedCheckMac;
         }
 
+        /// <summary>
+        /// 處理綠界付款通知
+        /// </summary>
         public async Task<bool> ProcessPaymentNotificationAsync(EcpayNotificationDto dto)
         {
             try
             {
+                // 1. 儲存通知記錄到 ORD_EcpayReturnNotification
                 await _notificationRepo.CreateAsync(dto);
-                _logger.LogInformation($"綠界通知處理成功: TradeNo={dto.TradeNo}");
+                _logger.LogInformation($"儲存綠界通知記錄成功: MerchantTradeNo={dto.MerchantTradeNo}");
+
+                // 2. 更新 ORD_Payment 狀態
+                // 解析 PaymentDate (成功時才有)
+                DateTime? paymentDate = null;
+                if (!string.IsNullOrEmpty(dto.PaymentDate))
+                {
+                    if (DateTime.TryParseExact(dto.PaymentDate, "yyyy/MM/dd HH:mm:ss",
+                        null, System.Globalization.DateTimeStyles.None, out var parsedPaymentDate))
+                    {
+                        paymentDate = parsedPaymentDate;
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"無法解析 PaymentDate: {dto.PaymentDate}");
+                    }
+                }
+
+                // ✅ 根據您的介面,只有 6 個參數 (沒有 tradeDate)
+                if (dto.RtnCode == 1) // 付款成功
+                {
+                    var updateResult = await _paymentRepo.UpdatePaymentByMerchantTradeNoAsync(
+                        dto.MerchantTradeNo,    // merchantTradeNo
+                        dto.TradeNo,            // tradeNo
+                        "success",              // status
+                        paymentDate,            // paymentDate (這個會更新到 TradeDate 欄位)
+                        dto.RtnCode,            // rtnCode
+                        dto.RtnMsg              // rtnMsg
+                    );
+
+                    if (updateResult)
+                    {
+                        _logger.LogInformation($"付款成功: MerchantTradeNo={dto.MerchantTradeNo}, TradeNo={dto.TradeNo}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"找不到對應的付款記錄: MerchantTradeNo={dto.MerchantTradeNo}");
+                    }
+                }
+                else // 付款失敗
+                {
+                    var updateResult = await _paymentRepo.UpdatePaymentByMerchantTradeNoAsync(
+                        dto.MerchantTradeNo,    // merchantTradeNo
+                        dto.TradeNo,            // tradeNo
+                        "failed",               // status
+                        null,                   // paymentDate
+                        dto.RtnCode,            // rtnCode
+                        dto.RtnMsg              // rtnMsg
+                    );
+
+                    if (updateResult)
+                    {
+                        _logger.LogWarning($"付款失敗: MerchantTradeNo={dto.MerchantTradeNo}, RtnCode={dto.RtnCode}, RtnMsg={dto.RtnMsg}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"找不到對應的付款記錄: MerchantTradeNo={dto.MerchantTradeNo}");
+                    }
+                }
+
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "處理通知失敗");
+                _logger.LogError(ex, $"處理綠界通知失敗: MerchantTradeNo={dto.MerchantTradeNo}, 錯誤: {ex.Message}");
                 return false;
             }
         }

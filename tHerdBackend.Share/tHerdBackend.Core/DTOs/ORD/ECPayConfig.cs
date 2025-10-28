@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace tHerdBackend.Core.DTOs.ORD
 {
@@ -25,27 +21,26 @@ namespace tHerdBackend.Core.DTOs.ORD
     /// </summary>
     public class EcpayNotificationDto
     {
-        public string MerchantID { get; set; }
-        public string PlatformID { get; set; }
-        public string StoreID { get; set; }
-        public string MerchantTradeNo { get; set; }
-        public string TradeNo { get; set; }
+        public string? MerchantID { get; set; }              
+        public string? MerchantTradeNo { get; set; }         
+        public string? PlatformID { get; set; }              
+        public string? StoreID { get; set; }                 
+        public string? TradeNo { get; set; }                 
         public int RtnCode { get; set; }
-        public string RtnMsg { get; set; }
+        public string? RtnMsg { get; set; }                  
         public int TradeAmt { get; set; }
-        public string PaymentType { get; set; }
+        public string? PaymentType { get; set; }             // ✅ nullable
         public decimal? PaymentTypeChargeFee { get; set; }
-        public string TradeDate { get; set; }
-        public string PaymentDate { get; set; }
+        public string? TradeDate { get; set; }               // ✅ nullable
+        public string? PaymentDate { get; set; }             // ✅ nullable
         public int? SimulatePaid { get; set; }
-        public string CustomField1 { get; set; }
-        public string CustomField2 { get; set; }
-        public string CustomField3 { get; set; }
-        public string CustomField4 { get; set; }
-        public string CheckMacValue { get; set; }
-        public string RawBody { get; set; }
-        public string RawHeaders { get; set; }
-        public string FailReason { get; set; }
+        public string? CustomField1 { get; set; }            
+        public string? CustomField2 { get; set; }           
+        public string? CustomField3 { get; set; }            
+        public string? CustomField4 { get; set; }            
+        public string? CheckMacValue { get; set; }           
+        public string? RawBody { get; set; }                 
+        public string? RawHeaders { get; set; }              
+        public string? FailReason { get; set; }              
     }
-
 }

@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.Interfaces.ORD;
-using System.Linq;
+using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 {
@@ -12,72 +13,16 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
     {
         private readonly IECPayService _ecpayService;
         private readonly ILogger<PaymentController> _logger;
+        private readonly tHerdDBContext _context;
 
         public PaymentController(
             IECPayService ecpayService,
-            ILogger<PaymentController> logger)
+            ILogger<PaymentController> logger,
+            tHerdDBContext context )
         {
             _ecpayService = ecpayService;
             _logger = logger;
-        }
-
-        /// <summary>
-        /// 測試端點 - 檢查 API 是否正常運作
-        /// </summary>
-        [HttpGet("test")]
-        public IActionResult Test()
-        {
-            try
-            {
-                _logger.LogInformation("Payment Test API called from: {Host}", Request.Host.ToString());
-
-                var response = new
-                {
-                    success = true,
-                    message = "Payment API is working",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
-                    server = new
-                    {
-                        host = Request.Host.ToString(),
-                        scheme = Request.Scheme,
-                        path = Request.Path.ToString(),
-                        method = Request.Method
-                    },
-                    headers = new
-                    {
-                        forwardedHost = Request.Headers.ContainsKey("X-Forwarded-Host")
-                            ? Request.Headers["X-Forwarded-Host"].ToString()
-                            : null,
-                        forwardedProto = Request.Headers.ContainsKey("X-Forwarded-Proto")
-                            ? Request.Headers["X-Forwarded-Proto"].ToString()
-                            : null,
-                        ngrokTraceId = Request.Headers.ContainsKey("ngrok-trace-id")
-                            ? Request.Headers["ngrok-trace-id"].ToString()
-                            : null,
-                        userAgent = Request.Headers.ContainsKey("User-Agent")
-                            ? Request.Headers["User-Agent"].ToString()
-                            : null
-                    },
-                    routes = new[]
-                    {
-                        "/api/ord/payment/test (GET) - 測試端點",
-                        "/api/ord/payment/ecpay/create (POST) - 建立付款",
-                        "/api/ord/payment/ecpay/notify (POST) - 綠界通知"
-                    }
-                };
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in Payment Test API");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Internal server error",
-                    error = ex.Message
-                });
-            }
+            _context = context;
         }
 
         /// <summary>
@@ -88,11 +33,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
         {
             try
             {
-                _logger.LogInformation(
-                    "Creating ECPay payment: OrderId={OrderId}, Amount={Amount}",
-                    request.OrderId,
-                    request.TotalAmount);
-
                 var formHtml = _ecpayService.CreatePaymentForm(
                     request.OrderId,
                     request.TotalAmount,
@@ -103,7 +43,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "建立綠界付款失敗: OrderId={OrderId}", request?.OrderId);
+                _logger.LogError(ex, "建立綠界付款失敗");
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -117,104 +57,48 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
         {
             try
             {
-                _logger.LogInformation("Received ECPay notification from: {Host}", Request.Host.ToString());
-
                 var formData = Request.Form.ToDictionary(x => x.Key, x => x.Value.ToString());
                 var rawBody = string.Join("&", formData.Select(x => $"{x.Key}={x.Value}"));
-
-                // 記錄 Headers（可選）
-                var rawHeaders = string.Join("; ", Request.Headers.Select(h => $"{h.Key}={h.Value}"));
-
-                _logger.LogDebug("ECPay notification data: {RawBody}", rawBody);
+                _logger.LogInformation("🧾 收到綠界通知: {RawBody}", rawBody);
 
                 if (!_ecpayService.ValidateCheckMacValue(formData))
                 {
-                    _logger.LogWarning("CheckMacValue 驗證失敗: {RawBody}", rawBody);
+                    _logger.LogWarning("❌ CheckMacValue 驗證失敗");
                     return BadRequest("0|CheckMacValue驗證失敗");
                 }
 
-                // 完整賦值所有欄位
-                var dto = new EcpayNotificationDto
+                var merchantTradeNo = GetValue(formData, "MerchantTradeNo");
+                var rtnCode = int.Parse(GetValue(formData, "RtnCode") ?? "0");
+                var rtnMsg = GetValue(formData, "RtnMsg");
+                var tradeNo = GetValue(formData, "TradeNo");
+
+                // ✅ 查找訂單（根據商店訂單編號）
+                var order = await _context.OrdOrders.FirstOrDefaultAsync(o => o.OrderNo == merchantTradeNo);
+                if (order == null)
                 {
-                    // 基本資訊
-                    MerchantID = GetValue(formData, "MerchantID"),
-                    PlatformID = GetValue(formData, "PlatformID"),
-                    StoreID = GetValue(formData, "StoreID"),
+                    _logger.LogWarning("❌ 找不到訂單: MerchantTradeNo={MerchantTradeNo}", merchantTradeNo);
+                    return BadRequest("0|找不到訂單");
+                }
 
-                    // 關鍵：商店訂單編號
-                    MerchantTradeNo = GetValue(formData, "MerchantTradeNo"),
-
-                    // 綠界交易編號
-                    TradeNo = GetValue(formData, "TradeNo"),
-
-                    // 付款結果
-                    RtnCode = int.Parse(GetValue(formData, "RtnCode") ?? "0"),
-                    RtnMsg = GetValue(formData, "RtnMsg"),
-
-                    // 金額資訊
-                    TradeAmt = int.Parse(GetValue(formData, "TradeAmt") ?? "0"),
-
-                    // 付款方式
-                    PaymentType = GetValue(formData, "PaymentType"),
-                    PaymentTypeChargeFee = decimal.TryParse(GetValue(formData, "PaymentTypeChargeFee"), out var fee)
-                        ? fee
-                        : (decimal?)null,
-
-                    // 日期資訊
-                    TradeDate = GetValue(formData, "TradeDate"),
-                    PaymentDate = GetValue(formData, "PaymentDate"),
-
-                    // 模擬付款
-                    SimulatePaid = int.TryParse(GetValue(formData, "SimulatePaid"), out var simPaid)
-                        ? simPaid
-                        : (int?)null,
-
-                    // 自訂欄位
-                    CustomField1 = GetValue(formData, "CustomField1"),
-                    CustomField2 = GetValue(formData, "CustomField2"),
-                    CustomField3 = GetValue(formData, "CustomField3"),
-                    CustomField4 = GetValue(formData, "CustomField4"),
-
-                    // 驗證碼
-                    CheckMacValue = GetValue(formData, "CheckMacValue"),
-
-                    // 失敗原因（如果有）
-                    FailReason = GetValue(formData, "FailReason"),
-
-                    // 原始資料
-                    RawBody = rawBody,
-                    RawHeaders = rawHeaders
-                };
-
-                _logger.LogInformation(
-                    "Processing ECPay notification: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}, RtnCode={RtnCode}, RtnMsg={RtnMsg}",
-                    dto.MerchantTradeNo,
-                    dto.TradeNo,
-                    dto.RtnCode,
-                    dto.RtnMsg);
-
-                var result = await _ecpayService.ProcessPaymentNotificationAsync(dto);
-
-                if (result)
+                // ✅ 更新訂單付款狀態（只在成功時）
+                if (rtnCode == 1)
                 {
-                    _logger.LogInformation(
-                        "ECPay notification processed successfully: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}",
-                        dto.MerchantTradeNo,
-                        dto.TradeNo);
+                    order.PaymentStatus = "paid";
+
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("✅ 更新訂單成功: OrderNo={OrderNo}, TradeNo={TradeNo}", merchantTradeNo, tradeNo);
                     return Ok("1|OK");
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "ECPay notification processing failed: MerchantTradeNo={MerchantTradeNo}, TradeNo={TradeNo}",
-                        dto.MerchantTradeNo,
-                        dto.TradeNo);
-                    return BadRequest("0|處理失敗");
+                    _logger.LogWarning("⚠️ 綠界通知交易失敗: OrderNo={OrderNo}, RtnMsg={RtnMsg}", merchantTradeNo, rtnMsg);
+                    return Ok("1|OK"); // 綠界即使失敗也要回傳 OK，否則會一直重發
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "處理綠界通知失敗");
+                _logger.LogError(ex, "💥 處理綠界通知異常");
                 return BadRequest("0|系統錯誤");
             }
         }
@@ -224,12 +108,45 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
             return data.ContainsKey(key) ? data[key] : null;
         }
 
+
+
+
+        /// <summary>
+        /// 解析 decimal?
+        /// </summary>
+        private decimal? ParseDecimal(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            if (decimal.TryParse(value, out var result))
+                return result;
+
+            return null;
+        }
+
+        /// <summary>
+        /// 解析 int?
+        /// </summary>
+        private int? ParseInt(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            if (int.TryParse(value, out var result))
+                return result;
+
+            return null;
+        }
     }
 
+    /// <summary>
+    /// 建立付款請求 DTO
+    /// </summary>
     public class CreatePaymentRequest
     {
-        public string OrderId { get; set; }
+        public string OrderId { get; set; } = string.Empty;
         public int TotalAmount { get; set; }
-        public string ItemName { get; set; }
+        public string ItemName { get; set; } = string.Empty;
     }
 }

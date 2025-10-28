@@ -29,12 +29,14 @@
               <button
                 class="circle-btn"
                 @click="decreaseOnce(item)"
+                :disabled="isCheckingOut"
                 :title="item.quantity === 1 ? '刪除商品' : '減少數量'"
               >-</button>
               <input type="text" class="qty-input" :value="item.quantity" readonly />
               <button
                 class="circle-btn"
                 @click="increaseQuantity(item)"
+                :disabled="isCheckingOut"
                 title="增加數量"
               >+</button>
             </div>
@@ -43,10 +45,24 @@
               NT$ {{ item.subtotal.toLocaleString() }}
             </div>
 
-            <button class="btn btn-outline-danger btn-sm" @click="confirmRemove(item)" title="移除商品">
+            <button 
+              class="btn btn-outline-danger btn-sm" 
+              @click="confirmRemove(item)" 
+              :disabled="isCheckingOut"
+              title="移除商品"
+            >
               <i class="bi bi-trash"></i>
             </button>
           </div>
+        </div>
+
+        <!-- 購物車空狀態 -->
+        <div v-if="cartItems.length === 0" class="text-center py-5">
+          <i class="bi bi-cart-x" style="font-size: 4rem; color: #ccc;"></i>
+          <h4 class="mt-3 text-muted">購物車是空的</h4>
+          <button class="btn btn-primary mt-3" @click="continueShopping">
+            <i class="bi bi-arrow-left"></i> 繼續購物
+          </button>
         </div>
       </div>
 
@@ -57,15 +73,39 @@
 
           <label class="fw-bold mb-2">優惠券代碼</label>
           <div class="input-group mb-4">
-            <input type="text" class="form-control" v-model="couponCode" placeholder="請輸入優惠券" />
-            <button class="btn teal-reflect-button" @click="applyCoupon">套用</button>
+            <input 
+              type="text" 
+              class="form-control" 
+              v-model="couponCode" 
+              placeholder="請輸入優惠券"
+              :disabled="isCheckingOut"
+            />
+            <button 
+              class="btn teal-reflect-button" 
+              @click="applyCoupon"
+              :disabled="isCheckingOut"
+            >套用</button>
           </div>
 
           <hr />
-          <div class="summary-row"><span>商品原價</span><span class="text-muted text-decoration-line-through">NT$ {{ subtotalBeforeDiscount.toLocaleString() }}</span></div>
-          <div class="summary-row text-success"><span>商品優惠</span><span>-NT$ {{ productDiscount.toLocaleString() }}</span></div>
-          <div class="summary-row fw-bold"><span>商品小計</span><span>NT$ {{ subtotal.toLocaleString() }}</span></div>
-          <div class="summary-row"><span>運費</span><span class="text-success">免運</span></div>
+          <div class="summary-row">
+            <span>商品原價</span>
+            <span class="text-muted text-decoration-line-through">
+              NT$ {{ subtotalBeforeDiscount.toLocaleString() }}
+            </span>
+          </div>
+          <div class="summary-row text-success">
+            <span>商品優惠</span>
+            <span>-NT$ {{ productDiscount.toLocaleString() }}</span>
+          </div>
+          <div class="summary-row fw-bold">
+            <span>商品小計</span>
+            <span>NT$ {{ subtotal.toLocaleString() }}</span>
+          </div>
+          <div class="summary-row">
+            <span>運費</span>
+            <span class="text-success">免運</span>
+          </div>
 
           <hr />
           <div class="summary-row align-items-center">
@@ -76,15 +116,22 @@
           <button 
             class="btn w-100 py-3 mt-3 teal-reflect-button" 
             @click="checkout"
-            :disabled="isCheckingOut">
+            :disabled="isCheckingOut || cartItems.length === 0"
+          >
             <span v-if="!isCheckingOut">
               <i class="bi bi-credit-card"></i> 前往結帳
             </span>
             <span v-else>
-              <span class="spinner-border spinner-border-sm me-2"></span>正在跳轉至綠界...
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              正在跳轉至綠界...
             </span>
           </button>
-          <button class="btn w-100 py-3 mt-2 silver-reflect-button" @click="continueShopping">
+          
+          <button 
+            class="btn w-100 py-3 mt-2 silver-reflect-button" 
+            @click="continueShopping"
+            :disabled="isCheckingOut"
+          >
             <i class="bi bi-arrow-left"></i> 繼續購物
           </button>
         </div>
@@ -148,8 +195,10 @@ export default {
       i.subtotal = i.salePrice * i.quantity;
     },
     increaseQuantity(i) {
-      if (i.quantity < 99) i.quantity++;
-      this.updateSubtotal(i);
+      if (i.quantity < 99) {
+        i.quantity++;
+        this.updateSubtotal(i);
+      }
     },
     decreaseOnce(i) {
       if (i.quantity === 1) {
@@ -168,7 +217,11 @@ export default {
       }
     },
     applyCoupon() {
-      alert("這是示範用優惠券功能");
+      if (!this.couponCode) {
+        alert("請輸入優惠券代碼");
+        return;
+      }
+      alert("這是示範用優惠券功能\n代碼:" + this.couponCode);
     },
     
     // 🔥 完整的結帳流程
@@ -201,8 +254,7 @@ export default {
           quantity: i.quantity
         })),
         couponCode: this.couponCode || null,
-        discountAmount: 0,
-        paymentConfigId: 1000
+        discountAmount: 0
       };
 
       console.log("📦 Checkout Payload:", payload);
@@ -210,7 +262,7 @@ export default {
       try {
         // 呼叫後端 API
         const res = await axios.post(
-          "https://localhost:7103/api/ord/Cart/checkout",
+          "http://localhost:7200/api/ord/cart/checkout",
           payload,
           {
             headers: {
@@ -223,20 +275,23 @@ export default {
 
         // 檢查是否成功
         if (res.data?.success) {
-          const ecpayHtml = res.data?.data?.ecpayFormHtml;
+          // 🔥 修正: ecpayFormHtml 在根層級
+          const ecpayHtml = res.data.ecpayFormHtml;
           
           if (!ecpayHtml) {
+            console.error("完整回應:", JSON.stringify(res.data, null, 2));
             throw new Error("後端未回傳 ecpayFormHtml");
           }
 
           console.log("🔥 收到綠界表單,準備提交...");
-          console.log("訂單編號:", res.data.data.orderNo);
-          console.log("訂單金額:", res.data.data.total);
+          if (res.data.data) {
+            console.log("訂單編號:", res.data.data.orderNo);
+            console.log("訂單金額:", res.data.data.total);
+          }
 
-          // 🔥 關鍵步驟: 插入表單並自動提交
+          // 🔥 插入表單並自動提交
           this.submitECPayForm(ecpayHtml);
 
-          // 注意: 提交後會跳轉到綠界,所以不需要重置 isCheckingOut
         } else {
           // 結帳失敗
           const errorMsg = res.data?.message || "結帳失敗,請稍後再試";
@@ -258,15 +313,17 @@ export default {
         let errorMsg = "結帳失敗,請稍後再試";
         
         if (error.response) {
-          // 後端回傳錯誤
           console.error("Error Response:", error.response.data);
           errorMsg = error.response.data?.message || 
                      `伺服器錯誤 (${error.response.status})`;
+          
+          // 顯示詳細錯誤 (開發時有用)
+          if (error.response.data?.detail) {
+            console.error("詳細錯誤:", error.response.data.detail);
+          }
         } else if (error.request) {
-          // 請求已發送但沒收到回應
-          errorMsg = "無法連接到伺服器,請檢查網路連線";
+          errorMsg = "無法連接到伺服器,請檢查:\n1. 後端是否啟動 (http://localhost:7200)\n2. 網路連線是否正常";
         } else {
-          // 其他錯誤
           errorMsg = error.message || "未知錯誤";
         }
         
@@ -292,26 +349,29 @@ export default {
         // 找到表單
         const form = container.querySelector("form");
         if (!form) {
-          console.error("HTML 內容:", htmlString);
+          console.error("HTML 內容:", htmlString.substring(0, 500));
           throw new Error("找不到 form 元素");
         }
 
-        console.log("✅ 找到表單:", form.id);
+        console.log("✅ 找到表單:", form.id || "無 ID");
         console.log("📍 表單 action:", form.action);
         console.log("📍 表單 method:", form.method);
         
-        // 列出所有表單欄位 (除錯用)
+        // 列出表單欄位 (開發時有用)
         const inputs = form.querySelectorAll("input");
         console.log(`📋 表單欄位數量: ${inputs.length}`);
         inputs.forEach(input => {
-          console.log(`  - ${input.name}: ${input.value.substring(0, 50)}...`);
+          const value = input.value.length > 50 
+            ? input.value.substring(0, 50) + "..." 
+            : input.value;
+          console.log(`  - ${input.name}: ${value}`);
         });
 
         // 🔥 提交表單 (會跳轉到綠界)
         console.log("🚀 正在提交表單到綠界...");
         form.submit();
 
-        // 提交後會離開當前頁面,所以這行不會執行
+        // 提交後會離開當前頁面
         console.log("✅ 表單已提交");
       } catch (error) {
         console.error("❌ 提交綠界表單失敗:", error);
@@ -323,56 +383,83 @@ export default {
     continueShopping() {
       window.location.href = "/";
     }
+  },
+
+  mounted() {
+    console.log("🛒 購物車組件已載入");
+    console.log("📦 商品數量:", this.cartItems.length);
+    console.log("💰 總金額:", this.finalTotal);
   }
 };
 </script>
 
 <style scoped>
-.text-teal { color:#007083; }
+.text-teal { 
+  color: #007083; 
+}
 
 /* 卡片 hover 效果 */
 .product-card {
-  border:1px solid #e9ecef;
-  border-radius:12px;
-  background:#fff;
-  transition:box-shadow .2s, transform .12s;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  background: #fff;
+  transition: box-shadow 0.2s, transform 0.12s;
 }
 .product-card:hover {
-  box-shadow:0 10px 24px rgba(0,0,0,.08);
-  transform:translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
 /* 數量控制 */
 .quantity-row {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  height:42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
 }
 .circle-btn {
-  width:42px; height:42px; border-radius:50%;
-  border:none; background:#007083; color:#fff;
-  font-size:1.35rem; font-weight:700;
-  display:flex; align-items:center; justify-content:center;
-  transition:all .2s ease;
+  width: 42px; 
+  height: 42px; 
+  border-radius: 50%;
+  border: none; 
+  background: #007083; 
+  color: #fff;
+  font-size: 1.35rem; 
+  font-weight: 700;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
-.circle-btn:hover { background:#0096a8; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+.circle-btn:hover:not(:disabled) { 
+  background: #0096a8; 
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); 
+}
 .circle-btn:disabled { 
-  background:#ccc; 
+  background: #ccc; 
   cursor: not-allowed;
+  opacity: 0.6;
 }
 .qty-input {
-  width:56px; height:42px; text-align:center;
-  border:1.5px solid #ccc; border-radius:8px;
-  font-weight:700; font-size:1.1rem; background:#fff;
+  width: 56px; 
+  height: 42px; 
+  text-align: center;
+  border: 1.5px solid #ccc; 
+  border-radius: 8px;
+  font-weight: 700; 
+  font-size: 1.1rem; 
+  background: #fff;
 }
 
 /* 訂單摘要 */
 .summary-row {
-  display:flex; justify-content:space-between;
-  align-items:center; margin-bottom:10px; font-size:1.05rem;
+  display: flex; 
+  justify-content: space-between;
+  align-items: center; 
+  margin-bottom: 10px; 
+  font-size: 1.05rem;
 }
 
 /* 按鈕樣式 */
@@ -381,8 +468,10 @@ export default {
   color: white;
   border: none;
   transition: all 0.3s ease;
+  font-weight: 600;
 }
-.teal-reflect-button:hover {
+.teal-reflect-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00586a 0%, #008a9f 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 112, 131, 0.3);
 }
@@ -390,6 +479,7 @@ export default {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
+  opacity: 0.6;
 }
 
 .silver-reflect-button {
@@ -397,15 +487,27 @@ export default {
   color: white;
   border: none;
   transition: all 0.3s ease;
+  font-weight: 600;
 }
-.silver-reflect-button:hover {
+.silver-reflect-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a6268 0%, #868e96 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
+.silver-reflect-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.6;
+}
 
+/* Loading spinner */
 .spinner-border-sm {
   width: 1rem;
   height: 1rem;
   border-width: 0.15em;
 }
+
+/* Bootstrap Icons (確保有引入) */
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css');
 </style>
