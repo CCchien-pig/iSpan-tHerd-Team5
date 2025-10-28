@@ -464,7 +464,21 @@ function setupStickyAssist() {
 }
 
 function goBack() {
-  router.push({ name: "cnt-articles", query: { scroll: "title" } });
+  const { categoryId, q, page, from } = route.query || {};
+  if (from === "list") {
+    router.push({
+      name: "cnt-articles",
+      query: {
+        categoryId,
+        q,
+        page,
+        scroll: "title",
+      },
+    });
+  } else {
+    // 不確定來源就回標題
+    router.push({ name: "cnt-articles", query: { scroll: "title" } });
+  }
 }
 
 function currentUrl() {

@@ -156,7 +156,10 @@ onMounted(async () => {
   await loadCategories();
   await loadArticles();
 
-// ✅ 新增：捲到清單頁標題
+
+
+
+  // ✅ 新增：捲到清單頁標題
   if (route.query.scroll === "title") {
     setTimeout(() => {
       const el = document.getElementById("article-list-title");
@@ -164,7 +167,8 @@ onMounted(async () => {
     }, 300);
   }
 
-  // 既有：捲到卡片清單起點
+
+  // ✅ 精準滾動到卡片起點
   if (route.query.scroll === "list") {
     setTimeout(() => {
       const target = document.getElementById("article-list-start");
@@ -247,7 +251,14 @@ function detailTo(a) {
   return {
     name: "cnt-article-detail",
     params: { id: a.pageId },
-    query: { scroll: "body" },
+    query: {
+      scroll: "body",
+      // 帶上清單狀態
+      from: "list",
+      categoryId: currentCategoryId.value || undefined,
+      q: state.q || undefined,
+      page: state.page || undefined,
+    },
   };
 }
 
@@ -285,6 +296,8 @@ function formatDate(d) {
 .border-main-color-green {
   border-color: rgb(0, 112, 131) !important;
 }
+
 /* 清單頁樣式加一條，讓固定導覽列不會把標題遮住 */
 :where(h2[id]) { scroll-margin-top: calc(var(--navbar-height, 80px) + 10px); }
+
 </style>
