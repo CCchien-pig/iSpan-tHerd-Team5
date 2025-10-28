@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Infra.DBSetting;
@@ -16,7 +18,6 @@ using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
-using tHerdBackend.Core.Abstractions.Security;
 
 
 
@@ -75,7 +76,29 @@ namespace tHerdBackend.SharedApi
                         return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
                     }
                 };
-            });
+				
+
+				//除錯用
+				// 在 Program.cs 的 builder.Build() 之前放一次：
+				//IdentityModelEventSource.ShowPII = true; // 允許輸出 PII，方便看到真錯因
+
+				//// 你的 .AddJwtBearer(..., options => { ... })
+				//options.Events = new JwtBearerEvents
+				//{
+				//	OnAuthenticationFailed = ctx =>
+				//	{
+				//		// 會看到像「IDX10214: Audience validation failed」之類的關鍵字
+				//		Console.WriteLine("JWT FAILED: " + ctx.Exception);
+				//		return Task.CompletedTask;
+				//	},
+				//	OnChallenge = context =>
+				//	{
+				//		// 你已經有客製 401 回應；可以加上 log
+				//		Console.WriteLine("JWT CHALLENGE: " + context.ErrorDescription);
+				//		return Task.CompletedTask;
+				//	}
+				//};
+			});
 
 			builder.Services.AddAuthorization();
 
