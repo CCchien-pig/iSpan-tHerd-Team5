@@ -189,9 +189,26 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                 if (request.CartItems.Any())
                 {
                     var firstProduct = request.CartItems.First().ProductName ?? "商品";
-                    itemName = firstProduct.Length > 50
-                        ? firstProduct.Substring(0, 47) + "..."
-                        : firstProduct;
+
+                    // 只保留中文、英文、數字、空格、連字號
+                    var cleanName = new string(firstProduct
+                        .Where(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-')
+                        .ToArray())
+                        .Trim();  // 👈 確保有 Trim
+
+                    if (cleanName.Length > 30)
+                    {
+                        itemName = cleanName.Substring(0, 30).Trim();  // 👈 截斷後也 Trim
+                    }
+                    else if (!string.IsNullOrEmpty(cleanName))
+                    {
+                        itemName = cleanName;
+                    }
+
+                    if (request.CartItems.Count > 1)
+                    {
+                        itemName += $" 等{request.CartItems.Count}項";
+                    }
                 }
 
                 var ecpayFormHtml = _ecpayService.CreatePaymentForm(

@@ -35,7 +35,7 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         public string CreatePaymentForm(string orderId, int totalAmount, string itemName)
         {
-            var merchantTradeNo = $"{orderId}_{DateTime.Now:yyyyMMddHHmmss}";
+            var merchantTradeNo = orderId;
             var tradeDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
             var parameters = new SortedDictionary<string, string>
@@ -65,7 +65,6 @@ namespace tHerdBackend.Services.ORD
             }
 
             formHtml.AppendLine("</form>");
-            formHtml.AppendLine("<script>document.getElementById('ecpayForm').submit();</script>");
 
             _logger.LogInformation($"建立付款表單: MerchantTradeNo={merchantTradeNo}, Amount={totalAmount}");
             return formHtml.ToString();
@@ -76,24 +75,39 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         private string GenerateCheckMacValue(SortedDictionary<string, string> parameters)
         {
-            var sb = new StringBuilder();
-            sb.Append($"HashKey={_config.HashKey}");
+            var hashKey = _config.HashKey;
+            var hashIV = _config.HashIV;
 
-            foreach (var param in parameters)
+            // 1️⃣ 組合原始字串 (未編碼)
+            var raw = new StringBuilder();
+            raw.Append($"HashKey={hashKey}");
+            foreach (var p in parameters)
             {
-                sb.Append($"&{param.Key}={param.Value}");
+                raw.Append($"&{p.Key}={p.Value}");
             }
+            raw.Append($"&HashIV={hashIV}");
 
-            sb.Append($"&HashIV={_config.HashIV}");
+            // 2️⃣ URL Encode (ECPay 要求空白轉 +)
+            string encoded = System.Web.HttpUtility.UrlEncode(raw.ToString()).ToLower();
 
-            var encodedString = HttpUtility.UrlEncode(sb.ToString()).ToLower();
+            // 3️⃣ 依官方規則替換保留字元
+            encoded = encoded
+                .Replace("%2d", "-").Replace("%5f", "_").Replace("%2e", ".")
+                .Replace("%21", "!").Replace("%2a", "*").Replace("%28", "(").Replace("%29", ")");
 
-            using (var md5 = MD5.Create())
-            {
-                var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(encodedString));
-                return BitConverter.ToString(bytes).Replace("-", "").ToUpper();
-            }
+            // 4️⃣ 轉 MD5 → 大寫
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(encoded));
+            var checkMac = string.Concat(hash.Select(b => b.ToString("X2")));
+
+            _logger.LogInformation($"✅ CheckMac 原始: {raw}");
+            _logger.LogInformation($"✅ CheckMac Encode: {encoded}");
+            _logger.LogInformation($"✅ CheckMac 結果: {checkMac}");
+
+            return checkMac;
         }
+
+
 
         /// <summary>
         /// 驗證 CheckMacValue
