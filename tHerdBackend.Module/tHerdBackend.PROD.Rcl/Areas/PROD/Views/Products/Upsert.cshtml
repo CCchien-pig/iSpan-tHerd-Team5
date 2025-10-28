@@ -636,7 +636,19 @@
                                     </div>
                                     <div id="collapseImg" class="collapse show">
                                         <div class="card-body">
-                                            @Html.Partial("_ProductImageUpload", Model.Images)
+                                            <div class="row g-3 align-items-start">
+                                                <!-- 圖片清單（右側） -->
+                                                <div class="col-md-9">
+                                                    @Html.Partial("_ProductImageUpload", Model.Images)
+                                                </div>
+                                                <!-- 上傳模組（左側） -->
+                                                <div class="col-md-3">
+                                                    @await Component.InvokeAsync("UploadImageModal", new {
+                                                        moduleId = ViewContext.RouteData.Values["area"],
+                                                        progId = ViewContext.RouteData.Values["controller"]
+                                                    })
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

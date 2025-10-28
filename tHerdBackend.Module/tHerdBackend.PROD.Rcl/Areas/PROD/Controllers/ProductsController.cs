@@ -21,16 +21,8 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		// GET: Products/Index
 		public async Task<IActionResult> Index()
         {
-            var query = new ProductFilterQueryDto
-            {
-                PageIndex = 1,
-                PageSize = 100 // 一次載入 100 筆（自行調整）
-            };
-            var (list, total) = await _repo.GetAllAsync(query);
-
-            //var products = await _qrepo.GetAllProductQueryListAsync(1000);
             await GetData();
-            return View(list);
+            return View();
         }
 
         // 取得品牌選項
@@ -173,5 +165,48 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 
             return RedirectToAction("Index");
         }
-    }
+
+		[HttpGet]
+		public async Task<IActionResult> GetProducts(
+	        int? brandId,
+	        int? productTypeId,
+	        bool? isPublished,
+	        string? keyword = null,
+	        int pageIndex = 1,
+	        int pageSize = 20,
+	        string? sortBy = null,
+	        bool sortDesc = false)
+		{
+			try
+			{
+				var query = new ProductFilterQueryDto
+				{
+					PageIndex = pageIndex,
+					PageSize = pageSize,
+					BrandId = brandId,
+					ProductTypeId = productTypeId,
+					Keyword = keyword,
+					SortBy = sortBy,
+					SortDesc = sortDesc
+				};
+
+				var (list, totalCount) = await _repo.GetAllAsync(query);
+
+				// DataTables 標準格式
+				var result = new
+				{
+					data = list,
+					recordsTotal = totalCount,
+					recordsFiltered = totalCount
+				};
+
+				return Json(result);
+			}
+			catch (Exception ex)
+			{
+				Response.StatusCode = 500;
+				return Json(new { error = ex.Message });
+			}
+		}
+	}
 }

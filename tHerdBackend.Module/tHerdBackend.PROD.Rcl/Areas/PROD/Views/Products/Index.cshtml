@@ -1,301 +1,203 @@
-﻿@using System.Text.Json
-@using tHerdBackend.Core.DTOs.PROD
-@using tHerdBackend.UIKit.Rcl.Views.Shared.Components.DataTable
+﻿@using tHerdBackend.Core.DTOs.PROD
+@using tHerdBackend.Core.Models
 @model IEnumerable<ProdProductDto>
 
 @section Styles {
     <style>
-        #dataTable tbody tr:nth-child(even) {
-            background-color: #fff;
-        }
-
-        #dataTable tbody tr:hover {
-            background-color: #FFF2CC !important;
-        }
-
-        /* 自訂表頭為紫色 */
+        #dataTable tbody tr:nth-child(even) { background-color: #fff; }
+        #dataTable tbody tr:hover { background-color: #FFF2CC !important; }
         table thead th {
             background-color: #652D77 !important;
             color: #fff !important;
             position: relative;
             padding-right: 20px !important;
-            white-space: nowrap; /* 讓多行表頭更穩定 */
+            white-space: nowrap;
         }
-
-        /* 隱藏第 1, 欄的排序箭頭（針對新版 DataTables 有 div.dt-column-header 的情況） */
-        table.dataTable thead th:nth-child(1) .dt-column-order{
-            display: none !important;
-        }
-
-        /* 預防仍可點擊排序：改游標樣式，表示不能點 */
-        table.dataTable thead th:nth-child(1){
-            cursor: default !important;
-        }
-
-        /* 隱藏上層表頭「商品」那一格的排序 icon */
-        table.dataTable thead tr:first-child th:nth-child(4) .dt-column-order {
-            display: none !important;
-            pointer-events: none !important; /* 防止點擊排序 */
-            cursor: default !important;
-        }
-
-        /* 徹底封住商品欄的排序事件與 icon */
+        table.dataTable thead th:nth-child(1),
         table.dataTable thead tr:first-child th.no-sort-group {
-            pointer-events: none !important;
             cursor: default !important;
+            pointer-events: none !important;
         }
-
-            table.dataTable thead tr:first-child th.no-sort-group .dt-column-order {
-                display: none !important;
-            }
-
-        /* 開啟時（上架）讓滑動開關變綠色 */
-        .publish-toggle:checked {
-            background-color: #28a745 !important; /* Bootstrap 綠色（也可改成你要的顏色） */
-            border-color: #28a745 !important;
+        table.dataTable thead th:nth-child(1) .dt-column-order,
+        table.dataTable thead tr:first-child th.no-sort-group .dt-column-order {
+            display: none !important;
         }
-
-            /* 滑塊圓圈顏色維持白色 */
-            .publish-toggle:checked:focus {
-                box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
-            }
-
-            #dataTable{
-                border-radius: 0.5rem;
-                overflow: hidden;
-                font-size: 0.95rem;
-                background-color: #ffffff;
-            }
-
-            #dataTable thead th{
-                position: sticky;
-                top: 0;
-                z-index: 10;
-                background: linear-gradient(135deg, #4a90e2, #007bff);
-                color: #fff;
-            }
-
+        .publish-toggle:checked { background-color: #28a745 !important; border-color: #28a745 !important; }
+        #dataTable { border-radius: 0.5rem; overflow: hidden; font-size: 0.95rem; background-color: #ffffff; }
     </style>
 }
 
-<!-- DataTales -->
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 text-purple2">清單查詢</h6>
-        <a asp-area ="PROD" asp-controller="Products" asp-action="Upsert" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+        <a asp-area="PROD" asp-controller="Products" asp-action="Upsert" class="btn btn-sm btn-success shadow-sm">
             <i class="fas fa-plus fa-sm text-white-50"></i> 新增產品
         </a>
     </div>
+
     <div class="card-body">
+
+        <!-- 🔸 篩選區 -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">品牌</label>
+                <select id="brandFilter" class="form-select">
+                    <option value="">全部</option>
+                    @foreach (var b in (List<LoadBrandOptionDto>)ViewBag.BrandDtos)
+                    {
+                        <option value="@b.BrandName">@b.BrandName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">分類</label>
+                <select id="typeFilter" class="form-select">
+                    <option value="">全部</option>
+                    @foreach (var t in (List<ProdProductTypeConfigDto>)ViewBag.TypeDtos)
+                    {
+                        <option value="@t.ProductTypeName">@t.ProductTypeName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">是否上架</label>
+                <select id="publishFilter" class="form-select">
+                    <option value="">全部</option>
+                    <option value="true">上架</option>
+                    <option value="false">下架</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button id="btnSearch" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> 查詢
+                </button>
+            </div>
+        </div>
+
+        <!-- 🔹 表格 -->
         <div class="table-responsive">
             <table class="display nowrap stripe hover" id="dataTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th rowspan="2"></th>
-                        <th rowspan="2">選項</th>
-                        <th rowspan="2">品牌</th>
-                        <th colspan="4" class="no-sort-group text-center" data-orderable="false">商品</th>
-                        <th rowspan="2">供應商</th>
-                        <th rowspan="2">是否上架</th>
-                        <th rowspan="2">建檔人員</th>
-                        <th rowspan="2">建檔日期</th>
+                        <th></th>
+                        <th>選項</th>
+                        <th>品牌</th>
+                        <th colspan="4" class="no-sort-group text-center">商品</th>
+                        <th>供應商</th>
+                        <th>是否上架</th>
+                        <th>建檔人員</th>
+                        <th>建檔日期</th>
                     </tr>
                     <tr>
+                        <th></th>
+                        <th></th>
+                        <th></th>
                         <th>編號</th>
                         <th>分類</th>
                         <th>簡碼</th>
                         <th>名稱</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
                     </tr>
                 </thead>
             </table>
         </div>
     </div>
 </div>
+
 @section Scripts {
-    @await Html.PartialAsync("_SweetAlertPartial")
-    <script>
-      $(function () {
-        // Razor 端輸出 → 正確 JSON 陣列
-        var dataJson = @Html.Raw(JsonSerializer.Serialize(
-            Model ?? Enumerable.Empty<ProdProductDetailDto>(),
-            new JsonSerializerOptions { PropertyNamingPolicy = null }
-        ));
+@await Html.PartialAsync("_SweetAlertPartial")
 
-        var $table = $('#dataTable');
+<script>
+$(function () {
+    const apiUrl = '@Url.Action("GetProducts", "Products", new { area = "PROD" })';
+    const upsertBase = '@Url.Action("Upsert", "Products", new { area = "PROD" })';
 
-            // 定義要顯示的子資料內容
-            // function format(row) {
-            //   return `
-            //     <div style="padding:10px">
-            //       <div><b>Email：</b>${row.Email}</div>
-            //       <div><b>備註：</b>${row.Notes}</div>
-            //     </div>
-            //   `;
-            // }
+    $.fn.dataTable.ext.errMode = 'throw';
 
-             // 邊界緩衝
-            function calcAvailableHeight() {
-              var footerH = $('footer').outerHeight() || 0;
-              var tableTop = $table.offset().top || 0;
-              var winH = $(window).height();
-              var gap = 20; // 邊界緩衝
-              return Math.max(240, winH - footerH - tableTop - gap);
-            }
-
-            // 高度設定
-            function resizeDataTable() {
-                var winH = window.innerHeight;
-                var headerH = $('.navbar, .topbar').outerHeight() || 0;
-                var footerH = $('footer').outerHeight() || 0;
-                var gap = 40;
-
-                // 計算可用高度，但最高只取 300
-                var h = winH - headerH - footerH - gap;
-                var finalH = Math.min(h, 300);
-
-                var $scrollBody = $(table.table().container()).find('.dataTables_scrollBody');
-                $scrollBody.css({
-                    height: finalH + 'px',
-                    'max-height': '300px'
-                });
-
-                table.columns.adjust();
-            }
-
-            var initH = calcAvailableHeight() - 300;
-            var topbarH = $('.navbar, .topbar').outerHeight() || 0;
-            const upsertBase = '@Url.Action("Upsert", "Products", new { area = "PROD" })';
-
-            // table 設定
-          var table = $table.DataTable({
-            paging: true, // 啟用分頁 (預設就是 true)
-            pageLength: 10, // 每頁 5 筆
-            lengthMenu: [5, 10, 25, 50], // 可選每頁顯示筆數
-            searching: true, // 啟用搜尋
-            ordering: true, // 啟用排序
-
-            // 捲動／凍結
-            scrollY: "500px", // 表格高度 (px)
-            scrollX: true, // 啟用水平捲軸
-            scrollCollapse: true,
-            // fixedHeader: {            // 若有固定頂部導航列時，用 offset 防止蓋住表頭
-            //   header: false,
-            //   headerOffset: topbarH
-            // },
-            fixedColumns: {
-                leftColumns: 1, // 凍結左邊第一欄
-                rightColumns: 1 // 如果要凍結右邊也可以加這個
+    var table = $('#dataTable').DataTable({
+        ajax: {
+            url: apiUrl,
+            type: "GET",
+            data: function (d) {
+                d.brandId = $('#brandFilter').val();
+                d.productTypeId = $('#typeFilter').val();
+                d.keyword = $('#keyword').val();
+                d.pageIndex = (d.start / d.length) + 1;
+                d.pageSize = d.length;
             },
-            language: {
-              processing: "處理中...",
-              loadingRecords: "載入中...",
-              lengthMenu: "每頁顯示 _MENU_ 筆",
-              zeroRecords: "沒有符合的資料",
-              info: "第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆",
-              infoEmpty: "第 0 ~ 0 筆，共 0 筆",
-              infoFiltered: "(從 _MAX_ 筆資料中篩選)",
-              search: "搜尋：",
-              paginate: {
+            dataSrc: function (json) {
+                console.log("✅ DataTable Response:", json);
+                return json.data || [];
+            }
+        },
+        serverSide: true,
+        processing: true,
+        columns: [
+          { data: null, defaultContent: "" },
+          {
+            data: null,
+            render: function (data, type, row) {
+              return `<a href="${upsertBase}?id=${row.productId}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil-square"></i> 編輯
+                      </a>`;
+            }
+          },
+          { data: "brandName", defaultContent: "-" },
+          { data: "productId" },
+          {
+            data: "productTypeDesc",
+            render: function (data) {
+              if (!data || !data.length) return "-";
+              return data.join(", ");
+            }
+          },
+          { data: "productCode" },
+          { data: "productName" },
+          { data: "supplierName" },
+          {
+            data: "isPublished",
+            render: function (data) {
+              const checked = data ? "checked" : "";
+              return `<div class="form-check form-switch d-flex justify-content-center">
+                        <input type="checkbox" class="form-check-input" ${checked} disabled>
+                      </div>`;
+            }
+          },
+          { data: "creatorNm" },
+          { data: "formateCreatedDate" }
+        ],
+        columnDefs: [
+            { targets: [0, 1], orderable: false },
+            { targets: "_all", className: "text-center align-middle" }
+        ],
+        paging: true,
+        searching: false,
+        ordering: true,
+        language: {
+            processing: "處理中...",
+            loadingRecords: "載入中...",
+            lengthMenu: "每頁顯示 _MENU_ 筆",
+            zeroRecords: "沒有符合的資料",
+            info: "第 _START_ ~ _END_ 筆，共 _TOTAL_ 筆",
+            infoEmpty: "第 0 ~ 0 筆，共 0 筆",
+            infoFiltered: "(從 _MAX_ 筆資料中篩選)",
+            search: "搜尋：",
+            paginate: {
                 first: "第一頁",
                 last: "最後一頁",
                 next: "下一頁",
                 previous: "上一頁"
-              },
-              aria: {
-                "sortAscending": ": 升冪排列",
-                "sortDescending": ": 降冪排列"
-              }
-            },
-            data: dataJson,
-            columns: [
-              {
-                className: 'dt-control',
-                orderable: false,
-                data: null,
-                defaultContent: ''
-              },
-              {
-                  data: null,
-                  orderable: false,
-                    render: function (data, type, row) {
-                      // 用 querystring 最保險（不用管結尾斜線）
-                      const url = `${upsertBase}?id=${row.ProductId}`;
-                      return `
-                        <a href="${url}" class="btn btn-sm btn-outline-primary me-1">
-                          <i class="fas fa-edit"></i> 編輯
-                        </a>
-                      `;
-                    }
-                },
-              { data: 'BrandName' },
-              { data: 'ProductId' },
-              {
-                data: 'ProductTypeDesc',
-                render: function (data) {
-                    if (!data || data.length === 0) return '';
-                    return data.map(x =>
-                        `<span class="badge text-white me-1" style="background-color:#B57FB3;font-size: 0.9rem;">${x}</span>`
-                    ).join('');
-                }
-              },
-              { data: 'ProductCode' },
-              { data: 'ProductName' },
-    
-              { data: 'SupplierName' },
-              {
-              data: 'IsPublished',
-              orderable: false,
-              render: function (data, type, row, meta) {
-                const checked = data ? 'checked' : '';
-                return `
-                  <div class="form-check form-switch d-flex justify-content-center">
-                    <input
-                      type="checkbox"
-                      class="form-check-input publish-toggle"
-                      data-id="${row.ProductId}"
-                      ${checked}
-                        disabled
-                    >
-                  </div>
-                `;
-              }
-            },
-              { data: 'CreatorNm' },
-              { data: 'FormateCreatedDate' }
-          ],
-          colReorder: true, 
-        columnDefs: [
-          {
-            targets: "_all",
-            type: "string",
-            className: "text-center align-middle"
-          }
-            ]
-          });
+            }
+        }
+    });
 
-            // 點擊展開/收合
-            $('#dataTable tbody').on('click', 'td.dt-control', function () {
-                var tr = $(this).closest('tr');
-                var row = table.row(tr);
-
-                if (row.child.isShown()) {
-                  row.child.hide();
-                  tr.removeClass('shown');
-                } else {
-                  row.child(format(row.data())).show();
-                  tr.addClass('shown');
-                }
-              });
-
-         // 每次重繪後自動調整高度
-        table.on('draw', function () {
-            resizeDataTable();
-        });
-
-        // 初始化後跑一次
-        resizeDataTable();
-
-        // 視窗大小改變時自動調整
-        $(window).on('resize', resizeDataTable);});
-    </script>
+    // 🔍 查詢按鈕
+    $('#btnSearch').on('click', function () {
+        table.ajax.reload();
+    });
+});
+</script>
 }

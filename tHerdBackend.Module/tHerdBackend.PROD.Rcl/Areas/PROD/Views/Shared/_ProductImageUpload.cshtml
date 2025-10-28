@@ -58,15 +58,6 @@
     </div>
 </div>
 
-<!-- 🔹 編輯圖片 Modal -->
-@await Component.InvokeAsync("UpdateImage", new {
-modalId = "imgMetaModal",
-    title = "圖片資訊",
-    file = new SysAssetFileDto(),
-    updateApiUrl = "/SYS/Images/UpdateFile",
-    deleteApiUrl = "/SYS/Images/DeleteFile"
-})
-
 <!-- 🔹 圖片選擇器 Modal（含上傳功能） -->
 @await Html.PartialAsync("_FileSelectPartial", new List<SysAssetFileDto>())
 
