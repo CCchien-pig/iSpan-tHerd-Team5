@@ -13,42 +13,31 @@
     <!-- 🔹 已綁定圖片清單 -->
     <div class="mt-3">
         <h6 class="fw-bold">已綁定圖片</h6>
-        <div id="boundImages" class="d-flex flex-wrap gap-3">
+        <div id="boundImages">
             @if (Model != null && Model.Any())
             {
-                foreach (var img in Model.Select((x, i) => new { x, i }))
+                // 將 ProductImageDto 轉成 SysAssetFileDto，方便套用 FileListPartial
+                var fileList = Model.Select(x => new SysAssetFileDto
                 {
-                    <div class="position-relative" style="width:120px; height:120px;">
-                        <img src="@img.x.FileUrl"
-                             alt="@img.x.AltText"
-                             class="img-thumbnail w-100 h-100 thumb-clickable"
-                             data-file-id="@img.x.ImageId"
-                             data-file-url="@img.x.FileUrl"
-                             data-alt-text="@img.x.AltText"
-                             data-caption="@img.x.AltText"
-                             style="object-fit:cover; cursor:pointer;" />
+                    FileId = x.ImgId,
+                    FileKey = x.FileKey,
 
-                        <!-- 編輯 -->
-                        <button type="button"
-                                class="btn btn-sm btn-outline-primary position-absolute bottom-0 start-0"
-                                onclick="editBoundImage(this)">
-                            <i class="bi bi-pencil"></i>
-                        </button>
+                    IsExternal = x.IsExternal,
+                    FileUrl = x.FileUrl,
+                    FileExt = x.FileExt,
+                    MimeType = x.MimeType,
+                    Width = x.Width,
+                    Height = x.Height,
+                    FileSizeBytes = x.FileSizeBytes,
+                    AltText = x.AltText,
+                    Caption = x.Caption,
+                    CreatedDate = x.CreatedDate,
+                    IsActive = true
+                }).ToList();
 
-                        <!-- 移除 -->
-                        <button type="button"
-                                class="btn btn-sm btn-danger position-absolute top-0 end-0"
-                                onclick="removeBoundImage(this)">
-                            <i class="bi bi-x"></i>
-                        </button>
-
-                        <!-- 後端綁定 -->
-                        <input type="hidden" name="Images[@img.i].ImageId" value="@img.x.ImageId" />
-                        <input type="hidden" name="Images[@img.i].FileUrl" value="@img.x.FileUrl" />
-                        <input type="hidden" name="Images[@img.i].AltText" value="@img.x.AltText" />
-                        <input type="hidden" name="Images[@img.i].OrderSeq" value="@img.x.OrderSeq" />
-                    </div>
-                }
+                @await Html.PartialAsync("_FileListPartial", fileList, new ViewDataDictionary(ViewData) {
+                    { "ItemClass", "prod-img-item" } // ✅ 指定產品專用 class
+                })
             }
             else
             {
@@ -82,54 +71,52 @@
             });
         }
 
-        // ✅ 初始化上傳模組（統一不帶參數）
         if (window.UploadImageModal && typeof UploadImageModal.init === "function") {
             UploadImageModal.init();
             console.log("✅ UploadImageModal initialized");
-        } else {
-            console.warn("⚠️ UploadImageModal.init 未定義");
         }
     });
 
-    // === 動態插入選取圖片 ===
+    // === 新增圖片後重新載入部分檢視 ===
     function appendSelectedImages(selectedFiles) {
         const list = document.getElementById("boundImages");
         if (!selectedFiles?.length) return;
 
         if (list.querySelector("span.text-muted")) list.innerHTML = "";
 
-        selectedFiles.forEach(f => {
-            const idx = list.querySelectorAll(".position-relative").length;
-            const div = document.createElement("div");
-            div.className = "position-relative";
-            div.style = "width:120px;height:120px;";
-            div.innerHTML = `
-                <img src="${f.fileUrl}" class="img-thumbnail w-100 h-100" style="object-fit:cover;cursor:pointer;">
-                <button type="button" class="btn btn-sm btn-outline-primary position-absolute bottom-0 start-0"
-                    onclick="editBoundImage(this)"><i class="bi bi-pencil"></i></button>
-                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0"
-                    onclick="removeBoundImage(this)"><i class="bi bi-x"></i></button>
-                <input type="hidden" name="Images[${idx}].FileUrl" value="${f.fileUrl}">
-                <input type="hidden" name="Images[${idx}].AltText" value="${f.altText || ''}">
-                <input type="hidden" name="Images[${idx}].ImageId" value="${f.fileId || 0}">
-            `;
-            list.appendChild(div);
+        fetch('/SYS/Images/RenderFileListPartial', {   // 👈 建議做一個 API 回傳 Partial HTML
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(selectedFiles)
+        })
+        .then(res => res.text())
+        .then(html => {
+            list.innerHTML = html;
+
+            // ✅ 將共用的 img-item 改成 prod-img-item，避免衝突
+            list.querySelectorAll(".img-item").forEach(el => {
+                el.classList.add("prod-img-item");
+                el.classList.remove("img-item");
+            });
+        })
+        .catch(err => {
+            console.error("載入 FileListPartial 失敗：", err);
         });
     }
 
     // === 編輯圖片資訊 ===
     function editBoundImage(btn) {
-        const container = btn.closest(".position-relative");
-        const img = container.querySelector("img");
+        const container = btn.closest(".prod-img-item");
+        const img = container?.querySelector("img, video");
         if (!img) return Swal.fire("錯誤", "找不到圖片元素", "error");
 
         const fileData = {
             fileId: img.dataset.fileId || 0,
-            fileUrl: img.src,
-            altText: img.alt || "",
+            fileUrl: img.dataset.fileUrl || img.src,
+            altText: img.dataset.altText || "",
             caption: img.dataset.caption || "",
-            mimeType: "image/jpeg",
-            isActive: true
+            mimeType: img.dataset.mimeType || "image/jpeg",
+            isActive: img.dataset.isActive === "true"
         };
 
         if (typeof openImageModal === "function") {
@@ -141,12 +128,11 @@
 
     // === 移除圖片 ===
     function removeBoundImage(btn) {
-        btn.closest("div").remove();
-        document.querySelectorAll("#boundImages input[name]").forEach((inp, i) => {
-            inp.name = inp.name.replace(/Images\[\d+\]/, `Images[${i}]`);
-        });
+        const container = btn.closest(".prod-img-item");
+        container.remove();
+
         const list = document.getElementById("boundImages");
-        if (!list.querySelector("img")) {
+        if (!list.querySelector(".prod-img-item")) {
             list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';
         }
     }

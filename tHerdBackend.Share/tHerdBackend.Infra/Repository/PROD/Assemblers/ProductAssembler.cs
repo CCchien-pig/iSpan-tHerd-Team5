@@ -75,8 +75,11 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
                 .OrderByDescending(t => t.IsPrimary).ToListAsync(ct);
 
             // 5. 圖片
-            const string imgSql = @"SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.IsMain, pi.OrderSeq,
-                                       af.FileUrl, af.AltText
+            const string imgSql = @"SELECT pi.ImageId, pi.ProductId, pi.SkuId, pi.ImgId, pi.IsMain, 
+                                pi.OrderSeq, af.FileUrl, af.AltText,
+                                af.Caption, af.Width, af.Height, af.FileKey, 
+                                af.FileExt, af.IsExternal, af.MimeType, 
+                                af.FileSizeBytes, af.CreatedDate
                                 FROM PROD_ProductImage pi
                                 JOIN SYS_AssetFile af ON pi.ImgId = af.FileId
                                 WHERE pi.ProductId = @ProductId

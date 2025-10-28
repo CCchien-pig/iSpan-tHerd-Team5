@@ -116,7 +116,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         const item = btn.closest(".img-item");
         const img = item.querySelector("img");
         const fileId = img.dataset.fileId;
-        const updateApiUrl = img.dataset.updateApi || "/SYS/Images/UpdateFile";
 
         const isCurrentlyActive = img.dataset.isActive === "true";
         const newState = !isCurrentlyActive;
@@ -133,7 +132,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!confirm.isConfirmed) return;
 
         try {
-            const res = await fetch(updateApiUrl, {
+            const res = await fetch("/SYS/Images/UpdateFile", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -507,27 +506,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         const modalIsActive = modalElement.querySelector("#modalIsActive");
         const confirmBtn = modalElement.querySelector("#confirmMetaBtn");
 
-        // === 點擊 Modal 內的圖片 → 直接開原圖 ===
+        // === 點擊 Modal 內圖片 → 開原圖 ===
         modalImg.addEventListener("click", e => {
             e.preventDefault();
             e.stopPropagation();
-            const imgUrl = modalImg.src;
-            if (imgUrl) window.open(imgUrl, "_blank");
+            if (modalImg.src) window.open(modalImg.src, "_blank");
         });
 
-        // === 點擊縮圖開啟 Modal ===
+        // === 點擊縮圖 → 開啟對應 Modal ===
         document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalElement.id}"]`).forEach(img => {
             img.addEventListener("click", () => {
                 openImageModal(img.dataset, `#${modalElement.id}`);
             });
         });
 
-        // === Modal 確認更新 ===
+        // === 儲存（更新圖片 Meta）===
         if (confirmBtn) {
-            if (!modalImg.dataset.updateApi) {
-                console.warn("⚠️ 找不到 updateApi，請確認 shown.bs.modal 有正確同步屬性");
-            }
-
             confirmBtn.addEventListener("click", async () => {
                 const modalImg = modalElement.querySelector(".img-zoomable");
                 if (!modalImg) {
@@ -535,32 +529,27 @@ document.addEventListener("DOMContentLoaded", async function () {
                     return;
                 }
 
-                const api = modalImg.dataset.updateApi || "/SYS/Images/UpdateFile";
                 const fileId = modalImg.dataset.fileId;
-
-                const alt = modalElement.querySelector("#modalAlt").value;
-                const caption = modalElement.querySelector("#modalCaption").value;
-                const isActive = modalElement.querySelector("#modalIsActive").checked;
-                const width = modalElement.querySelector("#modalWidth").value;
-                const height = modalElement.querySelector("#modalHeight").value;
+                const data = {
+                    FileId: fileId,
+                    AltText: modalElement.querySelector("#modalAlt").value,
+                    Caption: modalElement.querySelector("#modalCaption").value,
+                    IsActive: modalElement.querySelector("#modalIsActive").checked,
+                    Width: modalElement.querySelector("#modalWidth").value,
+                    Height: modalElement.querySelector("#modalHeight").value
+                };
 
                 showLoading("正在儲存中...");
 
                 try {
-                    const res = await fetch(api, {
+                    const res = await fetch("/SYS/Images/UpdateFile", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            FileId: fileId,
-                            AltText: alt,
-                            Caption: caption,
-                            IsActive: isActive,
-                            Width: width,
-                            Height: height
-                        })
+                        body: JSON.stringify(data)
                     });
 
                     const result = await res.json();
+
                     if (result.success) {
                         Swal.fire({
                             icon: "success",
@@ -568,8 +557,14 @@ document.addEventListener("DOMContentLoaded", async function () {
                             timer: 1200,
                             showConfirmButton: false
                         });
+
                         bootstrap.Modal.getInstance(modalElement)?.hide();
-                        refreshFileList?.();
+
+                        // ✅ 更新前端圖片（局部）
+                        if (data) {
+                            updateBoundImage(data);
+                            syncImageInput(data);
+                        }
                     } else {
                         Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
                     }
@@ -579,6 +574,63 @@ document.addEventListener("DOMContentLoaded", async function () {
                     hideLoading();
                 }
             });
+        }
+
+        // === 更新畫面卡片 + DTO ===
+        function updateBoundImage(fileDto) {
+            if (!fileDto || !fileDto.fileId) return;
+
+            const card = document.querySelector(`.prod-img-item [data-file-id='${fileDto.fileId}']`);
+            if (card) {
+                card.src = fileDto.fileUrl;
+                card.dataset.altText = fileDto.altText;
+                card.dataset.caption = fileDto.caption;
+                card.dataset.width = fileDto.width;
+                card.dataset.height = fileDto.height;
+                card.dataset.isActive = fileDto.isActive;
+
+                const captionEl = card.closest(".prod-img-item").querySelector(".caption-text");
+                if (captionEl) captionEl.textContent = fileDto.caption || "";
+
+                const badge = card.closest(".prod-img-item").querySelector(".status-badge");
+                if (badge) {
+                    badge.textContent = fileDto.isActive ? "啟用" : "停用";
+                    badge.classList.toggle("bg-success", fileDto.isActive);
+                    badge.classList.toggle("bg-secondary", !fileDto.isActive);
+                }
+
+                // 視覺提示
+                card.closest(".prod-img-item").style.boxShadow = "0 0 0 3px #28a74580";
+                setTimeout(() => (card.closest(".prod-img-item").style.boxShadow = ""), 600);
+            }
+
+            // 同步更新前端 DTO
+            if (window.productDto && Array.isArray(productDto.Images)) {
+                const target = productDto.Images.find(x => x.imgId == fileDto.fileId);
+                if (target) {
+                    target.fileUrl = fileDto.fileUrl;
+                    target.altText = fileDto.altText;
+                    target.caption = fileDto.caption;
+                    target.width = fileDto.width;
+                    target.height = fileDto.height;
+                    target.isActive = fileDto.isActive;
+                }
+            }
+
+            console.log("✅ 已同步更新圖片資料", fileDto);
+        }
+
+        // === 更新 Razor 隱藏輸入欄位（for MVC ModelBinding） ===
+        function syncImageInput(fileDto) {
+            const idxInput = document.querySelector(`[name^="Images"][value="${fileDto.fileId}"]`);
+            if (!idxInput) return;
+
+            const parentIndex = idxInput.name.match(/\[(\d+)\]/)?.[1];
+            if (parentIndex) {
+                document.querySelector(`[name="Images[${parentIndex}].AltText"]`).value = fileDto.altText;
+                document.querySelector(`[name="Images[${parentIndex}].Caption"]`).value = fileDto.caption;
+                document.querySelector(`[name="Images[${parentIndex}].IsActive"]`).checked = fileDto.isActive;
+            }
         }
     });
 

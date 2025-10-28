@@ -66,7 +66,8 @@
 </div>
 
 <style>
-    .img-item {
+    /* ✅ 將 .img-item 改為 .selector-img-item */
+    .selector-img-item {
         position: relative;
         background: #fff;
         border-radius: 6px;
@@ -75,17 +76,17 @@
         cursor: pointer;
     }
 
-        .img-item:hover {
+        .selector-img-item:hover {
             box-shadow: 0 0 10px rgba(13,110,253,0.25);
             transform: translateY(-3px);
         }
 
-        .img-item.selected {
+        .selector-img-item.selected {
             outline: 3px solid #0d6efd;
             box-shadow: 0 0 10px rgba(13,110,253,0.4);
         }
 
-    .filename-label {
+    .selector-filename-label {
         position: absolute;
         left: 0;
         bottom: 0;
@@ -158,34 +159,34 @@
         }
 
         const html = data.map(f => `
-            <div class="col img-item"
+            <div class="col selector-img-item"
                  data-id="${f.fileId}"
                  data-url="${f.fileUrl}"
                  data-alt="${f.altText || ''}"
                  data-caption="${f.caption || ''}">
                 <img src="${f.fileUrl}" alt="${f.altText || ''}" class="w-100" style="height:200px;object-fit:cover;">
-                <div class="filename-label">${f.altText || f.fileKey || ''}</div>
+                <div class="selector-filename-label">${f.altText || f.fileKey || ''}</div>
             </div>
         `).join("");
 
         grid.innerHTML = `<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">${html}</div>`;
     }
 
-    // 🖱️ 點擊選取
-    $(document).on("click", ".img-item", function () {
+    // 🖱️ 點擊選取（改用 selector-img-item）
+    $(document).on("click", ".selector-img-item", function () {
         $(this).toggleClass("selected");
-        $("#selectedCount").text($(".img-item.selected").length + " 已選");
+        $("#selectedCount").text($(".selector-img-item.selected").length + " 已選");
     });
 
     // ❌ 清除選取
     $("#btnClearSelection").on("click", function () {
-        $(".img-item").removeClass("selected");
+        $(".selector-img-item").removeClass("selected");
         $("#selectedCount").text("0 已選");
     });
 
     // ✅ 確定選取
     $("#btnConfirmSelectImages").on("click", function () {
-        const selected = $(".img-item.selected").map(function () {
+        const selected = $(".selector-img-item.selected").map(function () {
             return {
                 fileId: $(this).data("id"),
                 fileUrl: $(this).data("url"),

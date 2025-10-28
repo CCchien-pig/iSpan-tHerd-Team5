@@ -196,11 +196,8 @@
 
 @* 編輯圖片頁面 *@
 @await Component.InvokeAsync("UpdateImage", new { 
-    modalId = "imgMetaModal", 
     title = "圖片資訊", 
-    file = new SysAssetFileDto(), 
-    updateApiUrl = "/SYS/Images/UpdateFile", 
-    deleteApiUrl = "/SYS/Images/DeleteFile"
+    file = new SysAssetFileDto()
 })
 
 <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">

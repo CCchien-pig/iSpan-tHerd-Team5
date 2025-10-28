@@ -1,4 +1,5 @@
-﻿@using tHerdBackend.Core.DTOs.PROD
+﻿@using tHerdBackend.Core.DTOs
+@using tHerdBackend.Core.DTOs.PROD
 @using System.Text.Json
 @using tHerdBackend.Core.Models
 @model tHerdBackend.Core.DTOs.PROD.ProdProductDetailDto
@@ -638,11 +639,11 @@
                                         <div class="card-body">
                                             <div class="row g-3 align-items-start">
                                                 <!-- 圖片清單（右側） -->
-                                                <div class="col-md-9">
+                                                <div>
                                                     @Html.Partial("_ProductImageUpload", Model.Images)
                                                 </div>
                                                 <!-- 上傳模組（左側） -->
-                                                <div class="col-md-3">
+                                                <div>
                                                     @await Component.InvokeAsync("UploadImageModal", new {
                                                         moduleId = ViewContext.RouteData.Values["area"],
                                                         progId = ViewContext.RouteData.Values["controller"]
@@ -715,57 +716,6 @@
                         
                     </div>
                 </div>
-
-                <div class="col-md-2">
-                             @* 輪播圖 *@
-                        <div id="productCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
-
-                        <!-- 輪播圖片 -->
-                        <div class="carousel-inner rounded shadow-sm">
-                            @for (var i = 0; i < Model.Images.Count; i++)
-                            {
-                                var img = Model.Images[i];
-                                <div class="carousel-item @(i == 0 ? "active" : "")">
-                                    <img src="@Url.Action("GetImage", "Images", new { area = "PROD", fileName = System.IO.Path.GetFileName(img.FileUrl) })"
-                                         class="d-block w-100"
-                                         style="max-height:400px; object-fit:contain;"
-                                         alt="@img.AltText ?? Model.ProductName" />
-
-                                    @if (!string.IsNullOrEmpty(img.AltText))
-                                    {
-                                        <div class="carousel-caption d-none d-md-block">
-                                            <p>@img.AltText</p>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-
-                        <!-- 左右切換 -->
-                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
-                            <span class="visually-hidden">上一張</span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
-                            <span class="visually-hidden">下一張</span>
-                        </button>
-
-                        <!-- 小圓點 indicators -->
-                        <div class="carousel-indicators">
-                            @for (var i = 0; i < Model.Images.Count; i++)
-                            {
-                                <button type="button"
-                                        data-bs-target="#productCarousel"
-                                        data-bs-slide-to="@i"
-                                        class="@(i == 0 ? "active" : "")"
-                                        aria-current="@(i == 0 ? "true" : "false")"
-                                        aria-label="Slide @(i + 1)">
-                                </button>
-                            }
-                        </div>
-                    </div>
-                 </div>
             </div>
         </form>
     </div>
@@ -798,6 +748,12 @@
          </div>
     </div>
 </div>
+
+<!-- 編輯圖片 -->
+@await Component.InvokeAsync("UpdateImage", new { 
+    title = "圖片資訊",
+    file = new SysAssetFileDto()
+})
 
 @section Scripts {
     @{

@@ -22,11 +22,8 @@
 
 <!-- 編輯圖片 -->
 @await Component.InvokeAsync("UpdateImage", new { 
-    modalId = "imgMetaModal",
     title = "圖片資訊",
-    file = new SysAssetFileDto(),
-    updateApiUrl = updateApiUrl,
-    deleteApiUrl = deleteApiUrl
+    file = new SysAssetFileDto()
 })
 
 <!-- 🔹 全域 Loading 遮罩 Partial -->
