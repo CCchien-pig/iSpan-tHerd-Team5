@@ -135,6 +135,7 @@
 </template>
 
 <script>
+import { Dropdown } from 'bootstrap'
 export default {
   name: 'AppHeader',
   data() {
@@ -143,6 +144,13 @@ export default {
       cartCount: 0,
     };
   },
+
+  mounted() {
+    // 手動把頁面上所有 dropdown-toggle 初始化一次
+    document.querySelectorAll('[data-bs-toggle="dropdown"]')
+      .forEach(el => new Dropdown(el))
+  },
+  
   methods: {
     handleSearch() {
       if (this.searchQuery.trim()) {
