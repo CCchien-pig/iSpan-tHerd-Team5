@@ -62,6 +62,105 @@ window.refreshFileList = async function (message = "正在重新載入資料..."
     }
 };
 
+// === ✅ 全域取得單張圖片資訊的函式 ===
+window.fetchFileDetail = async function (fileId) {
+    try {
+        const res = await fetch(`/SYS/Images/GetFileDetail?fileId=${fileId}`, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            console.warn("⚠️ GetFileDetail 回傳失敗:", result.message);
+            return null;
+        }
+
+        return result.data; // ✅ 回傳 SysAssetFileDto
+    } catch (err) {
+        console.error("❌ GetFileDetail 發生錯誤:", err);
+        return null;
+    }
+};
+
+// === ✅ 全域更新已綁定圖片資訊 ===
+window.updateBoundImage = function (fileDto) {
+    if (!fileDto || !fileDto.fileId) return;
+
+    const card = document.querySelector(`.prod-img-item [data-file-id='${fileDto.fileId}']`);
+    if (card) {
+        // 原本更新 UI 的程式...
+        card.src = fileDto.fileUrl;
+        card.dataset.altText = fileDto.altText;
+        card.dataset.caption = fileDto.caption;
+        card.dataset.width = fileDto.width;
+        card.dataset.height = fileDto.height;
+        card.dataset.isActive = fileDto.isActive;
+
+        // ✅ 新增這行：同步 dataset 給 .thumb-clickable 元素
+        const thumb = document.querySelector(`.thumb-clickable[data-file-id='${fileDto.fileId}']`);
+        if (thumb) {
+            thumb.dataset.altText = fileDto.altText;
+            thumb.dataset.caption = fileDto.caption;
+            thumb.dataset.isActive = fileDto.isActive;
+            thumb.dataset.width = fileDto.width;
+            thumb.dataset.height = fileDto.height;
+            thumb.dataset.fileUrl = fileDto.fileUrl;
+            thumb.dataset.mimeType = fileDto.mimeType;
+        }
+    }
+
+    // ✅ 同步更新前端 DTO
+    if (window.productDto && Array.isArray(productDto.Images)) {
+        const target = productDto.Images.find(x => x.imgId == fileDto.fileId);
+        if (target) {
+            target.fileUrl = fileDto.fileUrl;
+            target.altText = fileDto.altText;
+            target.caption = fileDto.caption;
+            target.width = fileDto.width;
+            target.height = fileDto.height;
+            target.isActive = fileDto.isActive;
+        }
+    }
+
+    console.log("✅ 已同步更新圖片資料", fileDto);
+};
+
+// === 用最新 DTO 更新 Modal ===
+window.fillImageModal = function (fileDto) {
+    const modal = document.querySelector("#imgMetaModal");
+    if (!modal || !fileDto) return;
+
+    // 預覽圖更新
+    const img = modal.querySelector(".img-zoomable");
+    if (img) {
+        img.src = fileDto.fileUrl || "/images/No-Image.svg";
+        img.dataset.fileId = fileDto.fileId;
+    }
+
+    // 更新欄位
+    modal.querySelector("#modalFileKey").value = fileDto.fileKey || "";
+    modal.querySelector("#modalWidth").value = fileDto.width || "";
+    modal.querySelector("#modalHeight").value = fileDto.height || "";
+    modal.querySelector("#modalFileSizeBytes").value = (fileDto.fileSizeBytes || 0) + " Bytes";
+    modal.querySelector("#modalMimeType").value = fileDto.mimeType || "";
+    modal.querySelector("#modalCreatedDate").value = fileDto.formateCreatedDate || "";
+    modal.querySelector("#modalFileId").value = fileDto.fileId || "";
+    modal.querySelector("#modalAlt").value = fileDto.altText || "";
+    modal.querySelector("#modalCaption").value = fileDto.caption || "";
+    modal.querySelector("#modalIsActive").checked = fileDto.isActive === true || fileDto.isActive === "true";
+
+    // 外部連結 badge
+    const badge = modal.querySelector("#modalIsExternalBadge");
+    if (badge) {
+        const isExternal = fileDto.isExternal === true || fileDto.isExternal === "true";
+        badge.textContent = isExternal ? "外部連結" : "自有檔案";
+        badge.classList.remove("bg-success", "bg-secondary");
+        badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+    }
+};
+
 document.addEventListener("DOMContentLoaded", async function () {
     // 初次載入：顯示全頁遮罩
     showLoading("載入中，請稍候...", "global");
@@ -513,11 +612,30 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (modalImg.src) window.open(modalImg.src, "_blank");
         });
 
-        // === 點擊縮圖 → 開啟對應 Modal ===
-        document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalElement.id}"]`).forEach(img => {
-            img.addEventListener("click", () => {
-                openImageModal(img.dataset, `#${modalElement.id}`);
-            });
+        // === ✅ 改用事件委派，讓動態新增圖片也能自動抓最新資料 ===
+        document.addEventListener("click", async (e) => {
+            const img = e.target.closest(".thumb-clickable");
+            if (!img || !img.dataset.bsTarget) return;
+
+            const modalId = img.dataset.bsTarget;
+            const fileId = img.dataset.fileId;
+            if (!fileId) return;
+
+            try {
+                showLoading("正在抓取最新圖片資料...");
+                const latest = await fetchFileDetail(fileId);
+                if (!latest) {
+                    Swal.fire("錯誤", "無法取得圖片最新資訊", "error");
+                    return;
+                }
+
+                // ✅ 開啟 Modal 並填入最新資料
+                openImageModal(latest, modalId);
+            } catch (err) {
+                Swal.fire("錯誤", "讀取資料失敗：" + err.message, "error");
+            } finally {
+                hideLoading();
+            }
         });
 
         // === 儲存（更新圖片 Meta）===
@@ -529,9 +647,9 @@ document.addEventListener("DOMContentLoaded", async function () {
                     return;
                 }
 
-                const fileId = modalImg.dataset.fileId;
-                const data = {
-                    FileId: fileId,
+                // ✅ 建立 payload：這裡宣告在同一個作用域
+                const payload = {
+                    FileId: modalImg.dataset.fileId,
                     AltText: modalElement.querySelector("#modalAlt").value,
                     Caption: modalElement.querySelector("#modalCaption").value,
                     IsActive: modalElement.querySelector("#modalIsActive").checked,
@@ -542,31 +660,42 @@ document.addEventListener("DOMContentLoaded", async function () {
                 showLoading("正在儲存中...");
 
                 try {
+                    // 1️⃣ 呼叫 API 更新
                     const res = await fetch("/SYS/Images/UpdateFile", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data)
+                        body: JSON.stringify(payload)
                     });
 
                     const result = await res.json();
-
-                    if (result.success) {
-                        Swal.fire({
-                            icon: "success",
-                            title: "更新成功",
-                            timer: 1200,
-                            showConfirmButton: false
-                        });
-
-                        bootstrap.Modal.getInstance(modalElement)?.hide();
-
-                        // ✅ 更新前端圖片（局部）
-                        if (data) {
-                            updateBoundImage(data);
-                            syncImageInput(data);
-                        }
-                    } else {
+                    if (!result.success) {
                         Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+                        hideLoading();
+                        return;
+                    }
+
+                    // 2️⃣ 顯示成功提示
+                    Swal.fire({
+                        icon: "success",
+                        title: "更新成功",
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+
+                    // 3️⃣ 關閉 Modal
+                    const bsModal = bootstrap.Modal.getInstance(modalElement);
+                    if (bsModal?._element) {
+                        bsModal._element.removeEventListener("hidden.bs.modal", refreshFileList, true);
+                    }
+                    bsModal?.hide();
+
+                    // 4️⃣ 用最新資料更新畫面
+                    const freshDto = await fetchFileDetail(payload.FileId);
+                    if (freshDto) {
+                        updateBoundImage(freshDto);  // 更新圖片列表
+                        fillImageModal(freshDto);    // 更新 Modal 內容
+                    } else {
+                        await refreshFileList();
                     }
                 } catch (err) {
                     Swal.fire({ icon: "error", title: "錯誤", text: err.message });
@@ -574,50 +703,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                     hideLoading();
                 }
             });
-        }
-
-        // === 更新畫面卡片 + DTO ===
-        function updateBoundImage(fileDto) {
-            if (!fileDto || !fileDto.fileId) return;
-
-            const card = document.querySelector(`.prod-img-item [data-file-id='${fileDto.fileId}']`);
-            if (card) {
-                card.src = fileDto.fileUrl;
-                card.dataset.altText = fileDto.altText;
-                card.dataset.caption = fileDto.caption;
-                card.dataset.width = fileDto.width;
-                card.dataset.height = fileDto.height;
-                card.dataset.isActive = fileDto.isActive;
-
-                const captionEl = card.closest(".prod-img-item").querySelector(".caption-text");
-                if (captionEl) captionEl.textContent = fileDto.caption || "";
-
-                const badge = card.closest(".prod-img-item").querySelector(".status-badge");
-                if (badge) {
-                    badge.textContent = fileDto.isActive ? "啟用" : "停用";
-                    badge.classList.toggle("bg-success", fileDto.isActive);
-                    badge.classList.toggle("bg-secondary", !fileDto.isActive);
-                }
-
-                // 視覺提示
-                card.closest(".prod-img-item").style.boxShadow = "0 0 0 3px #28a74580";
-                setTimeout(() => (card.closest(".prod-img-item").style.boxShadow = ""), 600);
-            }
-
-            // 同步更新前端 DTO
-            if (window.productDto && Array.isArray(productDto.Images)) {
-                const target = productDto.Images.find(x => x.imgId == fileDto.fileId);
-                if (target) {
-                    target.fileUrl = fileDto.fileUrl;
-                    target.altText = fileDto.altText;
-                    target.caption = fileDto.caption;
-                    target.width = fileDto.width;
-                    target.height = fileDto.height;
-                    target.isActive = fileDto.isActive;
-                }
-            }
-
-            console.log("✅ 已同步更新圖片資料", fileDto);
         }
 
         // === 更新 Razor 隱藏輸入欄位（for MVC ModelBinding） ===
@@ -891,55 +976,70 @@ document.addEventListener("DOMContentLoaded", async function () {
             hideLoading();
         }
     };
-});
 
-document.addEventListener("click", async (e) => {
-    if (e.target && e.target.id === "confirmMetaBtn") {
+    document.addEventListener("click", async (e) => {
+        if (e.target && e.target.id === "confirmMetaBtn") {
+            e.preventDefault();
+            e.stopPropagation();  // ✅ 關鍵
 
-        const modalElement = e.target.closest(".modal");
-        const modalImg = modalElement.querySelector(".img-zoomable");
-        if (!modalImg) {
-            Swal.fire({ icon: "error", title: "找不到圖片預覽" });
-            return;
-        }
+            const modalElement = e.target.closest(".modal");
+            const modalImg = modalElement.querySelector(".img-zoomable");
+            if (!modalImg) {
+                Swal.fire({ icon: "error", title: "找不到圖片預覽" });
+                return;
+            }
 
-        const api = modalImg.dataset.updateApi || "/SYS/Images/UpdateFile";
-        const fileId = modalImg.dataset.fileId;
-        const alt = modalElement.querySelector("#modalAlt").value;
-        const caption = modalElement.querySelector("#modalCaption").value;
-        const isActive = modalElement.querySelector("#modalIsActive").checked;
-        const width = modalElement.querySelector("#modalWidth").value;
-        const height = modalElement.querySelector("#modalHeight").value;
+            const payload = {
+                FileId: modalImg.dataset.fileId,
+                AltText: modalElement.querySelector("#modalAlt").value,
+                Caption: modalElement.querySelector("#modalCaption").value,
+                IsActive: modalElement.querySelector("#modalIsActive").checked,
+                Width: modalElement.querySelector("#modalWidth").value,
+                Height: modalElement.querySelector("#modalHeight").value
+            };
 
-        showLoading("正在儲存中...");
-        try {
-            const res = await fetch(api, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ FileId: fileId, AltText: alt, Caption: caption, IsActive: isActive, Width: width, Height: height })
-            });
-            const result = await res.json();
-            if (result.success) {
-                Swal.fire({ icon: "success", title: "更新成功", timer: 1200, showConfirmButton: false });
+            showLoading("正在儲存中...");
+
+            try {
+                const res = await fetch("/SYS/Images/UpdateFile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+                if (!result.success) {
+                    Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+                    hideLoading();
+                    return;
+                }
+
+                Swal.fire({
+                    icon: "success",
+                    title: "更新成功",
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+
                 bootstrap.Modal.getInstance(modalElement)?.hide();
 
-                // 派發全域事件，讓 DataTable 那邊監聽刷新
-                document.dispatchEvent(new CustomEvent("imageMetaUpdated"));
+                // 🔁 重新查詢最新資料
+                const freshDto = await fetchFileDetail(payload.FileId);
+                if (freshDto) {
+                    updateBoundImage(freshDto);  // 更新外部清單
+                    fillImageModal(freshDto);    // ⬅️ 再同步更新 Modal 內欄位
+                }
 
-                // 在 UploadTest 畫面上，也同步刷新
-                refreshFileList?.();
-            } else {
-                Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "錯誤", text: err.message });
+            } finally {
+                hideLoading();
             }
-        } catch (err) {
-            Swal.fire({ icon: "error", title: "錯誤", text: err.message });
-        } finally {
-            hideLoading();
         }
-    }
+    });
 });
 
-// === ✅ 針對圖片選擇器的事件統一註冊 ===
+// === 針對圖片選擇器的事件統一註冊 ===
 document.addEventListener("click", e => {
     const item = e.target.closest(".img-item");
     if (!item) return;
@@ -958,5 +1058,36 @@ document.addEventListener("change", e => {
         if (item) {
             item.classList.toggle("selected", e.target.checked);
         }
+    }
+});
+
+// === 🔹 Modal 打開時載入最新圖片清單 ===
+document.addEventListener("show.bs.modal", async (e) => {
+    const modal = e.target;
+
+    // ✅ 僅針對 fileSelectModal 執行
+    if (modal.id !== "fileSelectModal") return;
+
+    // 防止重複載入（例如使用者連點按鈕）
+    if (modal.dataset.loading === "true") return;
+    modal.dataset.loading = "true";
+
+    showLoading("正在載入圖片清單...");
+
+    try {
+        const currentProgId = document.querySelector("#ProgId")?.value || "Products";
+        const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=SYS&progId=${currentProgId}`);
+        const html = await res.text();
+
+        const container = modal.querySelector("#fileListContainer");
+        if (container) {
+            container.innerHTML = html.trim() || `<p class="text-muted">目前沒有圖片。</p>`;
+        }
+    } catch (err) {
+        console.error("❌ 無法載入最新檔案：", err);
+        Swal.fire("錯誤", "無法載入圖片清單", "error");
+    } finally {
+        hideLoading();
+        modal.dataset.loading = "false";
     }
 });

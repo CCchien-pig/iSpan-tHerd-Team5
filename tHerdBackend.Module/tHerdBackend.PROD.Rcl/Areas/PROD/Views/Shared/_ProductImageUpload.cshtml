@@ -91,13 +91,20 @@
         })
         .then(res => res.text())
         .then(html => {
-            list.innerHTML = html;
+            // 🔹 建立暫存容器以解析傳回的 HTML
+            const temp = document.createElement("div");
+            temp.innerHTML = html;
 
-            // ✅ 將共用的 img-item 改成 prod-img-item，避免衝突
-            list.querySelectorAll(".img-item").forEach(el => {
+            // 🔹 把每個新的圖片卡片 append 進現有清單，而不是覆蓋
+            temp.querySelectorAll(".img-item").forEach(el => {
                 el.classList.add("prod-img-item");
                 el.classList.remove("img-item");
+                list.appendChild(el);
             });
+
+            // 🔹 移除「尚未綁定圖片」的提示文字
+            const emptyMsg = list.querySelector("span.text-muted");
+            if (emptyMsg) emptyMsg.remove();
         })
         .catch(err => {
             console.error("載入 FileListPartial 失敗：", err);

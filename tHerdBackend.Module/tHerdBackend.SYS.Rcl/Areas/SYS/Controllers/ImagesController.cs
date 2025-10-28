@@ -72,13 +72,12 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         // ============================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetFileDetail(int id)
+        public async Task<IActionResult> GetFileDetail(int fileId)
         {
-            var res = await _frepo.GetFilesById(id);
+            var res = await _frepo.GetFileById(fileId);
             return Json(new
             {
                 success = res != null,
-                message = res != null ? "取得成功" : "找不到檔案",
                 data = res
             });
         }

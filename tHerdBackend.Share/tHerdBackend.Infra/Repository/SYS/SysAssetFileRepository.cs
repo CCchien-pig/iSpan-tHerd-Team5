@@ -901,7 +901,7 @@ namespace tHerdBackend.Infra.Repository.SYS
         /// <summary>
         /// 依 FileId 取得單一檔案資訊
         /// </summary>
-        public async Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+        public async Task<SysAssetFileDto?> GetFileById(int id, CancellationToken ct = default)
         {
             return await _db.SysAssetFiles
                 .Where(f => !f.IsDeleted)

@@ -17,7 +17,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
         Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default);
         Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default);
         Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);
-        Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
+        Task<SysAssetFileDto?> GetFileById(int id, CancellationToken ct = default);
         Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default);
         Task<bool> UpdateFileMetaField(FileMetaUpdateDto model);
         Task<object> DeleteImage(int fileId, CancellationToken ct = default);
