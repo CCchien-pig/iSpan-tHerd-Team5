@@ -51,10 +51,10 @@
               <span class="main-color-white-text">登入</span>
             </button>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">登入</a></li>
-              <li><a class="dropdown-item" href="#">註冊</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath } })">登入</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
+              <li><a class="dropdown-item" v-if="isLogin" @click.prevent="$router.push({ name: 'userme' })">我的帳戶</a></li>
             </ul>
           </div>
           <!-- 訂單 -->

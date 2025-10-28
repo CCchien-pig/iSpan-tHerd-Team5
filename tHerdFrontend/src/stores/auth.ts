@@ -78,6 +78,19 @@ export const useAuthStore = defineStore('auth', {
       return data.accessToken
     },
 
+    // ★ 新增：正式登入
+    async login(email: string, password: string) {
+      const { data } = await http.post('/auth/login', { email, password })
+      // 你的 API 會回傳 { accessToken, accessExpiresAt, refreshToken?, user? }
+      if (data.refreshToken) this.setTokenPair(data.accessToken, data.accessExpiresAt, data.refreshToken)
+      else this.setToken(data.accessToken, data.accessExpiresAt)
+
+      // 同步 user（若 API 已回 user）
+      if (data.user) this.user = data.user
+      else await this.ensureUser(true)
+      return data
+    },
+
     async logout() {
       try {
         if (this.refreshToken) {
