@@ -103,7 +103,7 @@
         }));
 
         try {
-            const res = await fetch('/SYS/Images/RenderFileListPartial', {  // ✅ 相對路徑
+            const res = await fetch('/SYS/Images/RenderFileListPartial', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -116,8 +116,12 @@
 
             const html = await res.text();
 
-            // ✅ 覆蓋顯示，不 append
-            list.innerHTML = html.trim() || `<p class="text-muted">目前沒有圖片。</p>`;
+            // ✅ 不覆蓋、而是追加 append
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html.trim();
+
+            // 將新的圖片節點依序追加到現有清單中
+            Array.from(tempDiv.children).forEach(child => list.appendChild(child));
         } catch (err) {
             console.error("❌ 載入部分檢視失敗：", err);
             Swal.fire("錯誤", "載入圖片列表時發生錯誤", "error");

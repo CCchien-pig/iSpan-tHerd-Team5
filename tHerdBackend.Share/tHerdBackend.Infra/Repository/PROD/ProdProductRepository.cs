@@ -367,6 +367,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                 // === 共用處理 ===
                 await UpsertRelationsAsync(conn, tran, dto);
 
+                await UpsertImagesAsync(conn, tran, dto);
+
                 tran.Commit();
                 return true;
             }
@@ -374,6 +376,66 @@ namespace tHerdBackend.Infra.Repository.PROD
             {
                 tran.Rollback();
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// 圖片處理
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="tran"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        private async Task UpsertImagesAsync(IDbConnection conn, IDbTransaction tran, ProdProductDetailDto dto)
+        {
+            var images = dto.Images.Select(i => i.ImgId).ToList();
+
+            // === Step 1: 刪除舊的圖片關聯 ===
+            await conn.ExecuteAsync(
+                "DELETE FROM PROD_ProductImage WHERE ProductId = @ProductId AND ImgId NOT IN @ImgIds;",
+                new { dto.ProductId, ImgIds = images }, tran);
+
+            foreach (var img in dto.Images ?? new())
+            {
+                // 判斷是否存過
+                var isSaved = await conn.ExecuteScalarAsync<bool>(
+                    "SELECT COUNT(1) FROM PROD_ProductImage WHERE ProductId = @ProductId AND ImgId = @ImgId;",
+                new { dto.ProductId, img.ImgId }, tran);
+                // === 需要新建 圖片 ===
+                if (isSaved == false)
+                {
+
+                    await conn.ExecuteScalarAsync<int>(
+                        @" INSERT INTO PROD_ProductImage
+                           (ProductId, SkuId, ImgId, IsMain, OrderSeq)
+                          VALUES
+                          (@ProductId, @SkuId, @ImgId, @IsMain, @OrderSeq); ",
+                        new
+                        {
+                            dto.ProductId,
+                            img.SkuId,
+                            img.ImgId,
+                            img.IsMain,
+                            img.OrderSeq
+                        }, tran);
+                }
+                else
+                {
+                    // === 更新圖片關聯資料 ===
+                    await conn.ExecuteAsync(
+                        @" UPDATE PROD_ProductImage
+                           SET SkuId   = @SkuId,
+                               IsMain  = @IsMain,
+                               OrderSeq= @OrderSeq
+                         WHERE ImageId = @ImageId; ",
+                        new
+                        {
+                            img.SkuId,
+                            img.IsMain,
+                            img.OrderSeq,
+                            img.ImageId
+                        }, tran);
+                }
             }
         }
 

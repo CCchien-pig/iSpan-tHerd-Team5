@@ -964,65 +964,96 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // === 刪除圖片 ===
     window.deleteFile = async function (fileId, btn) {
-        // 從按鈕或圖片讀取 delete API（或預設）
-        const deleteApi = btn?.dataset.deleteApi || "/SYS/Images/DeleteFile";
-
-        const confirm = await Swal.fire({
-            title: "確定刪除？",
-            text: "此圖片將從雲端與資料庫永久移除",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "刪除",
-            cancelButtonText: "取消"
-        });
-        if (!confirm.isConfirmed) return;
-
         try {
-            // 🌀 顯示 Loading
-            showGlobalLoading("正在刪除檔案...");
+            // 🟢 顯示 Loading
+            showGlobalLoading?.("正在從綁定中移除...");
 
-            const res = await fetch(deleteApi, {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ fileId })
-            });
+            // 🔹 找到圖片容器
+            const parent = btn.closest(".img-item, .prod-img-item");
+            if (parent) parent.remove();
 
-            const data = await res.json();
+            const list = document.getElementById("boundImages");
+            if (!list) return;
 
-            if (data.success) {
-                Swal.fire({
-                    title: "✅ 刪除成功",
-                    icon: "success",
-                    showConfirmButton: false,
-                    timer: 1000
-                });
-
-                // 🔄 更新畫面（移除對應項）
-                const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
-                if (targetImg) {
-                    const parent = targetImg.closest(".img-item");
-                    if (parent) parent.remove();
-                }
-
-                const grid = document.querySelector("form > div.img-grid");
-                if (grid && grid.children.length === 0) {
-                    grid.innerHTML = `<p class="text-muted">目前沒有圖片。</p>`;
-                }
-
-                // ✅ 可選：同步刷新列表（若有多使用者同時上傳時建議保留）
-                await refreshFileList();
-
-            } else {
-                Swal.fire("❌ 刪除失敗", data.message || "", "error");
+            // 🔹 若全刪光，顯示提示文字
+            if (!list.querySelector(".img-item, .prod-img-item")) {
+                list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';
             }
+
+            // 🔹 更新隱藏欄位索引，避免 MVC 模型綁定出錯
+            list.querySelectorAll(".prod-img-item").forEach((item, idx) => {
+                item.querySelectorAll("input[name^='Images']").forEach(input => {
+                    input.name = input.name.replace(/Images\[\d+\]/, `Images[${idx}]`);
+                });
+            });
         } catch (err) {
-            console.error("❌ 刪除錯誤：", err);
-            Swal.fire("錯誤", err.message || "伺服器連線失敗", "error");
+            console.error("❌ 移除錯誤：", err);
+            Swal.fire("錯誤", err.message || "移除過程中發生錯誤", "error");
         } finally {
-            // 🟢 確保不論成功或失敗都關閉 Loading
-            hideGlobalLoading();
+            hideGlobalLoading?.();
         }
     };
+    // === 刪除圖片 ===
+    //window.deleteFile = async function (fileId, btn) {
+    //    // 從按鈕或圖片讀取 delete API（或預設）
+    //    const deleteApi = btn?.dataset.deleteApi || "/SYS/Images/DeleteFile";
+
+    //    const confirm = await Swal.fire({
+    //        title: "確定刪除？",
+    //        text: "此圖片將從雲端與資料庫永久移除",
+    //        icon: "warning",
+    //        showCancelButton: true,
+    //        confirmButtonText: "刪除",
+    //        cancelButtonText: "取消"
+    //    });
+    //    if (!confirm.isConfirmed) return;
+
+    //    try {
+    //        // 🌀 顯示 Loading
+    //        showGlobalLoading("正在刪除檔案...");
+
+    //        const res = await fetch(deleteApi, {
+    //            method: "POST",
+    //            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    //            body: new URLSearchParams({ fileId })
+    //        });
+
+    //        const data = await res.json();
+
+    //        if (data.success) {
+    //            Swal.fire({
+    //                title: "✅ 刪除成功",
+    //                icon: "success",
+    //                showConfirmButton: false,
+    //                timer: 1000
+    //            });
+
+    //            // 🔄 更新畫面（移除對應項）
+    //            const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
+    //            if (targetImg) {
+    //                const parent = targetImg.closest(".img-item");
+    //                if (parent) parent.remove();
+    //            }
+
+    //            const grid = document.querySelector("form > div.img-grid");
+    //            if (grid && grid.children.length === 0) {
+    //                grid.innerHTML = `<p class="text-muted">目前沒有圖片。</p>`;
+    //            }
+
+    //            // ✅ 可選：同步刷新列表（若有多使用者同時上傳時建議保留）
+    //            await refreshFileList();
+
+    //        } else {
+    //            Swal.fire("❌ 刪除失敗", data.message || "", "error");
+    //        }
+    //    } catch (err) {
+    //        console.error("❌ 刪除錯誤：", err);
+    //        Swal.fire("錯誤", err.message || "伺服器連線失敗", "error");
+    //    } finally {
+    //        // 🟢 確保不論成功或失敗都關閉 Loading
+    //        hideGlobalLoading();
+    //    }
+    //};
 
     document.addEventListener("click", async (e) => {
         if (e.target && e.target.id === "confirmMetaBtn") {

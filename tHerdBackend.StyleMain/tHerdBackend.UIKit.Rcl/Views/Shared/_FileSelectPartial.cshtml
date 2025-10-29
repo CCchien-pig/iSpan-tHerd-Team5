@@ -279,8 +279,6 @@
 
     // 🟢 接收從圖片選擇器回傳的結果 → 通知父層負責畫面更新
     document.addEventListener("images-selected", function (e) {
-        const selectedFiles = e.detail;
-
         // ❌ 不在這裡渲染圖片
         // ✅ 由父層 appendSelectedImages(selectedFiles) 去呼叫後端 _FileListPartial
     });
