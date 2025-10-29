@@ -61,12 +61,12 @@ public partial class SysAssetFileDto
     /// <summary>
     /// Alt 替代文字
     /// </summary>
-    public string AltText { get; set; }
+    public string? AltText { get; set; } = "";
 
     /// <summary>
     /// 文字說明 / 附註文字
     /// </summary>
-    public string Caption { get; set; }
+    public string? Caption { get; set; } = "";
 
     /// <summary>
     /// 建檔時間

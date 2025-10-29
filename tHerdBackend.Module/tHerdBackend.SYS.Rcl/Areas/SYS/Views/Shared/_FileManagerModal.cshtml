@@ -95,8 +95,8 @@
             if (!fm) return;
 
             fm.beforeSend = () => showLoading("同步資料中...");
-            fm.success = () => hideLoading();
-            fm.failure = () => hideLoading();
+            fm.success = () => hideGlobalLoading();
+            fm.failure = () => hideGlobalLoading();
         });
     </script>
 }

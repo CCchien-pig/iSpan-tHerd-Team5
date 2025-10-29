@@ -126,6 +126,19 @@
             console.error("❌ 載入部分檢視失敗：", err);
             Swal.fire("錯誤", "載入圖片列表時發生錯誤", "error");
         }
+
+        reindexImageInputs();
+    }
+
+    // === ✅ 強制重新編號 Hidden Inputs ===
+    function reindexImageInputs() {
+        const list = document.getElementById("boundImages");
+        const items = list.querySelectorAll(".prod-img-item, .img-item");
+        items.forEach((item, index) => {
+            item.querySelectorAll("input[name^='Images']").forEach(input => {
+                input.name = input.name.replace(/Images\[\d+\]/, `Images[${index}]`);
+            });
+        });
     }
 
     // === 編輯圖片資訊 ===

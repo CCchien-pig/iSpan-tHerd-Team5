@@ -141,7 +141,12 @@ window.UploadImageModal = (function () {
 
                 Swal.fire({ icon: "success", title: "上傳完成", timer: 1000, showConfirmButton: false });
                 modal.querySelector(".btn-close")?.click();
-                document.dispatchEvent(new CustomEvent("upload-success"));
+                document.dispatchEvent(new CustomEvent("upload-success", {
+                    detail: {
+                        moduleId,
+                        progId
+                    }
+                }));
             } catch (err) {
                 Swal.fire("錯誤", err.message || "上傳失敗", "error");
             } finally {
@@ -310,8 +315,8 @@ async function returnToImageSelector() {
     }
 
     // === 🌀 顯示 Loading ===
-    if (typeof showLoading === "function") {
-        showLoading("正在更新圖片清單...");
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("正在更新圖片清單...");
     }
 
     // 🔹 顯示圖片選擇器 Modal

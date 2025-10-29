@@ -173,7 +173,7 @@
         const progId = e.detail?.progId || "Images";
 
         try {
-            showLoading("重新載入圖片中，請稍候...");
+            showGlobalLoading("重新載入圖片中，請稍候...");
 
             await loadModuleImages(moduleId, progId);
 
@@ -194,7 +194,7 @@
             Swal.fire("錯誤", "載入圖片時發生問題，請稍後再試。", "error");
         } finally {
             // ✅ 無論成功或失敗都關閉 Loading
-            hideLoading();
+            hideGlobalLoading();
         }
     });
 

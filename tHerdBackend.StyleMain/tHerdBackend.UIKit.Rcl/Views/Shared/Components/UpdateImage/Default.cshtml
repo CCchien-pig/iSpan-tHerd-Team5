@@ -146,7 +146,7 @@
                 Height: modal.querySelector("#modalHeight").value
             };
 
-            showLoading("正在儲存中...");
+            showGlobalLoading("正在儲存中...");
 
             try {
                 const res = await fetch("/SYS/Images/UpdateFile", {
@@ -159,7 +159,7 @@
 
                 if (!result.success) {
                     Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
-                    hideLoading();
+                    hideGlobalLoading();
                     return;
                 }
 
@@ -179,7 +179,7 @@
             } catch (err) {
                 Swal.fire({ icon: "error", title: "錯誤", text: err.message });
             } finally {
-                hideLoading();
+                hideGlobalLoading();
             }
         });
 

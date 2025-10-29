@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.Interfaces.PROD;
@@ -143,7 +144,24 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 				return View("Upsert", dto);
 			}
 
-			if (!ModelState.IsValid)
+            // 🔹 Step 1. 清除錯誤
+            var keysToRemove = ModelState.Keys
+                .Where(k => k.Contains("Images[") && (k.EndsWith(".AltText") || k.EndsWith(".Caption")))
+                .ToList();
+
+            foreach (var key in keysToRemove)
+                ModelState[key].Errors.Clear();
+
+            // 🔹 Step 2. 清除狀態
+            ModelState.ClearValidationState("Images");
+
+            // 🔹 Step 3. 強制設定為 Valid ✅
+            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Images[")))
+            {
+                ModelState[key].ValidationState = ModelValidationState.Valid;
+            }
+
+            if (!ModelState.IsValid)
             {
                 var errors = ModelState
                     .Where(x => x.Value.Errors.Count > 0)
