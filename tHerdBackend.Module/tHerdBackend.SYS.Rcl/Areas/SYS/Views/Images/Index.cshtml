@@ -1072,6 +1072,102 @@
             }
         });
 
+        // === 移動資料夾 / 檔案 ===
+        $('#btnMove').on('click', async function () {
+            // 1️ 取得選取項目
+            const checkedRows = $('.row-select:checked').map(function () {
+                return table.row($(this).closest('tr')).data();
+            }).get();
+
+            if (checkedRows.length === 0) {
+                Swal.fire({ icon: 'warning', title: '請先選取要移動的項目' });
+                return;
+            }
+
+            // 2️ 選擇目標資料夾
+            const currentFolderId = breadcrumbStack.at(-1)?.id || null;
+
+            const result = await openFolderTreeSelector({
+                title: "選擇目標資料夾",
+                apiUrl: "/SYS/Images/GetTreeData",
+                defaultId: currentFolderId
+            });
+
+            if (!result.isConfirmed) return;
+
+            const targetFolderId = result.value ?? null;
+
+            // 3️ 防呆（同層移動）
+            if (targetFolderId === currentFolderId) {
+                return;
+            }
+
+            // 4️ 顯示確認視窗（這裡暫時不知道資料夾名稱，只顯示 ID）
+            const confirm = await Swal.fire({
+                icon: 'question',
+                title: '確認移動',
+                html: `
+                    <div class="text-start">
+                        將移動以下項目：<br>
+                        <b>${checkedRows.length}</b> 筆（檔案或資料夾）<br><br>
+                    </div>`,
+                showCancelButton: true,
+                confirmButtonText: '執行移動',
+                cancelButtonText: '取消'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            // 5️ 呼叫後端 API
+            try {
+                const dto = {
+                    Ids: checkedRows.map(r =>
+                        r.id || r.Id || r.fileId || r.FileId || r.folderId || r.FolderId
+                    ),
+                    FolderId: targetFolderId
+                };
+
+                const res = await fetch('/SYS/Images/MoveToFolder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dto)
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    // ✅ 使用後端回傳的資料夾名稱顯示結果
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '移動完成',
+                        html: `
+                            <div class="text-start">
+                                目標資料夾：<b>${result.data?.targetFolderName ?? '根目錄'}</b><br/>
+                                共移動：${checkedRows.length} 項
+                            </div>`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    // ✅ 成功後 → 導航到目標資料夾
+                    await navigateToFolder(targetFolderId ?? null);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '移動失敗',
+                        text: result.message || '伺服器回傳錯誤'
+                    });
+                }
+            } catch (err) {
+                console.error('❌ 移動發生錯誤：', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: '系統錯誤',
+                    text: '無法連線至伺服器或伺服器發生未預期錯誤。'
+                });
+            }
+        });
+
         // === 當圖片資訊視窗關閉時，自動刷新 DataTable ===
         document.getElementById('imgMetaModal').addEventListener('hidden.bs.modal', function () {
             if (window.table) {
