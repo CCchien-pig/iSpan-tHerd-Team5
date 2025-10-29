@@ -9,4 +9,22 @@ export default [
   //   component: () => import('../pages/user/UserProfile.vue'),
   //   meta: { title: '會員資料' }
   // }
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../pages/modules/user/UserLogin.vue'),
+    meta: { title: '登入' }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../pages/modules/user/UserRegister.vue'),
+    meta: { title: '註冊' }
+  },
+  {
+    path: '/me',
+    name: 'me',
+    component: () => import('../pages/modules/user/UserMe.vue'),
+    meta: { title: '我的帳戶', requiresAuth: true } // 守門員會檢查
+  },
 ];
