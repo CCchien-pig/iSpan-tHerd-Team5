@@ -105,12 +105,25 @@
                 @* ================= Accordion 區塊編輯 ================= *@
                 <template v-if="block.type === 'Accordion'">
                     <h5>摺疊區塊編輯</h5>
+                    @* ... (標題和內容和啟用 Switch) ... *@
                     <div class="mb-3"><label>摺疊標題：</label><input type="text" class="form-control" v-model="block.props.contentTitle"></div>
                     <div class="mb-3"><label class="form-label">摺疊內容：</label><textarea class="form-control" rows="5" v-model="block.props.content"></textarea></div>
-                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" v-model="block.props.isActive"><label class="form-check-label">啟用此摺疊內容</label></div>
+                    <div class="form-check form-switch mb-3" style="margin-left: 5px;">
+                        <input class="form-check-input" type="checkbox" v-model="block.props.isActive"><label class="form-check-label">啟用此摺疊內容</label>
+                    </div>
+
+                    @* 【核心修正點】加入展開/收合按鈕 *@
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary btn-sm mb-2"
+                                type="button"
+                                @@click="block.props.isImageUploaderOpen = !block.props.isImageUploaderOpen">
+                            <i :class="['fa-solid', block.props.isImageUploaderOpen ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                            {{ block.props.isImageUploaderOpen ? '收合圖片上傳區' : '展開圖片上傳區' }}
+                        </button>
+                    </div>
 
                     @* --- 圖片上傳區 (結構統一) --- *@
-                    <div class="border p-3 rounded mb-3">
+                    <div v-if="block.props.isImageUploaderOpen" class="border p-3 rounded mt-3">
                         <h6 class="mb-3">摺疊內容圖片 (可選)</h6>
                         <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3"><img :src="block.props.fileUrl || pendingFileUrl" style="max-width: 100%; max-height: 200px;" alt="預覽" /><p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽</p><div class="mt-2"><button class="btn btn-sm btn-outline-danger" @@click="removeBlockImage(block)">移除圖片</button></div></div>
                         <div v-if="!block.props.fileUrl && !pendingFileUrl">
@@ -129,11 +142,25 @@
                 @* ================= Article 區塊編輯 ================= *@
                 <template v-if="block.type === 'Article'">
                     <h5>品牌文章區塊編輯</h5>
+                    @* ... (標題和啟用 Switch) ... *@
                     <div class="mb-3"><label class="form-label">文章標題：</label><input type="text" class="form-control" v-model="block.props.contentTitle"></div>
-                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" v-model="block.props.isActive"><label class="form-check-label">啟用此文章內容</label></div>
+                    <div class="form-check form-switch mb-3 ms-2">
+                        <input class="form-check-input" type="checkbox" v-model="block.props.isActive">
+                        <label class="form-check-label">啟用此文章內容</label>
+                    </div>
+
+                    @* 【核心修正點】加入展開/收合按鈕 *@
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary btn-sm mb-3"
+                                type="button"
+                                @@click="block.props.isImageUploaderOpen = !block.props.isImageUploaderOpen">
+                            <i :class="['fa-solid', block.props.isImageUploaderOpen ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                            {{ block.props.isImageUploaderOpen ? '收合圖片上傳區' : '展開圖片上傳區' }}
+                        </button>
+                    </div>
 
                     @* --- 圖片上傳區 (結構統一) --- *@
-                    <div class="border p-3 rounded mb-3">
+                    <div v-if="block.props.isImageUploaderOpen" class="border p-3 rounded mt-3">
                         <h6 class="mb-3">文章主圖</h6>
                         <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3"><img :src="block.props.fileUrl || pendingFileUrl" style="max-width: 100%; max-height: 200px;" alt="預覽" /><p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽</p><div class="mt-2"><button class="btn btn-sm btn-outline-primary me-2" @@click="insertImageIntoEditor(block)" :disabled="!block.props.fileUrl">插入至文章內</button><button class="btn btn-sm btn-outline-danger" @@click="removeBlockImage(block)">移除圖片</button></div></div>
                         <div v-if="!block.props.fileUrl && !pendingFileUrl">
@@ -148,7 +175,8 @@
                         <div class="mt-3 text-center"><button v-if="pendingUpload && block.id === editingId" class="btn btn-success" @@click="confirmUploadAndInsert(block)"><i class="fa-solid fa-cloud-upload-alt"></i> {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳' }}</button></div>
                     </div>
 
-                    <div class="mb-3"><label class="form-label">文章內容：</label><textarea :id="'editor-' + block.id"></textarea></div>
+                    @* ... (內容) ... *@
+                    <div class="mb-3"><label class="form-label mt-3">文章內容：</label><textarea :id="'editor-' + block.id"></textarea></div>
                 </template>
                 
                 @* 移除區塊按鈕 *@
@@ -617,13 +645,16 @@
                     const file = event.target.files[0];
                     if (!file) return;
 
-                    const validationError = validateImageMeta(block);
-                    if (validationError) {
-                        Swal.fire('錯誤', validationError, 'warning');
+                    // 1. 【修正】只保留檔案類型驗證
+                    if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
+                        Swal.fire('錯誤', `不支援的檔案類型：${file.type}。請選擇圖片檔案。`, 'error');
                         event.target.value = '';
                         return;
                     }
 
+                    // 2. 移除 AltText 和 Caption 的驗證
+
+                    // 3. 處理本地預覽 (保持不變)
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         pendingFileUrl.value = e.target.result;
@@ -640,16 +671,10 @@
                          return;
                     }
 
-                    // 【核心修正點】前端驗證 AltText 和 Caption
-                    if (!block.props.imageAltText || block.props.imageAltText.trim() === '') {
-                        Swal.fire('錯誤', '請先輸入圖片的 Alt 替代文字。', 'warning');
-                        // 重設檔案輸入框，防止重複觸發
-                        event.target.value = ''; 
-                        return;
-                    }            
-                    if (!block.props.imageCaption || block.props.imageCaption.trim() === '') {
-                        Swal.fire('錯誤', '請先輸入圖片說明 (Caption)。', 'warning');
-                        event.target.value = '';
+                    // 【核心修正點】在這裡執行最終的元數據驗證
+                    const validationError = validateImageMeta(block);
+                    if (validationError) {
+                        Swal.fire('驗證失敗', validationError, 'warning');
                         return;
                     }
 
@@ -708,30 +733,12 @@
                     });
                 };
 
-                // 【新增】將圖片插入到 TinyMCE 編輯器
-                const insertImageIntoEditor = (block) => {
-                    const editor = tinymce.get('editor-' + block.id);
-                    if (editor && block.props.fileUrl) {
-                        const defaultWidth = 600;
-
-                        const imgHtml = `<img src="${block.props.fileUrl}"
-                                                alt="${block.props.imageAltText}"
-                                                width="${defaultWidth}"
-                                                style="max-width: 100%; height: auto;" />`; // 設置最大寬度 100%
-
-                        editor.execCommand('mceInsertContent', false, imgHtml);
-                    }
-                };
-
                 // 【新增】從 URL 上傳的函式
                 const confirmUploadByUrl = (block) => {
+                    // 【核心修正點】在這裡執行最終的元數據驗證
                     const validationError = validateImageMeta(block);
                     if (validationError) {
-                        Swal.fire('錯誤', validationError, 'warning');
-                        return;
-                    }
-                    if (!block.props.fileUrl || !block.props.fileUrl.startsWith('http')) {
-                        Swal.fire('錯誤', '請貼上一個有效的圖片 URL。', 'warning');
+                        Swal.fire('驗證失敗', validationError, 'warning');
                         return;
                     }
 
@@ -758,7 +765,7 @@
                                 // 更新 Vue 數據模型 (與本地上傳成功後的回調相同)
                                 if (block.type === 'Banner') {
                                     block.props.fileId = res.fileId;
-                                } else {
+                                } else { // Accordion, Article
                                     block.props.imgId = res.fileId;
                                 }
                                 block.props.fileUrl = res.location;
@@ -777,6 +784,22 @@
                         }
                     });
                 };
+
+                // 【新增】將圖片插入到 TinyMCE 編輯器
+                const insertImageIntoEditor = (block) => {
+                    const editor = tinymce.get('editor-' + block.id);
+                    if (editor && block.props.fileUrl) {
+                        const defaultWidth = 600;
+
+                        const imgHtml = `<img src="${block.props.fileUrl}"
+                                                alt="${block.props.imageAltText}"
+                                                width="${defaultWidth}"
+                                                style="max-width: 100%; height: auto;" />`; // 設置最大寬度 100%
+
+                        editor.execCommand('mceInsertContent', false, imgHtml);
+                    }
+                };
+
 
                 // 返回版本管理
                 const goToVersions = () => {
@@ -810,7 +833,7 @@
                           selector: '#editor-' + newId,
                           plugins: 'lists link image table code help wordcount',
                           toolbar:
-                            'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code | help',
+                            'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link | code | help',
                           menubar: false,
                           branding: false,
                           height: 500,

@@ -110,7 +110,7 @@
                 <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
 
                 <div class="d-flex align-items-center ms-auto" style="margin-left: 0 !important;">
-                    <button id="toggleFullscreenBtn" class="btn btn-sm me-2" title="切換編輯器全螢幕" style="display:none;">
+                    <button id="toggleFullscreenBtn" class="btn btn-sm me-2" title="切換編輯器大小" style="display:none;">
                         <i class="fa-solid fa-expand"></i>
                     </button>
 
@@ -1013,35 +1013,32 @@
                 });
             });
 
-            // 【新增事件】版面編輯 Modal 全螢幕切換邏輯
+            // 【新增事件】版面編輯 Modal 大小切換邏輯
             $('#toggleFullscreenBtn').on('click', function() {
                 var $thisBtn = $(this);
-                const $modalDialog = $('#brandLayoutModal').find('.modal-dialog');
-                const enteringFullscreen = !$modalDialog.hasClass('modal-fullscreen');
-
                 $thisBtn.blur();
 
+                var $modalDialog = $('#brandLayoutModal').find('.modal-dialog');
+                var isFullscreen = $modalDialog.hasClass('custom-fullscreen');
+
                 // 1. 切換 CSS Class
-                if (enteringFullscreen) {
-                    $modalDialog.removeClass('modal-xl').addClass('modal-fullscreen');
+                if (!isFullscreen) {
+                    $modalDialog.addClass('custom-fullscreen');
                     $(this).find('i').removeClass('fa-expand').addClass('fa-compress');
                 } else {
-                    $modalDialog.removeClass('modal-fullscreen').addClass('modal-xl');
+                    $modalDialog.removeClass('custom-fullscreen');
                     $(this).find('i').removeClass('fa-compress').addClass('fa-expand');
                 }
 
-                // 2. 【核心修正點】安全地重繪 TinyMCE 編輯器
+                // TinyMCE 重新繪製
                 if (typeof tinymce !== 'undefined' && tinymce.editors && tinymce.editors.length > 0) {
-                    // 使用 setTimeout 確保 DOM 調整完成後再重繪
                     setTimeout(() => {
                         tinymce.editors.forEach(editor => {
-                            // 檢查編輯器實例是否存在，且編輯器已初始化
                             if (editor && editor.initialized) {
-                                editor.execCommand('mceFullScreen'); // 讓 TinyMCE 內建邏輯處理全屏切換
-                                editor.execCommand('mceRepaint');    // 強制重繪
+                                editor.execCommand('mceRepaint');
                             }
                         });
-                    }, 50); // 稍微延遲以確保 DOM 穩定
+                    }, 50);
                 }
 
                 // ... (其他事件) ...
