@@ -30,8 +30,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.CNT.Rcl\tHerdBackend.CNT.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.CS.Rcl\tHerdBackend.CS.Rcl.csproj" />
+    <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.MKT.Rcl\tHerdBackend.MKT.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.ORD.Rcl\tHerdBackend.ORD.Rcl.csproj" />
+    <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.PROD.Rcl\tHerdBackend.PROD.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.SUP.Rcl\tHerdBackend.SUP.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.SYS.Rcl\tHerdBackend.SYS.Rcl.csproj" />
     <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.Users.Rcl\tHerdBackend.USER.Rcl.csproj" />
