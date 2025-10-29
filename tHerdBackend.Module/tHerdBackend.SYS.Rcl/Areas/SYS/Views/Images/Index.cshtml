@@ -836,7 +836,7 @@
 
             // 如果是檔案 → 呼叫原本圖片資訊邏輯
             try {
-                const res = await fetch(`${window.location.origin}/SYS/Images/GetFileDetail?id=${id}`);
+                const res = await fetch(`${window.location.origin}/SYS/Images/GetFileDetail?fileId=${id}`);
                 const raw = await res.json();
 
                 if (!res.ok || raw.success === false) {

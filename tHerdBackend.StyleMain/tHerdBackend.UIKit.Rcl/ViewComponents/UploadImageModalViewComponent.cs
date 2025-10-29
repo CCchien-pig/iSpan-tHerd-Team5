@@ -8,14 +8,18 @@ namespace tHerdBackend.UIKit.Rcl.ViewComponents.UploadImageModal
         {
             public string ModuleId { get; set; } = "";
             public string ProgId { get; set; } = "";
-
-            // 預設要不要雲端
+            public string ModalId { get; set; } = "uploadImageModal";
             public bool DefaultIsExternal { get; set; } = true;
         }
 
         public IViewComponentResult Invoke(string moduleId, string progId, string modalId = "uploadImageModal")
         {
-            var vm = new UploadImageModalViewModel();
+            var vm = new UploadImageModalViewModel
+            {
+                ModuleId = moduleId,
+                ProgId = progId,
+                ModalId = modalId
+            };
 
             return View("Default", vm);
         }

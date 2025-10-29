@@ -440,6 +440,20 @@ document.addEventListener("DOMContentLoaded", async function () {
         const modalImg = modal.querySelector(".img-zoomable");
         const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
 
+        // === 🖼️ 同步圖片與 dataset 屬性 ===
+        if (modalImg) {
+            modalImg.src = fileData.fileUrl || "/images/No-Image.svg";
+
+            // ✅ 關鍵：把所有必要屬性寫回 dataset
+            modalImg.dataset.fileId = fileData.fileId ?? fileData.FileId ?? "";
+            modalImg.dataset.fileKey = fileData.fileKey ?? "";
+            modalImg.dataset.mimeType = fileData.mimeType ?? "";
+            modalImg.dataset.isActive = fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
+            modalImg.dataset.isExternal = fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
+            modalImg.dataset.width = fileData.width ?? "";
+            modalImg.dataset.height = fileData.height ?? "";
+        }
+
         // === 同步所有欄位（含 checkbox） ===
         for (const [key, selector] of Object.entries(fieldMap)) {
             const input = modal.querySelector(selector);
@@ -753,145 +767,154 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     // === 修正版本：正確更新 Modal 內容 ===
-    document.addEventListener("shown.bs.modal", function (event) {
+    document.addEventListener("shown.bs.modal", async function (event) {
         const modal = event.target;
         if (!modal.id.startsWith("imgMetaModal")) return;
 
         const triggerImg = event.relatedTarget;
         if (!triggerImg) return;
 
-        const fileData = triggerImg.dataset; // ✅ 關鍵：從 dataset 抓資料
-        const mimeType = fileData.mimeType || "";
+        // ✅ 只抓 fileId，不使用 dataset 內容
+        const fileId = triggerImg.getAttribute("data-file-id");
+        if (!fileId) {
+            console.warn("⚠️ 缺少 fileId，無法載入檔案資料");
+            return;
+        }
+
         const previewContainer = modal.querySelector(".preview-container");
         if (!previewContainer) return;
 
-        // === 🔹 清空舊內容（避免殘影或多重預覽） ===
-        previewContainer.innerHTML = "";
+        // 🔹 顯示 Loading 畫面
+        previewContainer.innerHTML = `
+        <div class="text-center text-muted p-4">
+            <div class="spinner-border spinner-border-sm"></div>
+            <div>載入中...</div>
+        </div>`;
 
-        let previewEl;
-        if (mimeType.startsWith("video/")) {
-            const videoUrl = fileData.fileUrl || triggerImg.src || "";
-
-            const link = document.createElement("a");
-            link.href = videoUrl;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.title = "點擊開啟完整影片";
-
-            const video = document.createElement("video");
-            video.src = videoUrl;
-            video.controls = true;
-            video.muted = true;
-            video.preload = "metadata";
-            video.playsInline = true;
-            video.className = "dynamic-preview mb-3 rounded shadow-sm";
-            video.style = `
-                max-width: 600px;
-                max-height: 400px;
-                object-fit: contain;
-                cursor: pointer;
-                border-radius: 8px;
-                border: 1px solid #ccc;
-            `;
-
-            video.dataset.fileId = fileData.fileId || fileData.FileId || "";
-            video.dataset.updateApi = "/SYS/Images/UpdateFile";
-
-            link.appendChild(video);
-            previewEl = link;
-        } else if (mimeType.startsWith("image/")) {
-            const imgUrl = fileData.fileUrl || fileData.FileUrl || "/images/No-Image.svg";
-
-            // 用 <a> 包一層取代 window.open()
-            const link = document.createElement("a");
-            link.href = imgUrl;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.title = "點擊開啟完整圖片（另開新分頁）";
-
-            const img = document.createElement("img");
-            img.src = imgUrl;
-            img.className = "dynamic-preview rounded shadow-sm img-zoomable";
-            img.dataset.fileId = fileData.fileId || fileData.FileId || "";
-            img.dataset.updateApi = "/SYS/Images/UpdateFile";  // 預設 API
-            img.dataset.isActive = fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
-            img.dataset.isExternal = fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
-            img.style = `
-                max-width: 600px;
-                max-height: 400px;
-                object-fit: contain;
-                cursor: zoom-in;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-            `;
-
-            link.appendChild(img);
-            previewEl = link;
-        } else {
-            // 📄 其他類型（不支援預覽）
-            previewEl = document.createElement("div");
-            previewEl.className = "dynamic-preview text-muted small mt-3";
-            previewEl.innerText = `無法預覽此類型 (${mimeType || "未知"})`;
-        }
-
-        previewContainer.appendChild(previewEl);
-
-        // === 🔹 更新欄位資料 ===
-        for (const [key, selector] of Object.entries(fieldMap)) {
-            const input = modal.querySelector(selector);
-            if (!input) continue;
-
-            let val =
-                fileData[key] ??
-                fileData[key.toLowerCase()] ??
-                fileData[key.charAt(0).toLowerCase() + key.slice(1)];
-
-            // 是否啟用（checkbox）
-            if (key === "isActive") {
-                input.checked = val === "true";
-                continue;
+        try {
+            // === 🧩 呼叫全域 API 方法 ===
+            const fileData = await window.fetchFileDetail(fileId);
+            if (!fileData) {
+                previewContainer.innerHTML = `
+            <div class="text-danger p-3">
+                <i class="bi bi-exclamation-triangle"></i> 無法載入檔案資料，請稍後再試。
+            </div>`;
+                return;
             }
 
-            // 檔案大小（Bytes → KB/MB 格式化）
-            if (key === "fileSizeBytes") {
-                const bytes = parseInt(val || "0", 10);
-                let formatted;
-                if (isNaN(bytes)) formatted = "--";
-                else if (bytes < 1024) formatted = `${bytes} Bytes`;
-                else if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(1)} KB`;
-                else formatted = `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-                input.value = formatted;
-                continue;
+            // === 🔹 清空舊內容（避免殘影或多重預覽） ===
+            previewContainer.innerHTML = "";
+
+            // === 🎞️ 預覽區塊生成 ===
+            let previewEl;
+            const mimeType = fileData.mimeType || "";
+
+            if (mimeType.startsWith("video/")) {
+                const link = document.createElement("a");
+                link.href = fileData.fileUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整影片";
+
+                const video = document.createElement("video");
+                video.src = fileData.fileUrl;
+                video.controls = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.className = "dynamic-preview mb-3 rounded shadow-sm";
+                video.style = `
+                max-width:600px;
+                max-height:400px;
+                object-fit:contain;
+                border-radius:8px;
+                border:1px solid #ccc;`;
+
+                link.appendChild(video);
+                previewEl = link;
+            } else if (mimeType.startsWith("image/")) {
+                const link = document.createElement("a");
+                link.href = fileData.fileUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整圖片（另開新分頁）";
+
+                const img = document.createElement("img");
+                img.src = fileData.fileUrl || "/images/No-Image.svg";
+                img.className = "dynamic-preview rounded shadow-sm img-zoomable";
+                img.style = `
+            max-width:600px;
+            max-height:400px;
+            object-fit:contain;
+            cursor:zoom-in;
+            border:1px solid #ccc;
+            border-radius:8px;`;
+
+                img.dataset.fileId = fileData.fileId || fileData.FileId || "";
+
+                link.appendChild(img);
+                previewEl = link;
+
+            } else {
+                previewEl = document.createElement("div");
+                previewEl.className = "dynamic-preview text-muted small mt-3";
+                previewEl.innerText = `無法預覽此類型 (${mimeType || "未知"})`;
             }
 
-            // 其他一般欄位
-            if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
-                input.value = val ?? "";
+            previewContainer.appendChild(previewEl);
+
+            // === 🧾 更新欄位內容 ===
+            for (const [key, selector] of Object.entries(fieldMap)) {
+                const input = modal.querySelector(selector);
+                if (!input) continue;
+
+                const val = fileData[key];
+
+                // ✅ 是否啟用
+                if (key === "isActive") {
+                    input.checked = !!val;
+                    continue;
+                }
+
+                // ✅ 檔案大小格式化
+                if (key === "fileSizeBytes") {
+                    input.value = formatFileSize(val);
+                    continue;
+                }
+
+                // ✅ 其他欄位
+                if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                    input.value = val ?? "";
+                }
             }
-        }
 
-        // === ✅ 是否啟用開關 ===
-        const activeSwitch = modal.querySelector("#modalIsActive");
-        if (activeSwitch && fileData.isActive !== undefined) {
-            activeSwitch.checked = fileData.isActive === "true";
-        }
+            // === ✅ 是否啟用開關 ===
+            const activeSwitch = modal.querySelector("#modalIsActive");
+            if (activeSwitch) activeSwitch.checked = !!fileData.isActive;
 
-        // === ✅ 是否外部連結 Badge ===
-        const badge = modal.querySelector("#modalIsExternalBadge");
-        if (badge) {
-            const isExternal = fileData.isExternal === "true";
-
-            // 強制更新樣式與文字
-            badge.textContent = isExternal ? "外部連結" : "自有檔案";
-            badge.classList.remove("bg-success", "bg-secondary");
-            badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
-        }
-
-        // === ✅ 額外防呆（如果沒抓到 triggerImg） ===
-        if (!fileData || !fileData.fileId) {
-            console.warn("⚠️ 未取得 fileData，請檢查 data-* 屬性是否完整");
+            // === ✅ 是否外部連結 Badge ===
+            const badge = modal.querySelector("#modalIsExternalBadge");
+            if (badge) {
+                const isExternal = !!fileData.isExternal;
+                badge.textContent = isExternal ? "外部連結" : "自有檔案";
+                badge.classList.remove("bg-success", "bg-secondary");
+                badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+            }
+        } catch (err) {
+            console.error("❌ 載入檔案資料失敗：", err);
+            previewContainer.innerHTML = `
+            <div class="text-danger p-3">
+                <i class="bi bi-exclamation-triangle"></i> 無法載入檔案資料，請稍後再試。
+            </div>`;
         }
     });
+
+    // 輔助函式：格式化檔案大小
+    function formatFileSize(bytes) {
+        if (!bytes || isNaN(bytes)) return "--";
+        if (bytes < 1024) return `${bytes} Bytes`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
 
     // === 關閉時自動暫停影片並清除預覽 ===
     document.addEventListener("hidden.bs.modal", function (event) {
@@ -990,7 +1013,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             const payload = {
-                FileId: modalImg.dataset.fileId,
+                FileId: modalImg.dataset.fileId || modalElement.querySelector("#modalFileId")?.value,
                 AltText: modalElement.querySelector("#modalAlt").value,
                 Caption: modalElement.querySelector("#modalCaption").value,
                 IsActive: modalElement.querySelector("#modalIsActive").checked,
