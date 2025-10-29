@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="CS\TicketService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\tHerdBackend.Core\tHerdBackend.Core.csproj" />
     <ProjectReference Include="..\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
   </ItemGroup>

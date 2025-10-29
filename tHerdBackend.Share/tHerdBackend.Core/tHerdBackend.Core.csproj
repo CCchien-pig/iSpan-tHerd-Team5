@@ -7,14 +7,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Domain\CS\NewFolder\**" />
+    <Compile Remove="Domain\NewFolder\**" />
     <Compile Remove="Services\**" />
+    <EmbeddedResource Remove="Domain\CS\NewFolder\**" />
+    <EmbeddedResource Remove="Domain\NewFolder\**" />
     <EmbeddedResource Remove="Services\**" />
+    <None Remove="Domain\CS\NewFolder\**" />
+    <None Remove="Domain\NewFolder\**" />
     <None Remove="Services\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\MKT\" />
+    <Compile Remove="DTOs\CS\Tickets.cs" />
+    <Compile Remove="Interfaces\CS\ITicketService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Domain\CS\" />
+    <Folder Include="Domain\MKT\" />
     <Folder Include="Domain\CNT\" />
     <Folder Include="Domain\ORD\" />
     <Folder Include="Domain\SYS\" />
