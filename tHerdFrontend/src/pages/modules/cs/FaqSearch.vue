@@ -68,19 +68,6 @@
     <div class="center-narrow" v-if="q && searched">
       <!-- ... -->
 </div>
-<!-- 無結果 → 轉人工 CTA -->
-<div class="center-narrow text-center my-4" v-if="q && searched && showEscalate">
-  <p class="text-muted mb-3">找不到相關問題嗎？</p>
-  <button
-    class="btn btn-main px-4"
-    :disabled="escalateLoading"
-    @click="escalateToAgent"
-  >
-    <span v-if="!escalateLoading">轉人工客服</span>
-    <span v-else class="spinner-border spinner-border-sm"></span>
-  </button>
-</div>
-
 
     <!-- ✅ 精選答案卡（點建議後顯示；右上角 X 可關閉） -->
 <div v-if="featuredOpen" class="center-narrow" id="featured-ans">
@@ -207,8 +194,6 @@ onUnmounted(cleanupWidget)
 
 <script>
 import { getFaqList, searchFaq , suggestFaq, getFaqDetail } from '@/api/modules/cs/csfaq'
-import { createTicket } from '@/api/modules/cs/tickets'
-
 export default {
   name: 'FaqSearch',
   data() {
@@ -228,8 +213,6 @@ timer: null,
 featuredOpen: false,
     featuredFaq: null, // {faqId,title,categoryName, answerHtml }
     featuredLoading: false,
-    showEscalate: false,   // 搜尋無結果時顯示「轉人工」按鈕
-escalateLoading: false,// 轉人工中的 loading
       quickActions: [
   {
     text: '追蹤我的訂單',
@@ -375,8 +358,6 @@ _onDocClick(e) {
     this.loading = false
     this.searched = true
     this.open = false // 關閉下拉
-    this.showEscalate = Array.isArray(this.results) && this.results.length === 0//搜尋無結果顯示轉人工
-
   }
 },
 
@@ -489,40 +470,6 @@ _cleanupChatbase() {
   this.q = text
   this.doSearch()
 },
-// 產生／取得訪客識別 key（限流＋客服追蹤用）
-getOrCreateClientSessionKey() {
-  let key = localStorage.getItem('clientSessionKey')
-  if (!key) {
-    key = (crypto?.randomUUID?.() || Math.random().toString(36).slice(2))
-    localStorage.setItem('clientSessionKey', key)
-  }
-  return key
-},
-
-// 點「轉人工客服」建立工單
-async escalateToAgent () {
-  try {
-    this.escalateLoading = true
-    const payload = {
-      sessionId: null,                // 目前 FAQ 頁面沒有聊天會話，先 null
-      categoryId: 1000,               // 你列出的存在分類（訂購和結帳），可換
-      userId: null,                   // 未登入就 null；登入再帶會員 id
-      clientSessionKey: this.getOrCreateClientSessionKey(),
-      subject: `找不到相關問題：${this.q?.trim() || ''}`,
-      content: `使用者搜尋：「${this.q?.trim() || ''}」\n頁面：${location.pathname}${location.search}\n時間：${new Date().toISOString()}`,
-      priority: 0
-    }
-    const res = await createTicket(payload) // { ticketId, ticketNo? }
-    alert(`✅ 已建立工單：#${res.ticketId}${res.ticketNo ? `（${res.ticketNo}）` : ''}`)
-    this.showEscalate = false
-  } catch (err) {
-    console.error('escalateToAgent error:', err)
-    alert('❌ 建立工單失敗，請稍後再試')
-  } finally {
-    this.escalateLoading = false
-  }
-},
-
 }
 </script>
 
@@ -694,5 +641,5 @@ async escalateToAgent () {
 :deep(.suggest-item:hover .text-muted) {
   color: #fff !important;
 }
-
 </style>
+
