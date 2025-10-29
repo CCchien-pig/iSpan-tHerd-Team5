@@ -2,6 +2,8 @@
 @using tHerdBackend.Core.DTOs.PROD
 @model IEnumerable<ProductImageDto>
 
+@* 圖片模組 *@
+
 @{
     var moduleId = ViewContext.RouteData.Values["area"]?.ToString() ?? "SYS";
     var progId = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Images";
@@ -66,7 +68,7 @@
 
                 try {
                     if (typeof openImageSelector === "function") {
-                        // ✅ 等待 openImageSelector 完成載入（它內部有 async fetch）
+                        // 等待 openImageSelector 完成載入（它內部有 async fetch）
                         await openImageSelector(selectedFiles => {
                             appendSelectedImages(selectedFiles);
                         }, "@moduleId", "@progId");
@@ -130,7 +132,7 @@
         reindexImageInputs();
     }
 
-    // === ✅ 強制重新編號 Hidden Inputs ===
+    // === 強制重新編號 Hidden Inputs ===
     function reindexImageInputs() {
         const list = document.getElementById("boundImages");
         const items = list.querySelectorAll(".prod-img-item, .img-item");

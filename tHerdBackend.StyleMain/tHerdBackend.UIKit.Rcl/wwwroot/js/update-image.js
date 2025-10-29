@@ -1,4 +1,6 @@
-﻿// === 🌀 顯示全域 Loading ===
+﻿//圖片模組
+
+// === 🌀 顯示全域 Loading ===
 window.showGlobalLoading = function (message = "處理中，請稍候...") {
     const loader = document.getElementById("globalLoading");
     if (!loader) return;

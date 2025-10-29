@@ -639,6 +639,7 @@
                                         <div class="card-body">
                                             <div class="row g-3 align-items-start">
                                                 <div>
+                                                    @* 圖片模組 *@
                                                     @Html.Partial("_ProductImageUpload", Model.Images)
                                                 </div>
                                             </div>
@@ -741,7 +742,7 @@
     </div>
 </div>
 
-<!-- 編輯圖片 -->
+<!-- 編輯圖片 --> @* 圖片模組 *@
 @await Component.InvokeAsync("UpdateImage", new { 
     title = "圖片資訊",
     file = new SysAssetFileDto()
@@ -757,7 +758,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
-                 document.addEventListener("DOMContentLoaded", async function () {
+         @* 圖片模組 *@ 
+        document.addEventListener("DOMContentLoaded", async function () {
              // 初始化上傳模組
              UploadImageModal.init("uploadImageModal");
 
