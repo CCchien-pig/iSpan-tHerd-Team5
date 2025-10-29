@@ -70,6 +70,21 @@ public partial class MktAd
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    /// <summary>
+    /// 廣告種類（Carousel / Popup / Marquee）
+    /// </summary>
+    public string AdType { get; set; }
+
+    /// <summary>
+    /// 按鈕文字
+    /// </summary>
+    public string ButtonText { get; set; }
+
+    /// <summary>
+    /// 按鈕連結
+    /// </summary>
+    public string ButtonLink { get; set; }
+
     public virtual SysAssetFile Img { get; set; }
 
     public virtual ICollection<MktAdLog> MktAdLogs { get; set; } = new List<MktAdLog>();
