@@ -364,15 +364,15 @@ FodyWeavers.xsd
 /FlexBackend.Admin/.vshistory/FlexBackend.Admin.csproj/2025-09-16_20_21_49_402.csproj
 /FlexBackend.Admin/.vshistory/FlexBackend.Admin.csproj/2025-09-17_09_51_28_394.csproj
 /FlexBackend.Admin/.vshistory/FlexBackend.Admin.csproj/2025-09-17_10_31_30_914.csproj
+/FlexBackend.Admin/wwwroot/uploads
+/tHerdBackend.Admin/wwwroot/uploads/SYS/UploadTest
+/nul
+/tHerdBackend.Share/tHerdBackend.Services/ORD/.vshistory/ECPayService.cs/2025-10-30_00_07_29_051.cs
+/tHerdBackend.Share/tHerdBackend.Services/ORD/.vshistory/ECPayService.cs/2025-10-29_23_54_42_529.cs
+/tHerdBackend.Share/tHerdBackend.Services/ORD/.vshistory/ECPayService.cs
+/.gitignore
+/.gitignore
 
-# === 忽略暫存上傳檔案 ===
-tHerdBackend.Admin/wwwroot/uploads/
-wwwroot/uploads/
-uploads/
-*.tmp
-*.bak
-*.log
+# Visual Studio History
+.vshistory/
 
-# === 允許 Cloudinary 設定或說明檔 ===
-!tHerdBackend.Admin/wwwroot/uploads/readme.md
-/FlexBackend.Admin/wwwroot/uploads/4dc07ea4f07a4424bbfba70c8537d4ee.png

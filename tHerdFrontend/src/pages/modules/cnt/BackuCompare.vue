@@ -347,8 +347,38 @@ async function fetchCompare() {
 async function exportCharts() {
   const charts = Object.values(chartRefs).map(el => el?.__chartInstance).filter(Boolean)
   if (!charts.length) return showWarn('目前沒有可匯出的圖表')
+
   for (let [i, chart] of charts.entries()) {
+    // 取得目前圖的原始設定
+    const opt = chart.getOption()
+    const prevTitle = opt.title ? JSON.parse(JSON.stringify(opt.title)) : null
+    const prevGrid  = opt.grid  ? JSON.parse(JSON.stringify(opt.grid))  : null
+    const baseGrid  = Array.isArray(opt.grid) ? (opt.grid[0] || {}) : (opt.grid || {})
+
+    // 🔹 加大上方與下方距離
+    chart.setOption({
+      grid: {
+        ...baseGrid,
+        containLabel: true,
+        top: Math.max(baseGrid.top || 0, 140),   // ← 調高上方空間
+        bottom: Math.max(baseGrid.bottom || 0, 72),
+        left: Math.max(baseGrid.left || 0, 64),
+        right: Math.max(baseGrid.right || 0, 24),
+      }
+    })
+
+    chart.resize()
+    await new Promise(r => setTimeout(r, 80))
+
+    // 匯出圖片
     const url = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+
+    // 還原原始 grid
+    chart.setOption({
+      grid: prevGrid ? prevGrid : {}
+    })
+
+    // 儲存下載
     const a = document.createElement('a')
     a.href = url
     a.download = `營養比較圖-${i + 1}.png`
