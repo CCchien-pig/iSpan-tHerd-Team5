@@ -638,16 +638,8 @@
                                     <div id="collapseImg" class="collapse show">
                                         <div class="card-body">
                                             <div class="row g-3 align-items-start">
-                                                <!-- 圖片清單（右側） -->
                                                 <div>
                                                     @Html.Partial("_ProductImageUpload", Model.Images)
-                                                </div>
-                                                <!-- 上傳模組（左側） -->
-                                                <div>
-                                                    @await Component.InvokeAsync("UploadImageModal", new {
-                                                        moduleId = ViewContext.RouteData.Values["area"],
-                                                        progId = ViewContext.RouteData.Values["controller"]
-                                                    })
                                                 </div>
                                             </div>
                                         </div>
@@ -765,18 +757,38 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
-         document.addEventListener("DOMContentLoaded", async () => {
-             if (typeof showLoading === "function") showLoading("載入中...");
+                 document.addEventListener("DOMContentLoaded", async function () {
+             // 初始化上傳模組
+             UploadImageModal.init("uploadImageModal");
+
+             // === ✅ 顯示全域遮罩 ===
+             if (typeof showGlobalLoading === "function") {
+                 showGlobalLoading("載入中，請稍候...");
+             }
 
              try {
+                 // 呼叫初次載入函式（由 update-image.js 提供）
                  if (typeof refreshFileList === "function") {
                      await refreshFileList();
+                 } else {
+                     console.warn("⚠️ 找不到 refreshFileList()");
                  }
+             } catch (err) {
+                 console.error("❌ 初次載入失敗：", err);
+                 Swal.fire("錯誤", "載入圖片列表時發生問題", "error");
              } finally {
-                 if (typeof hideLoading === "function") hideLoading();
+                 // === ✅ 隱藏全域遮罩 ===
+                 if (typeof hideLoading === "function") {
+                     hideLoading();
+                 }
+             }
+
+             // Debug：確認全域遮罩存在
+             const loader = document.getElementById("globalLoading");
+             if (!loader) {
+                 console.warn("⚠️ 找不到 #globalLoading，請確認 _GlobalLoadingPartial 有正確載入。");
              }
          });
-
          // 刪除圖片（改為用 hidden input）
          function removeExistingImage(btn) {
              const imgId = btn.dataset.imgId;
@@ -1147,7 +1159,6 @@
 
         // 初始值從 Model 帶進來
         var specConfigs = @Html.Raw(JsonSerializer.Serialize(Model.SpecConfigs ?? new List<ProdSpecificationConfigDto>()));
-        console.log("初始化 specConfigs =", specConfigs);
 
         // 生成規格值區塊
         // 4) 規格值卡片（對應每個 SKU）

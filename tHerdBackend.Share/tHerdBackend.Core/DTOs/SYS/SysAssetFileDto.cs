@@ -133,3 +133,16 @@ public class AssetFileDetailsDto
     public bool IsActive { get; set; } = true;
     public string? FileUrl { get; set; }
 }
+
+/// <summary>
+/// 專供前端傳入 _FileListPartial 使用的輕量版 DTO
+/// </summary>
+public class SimpleAssetFileDto
+{
+    public int FileId { get; set; }
+    public string FileUrl { get; set; }
+    public string MimeType { get; set; }
+    public string AltText { get; set; }
+    public string Caption { get; set; }
+    public bool IsActive { get; set; }
+}

@@ -1,13 +1,5 @@
 ﻿@model tHerdBackend.UIKit.Rcl.ViewComponents.UploadImageModal.UploadImageModalViewComponent.UploadImageModalViewModel
 
-<!-- 打開彈窗按鈕 -->
-<button type="button"
-        class="btn btn-primary btn-sm mb-3"
-        data-bs-toggle="modal"
-        data-bs-target="#@Model.ModalId">
-    <i class="bi bi-upload"></i> 上傳檔案
-</button>
-
 <!-- Modal -->
 <div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -19,11 +11,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <form asp-action="Index"
-                  asp-controller="UploadTest"
-                  asp-area="SYS"
-                  method="post"
-                  enctype="multipart/form-data">
+            <div id="form_@Model.ModalId"
+                 data-action="@Url.Action("SaveFiles", "UploadTest", new { area = "SYS" })"
+                 data-method="post"
+                 enctype="multipart/form-data">
 
                 <div class="modal-body">
                     <!-- 上傳模式切換 -->
@@ -85,19 +76,52 @@
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
                         取消
                     </button>
-                    <button type="submit" class="btn btn-success btn-sm">
+                    <button type="button"
+                            id="btnConfirmUpload_@Model.ModalId"
+                            class="btn btn-success btn-sm">
                         <i class="bi bi-check-lg"></i> 確認上傳
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- 🔹 全域 Loading 遮罩 Partial -->
+@await Html.PartialAsync("_GlobalLoadingPartial")
+
 @section Scripts {
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async function () {
             UploadImageModal.init("@Model.ModalId");
+
+           // === ✅ 顯示全域遮罩 ===
+            if (typeof showGlobalLoading === "function") {
+                showGlobalLoading("載入中，請稍候...");
+            }
+
+            try {
+                // 呼叫初次載入函式（由 update-image.js 提供）
+                if (typeof refreshFileList === "function") {
+                    await refreshFileList();
+                } else {
+                    console.warn("⚠️ 找不到 refreshFileList()");
+                }
+            } catch (err) {
+                console.error("❌ 初次載入失敗：", err);
+                Swal.fire("錯誤", "載入圖片列表時發生問題", "error");
+            } finally {
+                // === ✅ 隱藏全域遮罩 ===
+                if (typeof hideGlobalLoading === "function") {
+                    hideGlobalLoading();
+                }
+            }
+
+            // Debug：確認全域遮罩存在
+            const loader = document.getElementById("globalLoading");
+            if (!loader) {
+                console.warn("⚠️ 找不到 #globalLoading，請確認 _GlobalLoadingPartial 有正確載入。");
+            }
         });
     </script>
 }

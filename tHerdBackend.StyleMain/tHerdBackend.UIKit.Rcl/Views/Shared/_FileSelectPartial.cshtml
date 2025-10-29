@@ -5,7 +5,6 @@
 <script>
     if (typeof window.jQuery === "undefined") {
         document.write('<script src="https://code.jquery.com/jquery-3.6.4.min.js"><\/script>');
-        console.warn("⚠️ jQuery 已在 _FileSelectPartial 局部載入");
     }
 </script>
 
@@ -16,20 +15,14 @@
             <!-- Header -->
             <div class="modal-header sticky-top bg-white border-bottom shadow-sm" style="z-index:10;">
                 <h5 class="modal-title fw-bold">
-                    <i class="bi bi-images me-2 text-primary"></i>選擇圖片或資料夾
+                    <i class="bi bi-images me-2 text-primary"></i>選擇圖片
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <!-- 🧭 麵包屑 + 搜尋 -->
+            <!-- 搜尋 -->
             <div class="p-3 border-bottom sticky-top bg-light" style="z-index:9;">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <nav aria-label="breadcrumb" class="flex-grow-1">
-                        <ol id="imgBreadcrumb" class="breadcrumb mb-0 small">
-                            <li class="breadcrumb-item"><a href="javascript:void(0)" class="crumb" data-id="0">根目錄</a></li>
-                        </ol>
-                    </nav>
-
                     <div class="input-group input-group-sm" style="max-width: 260px;">
                         <input id="filterInput" type="text" class="form-control" placeholder="搜尋 AltText / Caption / 資料夾...">
                         <button id="btnClearFilter" class="btn btn-outline-secondary" title="清除搜尋"><i class="bi bi-x-circle"></i></button>
@@ -55,51 +48,96 @@
             </div>
 
             <!-- Footer -->
-            <div class="modal-footer sticky-bottom bg-white border-top shadow-sm">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button class="btn btn-primary" id="btnConfirmSelectImages">
-                    <i class="bi bi-check-circle me-1"></i>確定選取
-                </button>
+            <div class="modal-footer d-flex justify-content-between align-items-center sticky-bottom bg-white border-top shadow-sm">
+                <!-- 🔹 左側：上傳圖片 Modal -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#uploadImageModal">
+                        <i class="bi bi-upload"></i> 檔案上傳
+                    </button>
+                </div>
+
+                <!-- 🔹 右側：操作按鈕群 -->
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmSelectImages">
+                        <i class="bi bi-check-circle me-1"></i>確定選取
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ✅ 上傳圖片 Modal 放在外層，不巢狀 -->
+@await Component.InvokeAsync("UploadImageModal", new {
+    moduleId = ViewContext.RouteData.Values["area"]?.ToString() ?? "SYS",
+    progId = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Images",
+    modalId = "uploadImageModal"
+})
+
 <style>
-    /* ✅ 將 .img-item 改為 .selector-img-item */
+    /* ✅ 圖片卡片樣式（selector-img-item） */
     .selector-img-item {
         position: relative;
         background: #fff;
-        border-radius: 6px;
+        border-radius: 8px;
         overflow: hidden;
-        transition: all 0.2s ease;
+        transition: all 0.25s ease;
         cursor: pointer;
+        margin: 4px; /* 🔹 每張圖之間加點空隙 */
+        box-shadow: 0 0 4px rgba(0,0,0,0.08);
     }
 
         .selector-img-item:hover {
-            box-shadow: 0 0 10px rgba(13,110,253,0.25);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
             transform: translateY(-3px);
         }
 
         .selector-img-item.selected {
             outline: 3px solid #0d6efd;
-            box-shadow: 0 0 10px rgba(13,110,253,0.4);
+            box-shadow: 0 0 12px rgba(13,110,253,0.4);
+            transform: translateY(-2px) scale(1.01);
         }
 
+        /* ✅ 讓圖片保持一致尺寸 */
+        .selector-img-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+    /* ✅ 檔名標籤 */
     .selector-filename-label {
         position: absolute;
         left: 0;
         bottom: 0;
         width: 100%;
         color: #fff;
-        background: rgba(0,0,0,0.6);
+        background: rgba(0, 0, 0, 0.55);
         text-align: center;
         font-size: 13px;
-        padding: 3px 5px;
+        padding: 4px 6px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
     }
+
+    /* ✅ 整體網格容器增加 padding，避免貼邊 */
+    #imageGrid {
+        padding: 0.25rem 0.25rem 0.75rem 0.25rem;
+    }
+
+        /* ✅ 在各尺寸下保持良好間距 */
+        #imageGrid .row {
+            row-gap: 1rem !important; /* 類似 g-4 效果 */
+            column-gap: 3rem !important;
+        }
 </style>
 
 <script>
@@ -107,14 +145,15 @@
     let _fileSelectModal = null;
     let _allData = [];
     let breadcrumbStack = [{ id: 0, name: "根目錄" }];
-    let _currentModuleId = "PROD";
-    let _currentProgId = "Products";
+    let _currentModuleId = "SYS";
+    let _currentProgId = "Images";
 
     // 🟦 開啟圖片選擇器
-    window.openImageSelector = async function (onConfirm, moduleId = "PROD", progId = "Products") {
+    window.openImageSelector = async function (onConfirm, moduleId = "SYS", progId = "Images", preSelectedIds = []) {
         _onFileSelectConfirm = onConfirm;
         _currentModuleId = moduleId;
         _currentProgId = progId;
+        window._preSelectedIds = preSelectedIds || [];
 
         breadcrumbStack = [
             { id: 0, name: "根目錄" },
@@ -128,48 +167,77 @@
         _fileSelectModal.show();
     };
 
-    // 🧩 載入模組圖片
-    async function loadModuleImages(moduleId, progId) {
-        const grid = document.getElementById("imageGrid");
-        grid.innerHTML = `<div class="spinner-border text-primary"></div><div>載入中...</div>`;
+    // ✅ 當上傳成功時，自動關閉上傳視窗、刷新圖片清單並回到選擇器
+    document.addEventListener("upload-success", async function (e) {
+        const moduleId = e.detail?.moduleId || "SYS";
+        const progId = e.detail?.progId || "Images";
+
         try {
-            const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}&json=true`);
-            const data = await res.json();
-            _allData = data.map(f => ({
-                fileId: f.fileId ?? f.FileId,
-                fileUrl: f.fileUrl ?? f.FileUrl,
-                altText: f.altText ?? f.AltText,
-                caption: f.caption ?? f.Caption,
-                fileKey: f.fileKey ?? f.FileKey,
-                isFolder: false,
-                name: f.altText ?? f.AltText ?? f.fileKey
-            }));
-            renderFileGrid(_allData);
+            showLoading("重新載入圖片中，請稍候...");
+
+            await loadModuleImages(moduleId, progId);
+
+            // 關閉上傳 Modal，回到選擇器
+            const uploadModalEl = document.getElementById("uploadImageModal");
+            const uploadModal = bootstrap.Modal.getInstance(uploadModalEl);
+            if (uploadModal) uploadModal.hide();
+
+            // 只有存在圖片選擇器時才顯示
+            const selectorModalEl = document.getElementById("imageSelectorModal");
+            if (selectorModalEl) {
+                const selectorModal = bootstrap.Modal.getOrCreateInstance(selectorModalEl);
+                selectorModal.show();
+            }
+
         } catch (err) {
-            grid.innerHTML = `<p class="text-danger">載入失敗，請稍後再試。</p>`;
+            console.error("❌ 無法刷新選擇器圖片：", err);
+            Swal.fire("錯誤", "載入圖片時發生問題，請稍後再試。", "error");
+        } finally {
+            // ✅ 無論成功或失敗都關閉 Loading
+            hideLoading();
         }
-    }
+    });
 
     // 🖼️ 渲染圖片
     function renderFileGrid(data) {
         const grid = document.getElementById("imageGrid");
+
+        // 沒資料時
         if (!data?.length) {
             grid.innerHTML = `<p class="text-muted">目前沒有任何資料。</p>`;
             return;
         }
 
-        const html = data.map(f => `
-            <div class="col selector-img-item"
-                 data-id="${f.fileId}"
-                 data-url="${f.fileUrl}"
-                 data-alt="${f.altText || ''}"
-                 data-caption="${f.caption || ''}">
-                <img src="${f.fileUrl}" alt="${f.altText || ''}" class="w-100" style="height:200px;object-fit:cover;">
-                <div class="selector-filename-label">${f.altText || f.fileKey || ''}</div>
-            </div>
-        `).join("");
+        // 清空現有內容，但不重建容器
+        grid.innerHTML = "";
+        const row = document.createElement("div");
+        row.className = "row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3 justify-content-center";
 
-        grid.innerHTML = `<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">${html}</div>`;
+        // 使用 DocumentFragment 減少 reflow
+        const fragment = document.createDocumentFragment();
+
+        for (const f of data) {
+            const col = document.createElement("div");
+            col.className = "col selector-img-item";
+            col.dataset.id = f.fileId;
+            col.dataset.url = f.fileUrl;
+            col.dataset.alt = f.altText || "";
+            col.dataset.caption = f.caption || "";
+
+            // ✅ Lazy Load 圖片
+            col.innerHTML = `
+                <img src="${f.fileUrl}" alt="${f.altText || ""}"
+                     loading="lazy"
+                     class="w-100"
+                     style="height:200px;object-fit:cover;">
+                <div class="selector-filename-label">${f.altText || f.fileKey || ""}</div>
+            `;
+
+            fragment.appendChild(col);
+        }
+
+        row.appendChild(fragment);
+        grid.appendChild(row);
     }
 
     // 🖱️ 點擊選取（改用 selector-img-item）
@@ -185,7 +253,10 @@
     });
 
     // ✅ 確定選取
-    $("#btnConfirmSelectImages").on("click", function () {
+    $("#btnConfirmSelectImages").on("click", function (e) {
+        e.preventDefault();   // ✅ 阻止瀏覽器預設行為（避免觸發 form.submit）
+        e.stopPropagation();  // ✅ 阻止事件冒泡到父層 form
+
         const selected = $(".selector-img-item.selected").map(function () {
             return {
                 fileId: $(this).data("id"),
@@ -195,7 +266,9 @@
             };
         }).get();
 
-        console.log("✅ 使用者選取：", selected);
+        // 🟢 通知父層（例如商品頁）回傳結果
+        const event = new CustomEvent("images-selected", { detail: selected });
+        document.dispatchEvent(event);
 
         if (typeof _onFileSelectConfirm === "function") {
             _onFileSelectConfirm(selected);
@@ -204,13 +277,47 @@
         if (_fileSelectModal) _fileSelectModal.hide();
     });
 
-    // ✅ 初始化上傳 modal（只初始化一次）
-    document.addEventListener("DOMContentLoaded", () => {
-        if (window.UploadImageModal && typeof UploadImageModal.init === "function") {
-            UploadImageModal.init(); // ✅ 不再傳參數
-            console.log("✅ UploadImageModal initialized");
-        } else {
-            console.warn("⚠️ UploadImageModal.init 未定義");
+    // 🟢 接收從圖片選擇器回傳的結果 → 通知父層負責畫面更新
+    document.addEventListener("images-selected", function (e) {
+        const selectedFiles = e.detail;
+
+        // ❌ 不在這裡渲染圖片
+        // ✅ 由父層 appendSelectedImages(selectedFiles) 去呼叫後端 _FileListPartial
+    });
+
+
+    // =======================================================
+    // 🔍 即時搜尋篩選功能
+    // =======================================================
+    $(document).on("input", "#filterInput", function () {
+        const keyword = $(this).val().trim().toLowerCase();
+        const btnClear = $("#btnClearFilter");
+
+        if (keyword === "") {
+            // 若清空輸入框，就恢復全部資料
+            renderFileGrid(_allData);
+            btnClear.prop("disabled", true);
+            return;
         }
+
+        btnClear.prop("disabled", false);
+
+        // 篩選邏輯：AltText、Caption、FileKey、Name 中有包含關鍵字者
+        const filtered = _allData.filter(f => {
+            const alt = (f.altText || "").toLowerCase();
+            const caption = (f.caption || "").toLowerCase();
+            const fileKey = (f.fileKey || "").toLowerCase();
+            const name = (f.name || "").toLowerCase();
+            return alt.includes(keyword) || caption.includes(keyword) || fileKey.includes(keyword) || name.includes(keyword);
+        });
+
+        renderFileGrid(filtered);
+    });
+
+    // ❌ 一鍵清除搜尋
+    $(document).on("click", "#btnClearFilter", function () {
+        $("#filterInput").val("");
+        renderFileGrid(_allData);
+        $(this).prop("disabled", true);
     });
 </script>

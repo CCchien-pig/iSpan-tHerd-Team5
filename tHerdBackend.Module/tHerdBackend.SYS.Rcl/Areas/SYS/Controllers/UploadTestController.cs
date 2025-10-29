@@ -5,6 +5,7 @@ using tHerdBackend.Core.Interfaces.SYS;
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {
     [Area("SYS")]
+    [Route("SYS/[controller]/[action]")]
     public class UploadTestController : BaseUploadController
     {
         private const string MODULE_ID = "SYS";
@@ -16,22 +17,36 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         /// <summary>
-        /// 上傳處理（POST）
+        /// ✅ 通用上傳 API，可跨模組呼叫
+        /// 前端呼叫：POST /SYS/UploadTest/SaveFiles
         /// </summary>
         [HttpPost]
-        [RequestSizeLimit(100_000_000)] // 100MB
-        [ActionName("Index")]
-        public async Task<IActionResult> IndexPost()
+        [RequestSizeLimit(100_000_000)]
+        public async Task<IActionResult> SaveFiles(
+            [FromForm] string moduleId,
+            [FromForm] string progId,
+            [FromForm] bool isExternal)
         {
-            // 呼叫基底邏輯，包含上傳 + 儲存 + 更新檔案清單
-            return await HandleUploadAsync(MODULE_ID, PROG_ID);
+            if (string.IsNullOrWhiteSpace(moduleId) || string.IsNullOrWhiteSpace(progId))
+                return BadRequest(new { success = false, message = "缺少 moduleId 或 progId" });
+
+            try
+            {
+                // 把 IsExternal 一起傳給 HandleUploadAsync
+                var result = await HandleUploadAsync(moduleId, progId, isExternal);
+                return Json(new { success = true, message = "上傳成功", result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
         }
 
         /// <summary>
         /// 初次載入（GET）
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? moduleId, string? progId)
         {
             var files = await _fileService.GetFilesByProg(MODULE_ID, PROG_ID);
             return View(files);

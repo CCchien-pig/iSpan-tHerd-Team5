@@ -9,10 +9,18 @@
 
 <h2>@ViewData["Title"]</h2>
 
+<button type="button"
+        class="btn btn-outline-primary btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#uploadImageModal">
+    <i class="bi bi-upload"></i> 檔案上傳
+</button>
+
 <!-- 🔹 上傳模組（Modal） -->
 @await Component.InvokeAsync("UploadImageModal", new {
     moduleId = ViewContext.RouteData.Values["area"],
-    progId = ViewContext.RouteData.Values["controller"]
+    progId = ViewContext.RouteData.Values["controller"],
+    modalId = "uploadImageModal"
 })
 
 <!-- 🔹 檔案清單容器（Partial 可被 AJAX 刷新） -->
@@ -26,20 +34,15 @@
     file = new SysAssetFileDto()
 })
 
-<!-- 🔹 全域 Loading 遮罩 Partial -->
-@await Html.PartialAsync("_GlobalLoadingPartial")
-
 @section Scripts {
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
             // 初始化上傳模組
-            if (window.UploadImageModal?.init) {
-                UploadImageModal.init("uploadImageModal");
-            }
+            UploadImageModal.init("uploadImageModal");
 
             // === ✅ 顯示全域遮罩 ===
-            if (typeof showLoading === "function") {
-                showLoading("載入中，請稍候...");
+            if (typeof showGlobalLoading === "function") {
+                showGlobalLoading("載入中，請稍候...");
             }
 
             try {
@@ -54,8 +57,8 @@
                 Swal.fire("錯誤", "載入圖片列表時發生問題", "error");
             } finally {
                 // === ✅ 隱藏全域遮罩 ===
-                if (typeof hideLoading === "function") {
-                    hideLoading();
+                if (typeof hideGlobalLoading === "function") {
+                    hideGlobalLoading();
                 }
             }
 

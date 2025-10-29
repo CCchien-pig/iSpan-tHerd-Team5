@@ -1,6 +1,6 @@
 ﻿using CloudinaryDotNet;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
+using System.Text.Json;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
@@ -27,6 +27,51 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 
         // === 頁面 ===
         public IActionResult Index() => View();
+
+        public class FileListWrapper
+        {
+            public List<SimpleAssetFileDto> Files { get; set; } = new();
+        }
+
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> RenderFileListPartial()
+        {
+            using var reader = new StreamReader(Request.Body);
+            var body = await reader.ReadToEndAsync();
+
+            // 若前端不小心多包一層字串（例如 "\"{...}\""）
+            if (body.StartsWith("\"") && body.EndsWith("\""))
+                body = JsonSerializer.Deserialize<string>(body)!;
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new FlexibleStringConverter() }
+            };
+
+            var wrapper = JsonSerializer.Deserialize<FileListWrapper>(body, options);
+            var files = wrapper?.Files;
+
+            if (files == null || !files.Any())
+                return PartialView("_FileListPartial", new List<SysAssetFileDto>());
+
+            var mapped = files.Select(f => new SysAssetFileDto
+            {
+                FileId = f.FileId,
+                FileUrl = f.FileUrl,
+                MimeType = f.MimeType ?? "image/jpeg",
+                AltText = f.AltText ?? "",
+                Caption = f.Caption ?? "",
+                IsActive = f.IsActive,
+                CreatedDate = DateTime.Now,
+                FileKey = "",
+                IsExternal = false,
+                FolderPaths = new List<FolderLevelItem>()
+            }).ToList();
+
+            return PartialView("_FileListPartial", mapped);
+        }
 
         // ============================================================
         // 資料夾結構與查詢

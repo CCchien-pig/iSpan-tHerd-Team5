@@ -2,17 +2,20 @@
 @using tHerdBackend.Core.DTOs.PROD
 @model IEnumerable<ProductImageDto>
 
+@{
+    var moduleId = ViewContext.RouteData.Values["area"]?.ToString() ?? "SYS";
+    var progId = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Images";
+    var modalId = "uploadImageModal_" + moduleId + "_" + progId; // ✅ 防止 ID 衝突
+}
+
+<!-- 🔹 選擇圖片（從共用 Images 模組中挑圖綁定） -->
+<button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnBindProductImage">
+    <i class="bi bi-images"></i> 選擇圖片
+</button>
+
 <div class="mb-3">
-    <label class="form-label fw-bold">產品圖片</label>
-
-    <!-- 🔹 選擇圖片（從共用 Images 模組中挑圖綁定） -->
-    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnBindProductImage">
-        <i class="bi bi-images"></i> 選擇圖片
-    </button>
-
     <!-- 🔹 已綁定圖片清單 -->
     <div class="mt-3">
-        <h6 class="fw-bold">已綁定圖片</h6>
         <div id="boundImages">
             @if (Model != null && Model.Any())
             {
@@ -35,9 +38,7 @@
                     IsActive = true
                 }).ToList();
 
-                @await Html.PartialAsync("_FileListPartial", fileList, new ViewDataDictionary(ViewData) {
-                    { "ItemClass", "prod-img-item" } // ✅ 指定產品專用 class
-                })
+                @await Html.PartialAsync("_FileListPartial", fileList)
             }
             else
             {
@@ -52,63 +53,75 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        console.log("🟣 ProductImageUpload ready");
-
         const btnSelect = document.getElementById("btnBindProductImage");
 
         // === 綁定圖片選擇器 ===
         if (btnSelect) {
-            btnSelect.addEventListener("click", e => {
+            btnSelect.addEventListener("click", async e => {
                 e.preventDefault();
-                if (typeof openImageSelector === "function") {
-                    openImageSelector(selectedFiles => {
-                        console.log("🖼️ 已選取:", selectedFiles);
-                        appendSelectedImages(selectedFiles);
-                    }, "PROD", "Products");
-                } else {
-                    Swal.fire("錯誤", "找不到圖片選擇器模組 openImageSelector", "error");
+
+                if (typeof showGlobalLoading === "function") {
+                    showGlobalLoading("載入圖片選擇器中，請稍候...");
+                }
+
+                try {
+                    if (typeof openImageSelector === "function") {
+                        // ✅ 等待 openImageSelector 完成載入（它內部有 async fetch）
+                        await openImageSelector(selectedFiles => {
+                            appendSelectedImages(selectedFiles);
+                        }, "@moduleId", "@progId");
+                    } else {
+                        Swal.fire("錯誤", "找不到圖片選擇器模組 openImageSelector", "error");
+                    }
+                } catch (err) {
+                    console.error("❌ 開啟圖片選擇器錯誤：", err);
+                    Swal.fire("錯誤", err.message || "載入圖片選擇器時發生錯誤", "error");
+                } finally {
+                    if (typeof hideGlobalLoading === "function") {
+                        hideGlobalLoading();
+                    }
                 }
             });
-        }
-
-        if (window.UploadImageModal && typeof UploadImageModal.init === "function") {
-            UploadImageModal.init();
-            console.log("✅ UploadImageModal initialized");
         }
     });
 
     // === 新增圖片後重新載入部分檢視 ===
-    function appendSelectedImages(selectedFiles) {
+    async function appendSelectedImages(selectedFiles) {
         const list = document.getElementById("boundImages");
         if (!selectedFiles?.length) return;
 
         if (list.querySelector("span.text-muted")) list.innerHTML = "";
 
-        fetch('/SYS/Images/RenderFileListPartial', {   // 👈 建議做一個 API 回傳 Partial HTML
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(selectedFiles)
-        })
-        .then(res => res.text())
-        .then(html => {
-            // 🔹 建立暫存容器以解析傳回的 HTML
-            const temp = document.createElement("div");
-            temp.innerHTML = html;
+        // 🔹 統一格式化資料，強制轉型
+        const normalizedFiles = selectedFiles.map(f => ({
+            FileId: Number(f.fileId),
+            FileUrl: String(f.fileUrl || ""),
+            MimeType: String(f.mimeType || "image/jpeg"),
+            AltText: String(f.altText || ""),     // ✅ 強制字串
+            Caption: String(f.caption || ""),
+            IsActive: Boolean(f.isActive ?? true) // ✅ null/undefined 都變 true
+        }));
 
-            // 🔹 把每個新的圖片卡片 append 進現有清單，而不是覆蓋
-            temp.querySelectorAll(".img-item").forEach(el => {
-                el.classList.add("prod-img-item");
-                el.classList.remove("img-item");
-                list.appendChild(el);
+        try {
+            const res = await fetch('/SYS/Images/RenderFileListPartial', {  // ✅ 相對路徑
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ Files: normalizedFiles })  // ✅ 外層包 Files
             });
 
-            // 🔹 移除「尚未綁定圖片」的提示文字
-            const emptyMsg = list.querySelector("span.text-muted");
-            if (emptyMsg) emptyMsg.remove();
-        })
-        .catch(err => {
-            console.error("載入 FileListPartial 失敗：", err);
-        });
+            if (!res.ok) throw new Error(`HTTP 錯誤：${res.status}`);
+
+            const html = await res.text();
+
+            // ✅ 覆蓋顯示，不 append
+            list.innerHTML = html.trim() || `<p class="text-muted">目前沒有圖片。</p>`;
+        } catch (err) {
+            console.error("❌ 載入部分檢視失敗：", err);
+            Swal.fire("錯誤", "載入圖片列表時發生錯誤", "error");
+        }
     }
 
     // === 編輯圖片資訊 ===
@@ -136,11 +149,20 @@
     // === 移除圖片 ===
     function removeBoundImage(btn) {
         const container = btn.closest(".prod-img-item");
+        if (!container) return;
+
         container.remove();
 
         const list = document.getElementById("boundImages");
         if (!list.querySelector(".prod-img-item")) {
             list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';
         }
+
+        // 🔹 重新編號 Hidden Input（避免跳號造成模型綁定錯誤）
+        list.querySelectorAll(".prod-img-item").forEach((item, idx) => {
+            item.querySelectorAll("input[name^='Images']").forEach(input => {
+                input.name = input.name.replace(/Images\[\d+\]/, `Images[${idx}]`);
+            });
+        });
     }
 </script>

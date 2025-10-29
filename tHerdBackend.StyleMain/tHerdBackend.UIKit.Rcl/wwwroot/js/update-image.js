@@ -1,38 +1,29 @@
-﻿// === ✅ 全域 Loading 函式（放最上面）===
-window.showLoading = function (message = "處理中，請稍候...", mode = "global") {
+﻿// === 🌀 顯示全域 Loading ===
+window.showGlobalLoading = function (message = "處理中，請稍候...") {
     const loader = document.getElementById("globalLoading");
     if (!loader) return;
-
-    const text = loader.querySelector("div.mt-3");
+    const text = loader.querySelector(".loading-text");
     if (text) text.textContent = message;
 
     loader.style.display = "flex";
     loader.style.opacity = "1";
     loader.style.pointerEvents = "auto";
-    loader.dataset.mode = mode;
+    loader.style.transition = "opacity 0.2s ease";
+}
 
-    if (mode === "inline") {
-        loader.style.background = "rgba(255,255,255,0.6)";
-    } else {
-        loader.style.background = "rgba(0,0,0,0.5)";
-    }
-};
-
-window.hideLoading = function () {
+// === 關閉全域 Loading ===
+window.hideGlobalLoading = function () {
     const loader = document.getElementById("globalLoading");
     if (!loader) return;
-    loader.style.transition = "opacity .3s ease";
     loader.style.opacity = "0";
-    setTimeout(() => {
-        loader.style.display = "none";
-        loader.style.pointerEvents = "none";
-    }, 300);
-};
+    loader.style.pointerEvents = "none";
+    setTimeout(() => loader.style.display = "none", 200);
+}
 
 // === ✅ 把這段放在最上面 ===
 window.refreshFileList = async function (message = "正在重新載入資料...") {
     try {
-        showLoading(message, "inline");
+        showGlobalLoading(message, "inline");
 
         const currentProgId = document.querySelector("#ProgId")?.value || "UploadTest";
         const currentFolderId = document.querySelector("#CurrentFolderId")?.value || "";
@@ -58,7 +49,7 @@ window.refreshFileList = async function (message = "正在重新載入資料..."
         console.error("❌ 重新抓取檔案清單失敗：", err);
         Swal.fire("錯誤", "無法重新載入最新資料", "error");
     } finally {
-        hideLoading();
+        hideGlobalLoading();
     }
 };
 
@@ -161,16 +152,49 @@ window.fillImageModal = function (fileDto) {
     }
 };
 
+// 照片清單接資料
+window.openImageEditModal = async function (fileId) {
+    if (!fileId) {
+        console.warn("⚠️ 無效的 fileId");
+        return;
+    }
+
+    const modal = document.getElementById("imgMetaModal");
+    if (!modal) {
+        return Swal.fire("錯誤", "找不到圖片編輯視窗", "error");
+    }
+
+    try {
+        // ✅ 從後端拿圖片完整資料
+        const res = await fetch(`/SYS/Images/GetFileDetail/${fileId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const file = await res.json();
+
+        // ✅ 填進 Modal 欄位
+        modal.querySelector("#FileId").value = file.fileId;
+        modal.querySelector("#AltText").value = file.altText || "";
+        modal.querySelector("#Caption").value = file.caption || "";
+        modal.querySelector("#PreviewImg").src = file.fileUrl;
+
+        // ✅ 顯示 modal
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    } catch (err) {
+        console.error("❌ 載入圖片資料失敗：", err);
+        Swal.fire("錯誤", "無法載入圖片詳細資料", "error");
+    }
+};
+
 document.addEventListener("DOMContentLoaded", async function () {
     // 初次載入：顯示全頁遮罩
-    showLoading("載入中，請稍候...", "global");
+    showGlobalLoading("載入中，請稍候...", "global");
 
     try {
         await window.refreshFileList();
     } catch (err) {
         console.error("初次載入失敗：", err);
     } finally {
-        hideLoading(); // 保證無論成功與否都會關閉
+        hideGlobalLoading(); // 保證無論成功與否都會關閉
     }
 
     // === DOM 元素 ===
@@ -429,7 +453,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // 支援 dataset (HTML data-*) 或 DTO (JSON 物件)
     async function openImageModal(fileData, modalSelector = "#imgMetaModal") {
         // 🧩 確保全域 loading 被關掉（防止黑屏）
-        window.hideLoading?.();
+        window.hideGlobalLoading?.();
 
         const modal = await waitForElement(modalSelector);
         if (!modal) {
@@ -636,7 +660,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (!fileId) return;
 
             try {
-                showLoading("正在抓取最新圖片資料...");
+                showGlobalLoading("正在抓取最新圖片資料...");
                 const latest = await fetchFileDetail(fileId);
                 if (!latest) {
                     Swal.fire("錯誤", "無法取得圖片最新資訊", "error");
@@ -648,7 +672,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             } catch (err) {
                 Swal.fire("錯誤", "讀取資料失敗：" + err.message, "error");
             } finally {
-                hideLoading();
+                hideGlobalLoading();
             }
         });
 
@@ -671,7 +695,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     Height: modalElement.querySelector("#modalHeight").value
                 };
 
-                showLoading("正在儲存中...");
+                showGlobalLoading("正在儲存中...");
 
                 try {
                     // 1️⃣ 呼叫 API 更新
@@ -684,7 +708,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     const result = await res.json();
                     if (!result.success) {
                         Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
-                        hideLoading();
+                        hideGlobalLoading();
                         return;
                     }
 
@@ -714,7 +738,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 } catch (err) {
                     Swal.fire({ icon: "error", title: "錯誤", text: err.message });
                 } finally {
-                    hideLoading();
+                    hideGlobalLoading();
                 }
             });
         }
@@ -955,7 +979,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         try {
             // 🌀 顯示 Loading
-            showLoading("正在刪除檔案...");
+            showGlobalLoading("正在刪除檔案...");
 
             const res = await fetch(deleteApi, {
                 method: "POST",
@@ -996,7 +1020,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             Swal.fire("錯誤", err.message || "伺服器連線失敗", "error");
         } finally {
             // 🟢 確保不論成功或失敗都關閉 Loading
-            hideLoading();
+            hideGlobalLoading();
         }
     };
 
@@ -1021,7 +1045,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 Height: modalElement.querySelector("#modalHeight").value
             };
 
-            showLoading("正在儲存中...");
+            showGlobalLoading("正在儲存中...");
 
             try {
                 const res = await fetch("/SYS/Images/UpdateFile", {
@@ -1033,7 +1057,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 const result = await res.json();
                 if (!result.success) {
                     Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
-                    hideLoading();
+                    hideGlobalLoading();
                     return;
                 }
 
@@ -1056,7 +1080,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             } catch (err) {
                 Swal.fire({ icon: "error", title: "錯誤", text: err.message });
             } finally {
-                hideLoading();
+                hideGlobalLoading();
             }
         }
     });
@@ -1095,22 +1119,58 @@ document.addEventListener("show.bs.modal", async (e) => {
     if (modal.dataset.loading === "true") return;
     modal.dataset.loading = "true";
 
-    showLoading("正在載入圖片清單...");
+    showGlobalLoading("正在載入圖片清單...");
 
     try {
-        const currentProgId = document.querySelector("#ProgId")?.value || "Products";
-        const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=SYS&progId=${currentProgId}`);
+        // === 1️ 取得目前模組與程式代號 ===
+        // 可以從 Razor 頁面注入，也可以從隱藏欄位或 data 屬性取值
+        const moduleId = modal.dataset.moduleId || "@moduleId" || "SYS";
+        const progId = modal.dataset.progId || "@progId" || "Products";
+
+        // === 2️ 呼叫後端取得 Partial HTML ===
+        // 統一改為使用 UploadTest/GetFilesByProg（含模組與程式代號）
+        const url = `/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const html = await res.text();
 
+        // === 3️ 置換 Modal 內部清單區塊 ===
         const container = modal.querySelector("#fileListContainer");
         if (container) {
             container.innerHTML = html.trim() || `<p class="text-muted">目前沒有圖片。</p>`;
         }
+
     } catch (err) {
         console.error("❌ 無法載入最新檔案：", err);
         Swal.fire("錯誤", "無法載入圖片清單", "error");
     } finally {
-        hideLoading();
+        hideGlobalLoading();
         modal.dataset.loading = "false";
     }
 });
+
+// 🧩 載入模組圖片
+async function loadModuleImages(moduleId, progId) {
+    const grid = document.getElementById("imageGrid");
+    grid.innerHTML = `<div class="spinner-border text-primary"></div><div>載入中...</div>`;
+
+    try {
+        const ts = new Date().getTime(); // 🔹 防止快取
+        const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}&json=true&_=${ts}`);
+        const data = await res.json();
+
+        _allData = data.map(f => ({
+            fileId: f.fileId ?? f.FileId,
+            fileUrl: f.fileUrl ?? f.FileUrl,
+            altText: f.altText ?? f.AltText,
+            caption: f.caption ?? f.Caption,
+            fileKey: f.fileKey ?? f.FileKey,
+            isFolder: false,
+            name: f.altText ?? f.AltText ?? f.fileKey
+        }));
+        renderFileGrid(_allData);
+    } catch (err) {
+        grid.innerHTML = `<p class="text-danger">載入失敗，請稍後再試。</p>`;
+    }
+}

@@ -20,9 +20,9 @@ namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
         }
 
         /// <summary>
-        /// 上傳檔案邏輯
+        /// 上傳檔案邏輯（支援 API JSON 模式）
         /// </summary>
-        protected async Task<IActionResult> HandleUploadAsync(string moduleId, string progId)
+        protected async Task<IActionResult> HandleUploadAsync(string moduleId, string progId, bool isApiMode = false)
         {
             try
             {

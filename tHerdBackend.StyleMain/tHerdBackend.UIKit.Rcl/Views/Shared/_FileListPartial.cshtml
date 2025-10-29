@@ -8,13 +8,16 @@
 
 @if (Model != null && Model.Any())
 {
-    <div class="img-grid">
+    <div class="d-flex flex-wrap gap-2">
         @foreach (var file in Model)
         {
+            var fileUrl = !string.IsNullOrWhiteSpace(file.FileUrl) ? file.FileUrl : "/images/no-image.png";
+            var alt = !string.IsNullOrWhiteSpace(file.AltText) ? file.AltText : System.IO.Path.GetFileName(fileUrl);
+
             <div class="img-item position-relative @(file.IsActive ? "" : "inactive")">
-                @if (file.MimeType != null && file.MimeType.StartsWith("video/"))
+                @if (!string.IsNullOrEmpty(file.MimeType) && file.MimeType.StartsWith("video/"))
                 {
-                    <video src="@file.FileUrl"
+                    <video src="@fileUrl"
                            class="thumb-clickable img-zoomable"
                            controls
                            muted
@@ -24,49 +27,27 @@
                            data-bs-toggle="modal"
                            data-bs-target="#imgMetaModal"
                            data-file-id="@file.FileId"
-                           data-file-key="@file.FileKey"
-                           data-file-url="@file.FileUrl"
-                           data-file-ext="@file.FileExt"
-                           data-mime-type="@file.MimeType"
-                           data-width="@file.Width"
-                           data-height="@file.Height"
-                           data-file-size-bytes="@file.FileSizeBytes"
-                           data-alt-text="@file.AltText"
-                           data-caption="@file.Caption"
-                           data-folder-id="@file.FolderId"
-                           data-is-active="@file.IsActive.ToString().ToLower()"
-                           data-is-external="@file.IsExternal.ToString().ToLower()"
-                           data-created-date="@file.FormateCreatedDate"
-                           data-update-api="@updateApiUrl"
-                           data-delete-api="@deleteApiUrl">
+                           data-file-url="@fileUrl"
+                           data-alt-text="@alt"
+                           data-caption="@file.Caption">
                         您的瀏覽器不支援影片預覽。
                     </video>
                 }
                 else
                 {
-                    <img loading="lazy" src="@file.FileUrl"
-                         alt="@file.AltText"
+                    <img loading="lazy"
+                         src="@fileUrl"
+                         alt="@alt"
                          class="thumb-clickable img-zoomable"
                          data-bs-toggle="modal"
                          data-bs-target="#imgMetaModal"
                          data-file-id="@file.FileId"
-                         data-file-key="@file.FileKey"
-                         data-file-url="@file.FileUrl"
-                         data-file-ext="@file.FileExt"
-                         data-mime-type="@file.MimeType"
-                         data-width="@file.Width"
-                         data-height="@file.Height"
-                         data-file-size-bytes="@file.FileSizeBytes"
-                         data-alt-text="@file.AltText"
-                         data-caption="@file.Caption"
-                         data-folder-id="@file.FolderId"
-                         data-is-active="@file.IsActive.ToString().ToLower()"
-                         data-is-external="@file.IsExternal.ToString().ToLower()"
-                         data-created-date="@file.FormateCreatedDate"
-                         data-update-api="@updateApiUrl"
-                         data-delete-api="@deleteApiUrl" />
+                         data-file-url="@fileUrl"
+                         data-alt-text="@alt"
+                         data-caption="@file.Caption" />
                 }
 
+                <!-- 🔹 Delete -->
                 <button type="button"
                         class="btn-close-custom"
                         aria-label="Close"
@@ -74,12 +55,14 @@
                     <i class="bi bi-x-lg"></i>
                 </button>
 
+                <!-- 🔹 Toggle Active -->
                 <button type="button"
                         class="toggle-active-btn btn btn-sm"
                         onclick="toggleActive(this)">
                     @(file.IsActive ? "停用" : "啟用")
                 </button>
 
+                <!-- 🔹 Overlay -->
                 <div class="disabled-overlay">
                     <i class="bi bi-slash-circle"></i>
                 </div>
