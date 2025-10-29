@@ -6,7 +6,7 @@
         <div class="modal-content">
             <form id="adForm" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="AdId" value="@Model.AdId" />
-                <input type="hidden" name="Status" value="aActive" /> <!-- 固定回傳 aActive -->
+                <input type="hidden" name="Status" value="aActive" />
 
                 <div class="modal-header">
                     <h5 class="modal-title">編輯廣告</h5>
@@ -39,13 +39,13 @@
                     <!-- 🖼 圖片 -->
                     <div class="mb-3" id="imageField">
                         <label class="form-label">廣告圖片</label>
-                        <input type="file" name="ImgId" class="form-control" id="imageInput" accept="image/*" />
+                        <!-- ⚠️ 關鍵修改：name 改為 imageFile -->
+                        <input type="file" name="imageFile" class="form-control" id="imageInput" accept="image/*" />
                         <div class="mt-2">
                             <img id="imagePreview"
                                  src="@(!string.IsNullOrEmpty(Model.ImgPath) ? Model.ImgPath : "")"
                                  class="img-fluid border rounded @(string.IsNullOrEmpty(Model.ImgPath) ? "d-none" : "")"
                                  style="max-height: 200px;" />
-
                         </div>
                     </div>
 
@@ -129,7 +129,7 @@
         $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
 
         if (type === 'Popup') {
-          disableExcept(['AdId', 'Title', 'ImgId', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
+          disableExcept(['AdId', 'Title', 'imageFile', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
           $('#contentField, #buttonTextField, #buttonLinkField').hide();
           setDefaultValues({ Content: '', ButtonText: '了解更多', ButtonLink: '/shop' });
         }
@@ -137,7 +137,7 @@
         if (type === 'Marquee') {
           disableExcept(['AdId', 'Title', 'Content', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
           $('#imageField, #buttonTextField, #buttonLinkField').hide();
-          setDefaultValues({ ImgId: '', ButtonText: '', ButtonLink: '' });
+          setDefaultValues({ imageFile: '', ButtonText: '', ButtonLink: '' });
         }
 
         if (type === 'Carousel') {
@@ -146,7 +146,6 @@
         }
       }
 
-      // ✅ AdId 永遠不被 disable
       function disableExcept(enabledNames) {
         $('#adForm input, #adForm textarea, #adForm select').each(function () {
           const name = $(this).attr('name');
@@ -185,21 +184,8 @@
         e.preventDefault();
 
         const adId = $('[name="AdId"]').val();
-        console.log("🟢 送出前 AdId =", adId); // ✅ 這行確認 AdId 是否正確
-
-        if (!adId || adId === "0") {
-          Swal.fire({
-            icon: 'error',
-            title: '錯誤',
-            text: '找不到廣告 ID，無法更新！',
-            confirmButtonColor: '#007083'
-          });
-          return;
-        }
-
         const title = $('[name="Title"]').val();
         const start = $('#StartDate').val();
-        const end = $('#EndDate').val();
 
         if (!title || !start) {
           Swal.fire({
@@ -227,7 +213,6 @@
                 showConfirmButton: false,
                 timer: 1200
               });
-
               setTimeout(() => {
                 $('#adModal').modal('hide');
               }, 1200);
@@ -240,14 +225,13 @@
               });
             }
           },
-          error: function (xhr) {
+          error: function () {
             Swal.fire({
               icon: 'error',
               title: '伺服器錯誤',
               text: '請稍後再試。',
               confirmButtonColor: '#007083'
             });
-            console.error("❌ AJAX 錯誤:", xhr.responseText);
           }
         });
       });
@@ -261,4 +245,3 @@
         cursor: not-allowed;
     }
 </style>
-

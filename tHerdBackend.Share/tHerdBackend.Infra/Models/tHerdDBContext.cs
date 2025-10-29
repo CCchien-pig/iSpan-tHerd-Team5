@@ -1159,73 +1159,24 @@ public partial class tHerdDBContext : DbContext
                 .HasConstraintName("FK_Ticket_CategoryId");
         });
 
-        modelBuilder.Entity<MktAd>(entity =>
-        {
-            entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
+        modelBuilder.Entity<MktAd>(entity => { 
+            entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423"); 
+            entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告")); 
+            entity.Property(e => e.AdId).HasComment("廣告編號"); 
+            entity.Property(e => e.Content).HasComment("廣告內容"); 
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysdatetime())").HasComment("建檔時間"); 
+            entity.Property(e => e.Creator).HasComment("建檔人員"); 
+            entity.Property(e => e.EndDate).HasComment("結束日期"); 
+            entity.Property(e => e.ImgId).HasComment("廣告圖片路徑"); 
+            entity.Property(e => e.IsActive).HasDefaultValue(true).HasComment("是否啟用（0=否，1=是）"); 
+            entity.Property(e => e.RevisedDate).HasComment("異動時間"); 
+            entity.Property(e => e.Reviser).HasComment("異動人員"); 
+            entity.Property(e => e.StartDate).HasComment("開始日期"); 
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(10).IsUnicode(false).HasComment("狀態（上架/下架）"); 
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(100).HasComment("廣告標題"); 
+            entity.HasOne(d => d.Img).WithMany(p => p.MktAds).HasForeignKey(d => d.ImgId).HasConstraintName("FK_MKT_Ad_ImgId"); }
+        );
 
-            entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
-
-            entity.Property(e => e.AdId).HasComment("廣告編號");
-
-            entity.Property(e => e.Title)
-                .IsRequired()
-                .HasMaxLength(100)
-                .HasComment("廣告標題");
-
-            entity.Property(e => e.Content)
-                .HasComment("廣告內容");
-
-            entity.Property(e => e.ImgPath)
-                .HasMaxLength(255)
-                .HasComment("廣告圖片路徑");
-
-            entity.Property(e => e.StartDate)
-                .HasComment("開始日期");
-
-            entity.Property(e => e.EndDate)
-                .HasComment("結束日期");
-
-            entity.Property(e => e.Status)
-                .IsRequired()
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasComment("狀態（上架/下架）");
-
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasComment("是否啟用（0=否，1=是）");
-
-            entity.Property(e => e.Creator)
-                .HasMaxLength(50)
-                .HasComment("建檔人員");
-
-            entity.Property(e => e.CreatedDate)
-                .HasDefaultValueSql("(sysdatetime())")
-                .HasComment("建檔時間");
-
-            entity.Property(e => e.Reviser)
-                .HasComment("異動人員");
-
-            entity.Property(e => e.RevisedDate)
-                .HasComment("異動時間");
-
-            entity.Property(e => e.AdType)
-                .HasMaxLength(20)
-                .HasComment("廣告類型（Carousel / Popup / Marquee）");
-
-            entity.Property(e => e.ButtonText)
-                .HasMaxLength(50)
-                .HasComment("按鈕文字");
-
-            entity.Property(e => e.ButtonLink)
-                .HasMaxLength(255)
-                .HasComment("按鈕連結");
-
-            // ❌ 移除外鍵關聯 (ImgId)
-            // entity.HasOne(d => d.Img).WithMany(p => p.MktAds)
-            //     .HasForeignKey(d => d.ImgId)
-            //     .HasConstraintName("FK_MKT_Ad_ImgId");
-        });
 
 
         modelBuilder.Entity<MktAdLog>(entity =>

@@ -28,7 +28,7 @@ public partial class MktAd
     /// <summary>
     /// 廣告圖片路徑
     /// </summary>
-    public string? ImgPath { get; set; }
+    public int? ImgId { get; set; }
 
     /// <summary>
     /// 開始日期

@@ -5,7 +5,6 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="adForm" enctype="multipart/form-data" novalidate>
-                <!-- ❗ 加上 novalidate 防止瀏覽器驗證 -->
                 <div class="modal-header">
                     <h5 class="modal-title">新增廣告</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -34,11 +33,12 @@
                         <textarea name="Content" class="form-control"></textarea>
                     </div>
 
-                    <!-- 🖼 圖片 -->
+                    <!-- 🖼 圖片上傳 -->
                     <div class="mb-3" id="imageField">
                         <label class="form-label">廣告圖片</label>
-                        <input type="file" name="ImgId" class="form-control" id="imageFile" accept="image/*" />
-                        <div class="mt-2">
+                        <input type="file" id="imageInput" class="form-control" accept="image/*" />
+                        <input type="hidden" name="ImgId" id="ImgId" />
+                        <div class="mt-2 text-center">
                             <img id="imagePreview" class="img-fluid border rounded d-none" style="max-height: 200px;" />
                         </div>
                     </div>
@@ -54,7 +54,6 @@
                         <input type="date" name="EndDate" id="EndDate" class="form-control" />
                     </div>
 
-                    <!-- 📌 狀態 -->
                     <input type="hidden" name="Status" value="aActive" />
 
                     <!-- ✅ 是否啟用 -->
@@ -92,20 +91,6 @@
 
 <script>
     $(document).ready(function () {
-      // 🖼 圖片預覽
-      $('#imageInput').on('change', function (e) {
-        const file = e.target.files[0];
-        const preview = $('#imagePreview');
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = ev => {
-            preview.attr('src', ev.target.result).removeClass('d-none');
-          };
-          reader.readAsDataURL(file);
-        } else {
-          preview.addClass('d-none').attr('src', '');
-        }
-      });
 
       // 🧭 廣告種類控制
       function updateAdFields() {
@@ -118,22 +103,51 @@
         if (type === 'Popup') {
           $('#contentField, #buttonTextField, #buttonLinkField').hide();
           $('#contentField textarea, #buttonTextField input, #buttonLinkField input')
-            .prop('disabled', true)
-            .val('')
+            .prop('disabled', true).val('')
             .css({ 'pointer-events': 'none', 'opacity': '0.6' });
         }
 
         if (type === 'Marquee') {
           $('#imageField, #buttonTextField, #buttonLinkField').hide();
           $('#imageField input, #buttonTextField input, #buttonLinkField input')
-            .prop('disabled', true)
-            .val('')
+            .prop('disabled', true).val('')
             .css({ 'pointer-events': 'none', 'opacity': '0.6' });
         }
       }
 
       $('#adTypeSelect').on('change', updateAdFields);
       updateAdFields();
+
+      // 🖼 圖片上傳到雲端
+      $('#imageInput').on('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        Swal.fire({ title: '上傳中...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const res = await fetch('/MKT/Ads/UploadToCloud', {
+            method: 'POST',
+            body: formData
+          });
+          const result = await res.json();
+          Swal.close();
+
+          if (result.success) {
+            $('#ImgId').val(result.fileId);
+            $('#imagePreview').attr('src', result.fileUrl).removeClass('d-none');
+            Swal.fire({ icon: 'success', title: '圖片已上傳成功', showConfirmButton: false, timer: 1200 });
+          } else {
+            Swal.fire({ icon: 'error', title: '上傳失敗', text: result.message });
+          }
+        } catch {
+          Swal.close();
+          Swal.fire({ icon: 'error', title: '雲端連線錯誤', text: '請稍後再試' });
+        }
+      });
 
       // 🗓 日期限制
       const today = new Date().toISOString().split('T')[0];
@@ -143,7 +157,6 @@
       $('#StartDate, #EndDate').on('change', function () {
         const start = $('#StartDate').val();
         const end = $('#EndDate').val();
-
         if (start && end && end < start) {
           Swal.fire({
             icon: 'warning',
@@ -155,51 +168,50 @@
         }
       });
 
-      // 🚨 SweetAlert 驗證必填欄位
-      $('#adForm').on('submit', function (e) {
+      // ✅ 表單送出
+      $('#adForm').on('submit', async function (e) {
         e.preventDefault();
 
-        const type = $('#adTypeSelect').val();
-        const checks = [
-          { field: 'Title', label: '標題' },
-          { field: 'StartDate', label: '開始日期' },
-          { field: 'EndDate', label: '結束日期' },
-          { field: 'Creator', label: '建檔人員' }
-        ];
+        const title = $('[name="Title"]').val();
+        const start = $('#StartDate').val();
+        const end = $('#EndDate').val();
+        const imgId = $('#ImgId').val();
 
-        for (const item of checks) {
-          if (!$(`[name="${item.field}"]`).val()) {
-            Swal.fire({
-              icon: 'warning',
-              title: '缺少必填欄位',
-              text: `請填寫「${item.label}」欄位！`,
-              confirmButtonColor: '#007083'
-            });
-            return;
-          }
+        if (!title || !start || !end) {
+          Swal.fire({
+            icon: 'warning',
+            title: '缺少必填欄位',
+            text: '請確認標題與日期已填寫！',
+            confirmButtonColor: '#007083'
+          });
+          return;
         }
 
-        if (type === 'Carousel') {
-          const img = $('#imageInput').val();
-          const btnText = $('[name="ButtonText"]').val();
-          const btnLink = $('[name="ButtonLink"]').val();
-
-          if (!img || !btnText || !btnLink) {
-            Swal.fire({
-              icon: 'warning',
-              title: '資料不完整',
-              text: '輪播圖廣告需上傳圖片並填寫按鈕文字與連結！',
-              confirmButtonColor: '#007083'
-            });
-            return;
-          }
+        if (!imgId && $('#adTypeSelect').val() === 'Carousel') {
+          Swal.fire({
+            icon: 'warning',
+            title: '未上傳圖片',
+            text: '輪播圖廣告需要圖片！',
+            confirmButtonColor: '#007083'
+          });
+          return;
         }
 
-        Swal.fire({
-          icon: 'success',
-          title: '儲存成功',
-          confirmButtonColor: '#007083'
+        const formData = $(this).serialize();
+
+        const res = await fetch('/MKT/Ads/Create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData
         });
+        const result = await res.json();
+
+        if (result.success) {
+          Swal.fire({ icon: 'success', title: '新增成功', showConfirmButton: false, timer: 1200 });
+          setTimeout(() => $('#adModal').modal('hide'), 1200);
+        } else {
+          Swal.fire({ icon: 'error', title: '新增失敗', text: result.message });
+        }
       });
     });
 </script>
