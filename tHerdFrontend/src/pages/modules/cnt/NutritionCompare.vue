@@ -856,7 +856,7 @@ function optionRadar(analyteNames, zhNames, dataset, unit, cfg = {}) {
   };
 }
 
-function optionHeatmap(analyteNames, zhNames, dataset, unit, cw = 800) {
+function optionHeatmap(analyteNames, zhNames, dataset, unit) {
   const data = [];
   for (let x = 0; x < zhNames.length; x++) {
     for (let y = 0; y < analyteNames.length; y++) data.push([x, y, toNum(dataset[x][y])])
@@ -878,7 +878,7 @@ function optionHeatmap(analyteNames, zhNames, dataset, unit, cw = 800) {
 }
 
 
-function optionStacked100(analyteNames, zhNames, dataset, unit) {
+function optionStacked100(analyteNames, zhNames, dataset) {
   const cols = analyteNames.length, rows = zhNames.length;
   const sums = Array(cols).fill(0);
   for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) sums[c] += toNum(dataset[r][c]);
