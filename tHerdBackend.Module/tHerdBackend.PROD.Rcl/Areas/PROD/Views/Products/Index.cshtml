@@ -87,27 +87,19 @@
             <table class="display nowrap stripe hover" id="dataTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th></th>
-                        <th>選項</th>
-                        <th>品牌</th>
-                        <th colspan="4" class="no-sort-group text-center">商品</th>
-                        <th>供應商</th>
-                        <th>是否上架</th>
-                        <th>建檔人員</th>
-                        <th>建檔日期</th>
+                        <th rowspan="2" class="text-center">選項</th>
+                        <th rowspan="2" class="text-center">品牌</th>
+                        <th colspan="4" class="text-center">商品</th>
+                        <th rowspan="2" class="text-center">供應商</th>
+                        <th rowspan="2" class="text-center">是否上架</th>
+                        <th rowspan="2" class="text-center">建檔人員</th>
+                        <th rowspan="2" class="text-center">建檔日期</th>
                     </tr>
                     <tr>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th>編號</th>
-                        <th>分類</th>
-                        <th>簡碼</th>
-                        <th>名稱</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
+                        <th class="text-center">編號</th>
+                        <th class="text-center">分類</th>
+                        <th class="text-center">簡碼</th>
+                        <th class="text-center">名稱</th>
                     </tr>
                 </thead>
             </table>
@@ -145,7 +137,6 @@ $(function () {
         serverSide: true,
         processing: true,
         columns: [
-            { data: null, defaultContent: "" },
             {
                 data: null,
                 render: function (data, type, row) {

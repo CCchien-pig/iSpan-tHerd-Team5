@@ -136,7 +136,12 @@ window.fillImageModal = function (fileDto) {
     modal.querySelector("#modalHeight").value = fileDto.height || "";
     modal.querySelector("#modalFileSizeBytes").value = (fileDto.fileSizeBytes || 0) + " Bytes";
     modal.querySelector("#modalMimeType").value = fileDto.mimeType || "";
-    modal.querySelector("#modalCreatedDate").value = fileDto.formateCreatedDate || "";
+    // === 直接在這裡強制格式化 ===
+    const rawCreated = fileDto.formateCreatedDate || fileDto.FormateCreatedDate || fileDto.createdDate || fileDto.CreatedDate || "";
+    modal.querySelector("#modalCreatedDate").value = String(rawCreated)
+        .replace("T", " ")
+        .split(".")[0]
+        .replace(/-/g, "/");
     modal.querySelector("#modalFileId").value = fileDto.fileId || "";
     modal.querySelector("#modalAlt").value = fileDto.altText || "";
     modal.querySelector("#modalCaption").value = fileDto.caption || "";
@@ -165,17 +170,23 @@ window.openImageEditModal = async function (fileId) {
     }
 
     try {
-        // ✅ 從後端拿圖片完整資料
-        const res = await fetch(`/SYS/Images/GetFileDetail/${fileId}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // ✅ 從全域方法抓取詳細 DTO
+        showGlobalLoading("正在讀取圖片資料...");
+        const fileDto = await fetchFileDetail(fileId);
+        if (!fileDto) {
+            Swal.fire("錯誤", "無法取得圖片資料", "error");
+            return;
+        }
 
-        const file = await res.json();
+        // ✅ 填入 Modal
+        fillImageModal(fileDto);
 
-        // ✅ 填進 Modal 欄位
-        modal.querySelector("#FileId").value = file.fileId;
-        modal.querySelector("#AltText").value = file.altText || "";
-        modal.querySelector("#Caption").value = file.caption || "";
-        modal.querySelector("#PreviewImg").src = file.fileUrl;
+        // ✅ 顯示預覽
+        const previewImg = modal.querySelector(".img-zoomable");
+        if (previewImg) {
+            previewImg.src = fileDto.fileUrl || "/images/No-Image.svg";
+            previewImg.dataset.fileId = fileDto.fileId;
+        }
 
         // ✅ 顯示 modal
         bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -483,30 +494,31 @@ document.addEventListener("DOMContentLoaded", async function () {
             const input = modal.querySelector(selector);
             if (!input) continue;
 
-            // 支援 dataset 小寫 / 駝峰 / Pascal 三種型態
-            let val =
-                fileData[key] ??
-                fileData[key.toLowerCase()] ??
-                fileData[key.charAt(0).toLowerCase() + key.slice(1)];
+            const val = fileData[key];
 
-            // ✅ 是否啟用
-            if (key === "isActive") {
-                input.checked = val === true || val === "true";
-                continue;
-            }
-
-            // ✅ 檔案大小自動轉換
-            if (key === "fileSizeBytes") {
-                const bytes = parseInt(val || "0", 10);
-                let formatted;
-                if (isNaN(bytes)) formatted = "--";
-                else if (bytes < 1024) formatted = `${bytes} Bytes`;
-                else if (bytes < 1024 * 1024) formatted = `${(bytes / 1024).toFixed(1)} KB`;
-                else formatted = `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+            // 這裡加一個例外處理 CreatedDate
+            if (key === "createdDate") {
+                const formatted = String(val || "")
+                    .replace("T", " ")
+                    .split(".")[0]
+                    .replace(/-/g, "/");
                 input.value = formatted;
                 continue;
             }
 
+            // 是否啟用
+            if (key === "isActive") {
+                input.checked = !!val;
+                continue;
+            }
+
+            // 檔案大小格式化
+            if (key === "fileSizeBytes") {
+                input.value = formatFileSize(val);
+                continue;
+            }
+
+            // 其他欄位
             if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
                 input.value = val ?? "";
             }
@@ -892,6 +904,15 @@ document.addEventListener("DOMContentLoaded", async function () {
                 if (!input) continue;
 
                 const val = fileData[key];
+
+                // ✅ 格式化建檔時間
+                if (key === "createdDate") {
+                    input.value = String(val || "")
+                        .replace("T", " ")
+                        .split(".")[0]
+                        .replace(/-/g, "/");
+                    continue;
+                }
 
                 // ✅ 是否啟用
                 if (key === "isActive") {

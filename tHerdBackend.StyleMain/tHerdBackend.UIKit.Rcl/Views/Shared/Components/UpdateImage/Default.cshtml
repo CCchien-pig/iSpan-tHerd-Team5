@@ -57,7 +57,11 @@
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">建檔時間</label>
-                                    <input type="text" id="modalCreatedDate" class="form-control" readonly />
+                                    <input type="text"
+                                           id="modalCreatedDate"
+                                           class="form-control"
+                                           readonly
+                                           onchange="this.value = this.value.replace('T', ' ').split('.')[0].replace(/-/g, '/')" />
                                 </div>
                             </div>
                         </div>
@@ -196,7 +200,12 @@
             modal.querySelector("#modalHeight").value = fileDto.height ?? "";
             modal.querySelector("#modalFileSizeBytes").value = `${fileDto.fileSizeBytes ?? 0} Bytes`;
             modal.querySelector("#modalMimeType").value = fileDto.mimeType ?? "";
-            modal.querySelector("#modalCreatedDate").value = fileDto.formateCreatedDate ?? "";
+        // === 直接在這裡強制格式化 ===
+        const rawCreated = fileDto.formateCreatedDate || fileDto.FormateCreatedDate || fileDto.createdDate || fileDto.CreatedDate || "";
+        modal.querySelector("#modalCreatedDate").value = String(rawCreated)
+            .replace("T", " ")
+            .split(".")[0]
+            .replace(/-/g, "/");
 
             // Meta 資料
             modal.querySelector("#modalAlt").value = fileDto.altText ?? "";
@@ -210,5 +219,26 @@
             badge.classList.remove("bg-success", "bg-secondary");
             badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
         };
+
+        // === 通用日期格式化 ===
+        function formatDateTime(dateStr) {
+            if (!dateStr) return "";
+
+            // 若已是格式化字串（例如 "2025/10/19 18:24:15"），直接回傳
+            if (typeof dateStr === "string" && dateStr.includes("/") && !dateStr.includes("T"))
+                return dateStr;
+
+            // 🔹 若含「.」(毫秒) 時，去掉小數部分
+            if (typeof dateStr === "string" && dateStr.includes("T") && dateStr.includes(".")) {
+                dateStr = dateStr.split(".")[0]; // 去掉 .3050966
+            }
+
+            // 🔹 嘗試解析成日期物件
+            const d = new Date(dateStr);
+            if (isNaN(d)) return dateStr; // 若仍無法解析，保留原樣
+
+            const pad = n => n.toString().padStart(2, "0");
+            return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
     </script>
 }
