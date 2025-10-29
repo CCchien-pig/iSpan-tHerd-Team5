@@ -1,25 +1,3 @@
-<!-- /src/pages/auth/Register.vue -->
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-// import { http } from '@/api/http' // 後端完成註冊 API 再解開
-
-const router = useRouter()
-const email = ref('')
-const password = ref('')
-const lastName = ref('')
-const firstName = ref('')
-const busy = ref(false)
-const msg = ref('')
-
-async function doRegister() {
-  busy.value = true
-  msg.value = '尚未接上後端註冊 API，請先用測試帳號或找後端開 /api/auth/register'
-  // 例：await http.post('/auth/register', { email: email.value, password: password.value, lastName: lastName.value, firstName: firstName.value })
-  // router.replace({ name: 'login' })
-  busy.value = false
-}
-</script>
 
 <template>
   <div class="container py-4">
@@ -51,3 +29,26 @@ async function doRegister() {
     </div>
   </div>
 </template>
+
+<!-- /src/pages/auth/Register.vue -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+// import { http } from '@/api/http' // 後端完成註冊 API 再解開
+
+const router = useRouter()
+const email = ref('')
+const password = ref('')
+const lastName = ref('')
+const firstName = ref('')
+const busy = ref(false)
+const msg = ref('')
+
+async function doRegister() {
+  busy.value = true
+  msg.value = '尚未接上後端註冊 API，請先用測試帳號或找後端開 /api/auth/register'
+  // 例：await http.post('/auth/register', { email: email.value, password: password.value, lastName: lastName.value, firstName: firstName.value })
+  // router.replace({ name: 'login' })
+  busy.value = false
+}
+</script>

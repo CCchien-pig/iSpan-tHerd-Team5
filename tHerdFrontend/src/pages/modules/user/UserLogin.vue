@@ -22,7 +22,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -43,8 +43,13 @@ async function doLogin() {
     await auth.login(email.value.trim(), password.value)
     const back = (route.query.redirect && String(route.query.redirect)) || '/'
     router.replace(back)
-  } catch (e: any) {
-    errMsg.value = e?.response?.data?.error || '登入失敗，請確認帳號或密碼'
+  } catch (e) {
+    // e 可能是 AxiosError，也可能是一般錯誤；先盡量取回後端訊息
+    const msg =
+      (e && e.response && e.response.data && (e.response.data.error || e.response.data.message)) ||
+      (e && e.message) ||
+      '登入失敗，請確認帳號或密碼'
+    errMsg.value = msg
   } finally {
     busy.value = false
   }
