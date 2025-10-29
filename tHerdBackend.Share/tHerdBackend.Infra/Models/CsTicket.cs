@@ -50,5 +50,14 @@ public partial class CsTicket
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    /// <summary>
+    /// 當前負責客服
+    /// </summary>
+    public int? AssigneeId { get; set; }
+
     public virtual CsFaqCategory Category { get; set; }
+
+    public virtual ICollection<CsTicketHistory> CsTicketHistories { get; set; } = new List<CsTicketHistory>();
+
+    public virtual ICollection<CsTicketMessage> CsTicketMessages { get; set; } = new List<CsTicketMessage>();
 }
