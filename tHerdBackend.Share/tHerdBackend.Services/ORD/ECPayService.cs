@@ -75,37 +75,36 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         private string GenerateCheckMacValue(SortedDictionary<string, string> parameters)
         {
-            var hashKey = _config.HashKey;
-            var hashIV = _config.HashIV;
+            var raw = $"HashKey={_config.HashKey}&{string.Join("&", parameters.Select(p => $"{p.Key}={p.Value}"))}&HashIV={_config.HashIV}";
 
-            // 1️⃣ 組合原始字串 (未編碼)
-            var raw = new StringBuilder();
-            raw.Append($"HashKey={hashKey}");
-            foreach (var p in parameters)
-            {
-                raw.Append($"&{p.Key}={p.Value}");
-            }
-            raw.Append($"&HashIV={hashIV}");
+            _logger.LogInformation($"[CheckMac Step1 原始] {raw}");
 
-            // 2️⃣ URL Encode (ECPay 要求空白轉 +)
-            string encoded = System.Web.HttpUtility.UrlEncode(raw.ToString()).ToLower();
+            // 綠界要求的特殊 encode（模擬 PHP rawurlencode）
+            string encoded = Uri.EscapeDataString(raw).ToLower();
 
-            // 3️⃣ 依官方規則替換保留字元
+            // 綠界規則修正：某些符號要還原
             encoded = encoded
-                .Replace("%2d", "-").Replace("%5f", "_").Replace("%2e", ".")
-                .Replace("%21", "!").Replace("%2a", "*").Replace("%28", "(").Replace("%29", ")");
+                .Replace("%20", "+")
+                .Replace("%21", "!")
+                .Replace("%28", "(")
+                .Replace("%29", ")")
+                .Replace("%2a", "*")
+                .Replace("%2d", "-")
+                .Replace("%2e", ".")
+                .Replace("%5f", "_");
 
-            // 4️⃣ 轉 MD5 → 大寫
+            _logger.LogInformation($"[CheckMac Step2 Encode修正] {encoded}");
+
+            // MD5 → 大寫
             using var md5 = System.Security.Cryptography.MD5.Create();
-            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(encoded));
-            var checkMac = string.Concat(hash.Select(b => b.ToString("X2")));
+            var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(encoded));
+            var checkMac = BitConverter.ToString(bytes).Replace("-", "").ToUpper();
 
-            _logger.LogInformation($"✅ CheckMac 原始: {raw}");
-            _logger.LogInformation($"✅ CheckMac Encode: {encoded}");
-            _logger.LogInformation($"✅ CheckMac 結果: {checkMac}");
-
+            _logger.LogInformation($"[CheckMac Step3 MD5] {checkMac}");
             return checkMac;
         }
+
+
 
 
 
