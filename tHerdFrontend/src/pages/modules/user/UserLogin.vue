@@ -17,7 +17,7 @@
         {{ busy ? '登入中…' : '登入' }}
       </button>
 
-      <router-link class="btn btn-link" :to="{ name: 'register' }">沒有帳號？去註冊</router-link>
+      <router-link class="btn btn-link" :to="{ name: 'userregister' }">沒有帳號？去註冊</router-link>
     </div>
   </div>
 </template>

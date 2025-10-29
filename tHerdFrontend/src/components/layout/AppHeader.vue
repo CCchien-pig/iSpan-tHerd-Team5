@@ -52,10 +52,11 @@
               <span class="main-color-white-text">登入</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#">登入</a></li>
-              <li><a class="dropdown-item" href="#">註冊</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
+              <li><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userme' })" href="#">我的帳戶</a></li>
+              <!-- 修正完在把我的帳戶新增：v-if="isLogin" -->
             </ul>
           </div>
           <!-- 訂單 -->
