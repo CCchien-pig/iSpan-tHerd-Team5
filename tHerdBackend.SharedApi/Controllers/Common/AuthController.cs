@@ -2,12 +2,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
+using tHerdBackend.SharedApi.Infrastructure.Referral;
 
 namespace tHerdBackend.SharedApi.Controllers.Common
 {
@@ -19,17 +22,20 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		private readonly UserManager<ApplicationUser> _userMgr;
 		private readonly IJwtTokenService _jwt;
 		private readonly IRefreshTokenService _refreshSvc;
-
+		private readonly IReferralCodeGenerator _refGen;
 		public AuthController(
 			SignInManager<ApplicationUser> signInMgr,
 			UserManager<ApplicationUser> userMgr,
 			IJwtTokenService jwt,
-			IRefreshTokenService refreshSvc)
+			IRefreshTokenService refreshSvc,
+			IReferralCodeGenerator refGen)
+
 		{
 			_signInMgr = signInMgr;
 			_userMgr = userMgr;
 			_jwt = jwt;
 			_refreshSvc = refreshSvc;
+			_refGen = refGen;
 		}
 
 		[AllowAnonymous]
@@ -144,7 +150,69 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			});
 		}
 
-		[Authorize(Roles = "Member")]
-		[HttpGet("whoami-member")] public IActionResult OkForMember() => Ok("ok");
+		[AllowAnonymous]
+		[HttpPost("register")]
+		public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+		{
+			if (dto is null) return BadRequest(new { error = "payload 不可為空" });
+			if (string.IsNullOrWhiteSpace(dto.Email) ||
+				string.IsNullOrWhiteSpace(dto.Password) ||
+				string.IsNullOrWhiteSpace(dto.LastName) ||
+				string.IsNullOrWhiteSpace(dto.FirstName) ||
+				string.IsNullOrWhiteSpace(dto.PhoneNumber) ||
+				string.IsNullOrWhiteSpace(dto.Gender))
+			{
+				return BadRequest(new { error = "請完整填寫必填欄位" });
+			}
+
+			var gender = dto.Gender.Trim();
+			if (gender != "男" && gender != "女")
+				return BadRequest(new { error = "性別僅接受「男」或「女」" });
+
+			var existed = await _userMgr.FindByEmailAsync(dto.Email);
+			if (existed != null) return BadRequest(new { error = "此 Email 已被註冊" });
+
+			// ★ 產生推薦碼（可選擇性做唯一檢查）
+			string referralCode = await GenerateUniqueReferralCodeAsync();
+
+			var user = new ApplicationUser
+			{
+				UserName = dto.Email.Trim(),
+				Email = dto.Email.Trim(),
+				EmailConfirmed = false,
+				PhoneNumber = dto.PhoneNumber.Trim(),
+				LastName = dto.LastName.Trim(),
+				FirstName = dto.FirstName.Trim(),
+				Gender = gender,
+				IsActive = true,
+				MemberRankId = "MR001",
+				ReferralCode = referralCode // ★ 指派
+			};
+
+			var createRes = await _userMgr.CreateAsync(user, dto.Password);
+			if (!createRes.Succeeded)
+			{
+				var msg = string.Join("; ", createRes.Errors.Select(e => e.Description));
+				return StatusCode(500, new { error = "建立帳號失敗：" + msg });
+			}
+
+			await _userMgr.AddToRoleAsync(user, "Member");
+
+			return Ok(new { ok = true, userId = user.Id, referralCode = user.ReferralCode });
+		}
+
+		// ★ 極低機率碰撞時的唯一性檢查（最多重試 5 次）
+		//    若你的 DB 有 UNIQUE 索引也可在異常時重試一次。
+		private async Task<string> GenerateUniqueReferralCodeAsync(int maxRetry = 5)
+		{
+			for (int i = 0; i < maxRetry; i++)
+			{
+				var code = _refGen.Generate();
+				var exists = await _userMgr.Users.AnyAsync(u => u.ReferralCode == code);
+				if (!exists) return code;
+			}
+			// 退而求其次，最後仍回傳一個新碼（碰撞機率極低）
+			return _refGen.Generate();
+		}
 	}
 }
