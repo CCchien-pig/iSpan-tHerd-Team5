@@ -16,6 +16,9 @@ namespace tHerdBackend.Core.DTOs.SUP.Brand
 		public string Caption { get; set; }
 		public bool IsActive { get; set; }
 
+		// 【核心修正點】在這裡新增 LinkUrl 屬性
+		public string? LinkUrl { get; set; }
+
 		// 用於 Upsert 邏輯
 		public int? Creator { get; set; }
 		public int? Reviser { get; set; }

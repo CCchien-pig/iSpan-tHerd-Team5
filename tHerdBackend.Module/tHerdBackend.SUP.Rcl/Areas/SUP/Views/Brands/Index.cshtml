@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
     @* <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" /> *@
     <style>
+        /* 【新增】SweetAlert2 垂直排列的自訂樣式 */
+        .swal2-radio-vertical .swal2-radio {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 選項靠左對齊 */
+            padding-left: 2em; /* 增加一些左邊距，使其美觀 */
+        }
     </style>
 }
 
@@ -832,16 +839,65 @@
 
             // 1. 新增版面按鈕
             $('#brandLayoutModalContent').on('click', '#addNewVersionBtn', function() {
-                // 獲取 Brand ID 和 Name
                 const brandId = getCurrentBrandIdFromModal();
                 const brandName = getCurrentBrandNameFromModal();
-
                 if (!brandId) return;
 
-                // 【修正】使用 ID 佔位符，並替換，確保是路由參數
-                const url = createLayoutUrl.replace('__ID__', brandId);
+                // 1. 先透過 AJAX 獲取所有版本列表
+                $.get(`/SUP/Brands/GetLayoutVersionsAsJson/${brandId}`).done(function(versions) {
+        
+                    // 2. 構建 Swal 的選項
+                    const inputOptions = {
+                        'blank': '建立一個全新的空白版面'
+                    };
+                    versions.forEach(v => {
+                        // key 是 layoutId，value 是顯示的文字
+                        inputOptions[v.layoutId] = `複製版本：${v.layoutVersion} (ID: ${v.layoutId})`;
+                    });
 
-                loadLayoutEditor(url, `新增版面版本：${brandName}`);
+                    // 3. 彈出 Swal 選擇框
+                    Swal.fire({
+                        title: '請選擇建立方式',
+                        input: 'radio',
+                        inputOptions: inputOptions,
+                        // 【新增】應用我們的自訂 CSS 類
+                        customClass: {
+                            popup: 'swal2-radio-vertical' 
+                        },
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return '您需要選擇一個選項！'
+                            }
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: '下一步',
+                        cancelButtonText: '取消'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const selectedValue = result.value;
+                            let url;
+                            let title;
+
+                            if (selectedValue === 'blank') {
+                                // 選擇「建立空白版本」
+                                url = `@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", fromScratch = true })`.replace('__ID__', brandId);
+                                title = `新增版面 (空白)：${brandName}`;
+                            } else {
+                                // 【核心修正點】從 versions 陣列中找到對應的版本號
+                                const selectedVersion = versions.find(v => v.layoutId == selectedValue);
+                                const versionName = selectedVersion ? selectedVersion.layoutVersion : `ID: ${selectedValue}`;
+
+                                url = `@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", copyFromLayoutId = "__LAYOUTID__" })`
+                                        .replace('__ID__', brandId)
+                                        .replace('__LAYOUTID__', selectedValue);
+
+                                // 使用版本號，而不是 ID
+                                title = `新增版面 (複製自 ${versionName})：${brandName}`;
+                            }
+                            loadLayoutEditor(url, title);
+                        }
+                    });
+                });
             });
 
             // 2. 編輯特定版本按鈕 (載入 EditLayout)

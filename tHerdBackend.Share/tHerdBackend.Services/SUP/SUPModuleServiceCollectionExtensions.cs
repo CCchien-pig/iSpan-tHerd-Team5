@@ -50,6 +50,8 @@ namespace tHerdBackend.Services.SUP
 
 			services.AddScoped<ISysAssetFileService, SysAssetFileService>();
 
+			services.AddHttpClient();
+
 			return services;
         }
     }

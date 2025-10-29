@@ -26,8 +26,8 @@
     @* 新增區塊按鈕 *@
     <div id="component-palette" class="mb-3">
         <button @@click="addBlock('Banner')" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
-        <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-primary me-2">新增 Accordion</button>
-        <button @@click="addBlock('Article')" class="btn btn-sm btn-outline-info me-2">新增 Article</button>
+        <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-info me-2">新增 Accordion</button>
+        <button @@click="addBlock('Article')" class="btn btn-sm btn-outline-warning me-2">新增 Article</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
     </div>
 
@@ -79,184 +79,78 @@
                 <template v-if="block.type === 'Banner'">
                     <h5>Banner 區塊編輯</h5>
 
-                    @* 【新增】錯誤提示區塊 *@
-                    <div v-if="!block.props.fileUrl" class="alert alert-danger py-2 mb-3">
-                        請務必提供圖片 URL 或透過媒體庫選擇圖片！
-                    </div>
+                    @* --- 圖片上傳區 (結構統一) --- *@
+                    <div class="border p-3 rounded mb-3">
+                        <h6 class="mb-3">Banner 圖片</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="form-label">圖片替代文字 (AltText 必填)</label><input type="text" class="form-control" v-model="block.props.altText"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">圖片說明 (Caption 必填)</label><input type="text" class="form-control" v-model="block.props.caption"></div>
+                        </div>                    
+                        <div class="mb-3">
+                            <label class="form-label">Banner 圖片點擊後的跳轉連結 (可選)</label>
+                        <input type="url" class="form-control" v-model="block.props.linkUrl" placeholder="/category/product-slug"></div>
 
-                    <div class="mb-3">
-                        <label>圖片Alt 替代文字：</label>
-                        @* [AltText]預設填入品牌名 *@
-                        <input type="text" class="form-control" v-model="block.props.altText">
-                    </div>
-
-                    <div class="mb-3">
-                        <label>圖片說明 (Caption)：</label>
-                        @* [Caption]預設填入品牌名_Banner_yyyy/mm/dd *@
-                        <input type="text" class="form-control" v-model="block.props.caption">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">點擊連結 URL</label>
-                        <input type="url" class="form-control" v-model="block.props.linkUrl" placeholder="/category/product-slug">
-                    </div>
-
-                    @* 【圖片選擇區域】 *@
-                    <div class="mb-3 border p-3 rounded" 
-                         :class="{'border-danger': !block.props.fileUrl}"> @* 圖片缺失時邊框變紅 *@
-        
-                        <label class="form-label fw-bold">圖片 URL</label>
-                        <div class="input-group">
-                            @* 這裡假設 FileUrl 是可編輯或可讀的，並用 v-model 追蹤 *@
-                            <input type="text" class="form-control" v-model="block.props.fileUrl" 
-                                   :class="{'is-invalid': !block.props.fileUrl}" 
-                                   placeholder="請在此貼上圖片 URL 或點擊選擇">
-            
-                            <button type="button" class="btn btn-secondary">
-                                <i class="fa-solid fa-image"></i> 選擇媒體庫圖片 (TODO)
-                            </button>
-
-                            (SYS_AssetFile.IsActive)
-                            <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
-                                <label class="form-check-label">啟用圖片</label>
-                            </div>
+                        <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3"><img :src="block.props.fileUrl || pendingFileUrl" style="max-width: 100%; max-height: 200px;" alt="預覽" /><p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽</p><div class="mt-2"><button class="btn btn-sm btn-outline-danger" @@click="removeBlockImage(block)">移除圖片</button></div></div>
+                        <div v-if="!block.props.fileUrl && !pendingFileUrl">
+                            <div class="mb-3"><label class="form-label">選擇本地圖片</label><input type="file" class="form-control" @@change="handleImageUpload($event, block)" accept="image/*"></div>
+                            <div class="text-center my-2 fw-bold">或</div>
+                            <div class="mb-3"><label class="form-label">貼上圖片 URL</label><div class="input-group"><input type="text" class="form-control" v-model="block.props.fileUrl" placeholder="貼上 URL 後點擊右側按鈕"><button class="btn btn-outline-primary" type="button" @@click="confirmUploadByUrl(block)">從 URL 上傳</button></div></div>
                         </div>
-        
-                        <small v-if="!block.props.fileUrl" class="text-danger mt-1">Banner 圖片網址為必填項。</small>
-        
-                        <div v-if="block.props.fileUrl" class="mt-3">
-                            <img :src="block.props.fileUrl" style="max-width: 100%; max-height: 150px; border: 1px solid #eee;" alt="圖片預覽" />
-                        </div>
+                        <div class="mt-3 text-center"><button v-if="pendingUpload && block.id === editingId" class="btn btn-success" @@click="confirmUploadAndInsert(block)"><i class="fa-solid fa-cloud-upload-alt"></i> {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳' }}</button></div>
                     </div>
+
+                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive"><label class="form-check-label">啟用此 Banner 圖片</label></div>
                 </template>
 
                 @* ================= Accordion 區塊編輯 ================= *@
                 <template v-if="block.type === 'Accordion'">
-                    @* 存回[SUP_BrandAccordionContent]表 *@
                     <h5>摺疊區塊編輯</h5>
-                    <div class="mb-3">
-                        <label>摺疊標題：</label> @*[ContentTitle]*@
-                        <input type="text" class="form-control" v-model="block.props.contentTitle" placeholder="請在此輸入標題。">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">摺疊內容：</label>
-                        @* 這裡未來可以替換成 CKEditor 或 TinyMCE 等富文本編輯器 *@
-                        <textarea class="form-control" rows="5" v-model="block.props.content" placeholder="請在此輸入內容。"></textarea>
-                    </div>
+                    <div class="mb-3"><label>摺疊標題：</label><input type="text" class="form-control" v-model="block.props.contentTitle"></div>
+                    <div class="mb-3"><label class="form-label">摺疊內容：</label><textarea class="form-control" rows="5" v-model="block.props.content"></textarea></div>
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" v-model="block.props.isActive"><label class="form-check-label">啟用此摺疊內容</label></div>
 
-                    @* 【Accordion 內容啟用 Switch】 (控制 SUP_BrandAccordionContent.IsActive) *@
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
-                        <label class="form-check-label">啟用此摺疊內容</label>
+                    @* --- 圖片上傳區 (結構統一) --- *@
+                    <div class="border p-3 rounded mb-3">
+                        <h6 class="mb-3">摺疊內容圖片 (可選)</h6>
+                        <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3"><img :src="block.props.fileUrl || pendingFileUrl" style="max-width: 100%; max-height: 200px;" alt="預覽" /><p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽</p><div class="mt-2"><button class="btn btn-sm btn-outline-danger" @@click="removeBlockImage(block)">移除圖片</button></div></div>
+                        <div v-if="!block.props.fileUrl && !pendingFileUrl">
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="form-label">圖片替代文字 (必填)</label><input type="text" class="form-control" v-model="block.props.imageAltText"></div>
+                                <div class="col-md-6 mb-3"><label class="form-label">圖片說明 (Caption 必填)</label><input type="text" class="form-control" v-model="block.props.imageCaption"></div>
+                            </div>
+                            <div class="mb-3"><label class="form-label">選擇本地圖片</label><input type="file" class="form-control" @@change="handleImageUpload($event, block)" accept="image/*"></div>
+                            <div class="text-center my-2 fw-bold">或</div>
+                            <div class="mb-3"><label class="form-label">貼上圖片 URL</label><div class="input-group"><input type="text" class="form-control" v-model="block.props.fileUrl" placeholder="貼上 URL 後點擊右側按鈕"><button class="btn btn-outline-primary" type="button" @@click="confirmUploadByUrl(block)">從 URL 上傳</button></div></div>
+                        </div>
+                        <div class="mt-3 text-center"><button v-if="pendingUpload && block.id === editingId" class="btn btn-success" @@click="confirmUploadAndInsert(block)"><i class="fa-solid fa-cloud-upload-alt"></i> {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳' }}</button></div>
                     </div>
-
-                    @* 【Accordion 圖片啟用 Switch】 (如果 ImgId 有值，控制 SYS_AssetFile.IsActive) *@
-                    <div v-if="block.props.imgId" class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
-                        <label class="form-check-label">啟用摺疊內容圖片</label>
-                    </div>
-
-                    @* 提醒：OrderSeq (順序) 將由區塊在列表中的位置決定，儲存時自動產生 *@
-                    
-                    @* TODO: 圖片選擇邏輯 (將選擇的 imgId 寫回 block.props.imgId) *@
                 </template>
 
                 @* ================= Article 區塊編輯 ================= *@
                 <template v-if="block.type === 'Article'">
                     <h5>品牌文章區塊編輯</h5>
+                    <div class="mb-3"><label class="form-label">文章標題：</label><input type="text" class="form-control" v-model="block.props.contentTitle"></div>
+                    <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" v-model="block.props.isActive"><label class="form-check-label">啟用此文章內容</label></div>
 
-                    @* --- 1. 文章標題 --- *@
-                    <div class="mb-3">
-                        <label class="form-label">文章標題：</label>
-                        <input type="text" class="form-control" v-model="block.props.contentTitle" placeholder="新文章標題。">
-                    </div>
-
-                    @* ========================================================== *@
-                    @* 【文章圖片】獨立上傳與元數據管理 *@
-                    @* ========================================================== *@
+                    @* --- 圖片上傳區 (結構統一) --- *@
                     <div class="border p-3 rounded mb-3">
-                        <h6 class="mb-3">文章圖片 (ImgId: {{ block.props.imgId || '無' }})</h6>
-
-                        @* --- 預覽與操作區 --- *@
-                        <div v-if="block.props.fileUrl || pendingFileUrl" class="mt-3 text-center mb-3">
-                            <img :src="block.props.fileUrl || pendingFileUrl"
-                                 style="max-width: 100%; max-height: 200px; border: 1px solid #eee;"
-                                 alt="預覽" />
-
-                            <p v-if="pendingFileUrl" class="text-muted small mt-1">此為**本地暫存預覽**，點擊下方「確認上傳」。</p>
-
-                            <div class="mt-3">
-                                <button class="btn btn-sm btn-outline-primary me-2"
-                                        @@click="insertImageIntoEditor(block)"
-                                        :disabled="!block.props.fileUrl">
-                                    @* 只有在 fileUrl 存在時才允許插入 *@
-                                    <i class="fa-solid fa-arrow-down"></i> 插入至文章內
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" @@click="removeArticleImage(block)">
-                                    <i class="fa-solid fa-trash"></i> 移除圖片
-                                </button>
-                            </div>
-                        </div>
-
-                        @* --- 元數據輸入區 --- *@
-                        <div v-if="!block.props.fileUrl">
-                            @* 只有在未儲存圖片時才顯示 Alt/Caption 輸入框 *@
+                        <h6 class="mb-3">文章主圖</h6>
+                        <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3"><img :src="block.props.fileUrl || pendingFileUrl" style="max-width: 100%; max-height: 200px;" alt="預覽" /><p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽</p><div class="mt-2"><button class="btn btn-sm btn-outline-primary me-2" @@click="insertImageIntoEditor(block)" :disabled="!block.props.fileUrl">插入至文章內</button><button class="btn btn-sm btn-outline-danger" @@click="removeBlockImage(block)">移除圖片</button></div></div>
+                        <div v-if="!block.props.fileUrl && !pendingFileUrl">
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">圖片替代文字 (AltText 必填)</label>
-                                    <input type="text" class="form-control" v-model="block.props.imageAltText">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">圖片說明 (Caption 必填)</label>
-                                    <input type="text" class="form-control" v-model="block.props.imageCaption">
-                                </div>
+                                <div class="col-md-6 mb-3"><label class="form-label">圖片替代文字 (必填)</label><input type="text" class="form-control" v-model="block.props.imageAltText"></div>
+                                <div class="col-md-6 mb-3"><label class="form-label">圖片說明 (Caption 必填)</label><input type="text" class="form-control" v-model="block.props.imageCaption"></div>
                             </div>
+                            <div class="mb-3"><label class="form-label">選擇本地圖片</label><input type="file" class="form-control" @@change="handleImageUpload($event, block)" accept="image/*"></div>
+                            <div class="text-center my-2 fw-bold">或</div>
+                            <div class="mb-3"><label class="form-label">貼上圖片 URL</label><div class="input-group"><input type="text" class="form-control" v-model="block.props.fileUrl" placeholder="貼上 URL 後點擊右側按鈕"><button class="btn btn-outline-primary" type="button" @@click="confirmUploadByUrl(block)">從 URL 上傳</button></div></div>
                         </div>
-
-                        @* --- 檔案選擇與觸發上傳區 --- *@
-                        <div class="mb-3">
-                            <label v-if="!block.props.fileUrl" class="form-label">選擇圖片檔案 (.jpg/.png/.gif 等)</label>
-                            <input type="file" 
-                                class="form-control" 
-                                @@change="handleImageUpload($event, block)"
-                                   accept="image/*">
-                        </div>
-
-                        @* 【Article 圖片啟用 Switch】 (如果 imgId 有值，控制 SYS_AssetFile.IsActive) *@
-                        <div v-if="block.props.imgId" class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.imageIsActive">
-                            <label class="form-check-label">啟用文章圖片</label>
-                        </div>
-
-                        @* 4. 【核心】確認上傳按鈕 (只有在有檔案待上傳時顯示) *@
-                        <div class="mt-3 text-center">
-                            <button v-if="pendingUpload"
-                                    class="btn btn-success"
-                                    @@click="confirmUploadAndInsert(block)">
-                                <i class="fa-solid fa-cloud-upload-alt"></i>
-                                @* 根據是否有舊圖來切換文本 *@
-                                {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳' }}
-                            </button>
-                            <span v-else-if="!block.props.fileUrl" class="text-muted small">選擇檔案後，點擊「確認上傳」。</span>
-                        </div>
+                        <div class="mt-3 text-center"><button v-if="pendingUpload && block.id === editingId" class="btn btn-success" @@click="confirmUploadAndInsert(block)"><i class="fa-solid fa-cloud-upload-alt"></i> {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳' }}</button></div>
                     </div>
 
-                    @* ========================================================== *@
-                    @* 【文章內容】TinyMCE 編輯器 *@
-                    @* ========================================================== *@
-                    <div class="mb-3">
-                        <label class="form-label">文章內容：</label>
-                        <textarea :id="'editor-' + block.id"></textarea>
-                    </div>
-
-                    @* 【Article 內容啟用 Switch】 (控制 SUP_BrandArticle.IsActive) *@
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
-                        <label class="form-check-label">啟用此文章內容</label>
-                    </div>
+                    <div class="mb-3"><label class="form-label">文章內容：</label><textarea :id="'editor-' + block.id"></textarea></div>
                 </template>
-
+                
                 @* 移除區塊按鈕 *@
                 <button @@click="removeBlock(block.id)" class="btn btn-sm btn-danger mt-2">移除區塊</button>
 
@@ -312,32 +206,40 @@
             switch (type) {
                 case 'Banner':
                     return {
-                        altText: brandName, // 預設填入品牌名
-                        caption: `${brandName}_Banner_${dateString}`, // 預設填入品牌名_Banner_日期
-                        fileId: null, // 圖片 ID
-                        fileUrl: '', // 圖片 URL
-                        linkUrl: '', // 點擊連結
-                        isActive: true, // 預設為啟用
-                        imageIsActive: true
+                        contentId: 0,
+                        fileId: null,
+                        fileUrl: '',
+                        linkUrl: '',
+                        altText: brandName, // 對應 BannerDto.AltText
+                        caption: `${brandName}_Banner_${dateString}`, // 對應 BannerDto.Caption
+                        imageIsActive: true // 對應 BannerDto.IsActive
                     };
                 case 'Accordion':
                     return {
-                        contentTitle: '', // 對應 [ContentTitle]
-                        content: '', // 對應 [Content]
-                        isActive: true, // 內容啟用狀態
-                        imgId: null, // 對應 [ImgId] (可選)
-                        imageIsActive: true
+                        contentId: 0,
+                        contentTitle: '',
+                        content: '',
+                        isActive: true, // 內容本身的啟用狀態
+                        imgId: null,
+                        fileUrl: '', // 用於預覽
+                        imageAltText: brandName,
+                        imageCaption: `${brandName}_Banner_${dateString}`,
+                        imageIsActive: true, // 圖片的啟用狀態
+                        isImageUploaderOpen: false // 【新增】預設為摺疊
                     };
                 case 'Article': // 品牌文章區塊
                      return {
-                        contentTitle: '', // 對應 [ContentTitle]
+                        contentId: 0,
+                        contentTitle: brandName + '品牌文章', // 對應 [ContentTitle]
                         content: '', // 對應 [Content]
-                        imgId: null, // 對應 [ImgId]
                         isActive: true, // 內容啟用狀態
-                        // 圖片元數據的預設值
-                        imageAltText: brandName + ' 文章圖片',
-                        imageCaption: '',
-                        imageIsActive: true
+                        // Article 圖片元數據
+                        imgId: null, // 對應 [ImgId]
+                        fileUrl: '',
+                        imageAltText: brandName,
+                        imageCaption: `${brandName}_Article_${dateString}`,
+                        imageIsActive: true, // 圖片啟用狀態
+                        isImageUploaderOpen: false // 【新增】預設為摺疊
                     };
                 default:
                     return {};
@@ -361,17 +263,28 @@
 
                 // 版本號建議值
                 if (layoutIdState.value === 'null' && initialVersion === '') {
-                    // 從現有版本號中找出最大版本號並 +0.1
                     let maxVersion = 0.0;
-                    existingVersions.forEach(v => {
-                        const match = v.match(/^v(\d+\.\d+)/);
-                        if (match) {
-                            const num = parseFloat(match[1]);
-                            if (num > maxVersion) maxVersion = num;
-                        }
-                    });
-                    // 建議版本號是最大版本號 + 0.1，並保留一位小數
-                    const suggestedVersion = `v${(maxVersion + 0.1).toFixed(1)}`;
+                    if (existingVersions && existingVersions.length > 0) {
+                        existingVersions.forEach(v => {
+                            // 確保 v 不是 null 或 undefined
+                            if (v) {
+                                const match = v.match(/^v(\d+\.\d+)/);
+                                if (match) {
+                                    const num = parseFloat(match[1]);
+                                    if (num > maxVersion) maxVersion = num;
+                                }
+                            }
+                        });
+                    }
+
+                    let suggestedVersion;
+                    // 【核心修正點】如果沒有找到任何版本，從 v1.0 開始
+                    if (maxVersion === 0.0) {
+                        suggestedVersion = 'v1.0';
+                    } else {
+                        // 否則，在最大版本號上 +0.1
+                        suggestedVersion = `v${(maxVersion + 0.1).toFixed(1)}`;
+                    }
                     layoutVersion.value = suggestedVersion;
                 }
 
@@ -411,16 +324,32 @@
                     };
                     blocks.value.push(newBlock);
 
+                    // 【核心修正點】新增後，立即將 editingId 設為新區塊的 ID
+                    editingId.value = newBlock.id;
+
+                    // 滾動邏輯
                     nextTick(() => {
                         const container = document.getElementById('layout-blocks-container');
                         if (container) { container.scrollTop = container.scrollHeight; }
                     });
                 };
 
-                // 【新增】移除文章圖片
-                const removeArticleImage = (block) => {
-                    // 1. 清除核心數據（ImgId 和 Url）
+                // 【新增】Switch 狀態變更通知函式
+                const handleSwitchChange = (isActive, itemName) => {
+                    Swal.fire({
+                        toast: true,
+                        position: 'center',
+                        icon: isActive ? 'success' : 'info',
+                        title: `${itemName} 已${isActive ? '啟用' : '停用'}`,
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                };
+                // 【新增】移除區塊圖片
+                const removeBlockImage = (block) => {
+                    // 1. 清除核心數據
                     block.props.imgId = null;
+                    block.props.fileId = null; // 確保 Banner 的 fileId 也被清除
                     block.props.fileUrl = null; 
     
                     // 2. 清除暫存區的數據 (如果用戶還沒上傳就點了移除)
@@ -434,6 +363,7 @@
                     // 4. (可選) 提醒使用者移除成功
                     Swal.fire('圖片已移除', '請點擊儲存，以確認變更。', 'info');
                 };
+
 
                 // 移除區塊
                 const removeBlock = (id) => {
@@ -456,14 +386,38 @@
 
                 // 【新增】前端 Banner 驗證邏輯
                 function validateBlocks(blocks) {
-                    for (const block of blocks) {
+                    // 【核心修正點】使用 for 迴圈來獲取索引
+                    for (let i = 0; i < blocks.length; i++) {
+                        const block = blocks[i];
                         if (block.type === 'Banner') {
-                            // 檢查 Banner 是否缺少 FileUrl
+                            // 【修正】只要 fileUrl 有值就通過
                             if (!block.props.fileUrl || block.props.fileUrl.trim() === '') {
-                                return `[Banner 區塊 #${block.id.substring(0, 8)}] 必須提供圖片 URL。`;
+                                // 使用索引 i + 1 來顯示排序
+                                return `[#${i + 1} - Banner 區塊] 必須提供圖片 URL。`;
                             }
                         }
                         // TODO: 可以在這裡加入 Accordion 的內容驗證等
+                    }
+                    return null; // 驗證通過
+                }
+
+                // 【新增】統一的圖片元數據驗證函式
+                function validateImageMeta(block) {
+                    let alt, cap;
+                    // 根據區塊類型，獲取正確的屬性名稱
+                    if (block.type === 'Banner') {
+                        alt = block.props.altText;
+                        cap = block.props.caption;
+                    } else { // Accordion, Article
+                        alt = block.props.imageAltText;
+                        cap = block.props.imageCaption;
+                    }
+
+                    if (!alt || alt.trim() === '') {
+                        return '請先輸入圖片的替代文字 (AltText)。';
+                    }
+                    if (!cap || cap.trim() === '') {
+                        return '請先輸入圖片說明 (Caption)。';
                     }
                     return null; // 驗證通過
                 }
@@ -658,35 +612,22 @@
                     'image/bmp', 'image/heic', 'image/heif', 'image/svg+xml' // 這裡列出了常見的 MIME 類型
                 ];
 
-                // 前端生成本地預覽
+                // 【修正】本地上傳：只做驗證和本地預覽
                 const handleImageUpload = (event, block) => {
                     const file = event.target.files[0];
                     if (!file) return;
 
-                    // 1. 【新增：檔案類型驗證】
-                    if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
-                        Swal.fire('錯誤', `不支援的檔案類型：${file.type}。請選擇圖片檔案。`, 'error');
+                    const validationError = validateImageMeta(block);
+                    if (validationError) {
+                        Swal.fire('錯誤', validationError, 'warning');
                         event.target.value = '';
                         return;
                     }
 
-                    // 2. 驗證 AltText 和 Caption
-                    if (!block.props.imageAltText || block.props.imageAltText.trim() === '') {
-                        Swal.fire('錯誤', '請先輸入圖片的替代文字 (AltText)。', 'warning');                        
-                        event.target.value = ''; // 必須清空，否則下次點擊同一檔案不觸發 change
-                        return;
-                    }
-                    if (!block.props.imageCaption || block.props.imageCaption.trim() === '') {
-                        Swal.fire('錯誤', '請先輸入圖片說明 (Caption)。', 'warning');
-                        event.target.value = '';
-                        return;
-                    }
-
-                    // 3. 【核心修正】在前端生成本地預覽 URL
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        pendingFileUrl.value = e.target.result; // 儲存本地 URL
-                        pendingUpload.value = file; // 儲存 File 物件，讓 v-if="pendingUpload" 成立
+                        pendingFileUrl.value = e.target.result;
+                        pendingUpload.value = file;
                     };
                     reader.readAsDataURL(file);
                 };
@@ -780,6 +721,61 @@
 
                         editor.execCommand('mceInsertContent', false, imgHtml);
                     }
+                };
+
+                // 【新增】從 URL 上傳的函式
+                const confirmUploadByUrl = (block) => {
+                    const validationError = validateImageMeta(block);
+                    if (validationError) {
+                        Swal.fire('錯誤', validationError, 'warning');
+                        return;
+                    }
+                    if (!block.props.fileUrl || !block.props.fileUrl.startsWith('http')) {
+                        Swal.fire('錯誤', '請貼上一個有效的圖片 URL。', 'warning');
+                        return;
+                    }
+
+                    Swal.fire({ title: '處理中...', text: '正在從遠端下載並上傳圖片...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+
+                    // 準備發送到後端的 payload
+                    const payload = {
+                        imageUrl: block.props.fileUrl,
+                        blockType: block.type,
+                        altText: block.props.imageAltText,
+                        caption: block.props.imageCaption,
+                        isActive: block.props.imageIsActive
+                    };
+
+                    // 3. 呼叫後端的 upload-by-url API
+                    $.ajax({
+                        url: '/api/assets/upload-by-url',
+                        type: 'POST',
+                        contentType: 'application/json', // 必須是 application/json
+                        data: JSON.stringify(payload),   // 必須序列化為 JSON 字串
+                        headers: { [csrfHeaderName]: csrfToken },
+                        success: function(res) {
+                            if (res.location && res.fileId) {
+                                // 更新 Vue 數據模型 (與本地上傳成功後的回調相同)
+                                if (block.type === 'Banner') {
+                                    block.props.fileId = res.fileId;
+                                } else {
+                                    block.props.imgId = res.fileId;
+                                }
+                                block.props.fileUrl = res.location;
+                                Swal.fire('成功', '圖片已從 URL 成功上傳！', 'success');
+                            } else {
+                                Swal.fire('上傳失敗', '後端未返回有效的圖片資訊。', 'error');
+                            }
+                        },
+                        error: function(xhr) {
+                            // 嘗試解析後端回傳的 JSON 錯誤訊息
+                            let errorMsg = `伺服器錯誤: ${xhr.statusText}`;
+                            if (xhr.responseJSON && xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                                errorMsg = xhr.responseJSON.error.message;
+                            }
+                            Swal.fire('上傳失敗', errorMsg, 'error');
+                        }
+                    });
                 };
 
                 // 返回版本管理
@@ -892,7 +888,9 @@
                     confirmUploadAndInsert,
                     handleImageUpload,
                     insertImageIntoEditor,
-                    removeArticleImage
+                    removeBlockImage,
+                    handleSwitchChange,
+                    confirmUploadByUrl
                 };
             }
         };

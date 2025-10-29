@@ -246,7 +246,6 @@ namespace tHerdBackend.Services.SUP
 								accordionDto.BrandId = dto.BrandId; // 賦予 BrandId
 								accordionDto.OrderSeq = orderSeq;   // 賦予 OrderSeq
 								accordionDto.Creator = reviserId;   // 賦予 Creator/Reviser ID
-																	// 追蹤欄位 (Reviser, OrderSeq) 應該在 Service 的 UpsertAsync 函式內部，只使用傳入的參數 (reviserId 和 orderSeq) 來設定 DTO，而不是在呼叫前就設定
 
 								// 呼叫 Service
 								var contentId = await _contentService.UpsertContentAsync(accordionDto, dto.BrandId, reviserId, orderSeq);
@@ -282,7 +281,13 @@ namespace tHerdBackend.Services.SUP
 								// 4. 只有 FileId > 0 (成功儲存) 才將其加入骨架
 								if (fileId > 0)
 								{
-									cleanLayoutItems.Add(new { type = "Banner", contentId = fileId });
+									// 【核心修正點】在 cleanLayoutItems 中，同時儲存 contentId 和 linkUrl
+									cleanLayoutItems.Add(new
+									{
+										type = "Banner",
+										contentId = fileId,
+										linkUrl = bannerDto.LinkUrl // 將 linkUrl 寫入 JSON 骨架
+									});
 								}
 								break;
 
