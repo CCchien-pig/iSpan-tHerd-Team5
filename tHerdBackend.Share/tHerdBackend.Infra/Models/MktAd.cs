@@ -28,7 +28,7 @@ public partial class MktAd
     /// <summary>
     /// 廣告圖片路徑
     /// </summary>
-    public int? ImgId { get; set; }
+    public string? ImgPath { get; set; }
 
     /// <summary>
     /// 開始日期
@@ -69,6 +69,21 @@ public partial class MktAd
     /// 異動時間
     /// </summary>
     public DateTime? RevisedDate { get; set; }
+
+    /// <summary>
+    /// 廣告種類（Carousel / Popup / Marquee）
+    /// </summary>
+    public string AdType { get; set; }
+
+    /// <summary>
+    /// 按鈕文字
+    /// </summary>
+    public string ButtonText { get; set; }
+
+    /// <summary>
+    /// 按鈕連結
+    /// </summary>
+    public string ButtonLink { get; set; }
 
     public virtual SysAssetFile Img { get; set; }
 
