@@ -1,18 +1,24 @@
 ﻿using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.Abstractions.Security;
+using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
+using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
+
 
 
 namespace tHerdBackend.SharedApi
@@ -23,8 +29,23 @@ namespace tHerdBackend.SharedApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // JWT Authentication
-            builder.Services.AddAuthentication(options =>
+			//�إ߳s�u�r��
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+			//與後台管理系統共用 Identity 使用者資料庫
+			// === Identity 使用者資料庫（與後台共用） ===
+			builder.Services.AddDbContext<ApplicationDbContext>(options =>
+				options.UseSqlServer(connectionString));
+
+			builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
+				.AddEntityFrameworkStores<ApplicationDbContext>()
+				.AddDefaultTokenProviders();
+
+			//關閉預設 Claims 映射
+			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+			// JWT Authentication
+			builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -37,10 +58,13 @@ namespace tHerdBackend.SharedApi
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+					RoleClaimType = "role",
+					NameClaimType = "name",
+					ClockSkew = TimeSpan.FromMinutes(1),
+					ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty))
+                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? string.Empty))
                 };
                 options.Events = new JwtBearerEvents // 自訂未授權回應，避免 401 回 HTML
                 {
@@ -52,10 +76,55 @@ namespace tHerdBackend.SharedApi
                         return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
                     }
                 };
-            });
+				
 
-            // 允許 CORS
-            builder.Services.AddCors(options =>
+				//除錯用
+				// 在 Program.cs 的 builder.Build() 之前放一次：
+				//IdentityModelEventSource.ShowPII = true; // 允許輸出 PII，方便看到真錯因
+
+				//// 你的 .AddJwtBearer(..., options => { ... })
+				//options.Events = new JwtBearerEvents
+				//{
+				//	OnAuthenticationFailed = ctx =>
+				//	{
+				//		// 會看到像「IDX10214: Audience validation failed」之類的關鍵字
+				//		Console.WriteLine("JWT FAILED: " + ctx.Exception);
+				//		return Task.CompletedTask;
+				//	},
+				//	OnChallenge = context =>
+				//	{
+				//		// 你已經有客製 401 回應；可以加上 log
+				//		Console.WriteLine("JWT CHALLENGE: " + context.ErrorDescription);
+				//		return Task.CompletedTask;
+				//	}
+				//};
+			});
+
+			builder.Services.AddAuthorization();
+
+			builder.Services.AddHttpContextAccessor();
+			builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+			builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
+			// === SQL Connection Factory ===
+			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
+
+			// === DbContext (EF Core) ===
+			builder.Services.AddDbContext<tHerdDBContext>(options =>
+				options.UseSqlServer(connectionString));
+
+			// === Session（訪客用） ===
+			builder.Services.AddDistributedMemoryCache();
+			builder.Services.AddSession(o =>
+			{
+				o.Cookie.Name = ".tHerd.Session";
+				o.IdleTimeout = TimeSpan.FromDays(7);
+				o.Cookie.HttpOnly = true;
+				o.Cookie.SameSite = SameSiteMode.Lax;
+			});
+
+			// 允許 CORS
+			builder.Services.AddCors(options =>
 			{
 				options.AddPolicy("AllowAll",
 					policy => policy
@@ -63,6 +132,15 @@ namespace tHerdBackend.SharedApi
 						.AllowAnyMethod()
 						.AllowAnyHeader());
 			});
+
+			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
+			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
+			// Auth Service
+			//builder.Services.AddScoped<AuthService>();
+
+			// 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
+			builder.Services.AddtHerdBackend(builder.Configuration);
 
 			// Cloudinary
 			builder.Services.Configure<CloudinarySettings>(
@@ -89,24 +167,6 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddSingleton(cloudinary);
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
-
-			// === SQL Connection Factory ===
-			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
-
-			// === DbContext (EF Core) ===
-			builder.Services.AddDbContext<tHerdDBContext>(options =>
-				options.UseSqlServer(connectionString));
-
-            // 前台沒有 Identity，只註冊 CurrentUser 本體（不要掛 ICurrentUser）
-            builder.Services.AddHttpContextAccessor();
-            builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-
-            // Auth Service
-            builder.Services.AddScoped<AuthService>();
-
-            // 加入 DI 註冊（這行會自動把 Infra、Service 都綁好）
-            builder.Services.AddtHerdBackend(builder.Configuration);
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             // Controllers & Swagger
@@ -140,7 +200,7 @@ namespace tHerdBackend.SharedApi
                         {
                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                         },
-                        new string[] {}
+                        new string[]{}
                     }
                 });
             });
@@ -158,6 +218,17 @@ namespace tHerdBackend.SharedApi
 
 			app.UseCors("AllowAll");
 
+
+			// 訪客追蹤：若無 guestId 就建立
+			app.UseSession();
+			app.Use(async (ctx, next) =>
+			{
+				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
+					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
+				await next();
+			});
+
+		
 			// 啟用 JWT 驗證
 			app.UseAuthentication();
 			app.UseAuthorization();

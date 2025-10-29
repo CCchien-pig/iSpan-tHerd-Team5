@@ -333,7 +333,7 @@ async function renderCharts() {
   }
 }
 
-/** 匯出 PNG（避免空白）：先 nextTick 確保渲染完成，再臨時加 Title，最後還原 */
+/** 匯出 PNG（避免空白）：先 nextTick 確保渲染完成，再臨時加 Title+Grid，最後還原 */
 async function exportPng() {
   const inst = activeChart.value === 'bar' ? barChart : radarChart
   if (!inst) return
@@ -345,56 +345,77 @@ async function exportPng() {
   const ename = sampleNameEnAuto.value || ''
   const title = ename ? `${cname}（${ename}）` : cname
 
-  // 副標：雙語（C2）
-  const kindZh = activeChart.value === 'bar' ? `每100克主要營養成分圖表 (Top${N})` : `每100克主要營養成分圖表 (Top${N})`
-  const kindEn = activeChart.value === 'bar' ? `Per 100g Nutrition Bar (Top${N})` : `Per 100g Nutrition Radar (Top${N})`
+  const kindZh = `每100克主要營養成分圖表 (Top${N})`
+  const kindEn = activeChart.value === 'bar'
+    ? `Per 100g Nutrition Bar (Top${N})`
+    : `Per 100g Nutrition Radar (Top${N})`
 
-  // 從當前圖表推斷主單位（柱狀圖較精準）
+  // 從現有 option 取主單位（柱狀圖較精準）
   const opt = inst.getOption()
   let mainUnit = ''
   try {
     if (activeChart.value === 'bar') {
       const data = (opt?.series?.[0]?.data ?? []).map(d => (typeof d === 'object' ? d.unit : ''))
-      const cnt = {}
-      data.forEach(u => { if (u) cnt[u] = (cnt[u] || 0) + 1 })
+      const cnt = {}; data.forEach(u => { if (u) cnt[u] = (cnt[u] || 0) + 1 })
       mainUnit = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0] || ''
     }
   } catch {}
 
-  const sub = `${kindZh} | ${kindEn}${mainUnit ? ` · ${mainUnit}` : ''} | 資料來源｜Source: tHerd Nutrition DB`
+  const sub = `${kindZh} | ${kindEn}${mainUnit ? ' · ' + mainUnit : ''} | 資料來源｜Source: tHerd Nutrition DB`
 
-  // 暫存舊的 title 設定，避免還原出錯
+  // 🔹 暫存舊的 title 與 grid
   const prevTitle = opt.title ? JSON.parse(JSON.stringify(opt.title)) : null
+  const prevGrid  = opt.grid  ? JSON.parse(JSON.stringify(opt.grid))  : null
+  const baseGrid  = Array.isArray(opt.grid) ? (opt.grid[0] || {}) : (opt.grid || {})
 
-  // 套上臨時 Title 後截圖
+  // 🔹 套上臨時 Title + 提高 grid.top（避免被標題/subtitle 蓋住）
+  const TITLE_FS = 16;         // 主標字體大小
+  const SUB_FS   = 12;         // 副標字體大小
+  const SUB_GAP  = 8;          // 主副標距離
+  // const SAFETY   = 28;         // 額外緩衝
+  // const NEED_TOP = TITLE_FS + SUB_FS + SUB_GAP + SAFETY; // ≈64，但保守抓 110px 起跳
+
   inst.setOption({
     title: {
-      left: 'center', top: 6,
+      left: 'center',
+      top: 8,
       text: title,
       subtext: sub,
-      textStyle: { fontSize: 14, fontWeight: 700, color: '#1f2937' },
-      subtextStyle: { fontSize: 12, color: '#6b7280' }
+      subtextGap: SUB_GAP,
+      textStyle: { fontSize: TITLE_FS, fontWeight: 700, color: '#1f2937' },
+      subtextStyle: { fontSize: SUB_FS, color: '#6b7280' }
+    },
+    grid: {
+      ...baseGrid,
+      containLabel: true,
+      top: Math.max(baseGrid.top || 0, 110),   // ⬅️ 預留足夠空間
+      bottom: Math.max(baseGrid.bottom || 0, 64),
+      left: Math.max(baseGrid.left || 0, 64),
+      right: Math.max(baseGrid.right || 0, 24),
     }
   })
 
-  // 等待 ECharts layout 完成，避免空白
-  await new Promise(r => setTimeout(r, 50))
-  const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' })
+// 🔸 這兩行很關鍵，強制版面重排
+inst.resize()
+await new Promise(r => setTimeout(r, 80))
 
-  // 還原 Title
-  if (prevTitle) {
-    inst.setOption({ title: prevTitle })
-  } else {
-    inst.setOption({ title: { show: false } })
-  }
+// 再進行 getDataURL 截圖
+const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' })
+
+  // 🔹 還原 Title 與 Grid
+  inst.setOption({
+    title: prevTitle ? prevTitle : { show: false },
+    grid:  prevGrid  ? prevGrid  : { }
+  })
 
   // 下載
   const a = document.createElement('a')
   a.href = url
-  a.download = `${cname}_${activeChart.value}_Top${N}_Per100g${mainUnit ? '_' + mainUnit : ''}.png`
+  a.download = `${cname}_${activeChart.value}_Top${N}_Per100g${mainUnit ? '_' + String(mainUnit).replace(/[\\/:*?"<>|]/g,'-').replace(/\s+/g,'_') : ''}.png`
   document.body.appendChild(a); a.click(); a.remove()
   exporting.value = false
 }
+
 
 async function fetchDetail() {
   const { sample: s, nutrients: n } = await getNutritionDetail(id)

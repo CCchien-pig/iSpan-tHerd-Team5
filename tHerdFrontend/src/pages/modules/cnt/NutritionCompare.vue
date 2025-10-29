@@ -51,6 +51,12 @@
           {{ c.sampleName }}
           <button class="btn btn-sm btn-link text-danger ms-1" @click="removeSample(c.sampleId)">✕</button>
         </span>
+        <button
+          class="btn silver-reflect-button px-3 py-1 rounded-pill ms-2 btn-sm"
+          @click="clearSamples"
+        >
+          清空
+        </button>
         <small class="text-muted d-block mt-2">（請選擇 2 – 6 種食材！）</small>
       </div>
     </section>
@@ -138,7 +144,11 @@
                     v-model="ui.selectedAnalyteIds"
                     :value="a.analyteId"
                     class="form-check-input me-2"
+                    :disabled="isPMS(a)"            
+                    :title="isPMS(a) ? '此欄為彙總指標，無法比較' : ''"  
                   />
+                  <!-- :title="isPMS(a) ? '此欄為彙總指標，無法比較' : ''" =>小提示，可留可拔 -->
+                   <!-- :disabled="isPMS(a)"  =>只有 PMS 不能勾 -->
                   {{ a.analyteName }}
                 </label>
               </div>
@@ -160,6 +170,14 @@
 
     <!-- 3️⃣ 圖表結果：面板（依單位分群） -->
     <section v-if="ui.groups.length" class="compare-step p-4 rounded-3 shadow-sm bg-white">
+      <div class="d-flex justify-content-end gap-2 mb-3">
+        <button class="btn teal-reflect-button text-white btn-sm" @click="exportPng">
+          💾 匯出圖表（PNG）
+        </button>
+        <button class="btn silver-reflect-button btn-sm" @click="exportCsv">
+          📑 匯出數據（CSV）
+        </button>
+      </div>
       <div class="d-flex align-items-center justify-content-between mb-3">
         <h4 class="main-color-green-text m-0">比較結果（依單位分群/每100公克含量）</h4>
         <div class="d-flex align-items-center gap-2">
@@ -169,7 +187,7 @@
             <option value="radar">雷達圖</option>
             <option value="heatmap">熱圖（樣本×營養素）</option>
             <option value="stacked">堆疊百分比條圖（100%）</option>
-            <option value="boxplot">箱型圖（分佈）</option>
+            <option value="boxplot">箱型圖（分佈）</option>            
           </select>
         </div>
       </div>
@@ -189,7 +207,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { reactive, ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getNutritionList, getNutritionCompare, getAnalyteList } from '@/pages/modules/cnt/api/cntService'
 import Swal from 'sweetalert2'
@@ -202,6 +220,14 @@ function showWarn(msg) {
     icon: 'warning',
     confirmButtonText: '確定',
     confirmButtonColor: 'rgb(0,112,131)'
+  })
+}
+function showSuccess(msg) {
+  Swal.fire({
+    text: msg,
+    icon: 'success',
+    timer: 1400,
+    showConfirmButton: false
   })
 }
 // 全程正規化分類字串。加入這個 helper
@@ -244,6 +270,51 @@ let resizeHandler = null
 let isBulkToggling = false
 const allCollapsed = ref(false)   // ← 新增：全局唯一「全部收合」狀態
 let togglingNow = false
+
+/* ---------- 單位正規化 ---------- */
+// 單位正規化與顯示
+const normUnit = (u) =>
+  String(u || '').trim().toLowerCase().replace('μg', 'µg').replace('mcg', 'µg')
+const displayUnit = (u) => {
+  const k = normUnit(u)
+  if (!k) return '-'         // 沒單位時顯示「-」
+  if (k === 'kcal') return 'kcal'
+  if (k === 'g')    return 'g'
+  if (k === 'mg')   return 'mg'
+  if (k === 'µg')   return 'µg'
+  return k                   // 其他單位原樣顯示
+}
+
+// 數字格式：kcal 或 >=100 取 0 位；>=10 取 1 位；其他 2 位
+const fmtNumber = (n, unit) => {
+  const v = Number(n ?? 0)
+  const abs = Math.abs(v)
+  const k = normUnit(unit)
+  const digits = (k === 'kcal' || abs >= 100) ? 0 : (abs >= 10 ? 1 : 2)
+  return v.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  })
+}
+
+// 判斷名稱是否就是「P/M/S」（容忍空白/大小寫）
+  const isPMS = (a) => {
+    const name = String(a?.analyteName || a?.name || '').trim().toUpperCase()
+    return name === 'P/M/S'
+  }
+
+// 如果之前已選過 P/M/S，自動剔除
+  watch(() => ui.selectedAnalyteIds.slice(), (ids) => {
+    const getAnalyteById = (id) => {
+      for (const g of ui.filteredAnalytesByCat || []) {
+        const hit = g.items?.find(x => x.analyteId === id)
+        if (hit) return hit
+      }
+      return null
+    }
+    const cleaned = ids.filter(id => !isPMS(getAnalyteById(id)))
+    if (cleaned.length !== ids.length) ui.selectedAnalyteIds = cleaned
+  })
 
 /* ----------------------- lifecycle ----------------------- */
 onMounted(async () => {
@@ -363,11 +434,12 @@ function filterAnalytes() {
 
 function selectAllAnalytes() {
   const ids = []
-  ui.filteredAnalytesByCat.forEach(g => g.items.forEach(a => ids.push(a.analyteId)))
+  ui.filteredAnalytesByCat.forEach(g =>
+    g.items.forEach(a => { if (!isPMS(a)) ids.push(a.analyteId) })  // ✅ 過濾 P/M/S
+  )
   const set = new Set([...ui.selectedAnalyteIds, ...ids])
   ui.selectedAnalyteIds = Array.from(set)
 }
-
 /* ----------------------- sample pick ----------------------- */
 function addSample(s) {
   if (ui.compareList.length >= 6) return showWarn('最多可比較 6 種食材')
@@ -375,6 +447,10 @@ function addSample(s) {
 }
 function removeSample(id) {
   ui.compareList = ui.compareList.filter(x => x.sampleId !== id)
+}
+
+function clearSamples() {
+  ui.compareList = []   // ← 清空已選食材
 }
 
 /* ---------- 群組收合（改為陣列可追蹤版） ---------- */
@@ -451,6 +527,15 @@ async function fetchCompare() {
 }
 
 /* ----------------------- charts ----------------------- */
+// 加個小工具把食材陣列切塊
+function wrapSamples(names, per = 3, sep = '、') {
+  const rows = []
+  for (let i = 0; i < names.length; i += per) {
+    rows.push(names.slice(i, i + per).join(sep))
+  }
+  return rows.join('\n')  // ← 每列之間用 \n
+}
+
 function renderAll() {
   // 清掉舊圖
   Object.values(chartRefs).forEach(el => el?.__chartInstance?.dispose?.())
@@ -481,7 +566,144 @@ function renderAll() {
       case 'stacked': option = optionStacked100(analyteNames, sampleNames, dataset, grp.unit); break
       case 'boxplot': option = optionBoxplot(analyteNames, dataset, grp.unit); break
     }
+    // === 標題/副標與版面 ===
+    // 1) 顯示用「原始單位」
+    const rawUnit  = (grp.unit ?? '').trim()  // 例如 "µg RAE", "mg/100g"
+    const unitKey  = normUnit(rawUnit)
+    const showUnit = rawUnit || '-'
 
+    // 2) 食材名稱 → 多列換行（每列3個，可調 4/5）
+    const names           = ui.compareList.map(s => s.sampleName)
+    const namesPerRow     = 1
+    const namesMultiline  = wrapSamples(names, namesPerRow)  // <-- 真的用上它
+    const titleText       = '食材比較'                        // 主標題就放簡短字
+    const subZh           = `依單位分群（每100公克）· 單位：${showUnit}`
+    const subEn           = `Per 100g · Unit: ${showUnit}`
+    // 把多行食材清單放在副標的第一行
+    // 組成多段文字（rich style）
+    const subText = [
+      `{foods|${namesMultiline}}`,
+      `{info|${subZh} | ${subEn}}`,
+      `{src|資料來源｜Source: tHerd Nutrition DB}`
+    ].join('\n')
+    
+    // 3) 依食材列數拉開上邊距（避免壓到圖）
+    const rows = Math.ceil(names.length / namesPerRow)   // <-- 要在 names 宣告之後
+    const baseGrid = option.grid && !Array.isArray(option.grid) ? option.grid : {}
+    option.grid = {
+      ...baseGrid,
+      top:    Math.max(baseGrid.top    ?? 0, 120 + (rows - 1) * 22),
+      left:   Math.max(baseGrid.left   ?? 0, 64),
+      right:  Math.max(baseGrid.right  ?? 0, 24),
+      bottom: Math.max(baseGrid.bottom ?? 0, 72),
+      containLabel: true
+    }
+
+    option.title = {
+        left: 'center',
+        top: 10,
+        text: titleText,
+        subtext: subText,
+        subtextGap: 12,
+        textStyle: {
+          fontSize: 18, fontWeight: 500, color: '#1f2937'// 主標題「食材比較」深灰黑
+        },
+        subtextStyle: {
+          rich: {
+            // 🔹 第一行：食材清單（主視覺焦點）→ 灰黑、略粗
+            foods: {
+              fontSize: 15, lineHeight: 24, fontWeight: 600, color: '#374151'},
+                        // ≈ Tailwind slate-700            
+            // 🔹 第二行：單位資訊 → 中灰、略細一點
+            info: {
+              fontSize: 14, lineHeight: 22, fontWeight: 600, color: '#6b7280'},
+                        // ≈ slate-500
+            // 🔹 第三行：資料來源 → 比上面再淺一階，但不會太淡
+            src: {
+              fontSize: 13, lineHeight: 20, fontWeight: 600, color: '#4b5563'}
+                        // ≈ slate-600，比 #9ca3af 深一點更穩重
+          }
+        }
+      }
+
+
+    // 4) 圖例：維持你原本單列/自動換寬的寫法（可保留或之後換成多列版本）
+    const cw = el?.clientWidth || 800
+    option.legend = {
+      ...(option.legend || {}),
+      type: 'plain',
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 14,
+      width: Math.max(320, cw - 160),
+      itemGap: 16,
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 12, lineHeight: 16 }
+    }
+    if (sampleNames.length > 14) {
+      option.legend.type = 'scroll'
+      option.legend.pageIconSize = 10
+      option.legend.pageButtonItemGap = 6
+      option.legend.pageFormatter = '{current}/{total}'
+    }
+
+
+    // 3) 軸線：只對 value 軸做數字格式（用 unitKey），類別軸不處理
+    const isXValue = option.xAxis && option.xAxis.type === 'value'
+    const isYValue = option.yAxis && option.yAxis.type === 'value'
+    if (option.xAxis) option.xAxis = { ...option.xAxis, name: '' }
+    if (option.yAxis) option.yAxis = { ...option.yAxis, name: '' }
+    if (isXValue) {
+      option.xAxis = {
+        ...option.xAxis,
+        axisLabel: { ...(option.xAxis.axisLabel || {}), formatter: v => fmtNumber(v, unitKey) }
+      }
+    }
+    if (isYValue) {
+      option.yAxis = {
+        ...option.yAxis,
+        axisLabel: { ...(option.yAxis.axisLabel || {}), formatter: v => fmtNumber(v, unitKey) }
+      }
+    }
+
+    // 4) Tooltip / 資料標籤：數字用 unitKey，尾巴單位顯示 rawUnit（showUnit）
+    if (ui.chartType === 'stacked') {
+      option.tooltip = {
+        trigger: 'axis',
+        valueFormatter: v => `${v?.toFixed?.(1) ?? v}%`
+      }
+    } else {
+      option.tooltip = {
+        ...(option.tooltip || {}),
+        trigger: option.tooltip?.trigger || 'axis',
+        valueFormatter: v => `${fmtNumber(v, unitKey)} ${showUnit}`.trim()
+      }
+    }
+
+    if (Array.isArray(option.series) && option.series.length) {
+      const isHorizontal = option.yAxis && option.yAxis.type === 'category'
+      option.series = option.series.map(s => {
+        if (s.type !== 'bar') return s
+
+        // ✅ 如果是堆疊百分比圖，強制顯示為百分比
+        const isPercent = ui.chartType === 'stacked'
+
+        return {
+          ...s,
+          barMaxWidth: 26,
+          label: {
+            ...(s.label || {}),
+            show: true,
+            position: isHorizontal ? 'right' : 'top',
+            formatter: p =>
+              isPercent
+                ? `${p.value?.toFixed?.(1) ?? p.value}%`
+                : `${fmtNumber(p.value, unitKey)} ${showUnit}`.trim()
+          }
+        }
+      })
+    }
     chart.setOption(option)
   })
 }
@@ -514,14 +736,56 @@ function optionBar(analyteNames, sampleNames, dataset, unit) {
 }
 
 function optionRadar(analyteNames, sampleNames, dataset) {
-  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2
+  // 計算最大值，避免超出雷達邊界
+  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2;
+
   return {
-    tooltip: {},
-    legend: { data: sampleNames },
-    radar: { indicator: analyteNames.map(n => ({ name: n, max: maxVal })) },
-    series: [{ type: 'radar', data: sampleNames.map((s, i) => ({ name: s, value: dataset[i] })) }]
-  }
+    tooltip: {
+      trigger: 'item',       // ✅ 原生預設：顯示單一樣本全部值
+      confine: true,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      borderColor: '#007083',
+      borderWidth: 1,
+      textStyle: { color: '#333', fontSize: 12 }
+    },
+    legend: {
+      data: sampleNames,
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 12 }
+    },
+    radar: {
+      center: ['50%', '55%'],     // ✅ 下移一點，避免標題擋到數值
+      radius: '65%',
+      splitNumber: 5,
+      splitArea: {
+        areaStyle: { color: ['#f9f9f9', '#fff'] }
+      },
+      axisLine: { lineStyle: { color: '#ccc' } },
+      splitLine: { lineStyle: { color: '#ddd' } },
+      indicator: analyteNames.map(n => ({
+        name: n,
+        max: maxVal
+      }))
+    },
+    series: [
+      {
+        type: 'radar',
+        symbol: 'circle',
+        symbolSize: 4,
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.1 },
+        data: sampleNames.map((s, i) => ({
+          name: s,
+          value: dataset[i]
+        }))
+      }
+    ]
+  };
 }
+
 
 function optionHeatmap(analyteNames, sampleNames, dataset, unit) {
   const data = []
@@ -606,6 +870,94 @@ function quantile(arr, p) {
 }
 function debounce(fn, t = 200) {
   let tid; return (...args) => { clearTimeout(tid); tid = setTimeout(() => fn(...args), t) }
+}
+
+/* ----------------------- 匯出檔案（修正版） ----------------------- */
+
+// 取得所有已渲染的 ECharts 實例
+function getAllChartInstances() {
+  return Object.values(chartRefs)
+    .map(el => el?.__chartInstance)
+    .filter(Boolean)
+}
+
+async function exportPng() {
+  await nextTick() // 確保圖已渲染
+  const charts = getAllChartInstances()
+  if (!charts.length) {
+    return showWarn('目前沒有可匯出的圖表（請先執行「開始比較」）')
+  }
+
+  for (let i = 0; i < charts.length; i++) {
+    const inst = charts[i]
+
+    // 1) 取原設定並備份 grid
+    const opt = inst.getOption()
+    const prevGrid = opt.grid ? JSON.parse(JSON.stringify(opt.grid)) : null
+    const baseGrid = Array.isArray(opt.grid) ? (opt.grid[0] || {}) : (opt.grid || {})
+
+    // 2) 暫時拉高上/下邊界（只為了匯出好看）
+    inst.setOption({
+      grid: {
+        ...baseGrid,
+        containLabel: true,
+        top: Math.max(baseGrid.top || 0, 140),   // ← 關鍵：上方距離
+        bottom: Math.max(baseGrid.bottom || 0, 72),
+        left: Math.max(baseGrid.left || 0, 64),
+        right: Math.max(baseGrid.right || 0, 24),
+      }
+    })
+    inst.resize()
+    await new Promise(r => setTimeout(r, 80))   // 等版面重排
+
+    // 3) 匯出圖片（檔名已做安全化）
+    const rawUnit = ui.groups[i]?.unit || 'chart'
+    const safeUnit = String(rawUnit).replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, '_')
+    const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' })
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `營養比較_${safeUnit}_${i + 1}.png`
+    document.body.appendChild(a); a.click(); a.remove()
+
+    // 4) 還原原本的 grid 設定（不影響畫面互動）
+    inst.setOption({ grid: prevGrid ? prevGrid : {} })
+  }
+  showSuccess(`已匯出 ${charts.length} 張圖`)
+}
+
+
+function exportCsv() {
+  // rows: 單位, 營養素, 食材, 數值
+  const rows = [['單位', '營養素', '食材', '數值']]
+
+  ;(ui.groups || []).forEach(grp => {
+    const unit = grp.unit || ''
+    ;(grp.analytes || []).filter(a => !isPMS(a)).forEach(a => {
+      const name = a.analyteName || ''
+      ;(a.values || []).forEach(v => {
+        rows.push([unit, name, v?.sampleName ?? '', v?.value ?? ''])
+      })
+    })
+  })
+
+  if (rows.length === 1) {
+    return showWarn('沒有可匯出的數據（請先執行「開始比較」）')
+  }
+
+  // CSV 轉字串（安全包雙引號）
+  const csv = rows
+    .map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '營養比較.csv'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 /* ----------------------- group tag styles ----------------------- */

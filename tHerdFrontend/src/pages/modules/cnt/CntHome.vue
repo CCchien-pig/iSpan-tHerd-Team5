@@ -99,13 +99,13 @@
             :to="{ name: 'cnt-nutrition', query: { from: 'home', scroll: 'nutrition' } }"
             class="btn teal-reflect-button btn-hero-teal"
           >
-            單一食材營養 →
+            單項食材分析 →
           </router-link>
           <router-link
             :to="{ name: 'cnt-nutrition-compare' }"
             class="btn teal-reflect-button btn-hero-teal"
           >
-            多種食材比較 →
+            多項食材比較 →
           </router-link>
         </div>
 
