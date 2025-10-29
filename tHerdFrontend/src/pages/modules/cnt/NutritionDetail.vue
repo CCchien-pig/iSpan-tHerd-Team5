@@ -20,7 +20,7 @@
                   <span class="badge-text">{{ sample.categoryName }}</span>
                 </div>
               </div>
-
+              
               <!-- 🔍 搜尋營養素 -->
               <div class="mt-3 search-wrap">
                 <span class="search-icon">🔍</span>
@@ -31,7 +31,11 @@
                   placeholder="搜尋營養素（例：鈣、維生素B12、鐵）"
                 />
               </div>
-
+              <div class="mb-2">
+                <label style="font-size: 8;font-weight: 1000;font-style: italic;">
+                  查詢結果即時更新顯示在下方，請往下拖曳查看結果。
+                </label>
+              </div>
               <!-- 描述 -->
               <p class="mt-3 desc-text">
                 {{ sample.description || '（無描述）' }}
