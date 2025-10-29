@@ -91,7 +91,7 @@ public partial class SysAssetFile
 
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();
 
-    //public virtual ICollection<MktAd> MktAds { get; set; } = new List<MktAd>();
+    public virtual ICollection<MktAd> MktAds { get; set; } = new List<MktAd>();
 
     public virtual ICollection<MktCampaign> MktCampaigns { get; set; } = new List<MktCampaign>();
 
