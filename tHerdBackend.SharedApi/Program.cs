@@ -18,6 +18,9 @@ using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
+using tHerdBackend.SharedApi.Infrastructure.Config;
+using tHerdBackend.SharedApi.Infrastructure.Services;
+
 
 
 
@@ -27,10 +30,19 @@ namespace tHerdBackend.SharedApi
     {
         public static void Main(string[] args)
         {
+
             var builder = WebApplication.CreateBuilder(args);
 
-			//�إ߳s�u�r��
-			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+            builder.Host.ConfigureAppConfiguration((context, config) =>
+            {
+                if (context.HostingEnvironment.IsDevelopment())
+                {
+                    config.AddUserSecrets<Program>();
+                }
+            });
+
+            //�إ߳s�u�r��
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 			//與後台管理系統共用 Identity 使用者資料庫
@@ -236,6 +248,12 @@ namespace tHerdBackend.SharedApi
 			app.MapControllers();
 
             app.Run();
+
+            // === 讀取綠界設定值 ===
+            builder.Services.Configure<ECPaySettings>(
+		    builder.Configuration.GetSection("ECPay"));
+            builder.Services.AddScoped<ECPayService>();
+
         }
     }
 }
