@@ -14,5 +14,7 @@ namespace tHerdBackend.Core.DTOs.Common
 		public string FirstName { get; set; } = default!;
 		public string PhoneNumber { get; set; } = default!; // 新增
 		public string Gender { get; set; } = default!;      // 新增：建議 '男' / '女'
+
+		public string UsedReferralCode { get; set; } = default!;
 	}
 }

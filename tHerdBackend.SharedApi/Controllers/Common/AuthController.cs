@@ -186,6 +186,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 				Gender = gender,
 				IsActive = true,
 				MemberRankId = "MR001",
+				UsedReferralCode = dto.UsedReferralCode?.Trim(),
 				ReferralCode = referralCode // ★ 指派
 			};
 

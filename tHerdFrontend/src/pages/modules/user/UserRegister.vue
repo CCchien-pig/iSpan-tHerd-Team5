@@ -38,16 +38,21 @@
         />
       </div>
 
-      <!-- 手機 -->
-      <div class="mb-3">
-        <label class="form-label">手機號碼 <span class="text-danger">*</span></label>
-        <input
-          v-model.trim="phoneNumber"
-          type="tel"
-          class="form-control"
-          placeholder="0900000000"
-        />
-        <div class="form-text">僅做聯絡使用，不會公開。</div>
+      <!-- 手機 + 使用推薦碼 -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">手機號碼 <span class="text-danger">*</span></label>
+          <input
+            v-model.trim="phoneNumber"
+            type="tel"
+            class="form-control"
+            placeholder="0900000000"
+          />
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">使用推薦碼</label>
+          <input v-model.trim="usedReferralCode" class="form-control" />
+        </div>
       </div>
 
       <!-- 性別 -->
@@ -96,7 +101,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
@@ -107,7 +112,8 @@ const password = ref('')
 const lastName = ref('')
 const firstName = ref('')
 const phoneNumber = ref('')
-const gender = ref<'男' | '女'>('男')
+const gender = ref('男')
+const usedReferralCode = ref('')
 
 // UI 狀態
 const busy = ref(false)
@@ -117,15 +123,13 @@ const msgTypeClass = computed(() => (isError.value ? 'alert-danger' : 'alert-suc
 
 const router = useRouter()
 
-function validate(): string | null {
+function validate() {
   if (!lastName.value) return '請輸入姓氏'
   if (!firstName.value) return '請輸入名字'
   if (!email.value) return '請輸入 Email'
-  // 簡易 email 檢查
   if (!/^\S+@\S+\.\S+$/.test(email.value)) return 'Email 格式不正確'
   if (!password.value || password.value.length < 8) return '密碼請至少 8 碼'
   if (!phoneNumber.value) return '請輸入手機號碼'
-  // 簡單的台灣手機格式（可按需放寬/強化）
   if (!/^09\d{8}$/.test(phoneNumber.value)) return '手機號碼格式不正確（例：0900000000）'
   if (!gender.value) return '請選擇性別'
   return null
@@ -143,7 +147,7 @@ async function doRegister() {
 
   busy.value = true
   try {
-    // 目前後端 /api/auth/register 依你設定：回傳 { ok, userId, referralCode }
+    // 目前後端 /api/auth/register：回傳 { ok, userId, referralCode }
     const payload = {
       email: email.value,
       password: password.value,
@@ -151,16 +155,17 @@ async function doRegister() {
       firstName: firstName.value,
       phoneNumber: phoneNumber.value,
       gender: gender.value,
+      usedReferralCode: usedReferralCode.value,
     }
-    const { data } = await http.post('/auth/register', payload)
+    await http.post('/auth/register', payload)
 
-    // 註冊成功 → 導向登入頁，並把 email 帶去預填
+    // 註冊成功 → 導去登入頁，並帶 email 預填
     msg.value = '註冊成功，將前往登入頁…'
     isError.value = false
     setTimeout(() => {
       router.replace({ name: 'userlogin', query: { email: email.value } })
     }, 600)
-  } catch (e: any) {
+  } catch (e) {
     isError.value = true
     msg.value = e?.response?.data?.error || '註冊失敗，請稍後再試'
     console.error('[register failed]', e?.response?.data || e)
