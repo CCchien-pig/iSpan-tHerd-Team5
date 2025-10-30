@@ -296,7 +296,6 @@ window.UploadImageModal = (function () {
 })();
 
 // === 🔹 統一回到圖片選擇器的函式 ===
-// === 🔹 統一回到圖片選擇器的函式 ===
 async function returnToImageSelector() {
     const showLoading = window.showGlobalLoading;
     const hideLoading = window.hideGlobalLoading;
