@@ -10,7 +10,7 @@
     var modalId = "uploadImageModal_" + moduleId + "_" + progId; // ✅ 防止 ID 衝突
 }
 
-<!-- 🔹 選擇圖片（從共用 Images 模組中挑圖綁定） -->
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用1 *@
 <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnBindProductImage">
     <i class="bi bi-images"></i> 選擇圖片
 </button>
@@ -40,6 +40,7 @@
                     IsActive = true
                 }).ToList();
 
+                <!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用2 *@
                 @await Html.PartialAsync("_FileListPartial", fileList)
             }
             else
@@ -50,9 +51,10 @@
     </div>
 </div>
 
-<!-- 🔹 圖片選擇器 Modal（含上傳功能） -->
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用3 *@
 @await Html.PartialAsync("_FileSelectPartial", new List<SysAssetFileDto>())
 
+    <!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用4 : 要改成自己的 *@
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         const btnSelect = document.getElementById("btnBindProductImage");
