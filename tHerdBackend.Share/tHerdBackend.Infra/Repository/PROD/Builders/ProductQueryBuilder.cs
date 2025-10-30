@@ -23,6 +23,8 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
                 sql.Append(" AND sp.MinSkuPrice >= @MinPrice");
             if (query.MaxPrice.HasValue)
                 sql.Append(" AND sp.MaxSkuPrice <= @MaxPrice");
+            if (query.IsPublished.HasValue)
+                sql.Append(" AND p.IsPublished = @IsPublished");
         }
 
         public static string BuildOrderClause(ProductFilterQueryDto query) => query.SortBy switch

@@ -207,26 +207,29 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 					Keyword = keyword,
 					SortBy = sortBy,
 					SortDesc = sortDesc,
-					ProductId = productId
-				};
+					ProductId = productId,
+                    IsPublished = isPublished
+                };
 
 				var (list, totalCount) = await _repo.GetAllAsync(query);
 
-				// DataTables 標準格式
-				var result = new
-				{
-					data = list,
-					recordsTotal = totalCount,
-					recordsFiltered = totalCount
-				};
-
-				return Json(result);
-			}
+                // === 回傳 DataTables 標準格式 ===
+                return Json(new
+                {
+                    draw = Request.Query["draw"].FirstOrDefault(), // DataTables 自動帶
+                    recordsTotal = totalCount,                     // 總筆數（未篩選）
+                    recordsFiltered = totalCount,                  // 篩選後筆數
+                    data = list                                    // 當頁資料
+                });
+            }
 			catch (Exception ex)
 			{
-				Response.StatusCode = 500;
-				return Json(new { error = ex.Message });
-			}
+                return StatusCode(500, new
+                {
+                    error = "伺服器錯誤",
+                    message = ex.Message
+                });
+            }
 		}
 	}
 }

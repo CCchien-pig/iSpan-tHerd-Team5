@@ -36,9 +36,8 @@
     </div>
 
     <div class="card-body">
-
-        <!-- 🔸 篩選區 -->
-        <div class="row mb-3">
+        @* 篩選區 *@
+        <div class="row mb-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label fw-bold">品牌</label>
                 <select id="brandFilter" class="form-select">
@@ -49,17 +48,19 @@
                     }
                 </select>
             </div>
+
             <div class="col-md-3">
                 <label class="form-label fw-bold">分類</label>
                 <select id="typeFilter" class="form-select">
                     <option value="">全部</option>
                     @foreach (var t in (List<ProdProductTypeConfigDto>)ViewBag.TypeDtos)
                     {
-                        <option value="@t.ProductTypeName">@t.ProductTypeName</option>
+                        <option value="@t.ProductTypeId">@t.ProductTypeName</option>   <!-- ✅ 改成 Id -->
                     }
                 </select>
             </div>
-            <div class="col-md-3">
+
+            <div class="col-md-2">
                 <label class="form-label fw-bold">是否上架</label>
                 <select id="publishFilter" class="form-select">
                     <option value="">全部</option>
@@ -67,15 +68,13 @@
                     <option value="false">下架</option>
                 </select>
             </div>
-            <div class="col-md-3">
+
+            <div class="col-md-2">
                 <label class="form-label fw-bold">商品編號</label>
                 <input type="text" id="productId" class="form-control" placeholder="輸入商品編號">
             </div>
-        </div>
 
-        <!-- ✅ 單獨放查詢按鈕 -->
-        <div class="row mb-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <button id="btnSearch" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> 查詢
                 </button>
@@ -122,10 +121,16 @@ $(function () {
             url: apiUrl,
             type: "GET",
             data: function (d) {
+                const isPublishedVal = $('#publishFilter').val();
+                const parsedIsPublished = 
+                    isPublishedVal === "" ? null :
+                    isPublishedVal === "true" ? true :
+                    isPublishedVal === "false" ? false : null;
+
                 d.brandId = $('#brandFilter').val();
                 d.productTypeId = $('#typeFilter').val();
-                d.isPublished = $('#publishFilter').val();
-                d.productId = $('#productId').val(); // ✅ 新增條件
+                d.isPublished = parsedIsPublished;
+                d.productId = $('#productId').val();
                 d.pageIndex = (d.start / d.length) + 1;
                 d.pageSize = d.length;
             },

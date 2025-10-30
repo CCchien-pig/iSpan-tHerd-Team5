@@ -70,11 +70,15 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
+        /// <summary>
+        /// 查詢商品清單
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
         public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
             ProductFilterQueryDto query, CancellationToken ct = default)
         {
-            //int skip = (query.PageIndex - 1) * query.PageSize;
-            //int take = query.PageSize;
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
@@ -101,14 +105,13 @@ namespace tHerdBackend.Infra.Repository.PROD
                   ) sp ON sp.ProductId = p.ProductId
                   LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
                   LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
-                 WHERE p.IsPublished=1 ");
+                 WHERE 1 = 1 ");
 
             // === Step 2. 條件過濾 ===
             ProductQueryBuilder.AppendFilters(sql, query);
 
-            // === Step 3. 排序 + 分頁 ===
+            // === Step 3. 排序 ===
             sql.Append(ProductQueryBuilder.BuildOrderClause(query));
-            sql.Append(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 
             // === Step 4. 統計筆數 ===
             var countSql = new StringBuilder(@"
@@ -126,7 +129,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                        WHERE IsActive = 1
                        GROUP BY ProductId
                   ) sp ON sp.ProductId = p.ProductId
-                 WHERE p.IsPublished=1");
+                 WHERE 1=1 ");
 
             ProductQueryBuilder.AppendFilters(countSql, query);
 
@@ -143,24 +146,33 @@ namespace tHerdBackend.Infra.Repository.PROD
                     query.BrandId, 
                     query.ProductTypeId, 
                     query.MinPrice, 
-                    query.MaxPrice };
+                    query.MaxPrice,
+                    query.IsPublished
+                };
 
                 var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
-                        sql.ToString(), 
-                        (p, typeName) => { 
-                            if (!string.IsNullOrEmpty(typeName)) p.ProductTypeDesc = new() { typeName }; return p; 
-                        }, 
-                        parameters, 
-                        tx, 
-                        splitOn: "ProductTypeName"
-                    );
+                    sql.ToString(),
+                    (p, typeName) => {
+                        if (!string.IsNullOrEmpty(typeName))
+                            p.ProductTypeDesc = new() { typeName };
+                        return p;
+                    },
+                    parameters, tx, splitOn: "ProductTypeName"
+                );
 
-                var list = raw.GroupBy(p => p.ProductId).Select(g =>
+                var grouped = raw.GroupBy(p => p.ProductId).Select(g =>
                 {
                     var first = g.First();
                     first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc ?? new()).Distinct().ToList();
                     return first;
                 }).ToList();
+
+                // 記憶體分頁
+                var list = (query.PageSize > 0)
+                    ? grouped.Skip((query.PageIndex - 1) * query.PageSize)
+                             .Take(query.PageSize)
+                             .ToList()
+                    : grouped.ToList();
 
                 // === Step 6. 計算總筆數 ===
                 var total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, tx);
@@ -174,16 +186,9 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
 			catch (Exception ex)
 			{
-				// ✅ 捕捉所有錯誤，輸出詳細資訊
-				Console.WriteLine("❌ [GetAllAsync] SQL Error ---------------------------------");
-				Console.WriteLine($"Message: {ex.Message}");
-				Console.WriteLine($"StackTrace: {ex.StackTrace}");
-				Console.WriteLine($"SQL:\n{sql}");
-				Console.WriteLine("------------------------------------------------------------");
-
-				// ✅ 回傳空集合 + 0 總筆數，避免前端崩潰
-				return (Enumerable.Empty<ProdProductDto>(), 0);
-			}
+                Console.WriteLine("❌ [GetAllAsync] " + ex);
+                return (Enumerable.Empty<ProdProductDto>(), 0);
+            }
 			finally
             {
                 if (needDispose) conn.Dispose();
