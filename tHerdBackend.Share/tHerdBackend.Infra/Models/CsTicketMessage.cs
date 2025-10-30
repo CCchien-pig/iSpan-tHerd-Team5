@@ -6,39 +6,37 @@ using System.Collections.Generic;
 namespace tHerdBackend.Infra.Models;
 
 /// <summary>
-/// 分享點擊紀錄
+/// 客服工單訊息
 /// </summary>
-public partial class CntShareClick
+public partial class CsTicketMessage
 {
     /// <summary>
-    /// 分享點擊 ID
+    /// 訊息 ID
     /// </summary>
-    public int ShareClickId { get; set; }
+    public int MessageId { get; set; }
 
     /// <summary>
-    /// 文章 ID
+    /// 所屬工單 ID
     /// </summary>
-    public int PageId { get; set; }
+    public int TicketId { get; set; }
 
     /// <summary>
-    /// IP 紀錄
+    /// 發送者類型（1=客戶，2=客服）
     /// </summary>
-    public string Ipaddress { get; set; }
+    public byte SenderType { get; set; }
 
     /// <summary>
-    /// 訪客識別
+    /// 訊息內容
     /// </summary>
-    public string VisitorToken { get; set; }
+    public string MessageText { get; set; }
 
     /// <summary>
-    /// 會員 ID
+    /// 附件路徑（可空）
     /// </summary>
-    public int? UserNumberId { get; set; }
+    public string AttachmentUrl { get; set; }
 
     /// <summary>
-    /// 點擊時間
+    /// 建立時間 (UTC)
     /// </summary>
     public DateTime CreatedDate { get; set; }
-
-    public virtual CntPage Page { get; set; }
 }
