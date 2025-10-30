@@ -8,9 +8,6 @@ using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.USER;
-using tHerdBackend.Infra.Models;
-using tHerdBackend.Services.Common;
-using tHerdBackend.SharedApi.Infrastructure.Referral;
 
 namespace tHerdBackend.SharedApi.Controllers.Common
 {
