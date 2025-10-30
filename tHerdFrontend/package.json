@@ -15,7 +15,10 @@
     "lint": "run-s lint:*",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,vue,json,css,scss,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,vue,json,css,scss,md}\"",
-    "format:all": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,json,css,scss,md}\" --ignore-path .prettierignore"
+    "format:all": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,json,css,scss,md}\" --ignore-path .prettierignore",
+    "ngrok:frontend": "ngrok http 5173",
+    "ngrok:backend": "ngrok http 7200 --host-header=\"localhost:7200\"",
+    "dev:with-ngrok": "run-p dev ngrok:frontend"
   },
   "dependencies": {
     "@fawmi/vue-google-maps": "^0.9.79",

@@ -144,6 +144,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[CS_TicketHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CS_TicketMessage]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[MKT_Ad]",
          "ObjectType": 0
       },
@@ -309,10 +317,6 @@
       },
       {
          "Name": "[dbo].[PROD_SpecificationOption]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[RefreshTokens]",
          "ObjectType": 0
       },
       {

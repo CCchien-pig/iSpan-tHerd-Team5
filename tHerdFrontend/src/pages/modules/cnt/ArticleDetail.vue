@@ -15,7 +15,7 @@
     </div>
 
     <!-- Banner / Title -->
-    <div class="rounded-3 p-4 mb-3" style="background:#e9f6f6;">
+    <div id="article-top" class="rounded-3 p-4 mb-3" style="background:#e9f6f6;">
       <h1 class="m-0 main-color-green-text">{{ article.title }}</h1>
       <p class="text-muted mb-0">{{ formatDate(article.publishedDate) }}</p>
     </div>
@@ -184,7 +184,7 @@ function getNavbarOffset() {
   return 80;
 }
 
-function scrollToWithOffset(id) {
+function scrollToWithOffset(id, adjust = 0) {
   const el = document.getElementById(id);
   if (!el) return;
 
@@ -192,7 +192,7 @@ function scrollToWithOffset(id) {
   const isWindow = scroller === window;
   const scTop = isWindow ? 0 : scroller.getBoundingClientRect().top;
   const current = isWindow ? window.scrollY : scroller.scrollTop;
-  const offset = (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA;
+  const offset = (currentNavbarOffset || getNavbarOffset()) + STICKY_EXTRA + adjust;
 
   const targetAbs = el.getBoundingClientRect().top - scTop + current;
   const to = Math.max(0, targetAbs - offset);
@@ -268,7 +268,7 @@ onMounted(async () => {
   // ✅ 若從列表/首頁帶入 scroll=body，進入就捲到正文
   if (route.query.scroll === "body") {
     setTimeout(() => {
-      scrollToWithOffset("article-body-start"); // 或傳入第一個 h2 的 id
+      scrollToWithOffset("article-top", 0); // ← 改這行：鎖在標題區塊
     }, 300);
   }
   buildHeadings();
@@ -464,8 +464,21 @@ function setupStickyAssist() {
 }
 
 function goBack() {
-  if (window.history.length > 1) router.back();
-  else router.push({ name: "cnt-articles" });
+  const { categoryId, q, page, from } = route.query || {};
+  if (from === "list") {
+    router.push({
+      name: "cnt-articles",
+      query: {
+        categoryId,
+        q,
+        page,
+        scroll: "title",
+      },
+    });
+  } else {
+    // 不確定來源就回標題
+    router.push({ name: "cnt-articles", query: { scroll: "title" } });
+  }
 }
 
 function currentUrl() {
@@ -803,5 +816,10 @@ function formatDate(d) {
   .toc-bar button {
     font-size: 0.85rem;
   }
+}
+
+/* 讓原生 #錨點 或 scrollIntoView 也對齊 */
+.article-content :where(h2[id], h3[id]) {
+  scroll-margin-top: calc(var(--navbar-height) + 10px);
 }
 </style>
