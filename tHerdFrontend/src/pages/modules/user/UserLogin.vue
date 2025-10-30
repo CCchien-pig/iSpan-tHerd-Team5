@@ -233,7 +233,7 @@ import { useAuthStore } from '@/stores/auth'
  * - 請在 .env 設定 VITE_RECAPTCHA_V2_SITE_KEY=你的_site_key
  * - 這裡採「顯式渲染」（explicit），用 grecaptcha.render 顯示核取方塊。
  */
-const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_V2_SITE_KEY
+const RECAPTCHA_SITE_KEY = document.querySelector('meta[name="recaptcha-site-key"]')?.getAttribute('content') ?? '';
 const RECAPTCHA_SRC =
   'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
 
