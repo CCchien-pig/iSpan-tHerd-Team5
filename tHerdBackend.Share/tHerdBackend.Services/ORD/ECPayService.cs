@@ -13,13 +13,13 @@ namespace tHerdBackend.Services.ORD
 {
     public class ECPayService : IECPayService
     {
-        private readonly ECPayConfig _config;
+        private readonly ECPayConfigDTO _config;
         private readonly IEcpayNotificationRepository _notificationRepo;
         private readonly IPaymentRepository _paymentRepo;
         private readonly ILogger<ECPayService> _logger;
 
         public ECPayService(
-            IOptions<ECPayConfig> config,
+            IOptions<ECPayConfigDTO> config,
             IEcpayNotificationRepository notificationRepo,
             IPaymentRepository paymentRepo,
             ILogger<ECPayService> logger)
@@ -75,37 +75,33 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         private string GenerateCheckMacValue(SortedDictionary<string, string> parameters)
         {
+            // 1️⃣ 組原始字串
             var raw = $"HashKey={_config.HashKey}&{string.Join("&", parameters.Select(p => $"{p.Key}={p.Value}"))}&HashIV={_config.HashIV}";
-
             _logger.LogInformation($"[CheckMac Step1 原始] {raw}");
 
-            // 綠界要求的特殊 encode（模擬 PHP rawurlencode）
-            string encoded = Uri.EscapeDataString(raw).ToLower();
+            // 2️⃣ URL Encode（依照官方規範）
+            string encoded = HttpUtility.UrlEncode(raw).ToLower();
 
-            // 綠界規則修正：某些符號要還原
+            // 3️⃣ 官方特殊字元還原（注意：這一串要一字不漏）
             encoded = encoded
-                .Replace("%20", "+")
-                .Replace("%21", "!")
-                .Replace("%28", "(")
-                .Replace("%29", ")")
-                .Replace("%2a", "*")
                 .Replace("%2d", "-")
+                .Replace("%5f", "_")
                 .Replace("%2e", ".")
-                .Replace("%5f", "_");
+                .Replace("%21", "!")
+                .Replace("%2a", "*")
+                .Replace("%28", "(")
+                .Replace("%29", ")");
 
             _logger.LogInformation($"[CheckMac Step2 Encode修正] {encoded}");
 
-            // MD5 → 大寫
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(encoded));
+            // 4️⃣ 使用 SHA256（因為 EncryptType=1）
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(encoded));
             var checkMac = BitConverter.ToString(bytes).Replace("-", "").ToUpper();
 
-            _logger.LogInformation($"[CheckMac Step3 MD5] {checkMac}");
+            _logger.LogInformation($"[CheckMac Step3 SHA256] {checkMac}");
             return checkMac;
         }
-
-
-
 
 
         /// <summary>
