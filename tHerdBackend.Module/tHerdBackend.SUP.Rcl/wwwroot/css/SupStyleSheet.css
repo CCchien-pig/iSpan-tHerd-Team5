@@ -302,6 +302,9 @@ input[type='radio']:focus {
 #brandTable tr:hover .text-danger {
     color: #ffc4e1 !important;
 }
+#brandTable tr:hover .text-secondary {
+    color: #d5daff !important;
+}
 #brandTable .text-warning {
     color: #ff8108 !important;
 }
@@ -575,4 +578,43 @@ button.dt-paging-button.current:not(:disabled):hover {
         background-color: #a349a4 !important;
         box-shadow: none;
     }
+
+
+
+/* 全螢幕時覆蓋 modal-content 及 container 限制，鋪滿整個 viewport */
+#brandLayoutModal .modal-dialog.custom-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1060;
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    justify-content: center; /* 水平置中 */
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+    #brandLayoutModal .modal-dialog.custom-fullscreen .modal-content.container {
+        /* 寬高用百分比+px限制 */
+        width: calc(100vw - 40px);
+        height: 80vh;
+        max-width: 100vw;
+        max-height: 80vh;
+        border-radius: 10px;
+        background: #fff;
+        box-sizing: border-box;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+#brandLayoutModal .modal-dialog.custom-fullscreen {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+}
 
