@@ -1,0 +1,40 @@
+﻿@using Syncfusion.EJ2.FileManager
+@model tHerdBackend.UIKit.Rcl.ViewComponents.FileManagerModalViewComponent.FileManagerModalViewModel
+
+<div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-folder me-2 text-primary"></i>
+                    檔案管理器（@Model.ModuleId / @Model.ProgId）
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <ejs-filemanager id="fileManager_@Model.ModalId"
+                                 height="500"
+                                 allowMultiSelection="true"
+                                 @* ✅ 用 string[] 而不是 List<string> *@
+                                 toolbarSettings="@(new FileManagerToolbarSettings { 
+                                     Items = new string[] { "NewFolder", "Upload", "Delete", "Download", "Rename", "Refresh" } 
+                                 })"
+                                 ajaxSettings="@(new FileManagerAjaxSettings {
+                                     Url = Url.Action("FileOperations", "FileManager"),
+                                     UploadUrl = Url.Action("Upload", "FileManager"),
+                                     DownloadUrl = Url.Action("Download", "FileManager"),
+                                     GetImageUrl = Url.Action("GetImage", "FileManager")
+                                 })">
+                </ejs-filemanager>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" id="btnConfirmFileSelect">
+                    <i class="bi bi-check-circle"></i> 確定選取
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,62 +1,96 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using tHerdBackend.Core.DTOs;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Interfaces.SYS;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {
     [Area("SYS")]
-    public class UploadTestController : Controller
+    [Route("SYS/[controller]/[action]")]
+    public class UploadTestController : BaseUploadController
     {
-        private readonly ISysAssetFileService _frepo;
+        private const string MODULE_ID = "SYS";
+        private const string PROG_ID = "UploadTest";
 
-        public UploadTestController(ISysAssetFileService frepo)
+        public UploadTestController(ISysAssetFileService frepo, IWebHostEnvironment env)
+            : base(frepo, env)
         {
-            _frepo = frepo;
         }
 
         /// <summary>
-        /// 上傳檔案
+        /// ✅ 通用上傳 API，可跨模組呼叫
+        /// 前端呼叫：POST /SYS/UploadTest/SaveFiles
         /// </summary>
-        /// <param name="uploadDto"></param>
-        /// <returns></returns>
         [HttpPost]
-        public async Task<IActionResult> Index(AssetFileUploadDto uploadDto)
+        [RequestSizeLimit(100_000_000)]
+        public async Task<IActionResult> SaveFiles(
+            [FromForm] string moduleId,
+            [FromForm] string progId,
+            [FromForm] bool isExternal)
         {
-            if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
-            {
-                ViewBag.Message = "請至少選擇一個檔案";
-                var files = await _frepo.GetFilesByProg("SYS", "UploadTest");
-                return View(files);
-            }
-
-            uploadDto.ModuleId = "SYS";
-            uploadDto.ProgId = "UploadTest";
+            if (string.IsNullOrWhiteSpace(moduleId) || string.IsNullOrWhiteSpace(progId))
+                return BadRequest(new { success = false, message = "缺少 moduleId 或 progId" });
 
             try
             {
-                var imageUrls = await _frepo.AddImages(uploadDto); // 呼叫服務上傳圖片
-
-                ViewBag.ImageUrls = imageUrls; // 將圖片 URL 傳遞到 View
-
-                TempData["SuccessMessage"] = "圖片已成功上傳！";
+                // 把 IsExternal 一起傳給 HandleUploadAsync
+                var result = await HandleUploadAsync(moduleId, progId, isExternal);
+                return Json(new { success = true, message = "上傳成功", result });
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"上傳失敗：{ex.Message}";
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
-
-            return RedirectToAction("Index"); // 建議 Redirect，避免重新整理重送
         }
 
         /// <summary>
-        /// 預設載入
+        /// 初次載入（GET）
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? moduleId, string? progId)
         {
-            var files = await _frepo.GetFilesByProg("SYS", "UploadTest"); // 依據模組及程式，取得已上傳的檔案
+            var files = await _fileService.GetFilesByProg(MODULE_ID, PROG_ID);
             return View(files);
+        }
+
+        /// <summary>
+        /// 覆寫基底回傳方式（確保使用正確 View）
+        /// </summary>
+        protected override async Task<IActionResult> ReturnIndexViewAsync(string moduleId, string progId)
+        {
+            var files = await _fileService.GetFilesByProg(MODULE_ID, PROG_ID);
+            return View("Index", files);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetFilesByProg(string moduleId, string progId, bool json = false)
+        {
+            try
+            {
+                moduleId ??= "SYS";
+                progId ??= "UploadTest";
+
+                var files = await _fileService.GetFilesByProg(moduleId, progId);
+
+                if (json)
+                    return Json(files); // 使用原本的 DTO 命名
+
+                return PartialView("_FileListPartial", files);
+            }
+            catch (Exception ex)
+            {
+                // 若要除錯，這行可以暫時開啟
+                // return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+
+                // 正式環境建議用這行
+                return StatusCode(500, "伺服器內部錯誤，請稍後再試。");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSelectableFiles(string moduleId, string progId)
+        {
+            var files = await _fileService.GetFilesByProg(moduleId, progId);
+            return PartialView("~/Views/Shared/_FileSelectPartial.cshtml", files);
         }
     }
 }

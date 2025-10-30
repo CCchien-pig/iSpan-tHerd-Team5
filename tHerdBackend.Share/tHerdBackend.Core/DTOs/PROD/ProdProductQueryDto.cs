@@ -11,6 +11,9 @@ public partial class ProductFilterQueryDto
 	public decimal? MaxPrice { get; set; }      // 最高價
 	public string? SortBy { get; set; }         // 排序欄位
     public bool SortDesc { get; set; } = false; // 是否倒序
+    public bool? IsPublished { get; set; }      // 是否發佈
+
+    public int? ProductId { get; set; }
 }
 
 /// <summary>
