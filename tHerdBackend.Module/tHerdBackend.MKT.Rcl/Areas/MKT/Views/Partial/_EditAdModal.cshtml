@@ -1,8 +1,12 @@
-﻿<div class="modal fade" id="adModal" tabindex="-1" aria-hidden="true">
+﻿<!-- ✅ SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="modal fade" id="adModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="adForm" enctype="multipart/form-data">
+            <form id="adForm" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="AdId" value="@Model.AdId" />
+                <input type="hidden" name="Status" value="aActive" />
 
                 <div class="modal-header">
                     <h5 class="modal-title">編輯廣告</h5>
@@ -10,47 +14,77 @@
                 </div>
 
                 <div class="modal-body">
+                    <!-- 🟢 廣告種類 -->
                     <div class="mb-3">
-                        <label class="form-label">標題</label>
-                        <input type="text" name="Title" value="@Model.Title" class="form-control" required />
+                        <label class="form-label">廣告種類</label>
+                        <select name="AdType" class="form-select" id="adTypeSelect">
+                            <option value="Carousel" @(Model.AdType == "Carousel" ? "selected" : "")>輪播圖</option>
+                            <option value="Popup" @(Model.AdType == "Popup" ? "selected" : "")>彈出式廣告</option>
+                            <option value="Marquee" @(Model.AdType == "Marquee" ? "selected" : "")>跑馬燈</option>
+                        </select>
                     </div>
 
+                    <!-- 📝 標題 -->
                     <div class="mb-3">
+                        <label class="form-label">標題</label>
+                        <input type="text" name="Title" value="@Model.Title" class="form-control" />
+                    </div>
+
+                    <!-- 📝 內容 -->
+                    <div class="mb-3" id="contentField">
                         <label class="form-label">內容</label>
                         <textarea name="Content" class="form-control">@Model.Content</textarea>
                     </div>
 
-                    <div class="mb-3">
+                    <!-- 🖼 圖片 -->
+                    <div class="mb-3" id="imageField">
                         <label class="form-label">廣告圖片</label>
-                        <input type="file" name="ImgId" class="form-control" />
+                        <!-- ⚠️ 關鍵修改：name 改為 imageFile -->
+                        <input type="file" name="imageFile" class="form-control" id="imageInput" accept="image/*" />
+                        <div class="mt-2">
+                            <img id="imagePreview"
+                                 src="@(!string.IsNullOrEmpty(Model.ImgPath) ? Model.ImgPath : "")"
+                                 class="img-fluid border rounded @(string.IsNullOrEmpty(Model.ImgPath) ? "d-none" : "")"
+                                 style="max-height: 200px;" />
+                        </div>
                     </div>
 
+                    <!-- ⏰ 日期 -->
                     <div class="mb-3">
                         <label class="form-label">開始日期</label>
-                        <input type="datetime-local" name="StartDate" value="@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")" class="form-control" required />
+                        <input type="date" name="StartDate" id="StartDate"
+                               value="@Model.StartDate.ToString("yyyy-MM-dd")"
+                               class="form-control" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">結束日期</label>
-                        <input type="datetime-local" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" />
+                        <input type="date" name="EndDate" id="EndDate"
+                               value="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+                               class="form-control" />
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">狀態</label>
-                        <select name="Status" class="form-select">
-                            <option value="aActive" @(Model.Status == "aActive" ? "selected" : "")>上架</option>
-                            <option value="aInactive" @(Model.Status == "aInactive" ? "selected" : "")>下架</option>
-                        </select>
-                    </div>
-
+                    <!-- ✅ 是否啟用 -->
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="IsActive" value="true" @(Model.IsActive ? "checked" : "") />
                         <label class="form-check-label">啟用</label>
                     </div>
 
+                    <!-- 👩 建檔人員 -->
                     <div class="mb-3">
                         <label class="form-label">建檔人員</label>
-                        <input type="text" name="Creator" value="@Model.Creator" class="form-control" required />
+                        <input type="text" name="Creator" value="@Model.Creator" class="form-control" />
+                    </div>
+
+                    <!-- 🆕 按鈕 -->
+                    <div class="mb-3" id="buttonTextField">
+                        <label class="form-label">按鈕文字</label>
+                        <input type="text" name="ButtonText" value="@Model.ButtonText" class="form-control" />
+                    </div>
+
+                    <div class="mb-3" id="buttonLinkField">
+                        <label class="form-label">按鈕連結</label>
+                        <input type="text" name="ButtonLink" value="@Model.ButtonLink" class="form-control" />
                     </div>
                 </div>
 
@@ -63,3 +97,151 @@
         </div>
     </div>
 </div>
+
+
+<script>
+    $(document).ready(function () {
+      const today = new Date().toISOString().split('T')[0];
+      $('#StartDate').attr('min', today);
+      $('#EndDate').attr('min', today);
+
+      // 🖼 圖片預覽
+      $('#imageInput').on('change', function (e) {
+        const file = e.target.files[0];
+        const preview = $('#imagePreview');
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = ev => preview.attr('src', ev.target.result).removeClass('d-none');
+          reader.readAsDataURL(file);
+        } else {
+          preview.addClass('d-none').attr('src', '');
+        }
+      });
+
+      // 🧭 廣告種類控制
+      function updateAdFields() {
+        const type = $('#adTypeSelect').val();
+        $('#adForm input, #adForm textarea, #adForm select')
+          .prop('disabled', false)
+          .css({ 'pointer-events': 'auto', 'opacity': '1' });
+
+        $('#Status').val('aActive');
+        $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
+
+        if (type === 'Popup') {
+          disableExcept(['AdId', 'Title', 'imageFile', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
+          $('#contentField, #buttonTextField, #buttonLinkField').hide();
+          setDefaultValues({ Content: '', ButtonText: '了解更多', ButtonLink: '/shop' });
+        }
+
+        if (type === 'Marquee') {
+          disableExcept(['AdId', 'Title', 'Content', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
+          $('#imageField, #buttonTextField, #buttonLinkField').hide();
+          setDefaultValues({ imageFile: '', ButtonText: '', ButtonLink: '' });
+        }
+
+        if (type === 'Carousel') {
+          $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
+          $('#adForm input, #adForm textarea').prop('disabled', false).css({ 'opacity': '1' });
+        }
+      }
+
+      function disableExcept(enabledNames) {
+        $('#adForm input, #adForm textarea, #adForm select').each(function () {
+          const name = $(this).attr('name');
+          if (!enabledNames.includes(name) && name !== 'Status' && name !== 'AdId') {
+            $(this).prop('disabled', true).css({ 'pointer-events': 'none', 'opacity': '0.6' });
+          }
+        });
+      }
+
+      function setDefaultValues(values) {
+        for (const key in values) {
+          $(`[name="${key}"]`).val(values[key]);
+        }
+      }
+
+      $('#adTypeSelect').on('change', updateAdFields);
+      updateAdFields();
+
+      // 🗓 日期檢查
+      $('#StartDate, #EndDate').on('change', function () {
+        const start = $('#StartDate').val();
+        const end = $('#EndDate').val();
+        if (start && end && end < start) {
+          Swal.fire({
+            icon: 'warning',
+            title: '日期錯誤',
+            text: '結束日期不能早於開始日期！',
+            confirmButtonColor: '#007083'
+          });
+          $('#EndDate').val('');
+        }
+      });
+
+      // 🧾 表單送出
+      $('#adForm').on('submit', function (e) {
+        e.preventDefault();
+
+        const adId = $('[name="AdId"]').val();
+        const title = $('[name="Title"]').val();
+        const start = $('#StartDate').val();
+
+        if (!title || !start) {
+          Swal.fire({
+            icon: 'warning',
+            title: '缺少必填欄位',
+            text: '請確認標題與日期已填寫！',
+            confirmButtonColor: '#007083'
+          });
+          return;
+        }
+
+        const formData = new FormData(this);
+
+        $.ajax({
+          url: '/MKT/Ads/Edit',
+          type: 'POST',
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function (res) {
+            if (res.success) {
+              Swal.fire({
+                icon: 'success',
+                title: '修改成功',
+                showConfirmButton: false,
+                timer: 1200
+              });
+              setTimeout(() => {
+                $('#adModal').modal('hide');
+              }, 1200);
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: '更新失敗',
+                text: res.message || '請稍後再試。',
+                confirmButtonColor: '#007083'
+              });
+            }
+          },
+          error: function () {
+            Swal.fire({
+              icon: 'error',
+              title: '伺服器錯誤',
+              text: '請稍後再試。',
+              confirmButtonColor: '#007083'
+            });
+          }
+        });
+      });
+    });
+</script>
+
+<style>
+    input:disabled, textarea:disabled {
+        background-color: #f5f5f5 !important;
+        color: #999 !important;
+        cursor: not-allowed;
+    }
+</style>

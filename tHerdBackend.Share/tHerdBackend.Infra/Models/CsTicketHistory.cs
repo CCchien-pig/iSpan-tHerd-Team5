@@ -59,4 +59,6 @@ public partial class CsTicketHistory
     /// 異動時間 (UTC)
     /// </summary>
     public DateTime ChangedDate { get; set; }
+
+    public virtual CsTicket Ticket { get; set; }
 }

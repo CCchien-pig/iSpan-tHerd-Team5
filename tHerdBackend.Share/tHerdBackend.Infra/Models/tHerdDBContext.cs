@@ -13,12 +13,1157 @@ public partial class tHerdDBContext : DbContext
     {
     }
 
+    public virtual DbSet<AspNetRole> AspNetRoles { get; set; }
+
+    public virtual DbSet<AspNetRoleClaim> AspNetRoleClaims { get; set; }
+
+    public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
+
+    public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
+
+    public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
+
+    public virtual DbSet<AspNetUserToken> AspNetUserTokens { get; set; }
+
+    public virtual DbSet<CntAnalyte> CntAnalytes { get; set; }
+
+    public virtual DbSet<CntAnalyteCategory> CntAnalyteCategories { get; set; }
+
+    public virtual DbSet<CntDataType> CntDataTypes { get; set; }
+
+    public virtual DbSet<CntFoodCategory> CntFoodCategories { get; set; }
+
+    public virtual DbSet<CntMeasurement> CntMeasurements { get; set; }
+
+    public virtual DbSet<CntMedium> CntMedia { get; set; }
+
+    public virtual DbSet<CntNutritionFact> CntNutritionFacts { get; set; }
+
+    public virtual DbSet<CntNutritionStaging> CntNutritionStagings { get; set; }
+
+    public virtual DbSet<CntPage> CntPages { get; set; }
+
+    public virtual DbSet<CntPageBlock> CntPageBlocks { get; set; }
+
+    public virtual DbSet<CntPageTag> CntPageTags { get; set; }
+
+    public virtual DbSet<CntPageType> CntPageTypes { get; set; }
+
+    public virtual DbSet<CntPurchase> CntPurchases { get; set; }
+
+    public virtual DbSet<CntSample> CntSamples { get; set; }
+
+    public virtual DbSet<CntSchedule> CntSchedules { get; set; }
+
+    public virtual DbSet<CntShareClick> CntShareClicks { get; set; }
+
+    public virtual DbSet<CntTag> CntTags { get; set; }
+
+    public virtual DbSet<CsAutoReplyRule> CsAutoReplyRules { get; set; }
+
+    public virtual DbSet<CsChatMessage> CsChatMessages { get; set; }
+
+    public virtual DbSet<CsChatSession> CsChatSessions { get; set; }
+
+    public virtual DbSet<CsFaq> CsFaqs { get; set; }
+
+    public virtual DbSet<CsFaqCategory> CsFaqCategories { get; set; }
+
+    public virtual DbSet<CsFaqFeedback> CsFaqFeedbacks { get; set; }
+
+    public virtual DbSet<CsFaqKeyword> CsFaqKeywords { get; set; }
+
+    public virtual DbSet<CsTicket> CsTickets { get; set; }
+
     public virtual DbSet<CsTicketHistory> CsTicketHistories { get; set; }
 
     public virtual DbSet<CsTicketMessage> CsTicketMessages { get; set; }
 
+    public virtual DbSet<MktAd> MktAds { get; set; }
+
+    public virtual DbSet<MktAdLog> MktAdLogs { get; set; }
+
+    public virtual DbSet<MktAdPlacementMap> MktAdPlacementMaps { get; set; }
+
+    public virtual DbSet<MktCampaign> MktCampaigns { get; set; }
+
+    public virtual DbSet<MktCoupon> MktCoupons { get; set; }
+
+    public virtual DbSet<MktCouponRule> MktCouponRules { get; set; }
+
+    public virtual DbSet<MktGameRecord> MktGameRecords { get; set; }
+
+    public virtual DbSet<MktPlacement> MktPlacements { get; set; }
+
+    public virtual DbSet<OrdEcpayReturnNotification> OrdEcpayReturnNotifications { get; set; }
+
+    public virtual DbSet<OrdInvoice> OrdInvoices { get; set; }
+
+    public virtual DbSet<OrdOrder> OrdOrders { get; set; }
+
+    public virtual DbSet<OrdOrderAdjustment> OrdOrderAdjustments { get; set; }
+
+    public virtual DbSet<OrdOrderItem> OrdOrderItems { get; set; }
+
+    public virtual DbSet<OrdOrderItemAdjustment> OrdOrderItemAdjustments { get; set; }
+
+    public virtual DbSet<OrdPayment> OrdPayments { get; set; }
+
+    public virtual DbSet<OrdPaymentConfig> OrdPaymentConfigs { get; set; }
+
+    public virtual DbSet<OrdReturnItem> OrdReturnItems { get; set; }
+
+    public virtual DbSet<OrdReturnRequest> OrdReturnRequests { get; set; }
+
+    public virtual DbSet<OrdShipping> OrdShippings { get; set; }
+
+    public virtual DbSet<OrdShoppingCart> OrdShoppingCarts { get; set; }
+
+    public virtual DbSet<OrdShoppingCartItem> OrdShoppingCartItems { get; set; }
+
+    public virtual DbSet<ProdAttribute> ProdAttributes { get; set; }
+
+    public virtual DbSet<ProdAttributeOption> ProdAttributeOptions { get; set; }
+
+    public virtual DbSet<ProdBundle> ProdBundles { get; set; }
+
+    public virtual DbSet<ProdBundleItem> ProdBundleItems { get; set; }
+
+    public virtual DbSet<ProdIngredient> ProdIngredients { get; set; }
+
+    public virtual DbSet<ProdProduct> ProdProducts { get; set; }
+
+    public virtual DbSet<ProdProductAnswer> ProdProductAnswers { get; set; }
+
+    public virtual DbSet<ProdProductAttribute> ProdProductAttributes { get; set; }
+
+    public virtual DbSet<ProdProductFavorite> ProdProductFavorites { get; set; }
+
+    public virtual DbSet<ProdProductImage> ProdProductImages { get; set; }
+
+    public virtual DbSet<ProdProductIngredient> ProdProductIngredients { get; set; }
+
+    public virtual DbSet<ProdProductLike> ProdProductLikes { get; set; }
+
+    public virtual DbSet<ProdProductQuestion> ProdProductQuestions { get; set; }
+
+    public virtual DbSet<ProdProductReview> ProdProductReviews { get; set; }
+
+    public virtual DbSet<ProdProductReviewImage> ProdProductReviewImages { get; set; }
+
+    public virtual DbSet<ProdProductSku> ProdProductSkus { get; set; }
+
+    public virtual DbSet<ProdProductType> ProdProductTypes { get; set; }
+
+    public virtual DbSet<ProdProductTypeConfig> ProdProductTypeConfigs { get; set; }
+
+    public virtual DbSet<ProdSpecificationConfig> ProdSpecificationConfigs { get; set; }
+
+    public virtual DbSet<ProdSpecificationOption> ProdSpecificationOptions { get; set; }
+
+    public virtual DbSet<SupBrand> SupBrands { get; set; }
+
+    public virtual DbSet<SupBrandAccordionContent> SupBrandAccordionContents { get; set; }
+
+    public virtual DbSet<SupBrandArticle> SupBrandArticles { get; set; }
+
+    public virtual DbSet<SupBrandFavorite> SupBrandFavorites { get; set; }
+
+    public virtual DbSet<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; }
+
+    public virtual DbSet<SupLogistic> SupLogistics { get; set; }
+
+    public virtual DbSet<SupLogisticsRate> SupLogisticsRates { get; set; }
+
+    public virtual DbSet<SupStockBatch> SupStockBatches { get; set; }
+
+    public virtual DbSet<SupStockHistory> SupStockHistories { get; set; }
+
+    public virtual DbSet<SupSupplier> SupSuppliers { get; set; }
+
+    public virtual DbSet<SysAssetFile> SysAssetFiles { get; set; }
+
+    public virtual DbSet<SysCode> SysCodes { get; set; }
+
+    public virtual DbSet<SysFolder> SysFolders { get; set; }
+
+    public virtual DbSet<SysProgramConfig> SysProgramConfigs { get; set; }
+
+    public virtual DbSet<SysSeoMetaAsset> SysSeoMetaAssets { get; set; }
+
+    public virtual DbSet<SysSeoMetum> SysSeoMeta { get; set; }
+
+    public virtual DbSet<UserBlockHistory> UserBlockHistories { get; set; }
+
+    public virtual DbSet<UserCouponWallet> UserCouponWallets { get; set; }
+
+    public virtual DbSet<UserCreditCardInfo> UserCreditCardInfos { get; set; }
+
+    public virtual DbSet<UserGtmManager> UserGtmManagers { get; set; }
+
+    public virtual DbSet<UserLoginLog> UserLoginLogs { get; set; }
+
+    public virtual DbSet<UserMemberPaymentMethod> UserMemberPaymentMethods { get; set; }
+
+    public virtual DbSet<UserMemberRank> UserMemberRanks { get; set; }
+
+    public virtual DbSet<UserNotification> UserNotifications { get; set; }
+
+    public virtual DbSet<UserNotificationHistory> UserNotificationHistories { get; set; }
+
+    public virtual DbSet<UserRoleModule> UserRoleModules { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AspNetRole>(entity =>
+        {
+            entity.HasIndex(e => e.NormalizedName, "RoleNameIndex")
+                .IsUnique()
+                .HasFilter("([NormalizedName] IS NOT NULL)");
+
+            entity.Property(e => e.Description).HasMaxLength(100);
+            entity.Property(e => e.Name).HasMaxLength(256);
+            entity.Property(e => e.NormalizedName).HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<AspNetRoleClaim>(entity =>
+        {
+            entity.HasIndex(e => e.RoleId, "IX_AspNetRoleClaims_RoleId");
+
+            entity.Property(e => e.RoleId).IsRequired();
+
+            entity.HasOne(d => d.Role).WithMany(p => p.AspNetRoleClaims).HasForeignKey(d => d.RoleId);
+        });
+
+        modelBuilder.Entity<AspNetUser>(entity =>
+        {
+            entity.HasIndex(e => e.NormalizedEmail, "EmailIndex");
+
+            entity.HasIndex(e => e.NormalizedUserName, "UserNameIndex")
+                .IsUnique()
+                .HasFilter("([NormalizedUserName] IS NOT NULL)");
+
+            entity.Property(e => e.Address).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.FirstName)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.Gender)
+                .IsRequired()
+                .HasMaxLength(10);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LastName)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.MemberRankId)
+                .IsRequired()
+                .HasMaxLength(10);
+            entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
+            entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
+            entity.Property(e => e.ReferralCode).HasMaxLength(20);
+            entity.Property(e => e.UsedReferralCode).HasMaxLength(20);
+            entity.Property(e => e.UserName).HasMaxLength(256);
+            entity.Property(e => e.UserNumberId).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[UserNumberSequence])");
+
+            entity.HasMany(d => d.Roles).WithMany(p => p.Users)
+                .UsingEntity<Dictionary<string, object>>(
+                    "AspNetUserRole",
+                    r => r.HasOne<AspNetRole>().WithMany().HasForeignKey("RoleId"),
+                    l => l.HasOne<AspNetUser>().WithMany().HasForeignKey("UserId"),
+                    j =>
+                    {
+                        j.HasKey("UserId", "RoleId");
+                        j.ToTable("AspNetUserRoles");
+                        j.HasIndex(new[] { "RoleId" }, "IX_AspNetUserRoles_RoleId");
+                    });
+        });
+
+        modelBuilder.Entity<AspNetUserClaim>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_AspNetUserClaims_UserId");
+
+            entity.Property(e => e.UserId).IsRequired();
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserClaims).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<AspNetUserLogin>(entity =>
+        {
+            entity.HasKey(e => new { e.LoginProvider, e.ProviderKey });
+
+            entity.HasIndex(e => e.UserId, "IX_AspNetUserLogins_UserId");
+
+            entity.Property(e => e.LoginProvider).HasMaxLength(128);
+            entity.Property(e => e.ProviderKey).HasMaxLength(128);
+            entity.Property(e => e.UserId).IsRequired();
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserLogins).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<AspNetUserToken>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.LoginProvider, e.Name });
+
+            entity.Property(e => e.LoginProvider).HasMaxLength(128);
+            entity.Property(e => e.Name).HasMaxLength(128);
+
+            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserTokens).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<CntAnalyte>(entity =>
+        {
+            entity.HasKey(e => e.AnalyteId).HasName("PK__CNT_Anal__D434E8837C7F7D24");
+
+            entity.ToTable("CNT_Analyte", tb => tb.HasComment("營養素／分析項主檔"));
+
+            entity.HasIndex(e => new { e.AnalyteCategoryId, e.AnalyteName }, "IX_CNT_Analyte_Category");
+
+            entity.HasIndex(e => new { e.AnalyteCategoryId, e.AnalyteName, e.DefaultUnit }, "UQ_CNT_Analyte").IsUnique();
+
+            entity.Property(e => e.AnalyteId).HasComment("分析項 ID");
+            entity.Property(e => e.AnalyteCategoryId).HasComment("分析項分類 ID");
+            entity.Property(e => e.AnalyteName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("分析項名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DefaultUnit)
+                .HasMaxLength(50)
+                .HasComment("預設單位（mg / ug / kcal）");
+            entity.Property(e => e.IsPopular).HasComment("是否常用（十大項）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.AnalyteCategory).WithMany(p => p.CntAnalytes)
+                .HasForeignKey(d => d.AnalyteCategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Analyte_Category");
+        });
+
+        modelBuilder.Entity<CntAnalyteCategory>(entity =>
+        {
+            entity.HasKey(e => e.AnalyteCategoryId).HasName("PK__CNT_Anal__03762332EE9B221A");
+
+            entity.ToTable("CNT_AnalyteCategory", tb => tb.HasComment("營養素分類主檔（維生素、礦物質、脂肪酸等）"));
+
+            entity.HasIndex(e => e.CategoryName, "IX_CNT_AnalyteCategory_CategoryName");
+
+            entity.HasIndex(e => e.CategoryName, "UQ_CNT_AnalyteCategory_CategoryName").IsUnique();
+
+            entity.Property(e => e.AnalyteCategoryId).HasComment("營養素分類 ID");
+            entity.Property(e => e.CategoryName)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("營養素分類名稱");
+        });
+
+        modelBuilder.Entity<CntDataType>(entity =>
+        {
+            entity.HasKey(e => e.DataTypeId).HasName("PK__CNT_Data__4382081FD18E9F4F");
+
+            entity.ToTable("CNT_DataType", tb => tb.HasComment("資料類別主檔（樣品基本資料、加工程度等）"));
+
+            entity.HasIndex(e => e.TypeName, "IX_CNT_DataType_TypeName");
+
+            entity.HasIndex(e => e.TypeName, "UQ_CNT_DataType_TypeName").IsUnique();
+
+            entity.Property(e => e.DataTypeId).HasComment("資料類別 ID");
+            entity.Property(e => e.TypeName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("資料類別名稱");
+        });
+
+        modelBuilder.Entity<CntFoodCategory>(entity =>
+        {
+            entity.HasKey(e => e.CategoryId).HasName("PK__CNT_Food__19093A0B61368552");
+
+            entity.ToTable("CNT_FoodCategory", tb => tb.HasComment("食品分類主檔"));
+
+            entity.HasIndex(e => e.CategoryName, "IX_CNT_FoodCategory_CategoryName");
+
+            entity.HasIndex(e => e.CategoryName, "UQ_CNT_FoodCategory_CategoryName").IsUnique();
+
+            entity.Property(e => e.CategoryId).HasComment("食品分類 ID");
+            entity.Property(e => e.CategoryName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("食品分類名稱");
+        });
+
+        modelBuilder.Entity<CntMeasurement>(entity =>
+        {
+            entity.HasKey(e => e.MeasurementId).HasName("PK__CNT_Meas__85599FB86F093122");
+
+            entity.ToTable("CNT_Measurement", tb => tb.HasComment("樣品 × 營養素觀測值主表"));
+
+            entity.HasIndex(e => e.AnalyteId, "IX_CNT_Measurement_Analyte");
+
+            entity.HasIndex(e => e.SampleId, "IX_CNT_Measurement_Sample");
+
+            entity.HasIndex(e => e.Unit, "IX_CNT_Measurement_Unit");
+
+            entity.HasIndex(e => new { e.SampleId, e.AnalyteId, e.Unit }, "UQ_CNT_Measurement_Sample_Analyte_Unit").IsUnique();
+
+            entity.Property(e => e.MeasurementId).HasComment("觀測值 ID");
+            entity.Property(e => e.AnalyteId).HasComment("分析項 ID（外鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ExtraJson)
+                .HasMaxLength(400)
+                .HasComment("特例資訊（JSON 格式）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleCount).HasComment("樣本數");
+            entity.Property(e => e.SampleId).HasComment("樣品 ID（外鍵）");
+            entity.Property(e => e.ServingWeightTxt)
+                .HasMaxLength(50)
+                .HasComment("每單位重（原始文字）");
+            entity.Property(e => e.ServingWeightVal)
+                .HasComment("每單位重（數值）")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("實際資料的單位");
+            entity.Property(e => e.ValuePer100g)
+                .HasComment("每100克含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.ValuePerServing)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+
+            entity.HasOne(d => d.Analyte).WithMany(p => p.CntMeasurements)
+                .HasForeignKey(d => d.AnalyteId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Measurement_Analyte");
+
+            entity.HasOne(d => d.Sample).WithMany(p => p.CntMeasurements)
+                .HasForeignKey(d => d.SampleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Measurement_Sample");
+        });
+
+        modelBuilder.Entity<CntMedium>(entity =>
+        {
+            entity.HasKey(e => e.MediaId).HasName("PK__CNT_Medi__B2C2B5CF3998BBEF");
+
+            entity.ToTable("CNT_Medium", tb => tb.HasComment("媒體資源"));
+
+            entity.Property(e => e.MediaId).HasComment("媒體 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("上傳時間");
+            entity.Property(e => e.FileId).HasComment("檔案 ID");
+            entity.Property(e => e.PageBlockId).HasComment("對應區塊 ID");
+
+            entity.HasOne(d => d.File).WithMany(p => p.CntMedia)
+                .HasForeignKey(d => d.FileId)
+                .HasConstraintName("FK_CNT_Media_FileId");
+
+            entity.HasOne(d => d.PageBlock).WithMany(p => p.CntMedia)
+                .HasForeignKey(d => d.PageBlockId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Media_PageBlockId");
+        });
+
+        modelBuilder.Entity<CntNutritionFact>(entity =>
+        {
+            entity.HasKey(e => e.NutritionFactId).HasName("PK__CNT_Nutr__A789FCB5C12B9BF8");
+
+            entity.ToTable("CNT_NutritionFacts", tb => tb.HasComment("營養成分主表"));
+
+            entity.HasIndex(e => e.AnalyteCategory, "IX_CNT_NutritionFacts_AnalyteCategory");
+
+            entity.HasIndex(e => e.AnalyteName, "IX_CNT_NutritionFacts_AnalyteName");
+
+            entity.HasIndex(e => e.FoodCategory, "IX_CNT_NutritionFacts_FoodCategory");
+
+            entity.HasIndex(e => new { e.IntegrationCode, e.AnalyteCategory, e.AnalyteName, e.Unit }, "UQ_CNT_NutritionFacts_Logical").IsUnique();
+
+            entity.Property(e => e.NutritionFactId).HasComment("主鍵 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("俗名");
+            entity.Property(e => e.AnalyteCategory)
+                .HasMaxLength(100)
+                .HasComment("分析項分類");
+            entity.Property(e => e.AnalyteName)
+                .HasMaxLength(200)
+                .HasComment("分析項");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容物描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataType)
+                .HasMaxLength(50)
+                .HasComment("資料類別");
+            entity.Property(e => e.FoodCategory)
+                .HasMaxLength(50)
+                .HasComment("食品分類");
+            entity.Property(e => e.IntegrationCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("整合編號");
+            entity.Property(e => e.Per100g)
+                .HasMaxLength(50)
+                .HasComment("每100克含量");
+            entity.Property(e => e.PerUnitAmount)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .HasMaxLength(100)
+                .HasComment("樣品名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣品英文名稱");
+            entity.Property(e => e.SampleSizeN).HasComment("樣本數");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("含量單位");
+            entity.Property(e => e.UnitWeightContent)
+                .HasComment("每單位重含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.UnitWeightText)
+                .HasMaxLength(50)
+                .HasComment("每單位重（文字）");
+            entity.Property(e => e.UnitWeightValue)
+                .HasComment("每單位重（數值）")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
+        });
+
+        modelBuilder.Entity<CntNutritionStaging>(entity =>
+        {
+            entity.HasKey(e => e.NutritionStagingId).HasName("PK__CNT_Nutr__DC271E3A135FDAE6");
+
+            entity.ToTable("CNT_NutritionStaging", tb => tb.HasComment("營養成分暫存表（原始資料匯入暫存用）"));
+
+            entity.HasIndex(e => e.AnalyteCategory, "IX_CNT_NutritionStaging_AnalyteCategory");
+
+            entity.HasIndex(e => e.FoodCategory, "IX_CNT_NutritionStaging_FoodCategory");
+
+            entity.HasIndex(e => e.IntegrationCode, "IX_CNT_NutritionStaging_IntegrationCode");
+
+            entity.HasIndex(e => new { e.IntegrationCode, e.AnalyteCategory, e.AnalyteName }, "UQ_CNT_NutritionStaging_Logical").IsUnique();
+
+            entity.Property(e => e.NutritionStagingId).HasComment("暫存資料 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("樣本別名");
+            entity.Property(e => e.AnalyteCategory)
+                .HasMaxLength(100)
+                .HasComment("成分類別");
+            entity.Property(e => e.AnalyteName)
+                .HasMaxLength(200)
+                .HasComment("成分名稱");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataType)
+                .HasMaxLength(50)
+                .HasComment("資料類別");
+            entity.Property(e => e.FoodCategory)
+                .HasMaxLength(50)
+                .HasComment("食品分類");
+            entity.Property(e => e.IntegrationCode)
+                .HasMaxLength(20)
+                .HasComment("整合代碼（原始資料代號）");
+            entity.Property(e => e.Per100g)
+                .HasMaxLength(100)
+                .HasComment("每100g含量");
+            entity.Property(e => e.PerUnitAmount)
+                .HasComment("每單位含量")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .HasMaxLength(100)
+                .HasComment("樣本名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣本英文名稱");
+            entity.Property(e => e.SampleSizeN).HasComment("樣本數");
+            entity.Property(e => e.StdDev)
+                .HasComment("標準差")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(50)
+                .HasComment("單位");
+            entity.Property(e => e.UnitWeightContent)
+                .HasComment("單位重量數值")
+                .HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.UnitWeightText)
+                .HasMaxLength(50)
+                .HasComment("單位重量（文字）");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
+        });
+
+        modelBuilder.Entity<CntPage>(entity =>
+        {
+            entity.HasKey(e => e.PageId).HasName("PK__CNT_Page__C565B1045B96AB36");
+
+            entity.ToTable("CNT_Page", tb => tb.HasComment("頁面"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_CNT_Page_CreatedDate");
+
+            entity.HasIndex(e => new { e.IsDeleted, e.Status }, "IX_CNT_Page_IsDeleted_Status");
+
+            entity.HasIndex(e => e.PageTypeId, "IX_CNT_Page_PageTypeId");
+
+            entity.HasIndex(e => e.PublishedDate, "IX_CNT_Page_PublishedDate");
+
+            entity.HasIndex(e => e.Status, "IX_CNT_Page_Status");
+
+            entity.Property(e => e.PageId).HasComment("頁面 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.IsDeleted).HasComment("是否在垃圾桶");
+            entity.Property(e => e.IsPaidContent).HasComment("是否為付費內容");
+            entity.Property(e => e.PageTypeId).HasComment("分類 ID");
+            entity.Property(e => e.PreviewLength).HasComment("試閱字元數或行數");
+            entity.Property(e => e.PublishedDate).HasComment("發布時間");
+            entity.Property(e => e.RevisedDate).HasComment("更新時間");
+            entity.Property(e => e.SeoId).HasComment("Seo 設定");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("draft")
+                .HasComment("頁面狀態");
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasComment("頁面標題");
+
+            entity.HasOne(d => d.PageType).WithMany(p => p.CntPages)
+                .HasForeignKey(d => d.PageTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Page_PageTypeId");
+
+            entity.HasOne(d => d.Seo).WithMany(p => p.CntPages)
+                .HasForeignKey(d => d.SeoId)
+                .HasConstraintName("FK_CNT_Page_SeoId");
+        });
+
+        modelBuilder.Entity<CntPageBlock>(entity =>
+        {
+            entity.HasKey(e => e.PageBlockId).HasName("PK__CNT_Page__E339E470860162B7");
+
+            entity.ToTable("CNT_PageBlock", tb => tb.HasComment("頁面區塊"));
+
+            entity.Property(e => e.PageBlockId).HasComment("區塊 ID");
+            entity.Property(e => e.BlockType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("區塊類型");
+            entity.Property(e => e.Content).HasComment("附文本內容");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.ImgId).HasComment("區塊圖片");
+            entity.Property(e => e.OrderSeq).HasComment("區塊順序");
+            entity.Property(e => e.PageId).HasComment("頁面 ID");
+            entity.Property(e => e.RevisedDate).HasComment("更新時間");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.CntPageBlocks)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_CNT_PageBlock_ImgId");
+
+            entity.HasOne(d => d.Page).WithMany(p => p.CntPageBlocks)
+                .HasForeignKey(d => d.PageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_PageBlock_PageId");
+        });
+
+        modelBuilder.Entity<CntPageTag>(entity =>
+        {
+            entity.HasKey(e => new { e.PageId, e.TagId }).HasName("UQ_CNT_PageTag_PageId_TagId");
+
+            entity.ToTable("CNT_PageTag", tb => tb.HasComment("頁面與標籤關聯表"));
+
+            entity.Property(e => e.PageId).HasComment("頁面 ID");
+            entity.Property(e => e.TagId).HasComment("標籤 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+
+            entity.HasOne(d => d.Page).WithMany(p => p.CntPageTags)
+                .HasForeignKey(d => d.PageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_PageTag_PageId");
+
+            entity.HasOne(d => d.Tag).WithMany(p => p.CntPageTags)
+                .HasForeignKey(d => d.TagId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_PageTag_TagId");
+        });
+
+        modelBuilder.Entity<CntPageType>(entity =>
+        {
+            entity.HasKey(e => e.PageTypeId).HasName("PK__CNT_Page__33FA9A458E9470A4");
+
+            entity.ToTable("CNT_PageType", tb => tb.HasComment("頁面分類"));
+
+            entity.HasIndex(e => e.TypeName, "UQ_CNT_PageType_TypeName").IsUnique();
+
+            entity.Property(e => e.PageTypeId).HasComment("分類 ID");
+            entity.Property(e => e.TypeName)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasComment("分類名稱");
+        });
+
+        modelBuilder.Entity<CntPurchase>(entity =>
+        {
+            entity.HasKey(e => e.PurchaseId).HasName("PK__CNT_Purc__6B0A6BBED3721F64");
+
+            entity.ToTable("CNT_Purchase", tb => tb.HasComment("文章/課程購買紀錄"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_CNT_Purchase_CreatedDate");
+
+            entity.HasIndex(e => e.PageId, "IX_CNT_Purchase_PageId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_CNT_Purchase_UserNumberId");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PageId }, "UQ_CNT_Purchase_UserNumberId_PageId").IsUnique();
+
+            entity.Property(e => e.PurchaseId).HasComment("購買紀錄 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.IsPaid).HasComment("是否購買（0=未購買，1=已購買）");
+            entity.Property(e => e.PageId).HasComment("文章/課程 ID");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.UnitPrice)
+                .HasComment("單價")
+                .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+
+            entity.HasOne(d => d.Page).WithMany(p => p.CntPurchases)
+                .HasForeignKey(d => d.PageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Purchase_Page");
+        });
+
+        modelBuilder.Entity<CntSample>(entity =>
+        {
+            entity.HasKey(e => e.SampleId).HasName("PK__CNT_Samp__8B99EC6A73ED4689");
+
+            entity.ToTable("CNT_Sample", tb => tb.HasComment("樣品主檔（對應營養成分樣本資料）"));
+
+            entity.HasIndex(e => new { e.CategoryId, e.DataTypeId, e.SampleName }, "IX_CNT_Sample_Search");
+
+            entity.HasIndex(e => e.IntegrationCode, "UQ_CNT_Sample_IntegrationCode").IsUnique();
+
+            entity.Property(e => e.SampleId).HasComment("樣品 ID");
+            entity.Property(e => e.AliasName)
+                .HasMaxLength(100)
+                .HasComment("俗名");
+            entity.Property(e => e.CategoryId).HasComment("食品分類 ID");
+            entity.Property(e => e.ContentDesc)
+                .HasMaxLength(500)
+                .HasComment("內容物描述");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DataTypeId).HasComment("資料類別 ID");
+            entity.Property(e => e.IntegrationCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("整合編號（唯一）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SampleName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("樣品名稱");
+            entity.Property(e => e.SampleNameEn)
+                .HasMaxLength(255)
+                .HasComment("樣品英文名稱");
+            entity.Property(e => e.WasteRate)
+                .HasComment("廢棄率（%）")
+                .HasColumnType("decimal(6, 2)");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.CntSamples)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Sample_Category");
+
+            entity.HasOne(d => d.DataType).WithMany(p => p.CntSamples)
+                .HasForeignKey(d => d.DataTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Sample_DataType");
+        });
+
+        modelBuilder.Entity<CntSchedule>(entity =>
+        {
+            entity.HasKey(e => e.ScheduleId).HasName("PK__CNT_Sche__9C8A5B497B397938");
+
+            entity.ToTable("CNT_Schedule", tb => tb.HasComment("頁面排程"));
+
+            entity.HasIndex(e => e.PageId, "IX_CNT_Schedule_PageId");
+
+            entity.HasIndex(e => e.ScheduledDate, "IX_CNT_Schedule_ScheduledDate");
+
+            entity.HasIndex(e => e.Status, "IX_CNT_Schedule_Status");
+
+            entity.Property(e => e.ScheduleId).HasComment("排程 ID");
+            entity.Property(e => e.ActionType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("排程動作");
+            entity.Property(e => e.PageId).HasComment("頁面 ID");
+            entity.Property(e => e.ScheduledDate).HasComment("排程時間");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("pending")
+                .HasComment("排程狀態");
+
+            entity.HasOne(d => d.Page).WithMany(p => p.CntSchedules)
+                .HasForeignKey(d => d.PageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_Schedule_PageId");
+        });
+
+        modelBuilder.Entity<CntShareClick>(entity =>
+        {
+            entity.HasKey(e => e.ShareClickId).HasName("PK__CNT_Shar__46D82BFC7AC56D53");
+
+            entity.ToTable("CNT_ShareClick", tb => tb.HasComment("分享點擊紀錄"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_CNT_ShareClick_CreatedDate");
+
+            entity.HasIndex(e => e.PageId, "IX_CNT_ShareClick_PageId");
+
+            entity.HasIndex(e => new { e.PageId, e.CreatedDate }, "IX_CNT_ShareClick_PageId_CreatedDate");
+
+            entity.HasIndex(e => e.VisitorToken, "IX_CNT_ShareClick_VisitorToken");
+
+            entity.Property(e => e.ShareClickId).HasComment("分享點擊 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("點擊時間");
+            entity.Property(e => e.Ipaddress)
+                .HasMaxLength(50)
+                .HasComment("IP 紀錄")
+                .HasColumnName("IPAddress");
+            entity.Property(e => e.PageId).HasComment("文章 ID");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+            entity.Property(e => e.VisitorToken)
+                .HasMaxLength(255)
+                .HasComment("訪客識別");
+
+            entity.HasOne(d => d.Page).WithMany(p => p.CntShareClicks)
+                .HasForeignKey(d => d.PageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CNT_ShareClick_PageId");
+        });
+
+        modelBuilder.Entity<CntTag>(entity =>
+        {
+            entity.HasKey(e => e.TagId).HasName("PK__CNT_Tag__657CF9AC79BC1D5A");
+
+            entity.ToTable("CNT_Tag", tb => tb.HasComment("標籤"));
+
+            entity.HasIndex(e => e.TagName, "UQ_CNT_Tag_TagName").IsUnique();
+
+            entity.Property(e => e.TagId).HasComment("標籤 ID");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.RevisedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("異動時間");
+            entity.Property(e => e.Revisor)
+                .HasMaxLength(50)
+                .HasComment("異動人員");
+            entity.Property(e => e.TagName)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasComment("標籤名稱");
+        });
+
+        modelBuilder.Entity<CsAutoReplyRule>(entity =>
+        {
+            entity.HasKey(e => e.RuleId).HasName("PK__CS_AutoR__110458E230302CA5");
+
+            entity.ToTable("CS_AutoReplyRule", tb => tb.HasComment("自動回覆規則"));
+
+            entity.HasIndex(e => new { e.IsActive, e.Priority }, "IX_CS_AutoReplyRule_IsActive_Priority");
+
+            entity.Property(e => e.RuleId).HasComment("規則主鍵");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.MatchType).HasComment("1=關鍵字、2=正則、3=預設回覆");
+            entity.Property(e => e.MinConfidence)
+                .HasComment("最低信心分數（0~1）")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("規則名稱（管理用）");
+            entity.Property(e => e.Priority).HasComment("優先序（小在前）");
+            entity.Property(e => e.ResponseFaqId).HasComment("對應 FAQ（對應 1）");
+            entity.Property(e => e.ResponseText)
+                .HasMaxLength(1000)
+                .HasComment("回覆文字（對應 2）");
+            entity.Property(e => e.ResponseType).HasComment("1=導向FAQ、2=文字、3=連結、4=轉人工/表單");
+            entity.Property(e => e.ResponseUrl)
+                .HasMaxLength(500)
+                .IsUnicode(false)
+                .HasComment("導向連結（對應 3）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+
+            entity.HasOne(d => d.ResponseFaq).WithMany(p => p.CsAutoReplyRules)
+                .HasForeignKey(d => d.ResponseFaqId)
+                .HasConstraintName("FK_AutoReplyRule_Faq");
+        });
+
+        modelBuilder.Entity<CsChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.MessageId).HasName("PK__CS_ChatM__C87C0C9C8E145F56");
+
+            entity.ToTable("CS_ChatMessage", tb => tb.HasComment("前台聊天式自助客服—訊息"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_CS_ChatMessage_CreatedDate");
+
+            entity.HasIndex(e => e.SessionId, "IX_CS_ChatMessage_SessionId");
+
+            entity.Property(e => e.MessageId).HasComment("主鍵");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.FaqId).HasComment("若回覆為 FAQ（可空）");
+            entity.Property(e => e.Message)
+                .IsRequired()
+                .HasMaxLength(2000)
+                .HasComment("訊息內容");
+            entity.Property(e => e.RuleId).HasComment("套用的規則（可空）");
+            entity.Property(e => e.SenderType).HasComment("0=使用者、1=機器人、2=客服");
+            entity.Property(e => e.SessionId).HasComment("所屬會話");
+
+            entity.HasOne(d => d.Faq).WithMany(p => p.CsChatMessages)
+                .HasForeignKey(d => d.FaqId)
+                .HasConstraintName("FK_CS_ChatMessage_FaqId");
+
+            entity.HasOne(d => d.Rule).WithMany(p => p.CsChatMessages)
+                .HasForeignKey(d => d.RuleId)
+                .HasConstraintName("FK_CS_ChatMessage_RuleId");
+
+            entity.HasOne(d => d.Session).WithMany(p => p.CsChatMessages)
+                .HasForeignKey(d => d.SessionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CS_ChatMessage_SessionId");
+        });
+
+        modelBuilder.Entity<CsChatSession>(entity =>
+        {
+            entity.HasKey(e => e.SessionId).HasName("PK__CS_ChatS__C9F492901340D1A4");
+
+            entity.ToTable("CS_ChatSession", tb => tb.HasComment("前台聊天式自助客服—會話"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_CS_ChatSession_CreatedDate");
+
+            entity.HasIndex(e => e.Status, "IX_CS_ChatSession_Status");
+
+            entity.HasIndex(e => e.UserId, "IX_CS_ChatSession_UserId");
+
+            entity.Property(e => e.SessionId).HasComment("會話主鍵");
+            entity.Property(e => e.Channel).HasComment("1=Web");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.LastFaqId).HasComment("最近推送的 FAQ（可空）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Status).HasComment("1=機器人、2=已轉人工、3=已關閉");
+            entity.Property(e => e.UserId).HasComment("會員ID（可空）");
+
+            entity.HasOne(d => d.LastFaq).WithMany(p => p.CsChatSessions)
+                .HasForeignKey(d => d.LastFaqId)
+                .HasConstraintName("FK_ChatSession_LastFaqId");
+        });
+
+        modelBuilder.Entity<CsFaq>(entity =>
+        {
+            entity.HasKey(e => e.FaqId).HasName("PK__CS_Faq__9C741C43DB2A4611");
+
+            entity.ToTable("CS_Faq", tb => tb.HasComment("FAQ 主內容"));
+
+            entity.HasIndex(e => e.CategoryId, "IX_CS_Faq_CategoryId");
+
+            entity.HasIndex(e => new { e.CategoryId, e.OrderSeq }, "UQ_CS_Faq_Category_OrderSeq").IsUnique();
+
+            entity.Property(e => e.FaqId).HasComment("FAQ 主鍵");
+            entity.Property(e => e.AnswerHtml)
+                .IsRequired()
+                .HasComment("答案內容（可含 HTML）");
+            entity.Property(e => e.CategoryId).HasComment("所屬分類");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.LastPublishedTime).HasComment("最近發布時間（可空）");
+            entity.Property(e => e.OrderSeq).HasComment("前台顯示排序");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(300)
+                .HasComment("問題標題");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.CsFaqs)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Faq_CategoryId");
+        });
+
+        modelBuilder.Entity<CsFaqCategory>(entity =>
+        {
+            entity.HasKey(e => e.CategoryId).HasName("PK__CS_FaqCa__19093A0B638FFC05");
+
+            entity.ToTable("CS_FaqCategory", tb => tb.HasComment("FAQ 分類"));
+
+            entity.HasIndex(e => e.IsActive, "IX_CS_FaqCategory_IsActive");
+
+            entity.HasIndex(e => e.ParentCategoryId, "IX_CS_FaqCategory_ParentCategoryId");
+
+            entity.Property(e => e.CategoryId).HasComment("分類主鍵");
+            entity.Property(e => e.CategoryName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("分類名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間(UTC)");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.OrderSeq).HasComment("排序（小在前）");
+            entity.Property(e => e.ParentCategoryId).HasComment("上層分類（可空，多層）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間(UTC)");
+
+            entity.HasOne(d => d.ParentCategory).WithMany(p => p.InverseParentCategory)
+                .HasForeignKey(d => d.ParentCategoryId)
+                .HasConstraintName("FK_FaqCategory_ParentId");
+        });
+
+        modelBuilder.Entity<CsFaqFeedback>(entity =>
+        {
+            entity.HasKey(e => e.FeedbackId).HasName("PK__CS_FaqFe__6A4BEDD6D9E21C57");
+
+            entity.ToTable("CS_FaqFeedback", tb => tb.HasComment("FAQ 成效回饋"));
+
+            entity.HasIndex(e => e.ClientSessionKey, "IX_CS_FaqFeedback_ClientSessionKey");
+
+            entity.HasIndex(e => e.FaqId, "IX_CS_FaqFeedback_FaqId");
+
+            entity.Property(e => e.FeedbackId).HasComment("主鍵");
+            entity.Property(e => e.ClientSessionKey)
+                .HasMaxLength(100)
+                .IsUnicode(false)
+                .HasComment("前台 Session 追蹤");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.FaqId).HasComment("對應 FAQ");
+            entity.Property(e => e.IsHelpful).HasComment("是否有幫助（??=true／??=false）");
+            entity.Property(e => e.UserId).HasComment("會員ID（訪客可空）");
+
+            entity.HasOne(d => d.Faq).WithMany(p => p.CsFaqFeedbacks)
+                .HasForeignKey(d => d.FaqId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FaqFeedback_Faq");
+        });
+
+        modelBuilder.Entity<CsFaqKeyword>(entity =>
+        {
+            entity.HasKey(e => e.KeywordId).HasName("PK__CS_FaqKe__37C135211C456357");
+
+            entity.ToTable("CS_FaqKeyword", tb => tb.HasComment("FAQ 搜尋關鍵字"));
+
+            entity.HasIndex(e => e.Keyword, "IX_CS_FaqKeyword_Keyword");
+
+            entity.HasIndex(e => new { e.FaqId, e.Keyword }, "UQ_CS_FaqKeyword_FaqId_Keyword").IsUnique();
+
+            entity.Property(e => e.KeywordId).HasComment("主鍵");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.FaqId).HasComment("對應 FAQ");
+            entity.Property(e => e.Keyword)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("關鍵字／同義詞");
+
+            entity.HasOne(d => d.Faq).WithMany(p => p.CsFaqKeywords)
+                .HasForeignKey(d => d.FaqId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FaqKeyword_Faq");
+        });
+
+        modelBuilder.Entity<CsTicket>(entity =>
+        {
+            entity.HasKey(e => e.TicketId).HasName("PK__CS_Ticke__712CC607C452D4A7");
+
+            entity.ToTable("CS_Ticket", tb => tb.HasComment("工單主表"));
+
+            entity.HasIndex(e => e.AssigneeId, "IX_CS_Ticket_AssigneeId");
+
+            entity.Property(e => e.TicketId).HasComment("工單主鍵");
+            entity.Property(e => e.AssigneeId).HasComment("當前負責客服");
+            entity.Property(e => e.CategoryId).HasComment("問題分類（對齊 FAQ 分類）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Priority)
+                .HasDefaultValue(2)
+                .HasComment("優先序，數字越小越急");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Status).HasComment("0=待處理、1=處理中、2=已完成、3=已關閉");
+            entity.Property(e => e.Subject)
+                .IsRequired()
+                .HasMaxLength(300)
+                .HasComment("工單主旨");
+            entity.Property(e => e.UserId).HasComment("建單會員（訪客可空）");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.CsTickets)
+                .HasForeignKey(d => d.CategoryId)
+                .HasConstraintName("FK_Ticket_CategoryId");
+        });
+
         modelBuilder.Entity<CsTicketHistory>(entity =>
         {
             entity.HasKey(e => e.HistoryId).HasName("PK__CS_Ticke__4D7B4ABD3A36D6FA");
@@ -46,6 +1191,10 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.OldStatus).HasComment("原狀態");
             entity.Property(e => e.TicketId).HasComment("對應工單 ID");
             entity.Property(e => e.ToAssigneeId).HasComment("新負責客服");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketHistories)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketHistory_Ticket");
         });
 
         modelBuilder.Entity<CsTicketMessage>(entity =>
@@ -68,6 +1217,2600 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("訊息內容");
             entity.Property(e => e.SenderType).HasComment("發送者類型（1=客戶，2=客服）");
             entity.Property(e => e.TicketId).HasComment("所屬工單 ID");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketMessages)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketMessage_Ticket");
+        });
+
+        modelBuilder.Entity<MktAd>(entity =>
+        {
+            entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
+
+            entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
+
+            entity.Property(e => e.AdId).HasComment("廣告編號");
+            entity.Property(e => e.AdType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("Carousel");
+            entity.Property(e => e.ButtonLink)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasDefaultValue("#");
+            entity.Property(e => e.ButtonText)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasDefaultValue("????");
+            entity.Property(e => e.Content).HasComment("廣告內容");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.EndDate).HasComment("結束日期");
+            entity.Property(e => e.ImgId).HasComment("廣告圖片路徑");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.StartDate).HasComment("開始日期");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("狀態（上架/下架）");
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("廣告標題");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.MktAds)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_MKT_Ad_ImgId");
+        });
+
+        modelBuilder.Entity<MktAdLog>(entity =>
+        {
+            entity.HasKey(e => e.LogId).HasName("PK__MKT_AdLo__5E5486481AAFE775");
+
+            entity.ToTable("MKT_AdLog", tb => tb.HasComment("廣告紀錄"));
+
+            entity.Property(e => e.LogId).HasComment("紀錄編號");
+            entity.Property(e => e.AdId).HasComment("廣告編號");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("發生時間");
+            entity.Property(e => e.EventType)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("事件類型（impression/click）");
+            entity.Property(e => e.UserIp)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("使用者IP")
+                .HasColumnName("UserIP");
+
+            entity.HasOne(d => d.Ad).WithMany(p => p.MktAdLogs)
+                .HasForeignKey(d => d.AdId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MKT_AdLog_AdId");
+        });
+
+        modelBuilder.Entity<MktAdPlacementMap>(entity =>
+        {
+            entity.HasKey(e => e.MapId).HasName("PK__MKT_AdPl__3265E21B5BDECFFA");
+
+            entity.ToTable("MKT_AdPlacementMap", tb => tb.HasComment("廣告與位置對應表"));
+
+            entity.HasIndex(e => new { e.AdId, e.PlacementId }, "UQ_MKT_AdPlacementMap_Ad_Placement").IsUnique();
+
+            entity.Property(e => e.MapId).HasComment("對應編號");
+            entity.Property(e => e.AdId).HasComment("廣告編號");
+            entity.Property(e => e.PlacementId).HasComment("位置編號");
+
+            entity.HasOne(d => d.Ad).WithMany(p => p.MktAdPlacementMaps)
+                .HasForeignKey(d => d.AdId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MKT_AdPlacementMap_AdId");
+
+            entity.HasOne(d => d.Placement).WithMany(p => p.MktAdPlacementMaps)
+                .HasForeignKey(d => d.PlacementId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MKT_AdPlacementMap_PlacementId");
+        });
+
+        modelBuilder.Entity<MktCampaign>(entity =>
+        {
+            entity.HasKey(e => e.CampaignId).HasName("PK__MKT_Camp__3F5E8A9937EF340D");
+
+            entity.ToTable("MKT_Campaign", tb => tb.HasComment("行銷活動基本資訊"));
+
+            entity.Property(e => e.CampaignId).HasComment("活動Id");
+            entity.Property(e => e.CampaignDescription)
+                .HasMaxLength(500)
+                .HasComment("活動描述");
+            entity.Property(e => e.CampaignName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("活動名稱");
+            entity.Property(e => e.CampaignType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("活動類型（例：滿額折扣、全館折扣）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.EndDate).HasComment("活動結束日期");
+            entity.Property(e => e.ImgId).HasComment("活動圖片路徑");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否,1=是）");
+            entity.Property(e => e.ProductType)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("適用商品類型");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.StartDate).HasComment("活動開始日期");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("活動狀態（Active, Inactive）");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.MktCampaigns)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_MKT_Campaign_ImgId");
+        });
+
+        modelBuilder.Entity<MktCoupon>(entity =>
+        {
+            entity.HasKey(e => e.CouponId).HasName("PK__MKT_Coup__384AF1BAC43F4D1C");
+
+            entity.ToTable("MKT_Coupon", tb =>
+                {
+                    tb.HasComment("行銷優惠券設定（引用規則分類檔）");
+                    tb.HasTrigger("TRG_MKT_Coupon_ValidateStartDate");
+                });
+
+            entity.HasIndex(e => e.CouponCode, "UQ_MKT_Coupon_CouponCode").IsUnique();
+
+            entity.HasIndex(e => e.CouponName, "UQ_MKT_Coupon_CouponName").IsUnique();
+
+            entity.Property(e => e.CouponId).HasComment("優惠券Id");
+            entity.Property(e => e.CampaignId).HasComment("關聯活動Id");
+            entity.Property(e => e.CouponCode)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("優惠券代碼");
+            entity.Property(e => e.CouponName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("優惠券名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DiscountAmount)
+                .HasComment("折扣金額")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.DiscountPercent)
+                .HasComment("折扣百分比")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.EndDate).HasComment("發放結束日期");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否,1=是）");
+            entity.Property(e => e.LeftQty).HasComment("剩餘數量");
+            entity.Property(e => e.RuleId).HasComment("關聯規則Id");
+            entity.Property(e => e.StartDate).HasComment("發放開始日期");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("狀態（有效、停用）");
+            entity.Property(e => e.TotQty).HasComment("總發放數量");
+            entity.Property(e => e.UserLimit).HasComment("每人可領取上限");
+            entity.Property(e => e.ValidHours).HasComment("有效時長（小時）");
+
+            entity.HasOne(d => d.Campaign).WithMany(p => p.MktCoupons)
+                .HasForeignKey(d => d.CampaignId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MKT_Coupon_CampaignId");
+
+            entity.HasOne(d => d.Rule).WithMany(p => p.MktCoupons)
+                .HasForeignKey(d => d.RuleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MKT_Coupon_RuleId");
+        });
+
+        modelBuilder.Entity<MktCouponRule>(entity =>
+        {
+            entity.HasKey(e => e.RuleId).HasName("PK__MKT_Coup__110458E2C5EABEA9");
+
+            entity.ToTable("MKT_CouponRule", tb => tb.HasComment("優惠券規則分類檔（定義優惠券類型與條件）"));
+
+            entity.Property(e => e.RuleId).HasComment("規則Id");
+            entity.Property(e => e.CouponType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("優惠券類型（滿額折扣、免運、折扣百分比）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DefaultCondition)
+                .HasMaxLength(200)
+                .HasComment("預設使用條件（例：滿1000折100、全館免運）");
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .HasComment("優惠券說明");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+        });
+
+        modelBuilder.Entity<MktGameRecord>(entity =>
+        {
+            entity.HasKey(e => e.GameRecordId).HasName("PK__MKT_Game__D53273FBF51DBEC5");
+
+            entity.ToTable("MKT_GameRecord", tb => tb.HasComment("活動遊戲紀錄"));
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PlayedDate }, "IX_MKT_GameRecord_UserNumberId_PlayedDate");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PlayedDate }, "UQ_MKT_GameRecord_UserNumber_PlayedDate").IsUnique();
+
+            entity.Property(e => e.GameRecordId).HasComment("主鍵，自動遞增 ID");
+            entity.Property(e => e.CouponAmount).HasComment("兌換金額");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.PlayedDate).HasComment("遊戲日期（同會員每日僅一筆）");
+            entity.Property(e => e.Score).HasComment("當局得分");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID (FK)");
+        });
+
+        modelBuilder.Entity<MktPlacement>(entity =>
+        {
+            entity.HasKey(e => e.PlacementId).HasName("PK__MKT_Plac__2E328C65537FE378");
+
+            entity.ToTable("MKT_Placement", tb => tb.HasComment("廣告位置"));
+
+            entity.Property(e => e.PlacementId).HasComment("位置編號");
+            entity.Property(e => e.Description)
+                .HasMaxLength(200)
+                .HasComment("位置說明");
+            entity.Property(e => e.IsActive).HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.PlacementName)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("位置名稱");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.Size)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("建議尺寸");
+        });
+
+        modelBuilder.Entity<OrdEcpayReturnNotification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId).HasName("PK__ORD_Ecpa__20CF2E12D7220783");
+
+            entity.ToTable("ORD_EcpayReturnNotification", tb => tb.HasComment("綠界付款結果通知"));
+
+            entity.HasIndex(e => e.MerchantTradeNo, "UQ_EcpayReturnNotification_MerchantTradeNo")
+                .IsUnique()
+                .HasFilter("([MerchantTradeNo] IS NOT NULL)");
+
+            entity.HasIndex(e => e.TradeNo, "UQ_EcpayReturnNotification_TradeNo").IsUnique();
+
+            entity.Property(e => e.NotificationId).HasComment("通知ID");
+            entity.Property(e => e.CheckMacValue)
+                .IsRequired()
+                .HasMaxLength(300)
+                .IsUnicode(false)
+                .HasComment("驗簽值");
+            entity.Property(e => e.CustomField1).HasMaxLength(50);
+            entity.Property(e => e.CustomField2).HasMaxLength(50);
+            entity.Property(e => e.CustomField3).HasMaxLength(50);
+            entity.Property(e => e.CustomField4).HasMaxLength(50);
+            entity.Property(e => e.FailReason)
+                .HasMaxLength(255)
+                .HasComment("失敗原因(optional)");
+            entity.Property(e => e.MerchantId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("特店編號");
+            entity.Property(e => e.MerchantTradeNo)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("我方訂單編號；允許NULL");
+            entity.Property(e => e.PaymentDate).HasComment("付款完成時間（成功時才有）");
+            entity.Property(e => e.PaymentType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("Credit")
+                .HasComment("付款方式");
+            entity.Property(e => e.PaymentTypeChargeFee)
+                .HasComment("通道手續費")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.PlatformId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("平台商編號");
+            entity.Property(e => e.RawBody)
+                .HasMaxLength(1000)
+                .HasComment("原始本文（表單/JSON）");
+            entity.Property(e => e.RawHeaders)
+                .HasMaxLength(1000)
+                .HasComment("原始標頭（選填）");
+            entity.Property(e => e.ReceivedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("接收時間");
+            entity.Property(e => e.RtnCode).HasComment("回應代碼");
+            entity.Property(e => e.RtnMsg)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasComment("回應訊息");
+            entity.Property(e => e.SimulatePaid).HasComment("模擬付款");
+            entity.Property(e => e.StoreId)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("分店代號");
+            entity.Property(e => e.TradeAmt).HasComment("交易金額(元)；整數");
+            entity.Property(e => e.TradeDate).HasComment("交易建立時間（yyyy/MM/dd HH:mm:ss）");
+            entity.Property(e => e.TradeNo)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("綠界交易編號；全域唯一；Payment 以此關聯");
+        });
+
+        modelBuilder.Entity<OrdInvoice>(entity =>
+        {
+            entity.HasKey(e => e.InvoiceId).HasName("PK__ORD_Invo__D796AAB5FD469E99");
+
+            entity.ToTable("ORD_Invoice", tb => tb.HasComment("發票"));
+
+            entity.HasIndex(e => e.OrderId, "IX_Invoice_OrderId");
+
+            entity.HasIndex(e => e.InvoiceNo, "UQ_ORD_Invoice_InvoiceNo").IsUnique();
+
+            entity.Property(e => e.InvoiceId).HasComment("發票ID");
+            entity.Property(e => e.AllowanceRef)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasComment("折讓單號");
+            entity.Property(e => e.Amount)
+                .HasComment("發票金額")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.BuyerName)
+                .HasMaxLength(100)
+                .HasComment("買受人");
+            entity.Property(e => e.CarrierNo)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasComment("載具號碼");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("開立時間");
+            entity.Property(e => e.InvoiceNo)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("發票號碼；唯一");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）");
+            entity.Property(e => e.RevisedDate).HasComment("更新時間（；更新時改寫）");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("issued")
+                .HasComment("狀態");
+            entity.Property(e => e.TaxId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("統編8碼");
+            entity.Property(e => e.VoidReason)
+                .HasMaxLength(200)
+                .HasComment("作廢原因");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdInvoices)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Invoice_OrderId");
+        });
+
+        modelBuilder.Entity<OrdOrder>(entity =>
+        {
+            entity.HasKey(e => e.OrderId).HasName("PK__ORD_Orde__C3905BCF15372E36");
+
+            entity.ToTable("ORD_Order", tb => tb.HasComment("訂單主檔"));
+
+            entity.HasIndex(e => new { e.LogisticsId, e.CreatedDate }, "IX_Order_LogisticsId_CreatedDate");
+
+            entity.HasIndex(e => new { e.OrderStatusId, e.CreatedDate }, "IX_Order_OrderStatusId_CreatedDate");
+
+            entity.HasIndex(e => new { e.PaymentConfigId, e.CreatedDate }, "IX_Order_PaymentConfigId_CreatedDate");
+
+            entity.HasIndex(e => new { e.PaymentStatus, e.CreatedDate }, "IX_Order_PaymentStatus_CreatedDate");
+
+            entity.HasIndex(e => new { e.ShippingStatusId, e.CreatedDate }, "IX_Order_ShippingStatusId_CreatedDate");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.CreatedDate }, "IX_Order_UserNumberId_CreatedDate");
+
+            entity.HasIndex(e => e.OrderNo, "UQ_Order_OrderNo").IsUnique();
+
+            entity.Property(e => e.OrderId).HasComment("訂單編號");
+            entity.Property(e => e.CouponId).HasComment("優惠券（FK→MKT_Coupon）；可為 NULL");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.DiscountTotal)
+                .HasComment("折扣總額（= 所有調整合計；含品牌95折、券等）")
+                .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.HasShippingLabel).HasComment("是否有出貨標籤");
+            entity.Property(e => e.IsVisibleToMember)
+                .HasDefaultValue(true)
+                .HasComment("是否顯示給會員(風險管控)");
+            entity.Property(e => e.LogisticsId).HasComment("物流商名稱（FK→SUP_Logistics）");
+            entity.Property(e => e.OrderNo)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("訂單號碼；唯一");
+            entity.Property(e => e.OrderStatusId)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("訂單狀態（對照表後補）");
+            entity.Property(e => e.PaymentConfigId).HasComment("付款方式（FK）");
+            entity.Property(e => e.PaymentStatus)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("付款狀態：unpaid/paid/refunded…");
+            entity.Property(e => e.ReceiverAddress)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasComment("收件人地址");
+            entity.Property(e => e.ReceiverName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("收件人姓名");
+            entity.Property(e => e.ReceiverPhone)
+                .IsRequired()
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasComment("收件人電話；格式建議：數字/短橫線");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.ShippingFee)
+                .HasComment("運費")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ShippingStatusId)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("配送狀態（對照表後補）");
+            entity.Property(e => e.Subtotal)
+                .HasComment("小計金額")
+                .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.TrackingNumber)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.UserNumberId).HasComment("會員編號（FK）");
+
+            entity.HasOne(d => d.Coupon).WithMany(p => p.OrdOrders)
+                .HasForeignKey(d => d.CouponId)
+                .HasConstraintName("FK_ORD_Order_CouponId");
+
+            entity.HasOne(d => d.Logistics).WithMany(p => p.OrdOrders)
+                .HasForeignKey(d => d.LogisticsId)
+                .HasConstraintName("FK_ORD_Order_LogisticsId");
+
+            entity.HasOne(d => d.PaymentConfig).WithMany(p => p.OrdOrders)
+                .HasForeignKey(d => d.PaymentConfigId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Order_PaymentConfigId");
+        });
+
+        modelBuilder.Entity<OrdOrderAdjustment>(entity =>
+        {
+            entity.HasKey(e => e.AdjustmentId).HasName("PK__ORD_Orde__E60DB893E4EAAF50");
+
+            entity.ToTable("ORD_OrderAdjustment", tb => tb.HasComment("訂單層級折扣/調整（只支援 brand 與 coupon）"));
+
+            entity.HasIndex(e => e.OrderId, "IX_OrderAdjustment_OrderId");
+
+            entity.HasIndex(e => new { e.OrderId, e.Kind }, "IX_OrderAdjustment_OrderId_Kind");
+
+            entity.HasIndex(e => new { e.OrderId, e.BrandId }, "UX_OrderAdj_Order_Brand")
+                .IsUnique()
+                .HasFilter("([BrandId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.OrderId, e.CouponId }, "UX_OrderAdj_Order_Coupon")
+                .IsUnique()
+                .HasFilter("([CouponId] IS NOT NULL)");
+
+            entity.Property(e => e.AdjustmentId).HasComment("調整主鍵");
+            entity.Property(e => e.AdjustmentAmount)
+                .HasComment("本筆訂單折扣金額（折扣為負值）")
+                .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.BrandId).HasComment("Kind=brand 時必填(**串供應商表)");
+            entity.Property(e => e.Code)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("券碼或活動代碼（若有）");
+            entity.Property(e => e.CouponId).HasComment("Kind=coupon 時必填(**串活動表)");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.DiscountRate)
+                .HasComment("比例；0.95=95折（**串供應商表）")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.Kind)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("來源：coupon/brand/site/shipping/other");
+            entity.Property(e => e.Method)
+                .IsRequired()
+                .HasMaxLength(12)
+                .IsUnicode(false)
+                .HasComment("計算：percentage/fixed");
+            entity.Property(e => e.OrderId).HasComment("FK: Order");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Scope)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("範圍：order（全單）/brand（品牌）");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.OrdOrderAdjustments)
+                .HasForeignKey(d => d.BrandId)
+                .HasConstraintName("FK_ORD_OrderAdjustment_BrandId");
+
+            entity.HasOne(d => d.Coupon).WithMany(p => p.OrdOrderAdjustments)
+                .HasForeignKey(d => d.CouponId)
+                .HasConstraintName("FK_ORD_OrderAdjustment_CouponId");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdOrderAdjustments)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderAdjustment_OrderId");
+        });
+
+        modelBuilder.Entity<OrdOrderItem>(entity =>
+        {
+            entity.HasKey(e => e.OrderItemId).HasName("PK__ORD_Orde__57ED068175F6417C");
+
+            entity.ToTable("ORD_OrderItem", tb => tb.HasComment("訂單明細"));
+
+            entity.HasIndex(e => e.OrderId, "IX_OrderItem_OrderId");
+
+            entity.HasIndex(e => e.ProductId, "IX_OrderItem_ProductId");
+
+            entity.HasIndex(e => e.SkuId, "IX_OrderItem_Sku");
+
+            entity.HasIndex(e => new { e.OrderId, e.OrderItemId }, "UQ_OrderItem_Order_OrderItem").IsUnique();
+
+            entity.Property(e => e.OrderItemId).HasComment("訂單明細編號");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）");
+            entity.Property(e => e.ProductId).HasComment("商品編號（對照表後補）");
+            entity.Property(e => e.Qty).HasComment("數量；建議CHECK：> 0");
+            entity.Property(e => e.SkuId).HasComment("貨號(退貨動庫存用)");
+            entity.Property(e => e.UnitPrice)
+                .HasComment("單價")
+                .HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdOrderItems)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderItem_OrderId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.OrdOrderItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderItem_ProductId");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.OrdOrderItems)
+                .HasForeignKey(d => d.SkuId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderItem_SkuId");
+        });
+
+        modelBuilder.Entity<OrdOrderItemAdjustment>(entity =>
+        {
+            entity.HasKey(e => e.AdjustmentItemId).HasName("PK__ORD_Orde__C56CCA7E1A24D228");
+
+            entity.ToTable("ORD_OrderItemAdjustment", tb => tb.HasComment("品項層級折扣/調整（多品牌時逐品項計算95折）"));
+
+            entity.HasIndex(e => new { e.OrderId, e.OrderItemId }, "IX_OrderItemAdj_Order_OrderItem");
+
+            entity.HasIndex(e => e.OrderId, "IX_OrderItemAdjustment_OrderId");
+
+            entity.HasIndex(e => e.OrderItemId, "IX_OrderItemAdjustment_OrderItemId");
+
+            entity.Property(e => e.AdjustmentItemId).HasComment("調整明細主鍵");
+            entity.Property(e => e.Amount)
+                .HasComment("本筆金額（折扣為負值）")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.DiscountRate)
+                .HasComment("比例；範例：0.95=95折(**串供應商表)")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.Kind)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("來源：coupon/brand/site/other");
+            entity.Property(e => e.Method)
+                .HasMaxLength(12)
+                .IsUnicode(false)
+                .HasComment("計算：percentage/fixed");
+            entity.Property(e => e.OrderId).HasComment("FK: Order（冗餘方便查詢彙總）");
+            entity.Property(e => e.OrderItemId).HasComment("FK: OrderItem");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdOrderItemAdjustments)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderItemAdjustment_OrderId");
+
+            entity.HasOne(d => d.OrderItem).WithMany(p => p.OrdOrderItemAdjustments)
+                .HasForeignKey(d => d.OrderItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_OrderItemAdjustment_OrderItemId");
+        });
+
+        modelBuilder.Entity<OrdPayment>(entity =>
+        {
+            entity.HasKey(e => e.PaymentId).HasName("PK__ORD_Paym__9B556A38AE910ABA");
+
+            entity.ToTable("ORD_Payment", tb => tb.HasComment("付款方式明細"));
+
+            entity.HasIndex(e => new { e.OrderId, e.CreatedDate }, "IX_Payment_OrderId_CreatedDate");
+
+            entity.HasIndex(e => e.PaymentConfigId, "IX_Payment_PaymentConfigId");
+
+            entity.HasIndex(e => new { e.ReturnRequestId, e.CreatedDate }, "IX_Payment_RetuenRequestId_CreatedDate");
+
+            entity.HasIndex(e => e.MerchantTradeNo, "UX_Pay_MerchantTradeNo")
+                .IsUnique()
+                .HasFilter("([MerchantTradeNo] IS NOT NULL)");
+
+            entity.HasIndex(e => e.TradeNo, "UX_Pay_TradeNo")
+                .IsUnique()
+                .HasFilter("([TradeNo] IS NOT NULL)");
+
+            entity.Property(e => e.PaymentId).HasComment("付款紀錄編號");
+            entity.Property(e => e.Amount).HasComment("金額(元)");
+            entity.Property(e => e.CheckMacValue)
+                .HasMaxLength(300)
+                .IsUnicode(false)
+                .HasComment("驗簽原文");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.MerchantTradeNo)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("對外交易編號；允許NULL");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）; YYYYMMDD#######");
+            entity.Property(e => e.PaymentConfigId).HasComment("付款方式（FK）");
+            entity.Property(e => e.ReturnRequestId).HasComment("退款型交易才填；一般授權/請款為 NULL（FK→ORD_ReturnRequest）");
+            entity.Property(e => e.RtnCode).HasComment("回傳代碼");
+            entity.Property(e => e.RtnMsg)
+                .HasMaxLength(200)
+                .HasComment("回傳訊息");
+            entity.Property(e => e.SimulatePaid).HasComment("模擬付款；1=學術/測試；不入帳/不出貨");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("狀態：pending/success/failed/refund");
+            entity.Property(e => e.TradeDate).HasComment("付款完成時間");
+            entity.Property(e => e.TradeNo)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("第三方交易號；允許NULL；主關聯至 ECPay");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdPayments)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Payment_OrderId");
+
+            entity.HasOne(d => d.PaymentConfig).WithMany(p => p.OrdPayments)
+                .HasForeignKey(d => d.PaymentConfigId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Payment_PaymentConfigId");
+
+            entity.HasOne(d => d.ReturnRequest).WithMany(p => p.OrdPayments)
+                .HasForeignKey(d => d.ReturnRequestId)
+                .HasConstraintName("FK_ORD_Payment_ReturnRequestId");
+        });
+
+        modelBuilder.Entity<OrdPaymentConfig>(entity =>
+        {
+            entity.HasKey(e => e.PaymentConfigId).HasName("PK__ORD_Paym__5D2F1BAE697D1167");
+
+            entity.ToTable("ORD_PaymentConfig", tb => tb.HasComment("付款方式設定"));
+
+            entity.HasIndex(e => e.PaymentName, "IX_ORD_PaymentConfig_PaymentName");
+
+            entity.HasIndex(e => e.PaymentCode, "UQ_ORD_PaymentConfig_PaymentCode")
+                .IsUnique()
+                .HasFilter("([PaymentCode] IS NOT NULL)");
+
+            entity.HasIndex(e => e.PaymentCode, "UX_PayMethod_Code")
+                .IsUnique()
+                .HasFilter("([PaymentCode] IS NOT NULL)");
+
+            entity.Property(e => e.PaymentConfigId).HasComment("付款方式編號");
+            entity.Property(e => e.PaymentCode)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasComment("付款方式代碼；允許NULL（建議 Filtered Unique）");
+            entity.Property(e => e.PaymentName)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("付款方式名稱");
+        });
+
+        modelBuilder.Entity<OrdReturnItem>(entity =>
+        {
+            entity.HasKey(e => e.RmaItemId).HasName("PK__ORD_Retu__FCC4AF150D3CC982");
+
+            entity.ToTable("ORD_ReturnItem", tb =>
+                {
+                    tb.HasComment("退貨明細");
+                    tb.HasTrigger("TRG_ReturnItem_Block_WhenFullRefund");
+                    tb.HasTrigger("TRG_ReturnItem_Qty_Validate");
+                });
+
+            entity.HasIndex(e => new { e.OrderId, e.OrderItemId }, "IX_ReturnItem_Order_OrderItem");
+
+            entity.HasIndex(e => e.ReturnRequestId, "IX_ReturnItem_RetuenRequestId");
+
+            entity.HasIndex(e => new { e.ReturnRequestId, e.OrderItemId }, "UQ_ReturnItem_RetuenRequestId_OrderItemId").IsUnique();
+
+            entity.Property(e => e.RmaItemId).HasComment("退貨明細編號");
+            entity.Property(e => e.ApprovedQty).HasComment("核准數量；CHECK：>= 0");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）");
+            entity.Property(e => e.OrderItemId).HasComment("原訂單明細編號（FK）；與 RetuenRequestId 組合唯一");
+            entity.Property(e => e.Qty).HasComment("申請數量；CHECK：>= 1");
+            entity.Property(e => e.RefundQty).HasComment("退款數量（僅 refund+items 使用；0~ApprovedQty）");
+            entity.Property(e => e.RefundUnitAmount)
+                .HasComment("退款單價")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ReshipQty).HasComment("補寄數量（僅 reship 使用；0~ApprovedQty）");
+            entity.Property(e => e.ReturnRequestId).HasComment("申請單編號（FK）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdReturnItems)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ReturnItem_OrderId");
+
+            entity.HasOne(d => d.OrderItem).WithMany(p => p.OrdReturnItems)
+                .HasForeignKey(d => d.OrderItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ReturnItem_OrderItemId");
+
+            entity.HasOne(d => d.ReturnRequest).WithMany(p => p.OrdReturnItems)
+                .HasForeignKey(d => d.ReturnRequestId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ReturnItem_ReturnRequestId");
+        });
+
+        modelBuilder.Entity<OrdReturnRequest>(entity =>
+        {
+            entity.HasKey(e => e.ReturnRequestId).HasName("PK__ORD_Retu__401EA6DF50BF02F9");
+
+            entity.ToTable("ORD_ReturnRequest", tb =>
+                {
+                    tb.HasComment("退貨申請 refund + order：整筆退款（不建明細）；refund + items：部分退款（需建明細）；reship：缺件補寄（需建明細；不換貨）。");
+                    tb.HasTrigger("TRG_ReturnRequest_MustHaveItems_WhenScopeItems");
+                });
+
+            entity.HasIndex(e => e.Creator, "IX_ReturnRequest_Creator");
+
+            entity.HasIndex(e => new { e.OrderId, e.CreatedDate }, "IX_ReturnRequest_OrderId_CreatedDate");
+
+            entity.HasIndex(e => e.Reviewer, "IX_ReturnRequest_Reviewer");
+
+            entity.Property(e => e.ReturnRequestId).HasComment("申請單編號");
+            entity.Property(e => e.AttachmentUrlId).HasComment("附件網址");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員(**串會員資料)");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）");
+            entity.Property(e => e.ReasonCode)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("原因代碼：damaged/missing/wrong/quality...");
+            entity.Property(e => e.ReasonText)
+                .HasMaxLength(500)
+                .HasComment("原因描述");
+            entity.Property(e => e.RefundScope)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("退款範圍：order=整筆 / items=品項（僅在 refund 時有用）");
+            entity.Property(e => e.RequestType)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("申請類型：refund/reship（建議CHECK）");
+            entity.Property(e => e.ReviewComment)
+                .HasMaxLength(500)
+                .HasComment("審核意見");
+            entity.Property(e => e.ReviewedDate).HasComment("審核時間");
+            entity.Property(e => e.Reviewer).HasComment("審核者（預留 AdminUsers，**串權限資料）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間（；更新時改寫）");
+            entity.Property(e => e.RmaId)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("流程：pending/review/refunding/done/rejected（建議CHECK）");
+
+            entity.HasOne(d => d.AttachmentUrl).WithMany(p => p.OrdReturnRequests)
+                .HasForeignKey(d => d.AttachmentUrlId)
+                .HasConstraintName("FK_ORD_ReturnRequest_AttachmentUrlId");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdReturnRequests)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ReturnRequest_OrderId");
+        });
+
+        modelBuilder.Entity<OrdShipping>(entity =>
+        {
+            entity.HasKey(e => e.ShippingId).HasName("PK__ORD_Ship__5FACD580A36223DC");
+
+            entity.ToTable("ORD_Shipping", tb => tb.HasComment("配送明細"));
+
+            entity.HasIndex(e => e.LogisticsId, "IX_Shipping_LogisticsId");
+
+            entity.HasIndex(e => new { e.OrderId, e.RevisedDate }, "IX_Shipping_OrderId_RevisedDate");
+
+            entity.HasIndex(e => new { e.ShippingStatusId, e.RevisedDate }, "IX_Shipping_StatusId_RevisedDate");
+
+            entity.HasIndex(e => e.TrackingNo, "IX_Shipping_TrackingNo");
+
+            entity.HasIndex(e => e.TrackingNo, "UQ_ORD_Shipping").IsUnique();
+
+            entity.Property(e => e.ShippingId).HasComment("配送紀錄編號");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.LogisticsId).HasComment("配送方式(**串物流組資料)");
+            entity.Property(e => e.Memo)
+                .HasMaxLength(200)
+                .HasComment("備註");
+            entity.Property(e => e.OrderId).HasComment("訂單編號（FK）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.ShippingStatusId).HasComment("狀態（對照表後補）");
+            entity.Property(e => e.TrackingNo)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("追蹤號碼");
+
+            entity.HasOne(d => d.Logistics).WithMany(p => p.OrdShippings)
+                .HasForeignKey(d => d.LogisticsId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Shipping_LogisticsId");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrdShippings)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_Shipping_OrderId");
+        });
+
+        modelBuilder.Entity<OrdShoppingCart>(entity =>
+        {
+            entity.HasKey(e => e.CartId).HasName("PK__ORD_Shop__51BCD7B789010853");
+
+            entity.ToTable("ORD_ShoppingCart", tb => tb.HasComment("購物車（訪客5、會員10 上限；程式設定 + DB 護欄）"));
+
+            entity.HasIndex(e => e.SessionId, "IX_ORD_ShoppingCart_SessionId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_ORD_ShoppingCart_UserNumberId");
+
+            entity.HasIndex(e => e.SessionId, "UQ_ORD_ShoppingCart_SessionId")
+                .IsUnique()
+                .HasFilter("([SessionId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UserNumberId, "UQ_ORD_ShoppingCart_UserNumberId")
+                .IsUnique()
+                .HasFilter("([UserNumberId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.SessionId, "UX_Cart_SessionId")
+                .IsUnique()
+                .HasFilter("([SessionId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UserNumberId, "UX_Cart_UserNumberId")
+                .IsUnique()
+                .HasFilter("([UserNumberId] IS NOT NULL)");
+
+            entity.Property(e => e.CartId).HasComment("購物車編號");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.MaxItemsAllowed)
+                .HasDefaultValue(10)
+                .HasComment("上限：訪客預設5；綁定會員後程式設為10");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("訪客識別碼；非NULL時建議唯一");
+            entity.Property(e => e.UserNumberId).HasComment("會員ID；NULL 代表訪客；非NULL時建議唯一");
+        });
+
+        modelBuilder.Entity<OrdShoppingCartItem>(entity =>
+        {
+            entity.HasKey(e => e.CartItemId).HasName("PK__ORD_Shop__488B0B0AAF337B32");
+
+            entity.ToTable("ORD_ShoppingCartItem", tb => tb.HasComment("購物車明細（同一 Cart 相同商品不可重複；數量限制參照購物車上限）"));
+
+            entity.HasIndex(e => e.SkuId, "IX_ORD_ShoppingCartItem_SkuId");
+
+            entity.HasIndex(e => e.CartId, "IX_ShoppingCartItem_CartId");
+
+            entity.HasIndex(e => e.ProductId, "IX_ShoppingCartItem_ProductId");
+
+            entity.HasIndex(e => new { e.CartId, e.SkuId }, "UQ_ORD_ShoppingCartItem_CartId_SkuId")
+                .IsUnique()
+                .HasFilter("([SkuId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.CartId, e.ProductId }, "UQ_ShoppingCartItem_CartId_ProductId").IsUnique();
+
+            entity.Property(e => e.CartItemId).HasComment("明細編號");
+            entity.Property(e => e.CartId).HasComment("購物車ID（FK）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("加入時間");
+            entity.Property(e => e.ProductId).HasComment("商品ID（對照表後補）");
+            entity.Property(e => e.Qty)
+                .HasDefaultValue(1)
+                .HasComment("數量；CHECK：> 0");
+            entity.Property(e => e.UnitPrice)
+                .HasComment("當下商品單價")
+                .HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Cart).WithMany(p => p.OrdShoppingCartItems)
+                .HasForeignKey(d => d.CartId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ShoppingCartItem_CartId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.OrdShoppingCartItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ORD_ShoppingCartItem_ProductId");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.OrdShoppingCartItems)
+                .HasForeignKey(d => d.SkuId)
+                .HasConstraintName("FK_ORD_ShoppingCartItem_Sku");
+        });
+
+        modelBuilder.Entity<ProdAttribute>(entity =>
+        {
+            entity.HasKey(e => e.AttributeId).HasName("PK__PROD_Att__C18929EA05A76EB8");
+
+            entity.ToTable("PROD_Attribute", tb => tb.HasComment("商品屬性定義，可用於篩選與分類，例如功效、性別、年齡層等"));
+
+            entity.HasIndex(e => e.DataType, "IX_PROD_Attribute_DataType");
+
+            entity.HasIndex(e => e.AttributeName, "UQ_PROD_Attribute_AttributeName").IsUnique();
+
+            entity.Property(e => e.AttributeId).HasComment("屬性ID（主鍵）");
+            entity.Property(e => e.AttributeName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("屬性名稱（例如：功效、性別、年齡）");
+            entity.Property(e => e.DataType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("text")
+                .HasComment("屬性資料型別（text/number/check/select）");
+        });
+
+        modelBuilder.Entity<ProdAttributeOption>(entity =>
+        {
+            entity.HasKey(e => e.AttributeOptionId).HasName("PK__PROD_Att__CB5BEE315A92CFCE");
+
+            entity.ToTable("PROD_AttributeOption", tb => tb.HasComment("屬性選項"));
+
+            entity.HasIndex(e => e.AttributeId, "IX_PROD_AttributeOption_AttributeId");
+
+            entity.HasIndex(e => new { e.AttributeId, e.OptionName }, "UQ_PROD_AttributeOption_AttributeId_OptionName").IsUnique();
+
+            entity.Property(e => e.AttributeOptionId).HasComment("屬性選項ID（主鍵）");
+            entity.Property(e => e.AttributeId).HasComment("屬性ID（外鍵）");
+            entity.Property(e => e.OptionName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("選項名稱（如：男性、女性、18-25歲）");
+            entity.Property(e => e.OptionValue)
+                .HasMaxLength(200)
+                .HasComment("選項值（用於儲存額外代碼或數值）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+
+            entity.HasOne(d => d.Attribute).WithMany(p => p.ProdAttributeOptions)
+                .HasForeignKey(d => d.AttributeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_AttributeOption_AttributeId");
+        });
+
+        modelBuilder.Entity<ProdBundle>(entity =>
+        {
+            entity.HasKey(e => e.BundleId).HasName("PK__PROD_Bun__420034515614D6EA");
+
+            entity.ToTable("PROD_Bundle", tb => tb.HasComment("以某一個「主商品」作為套組對外銷售，內容由多個子商品組成"));
+
+            entity.HasIndex(e => e.IsActive, "IX_PROD_Bundle_IsActive");
+
+            entity.HasIndex(e => e.BundleName, "UQ_PROD_Bundle_BundleName").IsUnique();
+
+            entity.Property(e => e.BundleId).HasComment("套組ID（主鍵）");
+            entity.Property(e => e.BundleName)
+                .HasMaxLength(200)
+                .HasComment("套組名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+        });
+
+        modelBuilder.Entity<ProdBundleItem>(entity =>
+        {
+            entity.HasKey(e => new { e.BundleId, e.ProductId }).HasName("UQ_BundleItem");
+
+            entity.ToTable("PROD_BundleItem", tb => tb.HasComment("套組明細表：記錄套組內有哪些子商品"));
+
+            entity.HasIndex(e => e.BundleId, "IX_BundleItem_BundleId");
+
+            entity.HasIndex(e => e.ProductId, "IX_BundleItem_ProductId");
+
+            entity.Property(e => e.BundleId).HasComment("套組ID (FK)");
+            entity.Property(e => e.ProductId).HasComment("商品ID (FK)");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+
+            entity.HasOne(d => d.Bundle).WithMany(p => p.ProdBundleItems)
+                .HasForeignKey(d => d.BundleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_BundleItem_BundleId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdBundleItems)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_BundleItem_ProductId");
+        });
+
+        modelBuilder.Entity<ProdIngredient>(entity =>
+        {
+            entity.HasKey(e => e.IngredientId).HasName("PK__PROD_Ing__BEAEB25AFA5FF382");
+
+            entity.ToTable("PROD_Ingredient", tb => tb.HasComment("成分主檔，可被多個商品共用"));
+
+            entity.HasIndex(e => e.Alias, "IX_PROD_Ingredient_Alias");
+
+            entity.HasIndex(e => e.IngredientName, "UQ_PROD_Ingredient_IngredientName").IsUnique();
+
+            entity.Property(e => e.IngredientId).HasComment("成分ID（主鍵）");
+            entity.Property(e => e.Alias)
+                .HasMaxLength(200)
+                .HasComment("別名或常見稱呼");
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .HasComment("成分說明或注意事項");
+            entity.Property(e => e.IngredientName)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasComment("成分名稱");
+        });
+
+        modelBuilder.Entity<ProdProduct>(entity =>
+        {
+            entity.HasKey(e => e.ProductId).HasName("PK__PROD_Pro__B40CC6CD666DE185");
+
+            entity.ToTable("PROD_Product", tb => tb.HasComment("商品基本資料"));
+
+            entity.HasIndex(e => e.BrandId, "IX_PROD_Product_BrandId");
+
+            entity.HasIndex(e => e.CreatedDate, "IX_PROD_Product_CreatedDate");
+
+            entity.HasIndex(e => e.IsPublished, "IX_PROD_Product_IsPublished");
+
+            entity.HasIndex(e => e.ProductName, "UQ_PROD_Product_ProductName").IsUnique();
+
+            entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.Badge)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("商品標籤")
+                .HasColumnName("badge");
+            entity.Property(e => e.BrandId).HasComment("品牌ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.FullDesc).HasComment("商品完整描述，用於詳細頁");
+            entity.Property(e => e.IsPublished).HasComment("是否上架（0=否，1=是）");
+            entity.Property(e => e.MainSkuId).HasComment("主規格");
+            entity.Property(e => e.ProductCode)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("商品簡碼");
+            entity.Property(e => e.ProductName)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasComment("商品名稱");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SeoId).HasComment("Seo設定");
+            entity.Property(e => e.ShortDesc)
+                .HasMaxLength(1000)
+                .HasComment("商品簡短描述，常用於列表展示");
+            entity.Property(e => e.VolumeCubicMeter)
+                .HasDefaultValue(0m)
+                .HasComment("體積")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.VolumeUnit)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("")
+                .HasComment("體積單位");
+            entity.Property(e => e.Weight)
+                .HasDefaultValue(0m)
+                .HasComment("重量（公斤）")
+                .HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.ProdProducts)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_Product_BrandId");
+
+            entity.HasOne(d => d.Seo).WithMany(p => p.ProdProducts)
+                .HasForeignKey(d => d.SeoId)
+                .HasConstraintName("FK_PROD_Product_SeoId");
+        });
+
+        modelBuilder.Entity<ProdProductAnswer>(entity =>
+        {
+            entity.HasKey(e => e.AnswerId).HasName("PK__PROD_Pro__D4825004E7F3FA80");
+
+            entity.ToTable("PROD_ProductAnswer", tb => tb.HasComment("商品問答的回答端；可標示官方回覆"));
+
+            entity.HasIndex(e => e.IsApproved, "IX_PROD_ProductAnswer_IsApproved");
+
+            entity.HasIndex(e => e.IsOfficial, "IX_PROD_ProductAnswer_IsOfficial");
+
+            entity.HasIndex(e => e.QuestionId, "IX_PROD_ProductAnswer_QuestionId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_PROD_ProductAnswer_UserNumberId");
+
+            entity.Property(e => e.AnswerId).HasComment("回答ID（主鍵）");
+            entity.Property(e => e.AnswerContent)
+                .IsRequired()
+                .HasMaxLength(1000)
+                .HasComment("回答內容");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("回答時間");
+            entity.Property(e => e.IsApproved)
+                .HasDefaultValue(true)
+                .HasComment("是否通過審核");
+            entity.Property(e => e.IsOfficial).HasComment("是否官方回覆（商家/客服）");
+            entity.Property(e => e.QuestionId).HasComment("問題ID（外鍵）");
+            entity.Property(e => e.UserNumberId).HasComment("回答者會員ID（可為商家/客服/一般會員）");
+
+            entity.HasOne(d => d.Question).WithMany(p => p.ProdProductAnswers)
+                .HasForeignKey(d => d.QuestionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductAnswer_QuestionId");
+        });
+
+        modelBuilder.Entity<ProdProductAttribute>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.AttributeId, e.AttributeOptionId });
+
+            entity.ToTable("PROD_ProductAttribute", tb => tb.HasComment("商品屬性明細表，可同時設定多種屬性"));
+
+            entity.HasIndex(e => e.AttributeId, "IX_PROD_ProductAttribute_AttributeId");
+
+            entity.HasIndex(e => e.AttributeOptionId, "IX_PROD_ProductAttribute_OptionId");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductAttribute_ProductId");
+
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.AttributeId).HasComment("屬性ID（外鍵）");
+            entity.Property(e => e.AttributeOptionId).HasComment("屬性選項ID");
+            entity.Property(e => e.AttributeValue)
+                .HasMaxLength(500)
+                .HasComment("屬性值");
+
+            entity.HasOne(d => d.Attribute).WithMany(p => p.ProdProductAttributes)
+                .HasForeignKey(d => d.AttributeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductAttribute_AttributeId");
+
+            entity.HasOne(d => d.AttributeOption).WithMany(p => p.ProdProductAttributes)
+                .HasForeignKey(d => d.AttributeOptionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductAttribute_AttributeOptionId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductAttributes)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductAttribute_ProductId");
+        });
+
+        modelBuilder.Entity<ProdProductFavorite>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.UserNumberId }).HasName("PK_PROD_ProductFavorite_ProductId_UserNumberId");
+
+            entity.ToTable("PROD_ProductFavorite", tb => tb.HasComment("會員對商品的收藏（我的最愛）紀錄"));
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductFavorite_ProductId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_PROD_ProductFavorite_UserNumberId");
+
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.UserNumberId).HasComment("會員ID（外鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("加入最愛時間");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductFavorites)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductFavorite_ProductId");
+        });
+
+        modelBuilder.Entity<ProdProductImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId).HasName("PK__PROD_Pro__7516F70CC6B6D49B");
+
+            entity.ToTable("PROD_ProductImage", tb => tb.HasComment("商品與SKU的圖片管理；主圖唯一；順序可控"));
+
+            entity.HasIndex(e => e.OrderSeq, "IX_PROD_ProductImage_OrderSeq");
+
+            entity.HasIndex(e => new { e.ProductId, e.IsMain }, "UQ_Product_MainImage")
+                .IsUnique()
+                .HasFilter("([IsMain]=(1))");
+
+            entity.HasIndex(e => new { e.SkuId, e.IsMain }, "UQ_Sku_MainImage")
+                .IsUnique()
+                .HasFilter("([SkuId] IS NOT NULL AND [IsMain]=(1))");
+
+            entity.Property(e => e.ImageId).HasComment("圖片ID（主鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("上傳時間");
+            entity.Property(e => e.ImgId).HasComment("商品圖片");
+            entity.Property(e => e.IsMain).HasComment("是否為主圖（1=主圖）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.SkuId).HasComment("若圖片只屬於特定SKU（如顏色/口味），可繫結SKU");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.ProdProductImages)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_PROD_ProductImage_ImgId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductImages)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductImage_ProductId");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.ProdProductImages)
+                .HasForeignKey(d => d.SkuId)
+                .HasConstraintName("FK_PROD_ProductImage_SkuId");
+        });
+
+        modelBuilder.Entity<ProdProductIngredient>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.IngredientId });
+
+            entity.ToTable("PROD_ProductIngredient", tb => tb.HasComment("商品成分明細；一個商品可對應多個成分"));
+
+            entity.HasIndex(e => e.IngredientId, "IX_PROD_ProductIngredient_IngredientId");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductIngredient_ProductId");
+
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.IngredientId).HasComment("成分ID（外鍵）");
+            entity.Property(e => e.Note)
+                .HasMaxLength(300)
+                .HasComment("劑量、產地或其他備註");
+            entity.Property(e => e.Percentage)
+                .HasComment("百分比或含量（單位可於前台說明）")
+                .HasColumnType("decimal(6, 3)");
+
+            entity.HasOne(d => d.Ingredient).WithMany(p => p.ProdProductIngredients)
+                .HasForeignKey(d => d.IngredientId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductIngredient_IngredientId");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductIngredients)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductIngredient_ProductId");
+        });
+
+        modelBuilder.Entity<ProdProductLike>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.UserNumberId }).HasName("PK_PROD_ProductLike_ProductId_UserNumberId");
+
+            entity.ToTable("PROD_ProductLike", tb => tb.HasComment("會員對商品的按讚紀錄；同一會員對同一商品只能按一次"));
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductLike_ProductId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_PROD_ProductLike_UserNumberId");
+
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.UserNumberId).HasComment("會員ID（外鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("按讚時間");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductLikes)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductLike_ProductId");
+        });
+
+        modelBuilder.Entity<ProdProductQuestion>(entity =>
+        {
+            entity.HasKey(e => e.QuestionId).HasName("PK__PROD_Pro__0DC06FACF631307C");
+
+            entity.ToTable("PROD_ProductQuestion", tb => tb.HasComment("商品問答的問題端；可搭配審核流程"));
+
+            entity.HasIndex(e => e.IsApproved, "IX_PROD_ProductQuestion_IsApproved");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductQuestion_ProductId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_PROD_ProductQuestion_UserNumberId");
+
+            entity.Property(e => e.QuestionId).HasComment("問題ID（主鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("提問時間");
+            entity.Property(e => e.IsApproved)
+                .HasDefaultValue(true)
+                .HasComment("是否通過審核（可做敏感詞過濾）");
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.QuestionContent)
+                .IsRequired()
+                .HasMaxLength(1000)
+                .HasComment("問題內容");
+            entity.Property(e => e.UserNumberId).HasComment("提問會員ID（外鍵）");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductQuestions)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductQuestion_ProductId");
+        });
+
+        modelBuilder.Entity<ProdProductReview>(entity =>
+        {
+            entity.HasKey(e => e.ReviewId).HasName("PK__PROD_Pro__74BC79CE8440B0CF");
+
+            entity.ToTable("PROD_ProductReview", tb => tb.HasComment("商品/SKU 的會員評價與圖片；建議搭配審核機制"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_PROD_ProductReview_CreatedDate");
+
+            entity.HasIndex(e => e.IsApproved, "IX_PROD_ProductReview_IsApproved");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductReview_ProductId");
+
+            entity.HasIndex(e => e.Rating, "IX_PROD_ProductReview_Rating");
+
+            entity.HasIndex(e => e.SkuId, "IX_PROD_ProductReview_SkuId");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_PROD_ProductReview_UserNumberId");
+
+            entity.Property(e => e.ReviewId).HasComment("評價ID（主鍵）");
+            entity.Property(e => e.Content)
+                .HasMaxLength(2000)
+                .HasComment("評價內容");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("評論時間");
+            entity.Property(e => e.IsApproved).HasComment("是否通過審核（防刷評）");
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.Rating).HasComment("星等（1~5）");
+            entity.Property(e => e.RevisedDate).HasComment("最後更新時間（編輯時更新）");
+            entity.Property(e => e.SkuId).HasComment("若評價針對特定SKU（口味/容量等），可繫結SKU");
+            entity.Property(e => e.Title)
+                .HasMaxLength(100)
+                .HasComment("評價標題");
+            entity.Property(e => e.UserNumberId).HasComment("評論會員ID（外鍵）");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductReviews)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductReview_ProductId");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.ProdProductReviews)
+                .HasForeignKey(d => d.SkuId)
+                .HasConstraintName("FK_PROD_ProductReview_SkuId");
+        });
+
+        modelBuilder.Entity<ProdProductReviewImage>(entity =>
+        {
+            entity.HasKey(e => e.ReviewImageId).HasName("PK__PROD_Pro__4AE9503FE834DD27");
+
+            entity.ToTable("PROD_ProductReviewImage", tb => tb.HasComment("評價附圖；一筆一張，便於審核與排序"));
+
+            entity.HasIndex(e => e.ImgId, "IX_PROD_ProductReviewImage_ImgId");
+
+            entity.HasIndex(e => e.ReviewId, "IX_PROD_ProductReviewImage_ReviewId");
+
+            entity.Property(e => e.ReviewImageId).HasComment("評價圖片ID（主鍵）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.ImgId).HasComment("圖片檔案ID（外鍵；對應 SYS_AssetFile.FileId）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序（同一評價內排序；預設 0）");
+            entity.Property(e => e.ReviewId).HasComment("評價ID（外鍵）");
+            entity.Property(e => e.RevisedDate).HasComment("最後更新時間（異動時更新）");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.ProdProductReviewImages)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_PROD_ProductReviewImage_ImgId");
+
+            entity.HasOne(d => d.Review).WithMany(p => p.ProdProductReviewImages)
+                .HasForeignKey(d => d.ReviewId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductReviewImage_ReviewId");
+        });
+
+        modelBuilder.Entity<ProdProductSku>(entity =>
+        {
+            entity.HasKey(e => e.SkuId).HasName("PK__PROD_Pro__AED6CBD55357DF2F");
+
+            entity.ToTable("PROD_ProductSku", tb => tb.HasComment("SKU層級與即時庫存(支援多規格)"));
+
+            entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode");
+
+            entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode_NotNull")
+                .IsUnique()
+                .HasFilter("([Barcode] IS NOT NULL AND [Barcode]<>'')");
+
+            entity.HasIndex(e => e.Barcode, "IX_PROD_ProductSku_Barcode_OnlyWhenNotEmpty")
+                .IsUnique()
+                .HasFilter("([Barcode] IS NOT NULL AND [Barcode]<>'')");
+
+            entity.HasIndex(e => e.IsActive, "IX_PROD_ProductSku_IsActive");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductSku_ProductId");
+
+            entity.HasIndex(e => e.SkuCode, "UQ_PROD_ProductSku_SkuCode").IsUnique();
+
+            entity.HasIndex(e => e.SkuCode, "UQ__PROD_Pro__3B243948F6647095").IsUnique();
+
+            entity.Property(e => e.SkuId).HasComment("SKU ID（主鍵）");
+            entity.Property(e => e.Barcode)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("條碼");
+            entity.Property(e => e.CostPrice)
+                .HasComment("成本價")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.EndDate).HasComment("下架時間（NULL=無限期）");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.IsAllowBackorder).HasComment("是否允許缺貨預購（1=可超賣，0=禁止）");
+            entity.Property(e => e.ListPrice)
+                .HasComment("原價")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.MaxStockQty).HasComment("最大庫存量（0=不限制)");
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.ReorderPoint).HasComment("再訂購點（≧安全庫存量）");
+            entity.Property(e => e.SafetyStockQty).HasComment("安全庫存量（低於提醒）");
+            entity.Property(e => e.SalePrice)
+                .HasComment("優惠價")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ShelfLifeDays).HasComment("有效天數");
+            entity.Property(e => e.SkuCode)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("SKU代碼");
+            entity.Property(e => e.SpecCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("規格碼");
+            entity.Property(e => e.StartDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("上架開始時間");
+            entity.Property(e => e.StockQty).HasComment("目前庫存");
+            entity.Property(e => e.UnitPrice)
+                .HasComment("單價")
+                .HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductSkus)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductSku_ProductId");
+
+            entity.HasMany(d => d.SpecificationOptions).WithMany(p => p.Skus)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ProdSkuSpecificationValue",
+                    r => r.HasOne<ProdSpecificationOption>().WithMany()
+                        .HasForeignKey("SpecificationOptionId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PROD_SkuSpecificationValue_SpecificationOptionId"),
+                    l => l.HasOne<ProdProductSku>().WithMany()
+                        .HasForeignKey("SkuId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_PROD_SkuSpecificationValue_SkuId"),
+                    j =>
+                    {
+                        j.HasKey("SkuId", "SpecificationOptionId");
+                        j.ToTable("PROD_SkuSpecificationValue", tb => tb.HasComment("SKU 與多個規格選項的對應"));
+                        j.HasIndex(new[] { "SkuId" }, "IX_PROD_SkuSpecificationValue_SkuId");
+                        j.HasIndex(new[] { "SpecificationOptionId" }, "IX_PROD_SkuSpecificationValue_SpecificationOptionId");
+                        j.IndexerProperty<int>("SkuId").HasComment("SKU ID（外鍵）");
+                        j.IndexerProperty<int>("SpecificationOptionId").HasComment("規格選項ID（外鍵）");
+                    });
+        });
+
+        modelBuilder.Entity<ProdProductType>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.ProductTypeId });
+
+            entity.ToTable("PROD_ProductType", tb => tb.HasComment("商品的分類明細表，一個商品可對應多個分類"));
+
+            entity.HasIndex(e => e.IsPrimary, "IX_PROD_ProductType_IsPrimary");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_ProductType_ProductId");
+
+            entity.HasIndex(e => e.ProductTypeId, "IX_PROD_ProductType_ProductTypeId");
+
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+            entity.Property(e => e.ProductTypeId).HasComment("分類ID（外鍵）");
+            entity.Property(e => e.IsPrimary).HasComment("是否為主分類（1=是）");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdProductTypes)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductType_ProductId");
+
+            entity.HasOne(d => d.ProductType).WithMany(p => p.ProdProductTypes)
+                .HasForeignKey(d => d.ProductTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_ProductType_ProductTypeId");
+        });
+
+        modelBuilder.Entity<ProdProductTypeConfig>(entity =>
+        {
+            entity.HasKey(e => e.ProductTypeId).HasName("PK__PROD_Pro__A1312F6E896A8AFC");
+
+            entity.ToTable("PROD_ProductTypeConfig", tb => tb.HasComment("商品分類設定檔，可支援多階層架構"));
+
+            entity.HasIndex(e => e.IsActive, "IX_PROD_ProductTypeConfig_IsActive");
+
+            entity.HasIndex(e => e.OrderSeq, "IX_PROD_ProductTypeConfig_OrderSeq");
+
+            entity.HasIndex(e => e.ParentId, "IX_PROD_ProductTypeConfig_ParentId");
+
+            entity.HasIndex(e => new { e.ParentId, e.ProductTypeName }, "UQ_PROD_ProductTypeConfig_Parent_ProductTypeName").IsUnique();
+
+            entity.Property(e => e.ProductTypeId).HasComment("分類ID（主鍵）");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用分類（0=否，1=是）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.ParentId).HasComment("父分類ID（NULL 代表最上層）");
+            entity.Property(e => e.ProductTypeCode)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("分類簡碼");
+            entity.Property(e => e.ProductTypeName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("分類名稱");
+            entity.Property(e => e.SeoId).HasComment("Seo 設定");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+                .HasForeignKey(d => d.ParentId)
+                .HasConstraintName("FK_PROD_ProductTypeConfig_ParentId");
+
+            entity.HasOne(d => d.Seo).WithMany(p => p.ProdProductTypeConfigs)
+                .HasForeignKey(d => d.SeoId)
+                .HasConstraintName("FK_PROD_ProductTypeConfig_SeoId");
+        });
+
+        modelBuilder.Entity<ProdSpecificationConfig>(entity =>
+        {
+            entity.HasKey(e => e.SpecificationConfigId).HasName("PK__PROD_Spe__48BAAE6C8CBE659F");
+
+            entity.ToTable("PROD_SpecificationConfig", tb => tb.HasComment("商品的規格設定"));
+
+            entity.HasIndex(e => e.GroupName, "IX_PROD_SpecificationConfig_GroupName");
+
+            entity.HasIndex(e => e.ProductId, "IX_PROD_SpecificationConfig_ProductId");
+
+            entity.Property(e => e.SpecificationConfigId).HasComment("規格群組ID（主鍵）");
+            entity.Property(e => e.GroupName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("規格群組名稱（例如：容量、口味、顏色）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProdSpecificationConfigs)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_SpecificationConfig_ProductId");
+        });
+
+        modelBuilder.Entity<ProdSpecificationOption>(entity =>
+        {
+            entity.HasKey(e => e.SpecificationOptionId).HasName("PK__PROD_Spe__50608ED5F075AC0B");
+
+            entity.ToTable("PROD_SpecificationOption", tb => tb.HasComment("商品的規格設定的選項"));
+
+            entity.HasIndex(e => e.SpecificationConfigId, "IX_PROD_SpecificationOption_ConfigId");
+
+            entity.HasIndex(e => e.OptionName, "IX_PROD_SpecificationOption_OptionName");
+
+            entity.Property(e => e.SpecificationOptionId).HasComment("規格選項ID（主鍵）");
+            entity.Property(e => e.OptionName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("規格選項名稱（例如：250ml、巧克力）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.SpecificationConfigId).HasComment("規格群組ID（外鍵）");
+
+            entity.HasOne(d => d.SpecificationConfig).WithMany(p => p.ProdSpecificationOptions)
+                .HasForeignKey(d => d.SpecificationConfigId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PROD_SpecificationOption_SpecificationConfigId");
+        });
+
+        modelBuilder.Entity<SupBrand>(entity =>
+        {
+            entity.HasKey(e => e.BrandId).HasName("PK__SUP_Bran__DAD4F05E8053B727");
+
+            entity.ToTable("SUP_Brand", tb => tb.HasComment("品牌管理"));
+
+            entity.HasIndex(e => e.BrandCode, "UQ_Brand_BrandCode").IsUnique();
+
+            entity.Property(e => e.BrandId).HasComment("主鍵，自動編號");
+            entity.Property(e => e.BrandCode)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("品牌簡碼，唯一，非空，英文");
+            entity.Property(e => e.BrandName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("品牌名稱");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DiscountRate)
+                .HasComment("折扣率 (0 ~ 100%)")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.EndDate).HasComment("折扣結束日期");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.IsDiscountActive)
+                .HasDefaultValue(true)
+                .HasComment("折扣狀態，1=有效、0=結束（排程更新）");
+            entity.Property(e => e.IsFeatured).HasComment("是否為重點展示品牌");
+            entity.Property(e => e.LikeCount).HasComment("按讚數（快取）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SeoId).HasComment("Seo 設定");
+            entity.Property(e => e.StartDate).HasComment("折扣開始日期");
+            entity.Property(e => e.SupplierId).HasComment("關聯供應商");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.SupBrands)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_SUP_Brand_ImgId");
+
+            entity.HasOne(d => d.Seo).WithMany(p => p.SupBrands)
+                .HasForeignKey(d => d.SeoId)
+                .HasConstraintName("FK_Brand_SeoId");
+
+            entity.HasOne(d => d.Supplier).WithMany(p => p.SupBrands)
+                .HasForeignKey(d => d.SupplierId)
+                .HasConstraintName("FK_Brand_SupplierId");
+        });
+
+        modelBuilder.Entity<SupBrandAccordionContent>(entity =>
+        {
+            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81EA3858F1C");
+
+            entity.ToTable("SUP_BrandAccordionContent", tb => tb.HasComment("品牌摺疊內容表"));
+
+            entity.Property(e => e.ContentId).HasComment("主鍵 Content Id");
+            entity.Property(e => e.BrandId).HasComment("關聯品牌");
+            entity.Property(e => e.Content).HasComment("摺疊內文");
+            entity.Property(e => e.ContentTitle)
+                .HasMaxLength(100)
+                .HasComment("摺疊標題");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ImgId).HasComment("品牌摺疊內容圖片");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandAccordionContents)
+                .HasForeignKey(d => d.BrandId)
+                .HasConstraintName("FK_BrandAccordionContent_BrandId");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.SupBrandAccordionContents)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_BrandAccordionContent_ImgId");
+        });
+
+        modelBuilder.Entity<SupBrandArticle>(entity =>
+        {
+            entity.HasKey(e => e.ContentId).HasName("PK__SUP_Bran__2907A81E1E3A79C5");
+
+            entity.ToTable("SUP_BrandArticle", tb => tb.HasComment("品牌文章內容表"));
+
+            entity.HasIndex(e => e.BrandId, "IX_BrandArticle_BrandId");
+
+            entity.HasIndex(e => new { e.IsActive, e.PublishDate }, "IX_BrandArticle_IsActive_PublishDate");
+
+            entity.HasIndex(e => e.OrderSeq, "IX_BrandArticle_OrderSeq");
+
+            entity.Property(e => e.ContentId).HasComment("主鍵");
+            entity.Property(e => e.BrandId).HasComment("關聯品牌Id");
+            entity.Property(e => e.Content).HasComment("內文（支援HTML）");
+            entity.Property(e => e.ContentTitle)
+                .HasMaxLength(100)
+                .HasComment("內容標題");
+            entity.Property(e => e.ContentType)
+                .HasMaxLength(20)
+                .HasComment("類型：文章/公告/新聞/活動");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ImgId).HasComment("文章圖片");
+            entity.Property(e => e.IsActive).HasComment("是否啟用");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.PublishDate).HasComment("發布時間，可排程");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandArticles)
+                .HasForeignKey(d => d.BrandId)
+                .HasConstraintName("FK_BrandArticle_BrandId");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.SupBrandArticles)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_BrandArticle_ImgId");
+        });
+
+        modelBuilder.Entity<SupBrandFavorite>(entity =>
+        {
+            entity.HasKey(e => new { e.UserNumberId, e.BrandId });
+
+            entity.ToTable("SUP_BrandFavorite", tb => tb.HasComment("品牌收藏表"));
+
+            entity.Property(e => e.UserNumberId).HasComment("關聯會員Id");
+            entity.Property(e => e.BrandId).HasComment("關聯品牌Id");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandFavorites)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BrandFavorite_BrandId");
+        });
+
+        modelBuilder.Entity<SupBrandLayoutConfig>(entity =>
+        {
+            entity.HasKey(e => e.LayoutId).HasName("PK__SUP_Bran__20358515D6831704");
+
+            entity.ToTable("SUP_BrandLayoutConfig", tb => tb.HasComment("品牌版面設定"));
+
+            entity.HasIndex(e => e.BrandId, "IX_SUP_BrandLayoutConfig_BrandId");
+
+            entity.HasIndex(e => new { e.BrandId, e.IsActive }, "UQ_SUP_BrandLayoutConfig_BrandId_IsActive")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.Property(e => e.LayoutId).HasComment("版面設定 ID");
+            entity.Property(e => e.BrandId).HasComment("關聯品牌 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive).HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.LayoutJson)
+                .IsRequired()
+                .HasComment("版面內容（JSON Array 格式，記錄 type/props/id）");
+            entity.Property(e => e.LayoutVersion)
+                .HasMaxLength(50)
+                .HasComment("版型版本");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandLayoutConfigs)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandLayoutConfig_BrandId");
+        });
+
+        modelBuilder.Entity<SupLogistic>(entity =>
+        {
+            entity.HasKey(e => e.LogisticsId).HasName("PK__SUP_Logi__15C9051BF3BA569D");
+
+            entity.ToTable("SUP_Logistics", tb => tb.HasComment("物流方式"));
+
+            entity.HasIndex(e => new { e.LogisticsName, e.ShippingMethod }, "UQ_Logistics").IsUnique();
+
+            entity.Property(e => e.LogisticsId).HasComment("主鍵");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive).HasComment("是否啟用");
+            entity.Property(e => e.LogisticsName)
+                .HasMaxLength(50)
+                .HasComment("物流商名稱");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.ShippingMethod).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<SupLogisticsRate>(entity =>
+        {
+            entity.HasKey(e => e.LogisticsRateId).HasName("PK__SUP_Logi__F0CE4A0216B1F767");
+
+            entity.ToTable("SUP_LogisticsRate", tb => tb.HasComment("物流費率"));
+
+            entity.Property(e => e.LogisticsRateId).HasComment("主鍵");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.LogisticsId).HasComment("關聯物流Id");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.ShippingFee)
+                .HasComment("運費")
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.WeightMax)
+                .HasComment("最大重量 (kg)，NULL=無限大")
+                .HasColumnType("decimal(20, 2)");
+            entity.Property(e => e.WeightMin)
+                .HasComment("最小重量 (kg)")
+                .HasColumnType("decimal(20, 2)");
+
+            entity.HasOne(d => d.Logistics).WithMany(p => p.SupLogisticsRates)
+                .HasForeignKey(d => d.LogisticsId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LogisticsRate_LogisticsId");
+        });
+
+        modelBuilder.Entity<SupStockBatch>(entity =>
+        {
+            entity.HasKey(e => e.StockBatchId).HasName("PK__SUP_Stoc__6AFCD4DF4171C3CA");
+
+            entity.ToTable("SUP_StockBatch", tb => tb.HasComment("庫存批次"));
+
+            entity.HasIndex(e => new { e.SkuId, e.BatchNumber }, "UQ_SUP_StockBatch_SkuId_BatchNumber").IsUnique();
+
+            entity.Property(e => e.StockBatchId).HasComment("主鍵");
+            entity.Property(e => e.BatchNumber)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("批號，唯一，非空");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ExpireDate).HasComment("效期");
+            entity.Property(e => e.IsSellable)
+                .HasDefaultValue(true)
+                .HasComment("是否可銷售");
+            entity.Property(e => e.ManufactureDate).HasComment("製造日期");
+            entity.Property(e => e.Qty).HasComment("數量（CK ? 0）");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SkuId).HasComment("SKU ID (FK)");
+
+            entity.HasOne(d => d.Sku).WithMany(p => p.SupStockBatches)
+                .HasForeignKey(d => d.SkuId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StockBatch_SkuId");
+        });
+
+        modelBuilder.Entity<SupStockHistory>(entity =>
+        {
+            entity.HasKey(e => e.StockHistoryId).HasName("PK__SUP_Stoc__A6CE86FB50923AAD");
+
+            entity.ToTable("SUP_StockHistory", tb => tb.HasComment("庫存異動紀錄"));
+
+            entity.HasIndex(e => e.OrderItemId, "IX_SUP_StockHistory_OrderItemId");
+
+            entity.HasIndex(e => e.StockBatchId, "IX_SUP_StockHistory_StockBatchId");
+
+            entity.Property(e => e.StockHistoryId).HasComment("主鍵");
+            entity.Property(e => e.AfterQty).HasComment("異動後數量");
+            entity.Property(e => e.BeforeQty).HasComment("異動前數量");
+            entity.Property(e => e.ChangeQty).HasComment("異動數量 (CK ? 0)");
+            entity.Property(e => e.ChangeType)
+                .HasMaxLength(20)
+                .HasComment("異動類型");
+            entity.Property(e => e.OrderItemId).HasComment("訂單明細編號(FK)");
+            entity.Property(e => e.Remark)
+                .HasMaxLength(500)
+                .HasComment("備註");
+            entity.Property(e => e.RevisedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.StockBatchId).HasComment("關聯庫存批次");
+
+            entity.HasOne(d => d.OrderItem).WithMany(p => p.SupStockHistories)
+                .HasForeignKey(d => d.OrderItemId)
+                .HasConstraintName("FK_SUP_StockHistory_OrderItem");
+
+            entity.HasOne(d => d.StockBatch).WithMany(p => p.SupStockHistories)
+                .HasForeignKey(d => d.StockBatchId)
+                .HasConstraintName("FK_StockHistory_StockBatchId");
+        });
+
+        modelBuilder.Entity<SupSupplier>(entity =>
+        {
+            entity.HasKey(e => e.SupplierId).HasName("PK__SUP_Supp__4BE666B45E51D1ED");
+
+            entity.ToTable("SUP_Supplier", tb => tb.HasComment("供應商模組"));
+
+            entity.Property(e => e.SupplierId).HasComment("主鍵，自動編號");
+            entity.Property(e => e.ContactName)
+                .HasMaxLength(50)
+                .HasComment("聯絡人");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.Email)
+                .IsRequired()
+                .HasMaxLength(100)
+                .IsUnicode(false)
+                .HasComment("電子郵件");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.Phone)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("聯絡電話");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.SupplierName)
+                .HasMaxLength(100)
+                .HasComment("供應商名稱");
+        });
+
+        modelBuilder.Entity<SysAssetFile>(entity =>
+        {
+            entity.HasKey(e => e.FileId).HasName("PK__SYS_Asse__6F0F98BF76A7BD38");
+
+            entity.ToTable("SYS_AssetFile", tb => tb.HasComment("通用媒體庫（圖片/影片/檔案）"));
+
+            entity.HasIndex(e => e.FileKey, "UQ_SYS_AssetFile_FileKey").IsUnique();
+
+            entity.Property(e => e.FileId).HasComment("主鍵 ID");
+            entity.Property(e => e.AltText)
+                .HasMaxLength(300)
+                .HasComment("Alt 替代文字");
+            entity.Property(e => e.Caption)
+                .HasMaxLength(500)
+                .HasComment("文字說明 / 附註文字");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.FileExt)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("副檔名，例如 jpg, png, webp");
+            entity.Property(e => e.FileKey)
+                .IsRequired()
+                .HasMaxLength(200)
+                .IsUnicode(false)
+                .HasComment("雜湊或GUID，用來防重複");
+            entity.Property(e => e.FileSizeBytes).HasComment("檔案大小（byte 為單位）");
+            entity.Property(e => e.FileUrl)
+                .IsRequired()
+                .HasMaxLength(1000)
+                .HasComment("完整URL或相對路徑");
+            entity.Property(e => e.Height).HasComment("影像高度（非影像類型可為 NULL）");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否有效");
+            entity.Property(e => e.IsDeleted).HasComment("軟刪除");
+            entity.Property(e => e.IsExternal).HasComment("是否外部URL");
+            entity.Property(e => e.MimeType)
+                .HasMaxLength(100)
+                .IsUnicode(false)
+                .HasComment("image/jpeg, image/png, video/mp4");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Width).HasComment("影像寬度（非影像類型可為 NULL）");
+        });
+
+        modelBuilder.Entity<SysCode>(entity =>
+        {
+            entity.HasKey(e => new { e.ModuleId, e.CodeId, e.CodeNo });
+
+            entity.ToTable("SYS_Code", tb =>
+                {
+                    tb.HasComment("系統代號檔");
+                    tb.HasTrigger("TR_SYS_Code_ModuleIdCheck");
+                });
+
+            entity.Property(e => e.ModuleId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("模組代號");
+            entity.Property(e => e.CodeId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("代號編碼");
+            entity.Property(e => e.CodeNo)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("代號");
+            entity.Property(e => e.CodeDesc)
+                .HasMaxLength(50)
+                .HasComment("說明");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.GroupName)
+                .HasMaxLength(200)
+                .IsUnicode(false)
+                .HasComment("模組群組");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否有效");
+            entity.Property(e => e.Memo).HasMaxLength(500);
+            entity.Property(e => e.ProgId)
+                .HasMaxLength(100)
+                .IsUnicode(false)
+                .HasComment("程式代號");
+        });
+
+        modelBuilder.Entity<SysFolder>(entity =>
+        {
+            entity.HasKey(e => e.FolderId).HasName("PK__SYS_Fold__ACD7107F476EEB66");
+
+            entity.ToTable("SYS_Folders", tb => tb.HasComment("資料夾管理"));
+
+            entity.HasIndex(e => e.ParentId, "IX_SYS_Folders_ParentId");
+
+            entity.HasIndex(e => new { e.ParentId, e.FolderName }, "UQ_SYS_Folders_Parent_FolderName").IsUnique();
+
+            entity.Property(e => e.FolderId).HasComment("資料夾 ID");
+            entity.Property(e => e.FolderName)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("資料夾名稱");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（1=啟用，0=停用）");
+            entity.Property(e => e.ParentId).HasComment("上層資料夾 ID（自關聯）");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+                .HasForeignKey(d => d.ParentId)
+                .HasConstraintName("FK_SYS_Folders_Parent");
+        });
+
+        modelBuilder.Entity<SysProgramConfig>(entity =>
+        {
+            entity.HasKey(e => e.ProgramConfigId).HasName("PK__SYS_Prog__3E6165A2ACD32C41");
+
+            entity.ToTable("SYS_ProgramConfig", tb =>
+                {
+                    tb.HasComment("角色擁有的模組權限");
+                    tb.HasTrigger("TR_SYS_ProgramConfig_ModuleIdCheck");
+                });
+
+            entity.HasIndex(e => e.ProgId, "UQ_SYS_ProgramConfig_ProgId").IsUnique();
+
+            entity.Property(e => e.ProgramConfigId).HasComment("程式設定編號（主鍵）");
+            entity.Property(e => e.ActionName)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Area)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Controller)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.Icon)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（0=否，1=是）");
+            entity.Property(e => e.ModuleId)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("模組名稱");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.ProgId)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("模組代號（唯一）");
+            entity.Property(e => e.ProgName)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+        });
+
+        modelBuilder.Entity<SysSeoMetaAsset>(entity =>
+        {
+            entity.HasKey(e => new { e.SeoId, e.FileId });
+
+            entity.ToTable("SYS_SeoMetaAsset", tb => tb.HasComment("SEO 頁面用到的資產（可多張）"));
+
+            entity.HasIndex(e => new { e.SeoId, e.OrderSeq }, "IX_SYS_SeoMetaAsset_SeoId_OrderSeq");
+
+            entity.HasIndex(e => new { e.SeoId, e.Role, e.OrderSeq }, "IX_SYS_SeoMetaAsset_SeoId_Role_OrderSeq");
+
+            entity.Property(e => e.SeoId).HasComment("來源 SEO Id");
+            entity.Property(e => e.FileId).HasComment("資產檔案 Id");
+            entity.Property(e => e.AltText)
+                .HasMaxLength(300)
+                .HasComment("圖片在此頁面的替代文字（與檔案本體解耦）");
+            entity.Property(e => e.Caption)
+                .HasMaxLength(500)
+                .HasComment("此頁面下的圖片說明文字/附註");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("註冊時間");
+            entity.Property(e => e.FocalX)
+                .HasComment("焦點X%（0~100）")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.FocalY)
+                .HasComment("焦點Y%（0~100）")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.IsPrimary).HasComment("主要代表圖（OpenGraph/縮圖優先）");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
+            entity.Property(e => e.RevisedDate).HasComment("上次修改時間");
+            entity.Property(e => e.Role)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("圖片角色（hero/gallery/og/twitter）");
+
+            entity.HasOne(d => d.File).WithMany(p => p.SysSeoMetaAssets)
+                .HasForeignKey(d => d.FileId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SYS_SeoMetaAsset_FileId");
+
+            entity.HasOne(d => d.Seo).WithMany(p => p.SysSeoMetaAssets)
+                .HasForeignKey(d => d.SeoId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SYS_SeoMetaAsset_SeoId");
+        });
+
+        modelBuilder.Entity<SysSeoMetum>(entity =>
+        {
+            entity.HasKey(e => e.SeoId).HasName("PK__SYS_SeoM__7A789D35FE3DCA75");
+
+            entity.ToTable("SYS_SeoMeta", tb => tb.HasComment("SEO 設定表"));
+
+            entity.HasIndex(e => e.SeoSlug, "IX_SYS_SeoMeta_SeoSlug");
+
+            entity.HasIndex(e => new { e.RefTable, e.RefId }, "UQ_SYS_SeoMeta_RefTable_RefId").IsUnique();
+
+            entity.HasIndex(e => e.SeoSlug, "UQ_SYS_SeoMeta_SeoSlug").IsUnique();
+
+            entity.Property(e => e.SeoId).HasComment("SEO 編號");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建檔時間");
+            entity.Property(e => e.RefId).HasComment("來源 ID");
+            entity.Property(e => e.RefTable)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("來源表名稱");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.SeoDesc)
+                .HasMaxLength(1000)
+                .HasComment("SEO 簡短描述");
+            entity.Property(e => e.SeoSlug)
+                .IsRequired()
+                .HasMaxLength(255)
+                .IsUnicode(false)
+                .HasComment("頁面唯一 URL 標識");
+            entity.Property(e => e.SeoTitle)
+                .HasMaxLength(150)
+                .HasComment("SEO 標題簡稱");
+        });
+
+        modelBuilder.Entity<UserBlockHistory>(entity =>
+        {
+            entity.HasKey(e => e.BlockHistoryId).HasName("PK__USER_Blo__E16BC64019AC5560");
+
+            entity.ToTable("USER_BlockHistory", tb => tb.HasComment("會員禁用紀錄"));
+
+            entity.HasIndex(e => e.Status, "IX_USER_BlockHistory_Status");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_USER_BlockHistory_UserNumberId");
+
+            entity.Property(e => e.BlockHistoryId).HasComment("禁用紀錄 ID");
+            entity.Property(e => e.Creator).HasComment("設定者");
+            entity.Property(e => e.EndDate).HasComment("結束日期");
+            entity.Property(e => e.Reason)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("禁用原因");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動者");
+            entity.Property(e => e.Scope)
+                .HasMaxLength(50)
+                .HasComment("禁用範圍");
+            entity.Property(e => e.StartDate).HasComment("開始日期");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("禁用狀態");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+        });
+
+        modelBuilder.Entity<UserCouponWallet>(entity =>
+        {
+            entity.HasKey(e => e.CouponWalletId).HasName("PK__USER_Cou__E747CD6E91E2CDAA");
+
+            entity.ToTable("USER_CouponWallet", tb =>
+                {
+                    tb.HasComment("會員擁有的優惠券錢包");
+                    tb.HasTrigger("TRG_CouponWallet_Insert");
+                });
+
+            entity.HasIndex(e => e.CouponId, "IX_USER_CouponWallet_CouponId");
+
+            entity.HasIndex(e => e.Status, "IX_USER_CouponWallet_Status");
+
+            entity.HasIndex(e => e.UsedDate, "IX_USER_CouponWallet_UsedDate");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_USER_CouponWallet_UserNumberId");
+
+            entity.Property(e => e.CouponWalletId).HasComment("會員優惠券 ID");
+            entity.Property(e => e.ClaimedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("領取時間");
+            entity.Property(e => e.CouponId).HasComment("優惠券id");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("使用狀態");
+            entity.Property(e => e.UsedDate).HasComment("使用時間");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+
+            entity.HasOne(d => d.Coupon).WithMany(p => p.UserCouponWallets)
+                .HasForeignKey(d => d.CouponId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_USER_CouponWallet_CouponId");
+        });
+
+        modelBuilder.Entity<UserCreditCardInfo>(entity =>
+        {
+            entity.HasKey(e => e.CreditCardInfoId).HasName("PK__USER_Cre__5EAFB3C01979544D");
+
+            entity.ToTable("USER_CreditCardInfo", tb => tb.HasComment("信用卡付款資訊"));
+
+            entity.HasIndex(e => e.PaymentMethodId, "IX_USER_CreditCardInfo_PaymentMethodId");
+
+            entity.Property(e => e.CreditCardInfoId).HasComment("信用卡資訊 ID");
+            entity.Property(e => e.CardBrand)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("信用卡品牌");
+            entity.Property(e => e.CardLastFourDigits)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .HasComment("卡號末四碼");
+            entity.Property(e => e.ExpiryDate)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("有效期限");
+            entity.Property(e => e.PaymentMethodId).HasComment("付款方式 ID");
+
+            entity.HasOne(d => d.PaymentMethod).WithMany(p => p.UserCreditCardInfos)
+                .HasForeignKey(d => d.PaymentMethodId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_USER_CreditCardInfo_PaymentMethodId");
+        });
+
+        modelBuilder.Entity<UserGtmManager>(entity =>
+        {
+            entity.HasKey(e => e.GtmManagerId).HasName("PK__USER_Gtm__B627E25721F085EC");
+
+            entity.ToTable("USER_GtmManager", tb => tb.HasComment("google tag manager 追蹤碼管理員設定"));
+
+            entity.HasIndex(e => e.IsActive, "IX_USER_GtmManager_IsActive");
+
+            entity.HasIndex(e => e.GtmId, "UQ_USER_GtmManager_GtmId")
+                .IsUnique()
+                .HasFilter("([GtmId] IS NOT NULL)");
+
+            entity.Property(e => e.GtmManagerId).HasComment("GTM 管理員 ID");
+            entity.Property(e => e.GtmId)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("GTM 專案 ID");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+        });
+
+        modelBuilder.Entity<UserLoginLog>(entity =>
+        {
+            entity.HasKey(e => e.LoginLogId).HasName("PK__USER_Log__D42E7AEC596C192F");
+
+            entity.ToTable("USER_LoginLog", tb => tb.HasComment("管理員登入紀錄"));
+
+            entity.HasIndex(e => e.AdminId, "IX_USER_LoginSUP_AdminId");
+
+            entity.HasIndex(e => e.LoginDate, "IX_USER_LoginSUP_LoginDate");
+
+            entity.HasIndex(e => e.LoginResult, "IX_USER_LoginSUP_LoginResult");
+
+            entity.Property(e => e.LoginLogId).HasComment("登入紀錄 ID");
+            entity.Property(e => e.AdminId).HasComment("登入者 ID");
+            entity.Property(e => e.LoginDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("登入時間");
+            entity.Property(e => e.LoginIp)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("登入 IP");
+            entity.Property(e => e.LoginResult)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("登入結果");
+            entity.Property(e => e.LogoutDate).HasComment("登出時間");
+        });
+
+        modelBuilder.Entity<UserMemberPaymentMethod>(entity =>
+        {
+            entity.HasKey(e => e.PaymentMethodId).HasName("PK__USER_Mem__DC31C1D3EFC47E7F");
+
+            entity.ToTable("USER_MemberPaymentMethod", tb => tb.HasComment("會員付款方式"));
+
+            entity.HasIndex(e => e.IsDefault, "IX_USER_MemberPaymentMethod_IsDefault");
+
+            entity.HasIndex(e => e.PaymentMethodType, "IX_USER_MemberPaymentMethod_Type");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_USER_MemberPaymentMethod_UserNumberId");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.PaymentToken }, "UQ_USER_MemberPaymentMethod_UserNumberId_Token").IsUnique();
+
+            entity.Property(e => e.PaymentMethodId).HasComment("付款方式 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.IsDefault).HasComment("是否為預設付款方式");
+            entity.Property(e => e.Note)
+                .HasMaxLength(200)
+                .HasComment("備註說明");
+            entity.Property(e => e.PaymentGatewayCode)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("金流服務商代碼");
+            entity.Property(e => e.PaymentMethodType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("付款方式類型");
+            entity.Property(e => e.PaymentToken)
+                .IsRequired()
+                .HasMaxLength(200)
+                .IsUnicode(false)
+                .HasComment("代號化付款憑證");
+            entity.Property(e => e.RevisedDate).HasComment("修改時間");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+        });
+
+        modelBuilder.Entity<UserMemberRank>(entity =>
+        {
+            entity.HasKey(e => e.MemberRankId).HasName("PK__USER_Mem__DE307E3479CEB5B5");
+
+            entity.ToTable("USER_MemberRank", tb =>
+                {
+                    tb.HasComment("會員等級設定");
+                    tb.HasTrigger("tr_MemberRankId");
+                });
+
+            entity.HasIndex(e => e.RankName, "UQ_USER_MemberRank_RankName").IsUnique();
+
+            entity.Property(e => e.MemberRankId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("等級代碼");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用");
+            entity.Property(e => e.OrderCountForUpgrade).HasComment("升級所需訂單數");
+            entity.Property(e => e.RankDescription).HasComment("等級說明");
+            entity.Property(e => e.RankName)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("等級名稱");
+            entity.Property(e => e.RebateRate)
+                .HasComment("回饋率")
+                .HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.TotalSpentForUpgrade)
+                .HasComment("升級所需總消費金額")
+                .HasColumnType("decimal(20, 2)");
+        });
+
+        modelBuilder.Entity<UserNotification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId).HasName("PK__USER_Not__20CF2E121B341311");
+
+            entity.ToTable("USER_Notification", tb => tb.HasComment("會員通知設定"));
+
+            entity.HasIndex(e => e.CreatedDate, "IX_USER_Notification_CreatedDate");
+
+            entity.HasIndex(e => e.IsActive, "IX_USER_Notification_IsActive");
+
+            entity.HasIndex(e => new { e.UserNumberId, e.NotificationType }, "UQ_USER_Notification_UserNumberId_Type").IsUnique();
+
+            entity.Property(e => e.NotificationId).HasComment("通知設定 ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員 ID");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("啟用狀態");
+            entity.Property(e => e.NotificationType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("通知類型");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員 ID");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+        });
+
+        modelBuilder.Entity<UserNotificationHistory>(entity =>
+        {
+            entity.HasKey(e => e.NotificationHistoryId).HasName("PK__USER_Not__4A04A54C4F445214");
+
+            entity.ToTable("USER_NotificationHistory", tb => tb.HasComment("會員通知發送紀錄"));
+
+            entity.HasIndex(e => e.IsRead, "IX_USER_NotificationHistory_IsRead");
+
+            entity.HasIndex(e => e.SentDate, "IX_USER_NotificationHistory_SentDate");
+
+            entity.HasIndex(e => e.Status, "IX_USER_NotificationHistory_Status");
+
+            entity.HasIndex(e => e.UserNumberId, "IX_USER_NotificationHistory_UserNumberId");
+
+            entity.Property(e => e.NotificationHistoryId).HasComment("通知紀錄 ID");
+            entity.Property(e => e.CodeSource)
+                .HasMaxLength(50)
+                .HasComment("程式來源");
+            entity.Property(e => e.Content).HasComment("通知內容");
+            entity.Property(e => e.ContentTitle)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasComment("通知標題");
+            entity.Property(e => e.DeliveryChannel)
+                .HasMaxLength(50)
+                .HasComment("發送管道");
+            entity.Property(e => e.IsRead).HasComment("判斷通知是否已讀");
+            entity.Property(e => e.ModuleId)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("模組名稱");
+            entity.Property(e => e.NotificationType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("通知類型");
+            entity.Property(e => e.SentDate).HasComment("發送時間");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("發送狀態");
+            entity.Property(e => e.UserNumberId).HasComment("會員 ID");
+        });
+
+        modelBuilder.Entity<UserRoleModule>(entity =>
+        {
+            entity.HasKey(e => e.RoleModuleId).HasName("PK__USER_Rol__87A830300A5F5614");
+
+            entity.ToTable("USER_RoleModule", tb =>
+                {
+                    tb.HasComment("角色擁有的模組權限");
+                    tb.HasTrigger("TR_USER_RoleModule_ModuleIdCheck");
+                });
+
+            entity.HasIndex(e => e.AdminRoleId, "IX_USER_RoleModule_AdminRoleId");
+
+            entity.HasIndex(e => e.ModuleId, "IX_USER_RoleModule_ModuleId");
+
+            entity.Property(e => e.RoleModuleId).HasComment("主鍵 ID");
+            entity.Property(e => e.AdminRoleId)
+                .IsRequired()
+                .HasComment("管理員角色 ID (FK)");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.ModuleId)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasComment("模組代號");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.AdminRole).WithMany(p => p.UserRoleModules)
+                .HasForeignKey(d => d.AdminRoleId)
+                .HasConstraintName("FK_USER_RoleModule_Role");
         });
         modelBuilder.HasSequence("MemberRankIdSequence");
         modelBuilder.HasSequence<int>("UserNumberSequence").StartsAt(1001L);

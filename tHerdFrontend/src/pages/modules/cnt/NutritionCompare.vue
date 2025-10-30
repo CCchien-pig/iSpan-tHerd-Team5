@@ -235,6 +235,40 @@ const norm = s => {
   const t = String(s || '').trim()
   return t === '' ? '未分類' : t
 }
+/* ---------- 名稱解析與寬度估算 helper ---------- */
+// 取中文顯示名 + 英文尾註（允許括號裡再有括號）
+function parseZhEn(name) {
+  const s = String(name || '').trim();
+  const open = s.lastIndexOf('(');
+  const close = s.endsWith(')');
+  if (open > -1 && close) {
+    const zhPart = s.slice(0, open).trim();
+    const tail = s.slice(open + 1, -1).trim(); // 括號內完整字串，可含 (Chinese) 之類
+    const hasCJK = /[\u4e00-\u9fff]/.test(tail);
+    const hasLat = /[A-Za-z]/.test(tail);
+    if (hasLat && !hasCJK) {
+      return { zh: zhPart || s, en: tail };
+    }
+  }
+  return { zh: s, en: '' };
+}
+
+// 用 canvas 實測字寬，避免估太寬把圖擠到右邊
+const measureTextWidth = (() => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  // 依你頁面實際字體微調；12px 是 ECharts 預設刻度字
+  ctx.font = '12px "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  return (text) => ctx.measureText(String(text)).width;
+})();
+
+// 依最長的 Y 標籤算出左邊距
+function leftPadForY(labels, cw) {
+  const maxW = Math.max(0, ...labels.map(measureTextWidth));
+  const estimated = Math.ceil(maxW) + 16;       // 文字 + 內距
+  const cap = Math.floor(cw * 0.34);            // 左邊距最多占容器 34%（更嚴格）
+  return Math.max(64, Math.min(estimated, cap)); 
+}
 
 /* ---------- state ---------- */
 const state = reactive({
@@ -527,6 +561,15 @@ async function fetchCompare() {
 }
 
 /* ----------------------- charts ----------------------- */
+// 加個小工具把食材陣列切塊
+function wrapSamples(names, per = 3, sep = '、') {
+  const rows = []
+  for (let i = 0; i < names.length; i += per) {
+    rows.push(names.slice(i, i + per).join(sep))
+  }
+  return rows.join('\n')  // ← 每列之間用 \n
+}
+
 function renderAll() {
   // 清掉舊圖
   Object.values(chartRefs).forEach(el => el?.__chartInstance?.dispose?.())
@@ -539,58 +582,111 @@ function renderAll() {
 
     const analytes = grp.analytes || []
     const analyteNames = analytes.map(a => a.analyteName)
-    const sampleNames = analytes[0]?.values?.map(v => v.sampleName) || []
+    const rawSampleNames = analytes[0]?.values?.map(v => v.sampleName) || [];
+    const parsed = rawSampleNames.map(parseZhEn);
+    const zhNames = parsed.map(p => p.zh);   // 給圖例/系列/座標軸顯示
+    const enTails = parsed.map(p => p.en);   // 只給 tooltip 括號顯示
 
     // dataset[y(sample)][x(analyte)] = value
-    const dataset = sampleNames.map(() => [])
-    analytes.forEach((a, ai) => {
-      a.values.forEach((v, si) => {
-        dataset[si][ai] = toNum(v.value)
-      })
-    })
+    const dataset = zhNames.map(() => [])
+    analytes.forEach((a, ai) => a.values.forEach((v, si) => { dataset[si][ai] = toNum(v.value) }))
+   // ✅ 先算 names/rows，後面雷達圖要用
+   const names       = zhNames
+   const namesPerRow = 3
+   const rows        = Math.ceil(names.length / namesPerRow)
+   // 在 renderAll() 內、算出 rows 之後、決定 option 之前
+   const extraTopByType = { bar: 0, stacked: 0, heatmap: 8, radar: 12, boxplot: 0 };
+   const extraTop = extraTopByType[ui.chartType] || 0;
+
 
     let option
     switch (ui.chartType) {
-      case 'bar': option = optionBar(analyteNames, sampleNames, dataset, grp.unit); break
-      case 'radar': option = optionRadar(analyteNames, sampleNames, dataset); break
-      case 'heatmap': option = optionHeatmap(analyteNames, sampleNames, dataset, grp.unit); break
-      case 'stacked': option = optionStacked100(analyteNames, sampleNames, dataset, grp.unit); break
-      case 'boxplot': option = optionBoxplot(analyteNames, dataset, grp.unit); break
+     case 'bar':     option = optionBar(analyteNames, zhNames, dataset, grp.unit); break
+     case 'radar':   option = optionRadar(analyteNames, zhNames, dataset, grp.unit, { rows, enTails }); break
+     case 'heatmap': option = optionHeatmap(analyteNames, zhNames, dataset, grp.unit, (el?.clientWidth || 800)); break
+     case 'stacked': option = optionStacked100(analyteNames, zhNames, dataset, grp.unit); break
+     case 'boxplot': option = optionBoxplot(analyteNames, dataset, grp.unit); break
     }
+
     // === 標題/副標與版面 ===
     // 1) 顯示用「原始單位」
-    const rawUnit = (grp.unit ?? '').trim()     // <- DB 原字串（例如 "µg RAE", "mg/100g"）
-    const unitKey = normUnit(rawUnit)           // <- 只給 fmtNumber 用來決定小數位
-    const showUnit = rawUnit || '-'             // <- 所有對外顯示都用它
+    const rawUnit  = (grp.unit ?? '').trim();
+    const unitKey  = normUnit(rawUnit);
+    const showUnit = rawUnit || '-';
 
-    // 2) 標題 / 副標
-    const titleText = `食材比較（${ui.compareList.map(s => s.sampleName).join('、')}）`
-    const subZh = `依單位分群（每100公克）· 單位：${showUnit}`
-    const subEn = `Per 100g · Unit: ${showUnit}`
-    const subText   = `${subZh} | ${subEn} | 資料來源｜Source: tHerd Nutrition DB`
-
-    // 標題/圖例留空間 //先保留原本 grid，再統一加大邊界
-    const baseGrid = option.grid || {}
+    // 2) 食材名稱 → 多列換行（每列3個，可調 4/5）
+    const namesMultiline  = wrapSamples(names, namesPerRow)  // <-- 真的用上它
+    const titleText       = '食材比較'                        // 主標題就放簡短字
+    const subZh           = `依單位分群（每100公克）· 單位：${showUnit}`
+    const subEn           = `Per 100g · Unit: ${showUnit}`
+    // 把多行食材清單放在副標的第一行
+    // 組成多段文字（rich style）
+    const subText = [
+      `{foods|${namesMultiline}}`,
+      `{info|${subZh} | ${subEn}}`,
+      `{src|資料來源｜Source: tHerd Nutrition DB}`
+    ].join('\n')
+    
+    // 3) 依食材列數拉開上邊距（避免壓到圖）
+    const baseGrid = option.grid && !Array.isArray(option.grid) ? option.grid : {}
     option.grid = {
-      left:   Math.max(baseGrid.left   || 0, 64),
-      right:  Math.max(baseGrid.right  || 0, 24),
-      bottom: Math.max(baseGrid.bottom || 0, 72),
-      top:    Math.max(baseGrid.top    || 0, 180), // ← 160~200 皆可；你要像單項那樣就用 180
-      containLabel: true,
-      ...baseGrid
-    }
-    option.title = {
-      left: 'center',
-      top: 10,
-      text: titleText,
-      subtext: subText,
-      subtextGap: 8,
-      textStyle: { fontSize: 15, fontWeight: 360, color: '#1f2937' },
-      subtextStyle: { fontSize: 12, color: '#6b7280' }
+      ...baseGrid,
+      top: Math.max(baseGrid.top ?? 0, 148 + (rows - 1) * 24 + extraTop),
+      left:   Math.max(baseGrid.left   ?? 0, 64),
+      right:  Math.max(baseGrid.right  ?? 0, 28),
+      bottom: Math.max(baseGrid.bottom ?? 0, 108),
+      containLabel: true
     }
 
-    // 圖例往下放一些，避免壓到圖
-    option.legend = { ...(option.legend || {}), bottom: 18 }
+    option.title = {
+        left: 'center',
+        top: 10,
+        text: titleText,
+        subtext: subText,
+        subtextGap: 16,
+        textStyle: {
+          fontSize: 18, fontWeight: 500, color: '#1f2937'// 主標題「食材比較」深灰黑
+        },
+        subtextStyle: {
+          rich: {
+            // 🔹 第一行：食材清單（主視覺焦點）→ 灰黑、略粗
+            foods: {
+              fontSize: 15, lineHeight: 24, fontWeight: 600, color: '#374151'},
+                        // ≈ Tailwind slate-700            
+            // 🔹 第二行：單位資訊 → 中灰、略細一點
+            info: {
+              fontSize: 14, lineHeight: 22, fontWeight: 600, color: '#6b7280'},
+                        // ≈ slate-500
+            // 🔹 第三行：資料來源 → 比上面再淺一階，但不會太淡
+            src: {
+              fontSize: 13, lineHeight: 20, fontWeight: 600, color: '#4b5563'}
+                        // ≈ slate-600，比 #9ca3af 深一點更穩重
+          }
+        }
+      }
+
+
+    // 4) 圖例：維持你原本單列/自動換寬的寫法（可保留或之後換成多列版本）
+    const cw = el?.clientWidth || 800
+    option.legend = {
+      ...(option.legend || {}),
+      type: 'plain',
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 2,
+      width: Math.max(320, cw - 160),
+      itemGap: 16,
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 12, lineHeight: 16 }
+    }
+    if (zhNames.length > 14) {
+      option.legend.type = 'scroll'
+      option.legend.pageIconSize = 10
+      option.legend.pageButtonItemGap = 6
+      option.legend.pageFormatter = '{current}/{total}'
+    }
+
 
     // 3) 軸線：只對 value 軸做數字格式（用 unitKey），類別軸不處理
     const isXValue = option.xAxis && option.xAxis.type === 'value'
@@ -611,16 +707,57 @@ function renderAll() {
     }
 
     // 4) Tooltip / 資料標籤：數字用 unitKey，尾巴單位顯示 rawUnit（showUnit）
-    option.tooltip = {
-      ...(option.tooltip || {}),
-      trigger: option.tooltip?.trigger || 'axis',
-      valueFormatter: v => `${fmtNumber(v, unitKey)} ${showUnit}`.trim()
+    // 條狀/堆疊：以「營養素 → 各食材：數字」的樣式
+    if (ui.chartType === 'bar' || ui.chartType === 'stacked') {
+      option.tooltip = {
+        trigger: 'axis',
+        confine: true,
+        formatter: (params) => {
+          const analyte = params?.[0]?.axisValueLabel ?? params?.[0]?.axisValue ?? ''
+          let html = `<div style="margin-bottom:4px;"><strong>${analyte}</strong></div>`
+          for (const p of params) {
+            if (p.seriesName === '平均值') {
+              html += `<div>${p.marker} 平均值：<b>${fmtNumber(p.value, unitKey)} ${showUnit}</b></div>`
+            } else {
+              const idx = zhNames.indexOf(p.seriesName)
+              const en  = enTails[idx] ? `（${enTails[idx]}）` : ''
+              html += `<div>${p.marker} ${p.seriesName}${en}：<b>${fmtNumber(p.value, unitKey)} ${showUnit}</b></div>`
+            }
+          }
+          return html
+        }
+      }
     }
+    else if (ui.chartType === 'heatmap') {
+      option.tooltip = {
+        position: 'top',
+        confine: true,
+        formatter: (p) => {
+          const aIdx = p.data[0], sIdx = p.data[1]
+          const analyte = analyteNames[aIdx]
+          const en = enTails[sIdx] ? `（${enTails[sIdx]}）` : ''
+          return `<div style="margin-bottom:4px;"><strong>${analyte}</strong></div>
+                  <div>${p.marker} ${zhNames[sIdx]}${en}：<b>${fmtNumber(p.data[2], unitKey)} ${showUnit}</b></div>`
+        }
+      }
+    }
+    // 雷達圖在 optionRadar 自帶客製 formatter（已用 enTails 了）
+    else if (ui.chartType !== 'radar') {
+      option.tooltip = {
+        ...(option.tooltip || {}),
+        trigger: option.tooltip?.trigger || 'axis',
+        valueFormatter: v => `${fmtNumber(v, unitKey)} ${showUnit}`.trim()
+      }
+    } // radar 維持 optionRadar 內建的 trigger: 'item'
 
     if (Array.isArray(option.series) && option.series.length) {
       const isHorizontal = option.yAxis && option.yAxis.type === 'category'
       option.series = option.series.map(s => {
         if (s.type !== 'bar') return s
+
+        // ✅ 如果是堆疊百分比圖，強制顯示為百分比
+        const isPercent = ui.chartType === 'stacked'
+
         return {
           ...s,
           barMaxWidth: 26,
@@ -628,12 +765,22 @@ function renderAll() {
             ...(s.label || {}),
             show: true,
             position: isHorizontal ? 'right' : 'top',
-            formatter: p => `${fmtNumber(p.value, unitKey)} ${showUnit}`.trim()
+            formatter: p =>
+              isPercent
+                ? `${p.value?.toFixed?.(1) ?? p.value}%`
+                : `${fmtNumber(p.value, unitKey)} ${showUnit}`.trim()
           }
         }
       })
     }
-
+    // 讓不同視圖做一點小微調
+    if (ui.chartType === 'boxplot') {
+      option.legend = { ...(option.legend||{}), show: false }       // 箱型圖通常不需要圖例
+      option.grid   = { ...(option.grid||{}), left: '12%', right: '12%', containLabel: true }
+      if (Array.isArray(option.series) && option.series[0]?.type === 'boxplot') {
+        option.series[0] = { ...option.series[0], boxWidth: [14, 28] } // px 範圍，讓箱寬穩定
+      }
+    }
     chart.setOption(option)
   })
 }
@@ -643,88 +790,111 @@ function resizeAll() {
 }
 
 /* ----------------------- chart options ----------------------- */
-function optionBar(analyteNames, sampleNames, dataset, unit) {
+function optionBar(analyteNames, zhNames, dataset, unit) {
   const averages = analyteNames.map((_, i) =>
     dataset.reduce((sum, arr) => sum + (arr[i] || 0), 0) / Math.max(1, dataset.length)
-  )
+  );
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: sampleNames },
+    legend: { data: zhNames },
     grid: { top: 40, right: 16, bottom: 72, left: 56 },
     xAxis: { type: 'category', data: analyteNames },
     yAxis: { type: 'value', name: unit },
     series: [
-      ...sampleNames.map((s, i) => ({
-        name: s,
-        type: 'bar',
-        data: dataset[i],
-        label: { show: true, position: 'top', fontSize: 12 }
-      })),
+      ...zhNames.map((name, i) => ({ name, type: 'bar', data: dataset[i], label: { show: true, position: 'top', fontSize: 12 } })),
       { name: '平均值', type: 'line', data: averages, lineStyle: { type: 'dashed' }, symbol: 'none' }
     ]
-  }
+  };
 }
 
-function optionRadar(analyteNames, sampleNames, dataset) {
-  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2
-  return {
-    tooltip: {},
-    legend: { data: sampleNames },
-    radar: { indicator: analyteNames.map(n => ({ name: n, max: maxVal })) },
-    series: [{ type: 'radar', data: sampleNames.map((s, i) => ({ name: s, value: dataset[i] })) }]
-  }
-}
+function optionRadar(analyteNames, zhNames, dataset, unit, cfg = {}) {
+  const enTails = cfg.enTails || [];
+  const maxVal = Math.max(1, ...dataset.flat().map(n => Number(n) || 0)) * 1.2;
+  const rows = cfg.rows ?? 1;
+  // 副標越高，中心越往下、半徑越小一點
+  const centerY = `${Math.min(70, 52 + rows * 4)}%`;
+  const radius  = `${Math.max(46, 66 - rows * 3)}%`;
 
-function optionHeatmap(analyteNames, sampleNames, dataset, unit) {
-  const data = []
-  for (let y = 0; y < sampleNames.length; y++) {
-    for (let x = 0; x < analyteNames.length; x++) {
-      data.push([x, y, toNum(dataset[y][x])])
-    }
-  }
   return {
-    tooltip: { position: 'top' },
-    grid: { top: 40, right: 16, bottom: 72, left: 120 },
-    xAxis: { type: 'category', data: analyteNames, splitArea: { show: true } },
-    yAxis: { type: 'category', data: sampleNames, splitArea: { show: true } },
-    visualMap: {
-      min: 0,
-      max: Math.max(1, ...data.map(d => d[2] || 0)),
-      calculable: true,
-      orient: 'horizontal',
-      left: 'center',
-      bottom: 10
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: '#007083', borderWidth: 1,
+      textStyle: { color: '#333', fontSize: 12 },
+      formatter: (p) => {
+        const i = zhNames.indexOf(p.name)
+        const name = (i > -1 && enTails[i]) ? `${p.name}（${enTails[i]}）` : p.name;
+        let html = `<div style="margin-bottom:4px;"><strong>${name}</strong></div>`;
+        for (let k = 0; k < analyteNames.length; k++) {
+          const v = p.value?.[k];
+          html += `<div>• ${analyteNames[k]}：<b>${fmtNumber(v, unit)}</b></div>`;
+        }
+        return html;
+      }
     },
-    series: [{ name: `含量(${unit})`, type: 'heatmap', data, label: { show: true } }]
-  }
+    legend: {
+      data: zhNames, bottom: 8, icon: 'circle',
+      itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 12 }
+    },
+    radar: {
+      center: ['50%', centerY],
+      radius,
+      splitNumber: 5,
+      splitArea: { areaStyle: { color: ['#f9f9f9', '#fff'] } },
+      axisLine:  { lineStyle: { color: '#ccc' } },
+      splitLine: { lineStyle: { color: '#ddd' } },
+      indicator: analyteNames.map(n => ({ name: n, max: maxVal }))
+    },
+    series: [{
+      type: 'radar',
+      symbol: 'circle', symbolSize: 4,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.1 },
+      data: zhNames.map((name, i) => ({ name, value: dataset[i] }))
+    }]
+  };
 }
 
-function optionStacked100(analyteNames, sampleNames, dataset, unit) {
-  // 轉百分比
-  const cols = analyteNames.length
-  const rows = sampleNames.length
-  const sums = Array(cols).fill(0)
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) sums[c] += toNum(dataset[r][c])
+function optionHeatmap(analyteNames, zhNames, dataset, unit) {
+  const data = [];
+  for (let x = 0; x < zhNames.length; x++) {
+    for (let y = 0; y < analyteNames.length; y++) data.push([x, y, toNum(dataset[x][y])])
   }
-  const percent = dataset.map(row =>
-    row.map((v, c) => (sums[c] ? (toNum(v) / sums[c]) * 100 : 0))
-  )
+  const safeLeft = 56;       // ← 更準的左邊距
+  const rightPad = 28;  // 依左邊距做對稱微調
 
+  return {
+    grid: { top: 56, right: rightPad, bottom: 88, left: safeLeft, containLabel: true },
+    xAxis: { type: 'category', data: zhNames, splitArea: { show: true } },
+    yAxis: { type: 'category', data: analyteNames, splitArea: { show: true } },
+    visualMap: {
+      min: 0, max: Math.max(1, ...data.map(d => d[2] || 0)),
+      calculable: true, orient: 'horizontal', left: 'center', bottom: 10
+    },
+    tooltip: { position: 'top' }, // 會被上面的 renderAll 再覆寫成客製 formatter
+    series: [{ name: `含量(${unit})`, type: 'heatmap', data, label: { show: true } }]
+  };
+}
+
+
+function optionStacked100(analyteNames, zhNames, dataset) {
+  const cols = analyteNames.length, rows = zhNames.length;
+  const sums = Array(cols).fill(0);
+  for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) sums[c] += toNum(dataset[r][c]);
+
+  const percent = dataset.map(row => row.map((v, c) => (sums[c] ? (toNum(v) / sums[c]) * 100 : 0)));
   return {
     tooltip: { trigger: 'axis', valueFormatter: v => `${v?.toFixed?.(1) ?? v}%` },
-    legend: { data: sampleNames },
+    legend: { data: zhNames },
     grid: { top: 40, right: 16, bottom: 72, left: 56 },
     xAxis: { type: 'category', data: analyteNames },
     yAxis: { type: 'value', name: '%', max: 100, axisLabel: { formatter: '{value}%' } },
-    series: sampleNames.map((s, i) => ({
-      name: s,
-      type: 'bar',
-      stack: 'total',
-      emphasis: { focus: 'series' },
+    series: zhNames.map((name, i) => ({
+      name, type: 'bar', stack: 'total', emphasis: { focus: 'series' },
       data: percent[i].map(v => Number.isFinite(v) ? Number(v.toFixed(2)) : 0)
     }))
-  }
+  };
 }
 
 function optionBoxplot(analyteNames, dataset, unit) {
