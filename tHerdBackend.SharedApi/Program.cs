@@ -19,6 +19,9 @@ using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
+using tHerdBackend.Core.Abstractions.Referral;
+using tHerdBackend.SharedApi.Infrastructure.Referral;
+
 using tHerdBackend.SharedApi.Infrastructure.Config;
 using tHerdBackend.SharedApi.Infrastructure.Services;
 
@@ -54,9 +57,30 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddDbContext<ApplicationDbContext>(options =>
 				options.UseSqlServer(connectionString));
 
-			builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
-				.AddEntityFrameworkStores<ApplicationDbContext>()
-				.AddDefaultTokenProviders();
+			builder.Services
+	.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+	{
+		// 登入前是否必須完成信箱驗證
+		options.SignIn.RequireConfirmedAccount = false;   // 開發/測試可先關掉
+		options.SignIn.RequireConfirmedEmail = false;
+
+		// （可選）密碼規則
+		options.Password.RequireDigit = true;
+		options.Password.RequireLowercase = true;
+		options.Password.RequireUppercase = true;
+		options.Password.RequireNonAlphanumeric = true;
+		options.Password.RequiredLength = 8;
+
+		// （可選）鎖定策略
+		options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
+		options.Lockout.MaxFailedAccessAttempts = 5;
+		options.Lockout.AllowedForNewUsers = true;
+
+		// （可選）Email 唯一
+		options.User.RequireUniqueEmail = true;
+	})
+	.AddEntityFrameworkStores<ApplicationDbContext>()
+	.AddDefaultTokenProviders();
 
 			//關閉預設 Claims 映射
 			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
@@ -121,7 +145,7 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddHttpContextAccessor();
 			builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 			builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-
+			builder.Services.AddSingleton<IReferralCodeGenerator, ReferralCodeGenerator>();
 			// === SQL Connection Factory ===
 			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
 
