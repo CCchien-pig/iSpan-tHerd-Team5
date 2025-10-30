@@ -100,6 +100,5 @@ http.interceptors.response.use(
       isRefreshing = false
     }
   }
-)
-
-export default http;
+  return config;
+});
