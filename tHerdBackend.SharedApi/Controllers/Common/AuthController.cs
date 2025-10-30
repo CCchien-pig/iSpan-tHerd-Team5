@@ -35,9 +35,10 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			_refGen = refGen;
 		}
 
+		public record RecaptchaVerifyResponse(bool success, decimal score, string action, DateTime challenge_ts, string hostname, string[]? errorCodes);
 		[AllowAnonymous]
 		[HttpPost("login")]
-		public async Task<IActionResult> Login([FromBody] LoginDto dto)
+		public async Task<IActionResult> Login([FromBody] LoginDto dto, [FromServices] IHttpClientFactory httpClientFactory, IConfiguration cfg)
 		{
 			if (string.IsNullOrWhiteSpace(dto?.Email) || string.IsNullOrWhiteSpace(dto?.Password))
 				return BadRequest(new { error = "請輸入帳號與密碼" });
@@ -53,6 +54,19 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			var roles = await _userMgr.GetRolesAsync(user);
 			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
 
+			var secret = cfg["Recaptcha:Secret"]; // 請從組態讀取
+			using var http = httpClientFactory.CreateClient();
+			var content = new FormUrlEncodedContent(new Dictionary<string, string>
+			{
+				["secret"] = secret,
+				["response"] = dto.RecaptchaToken
+				// 可加 ["remoteip"] = HttpContext.Connection.RemoteIpAddress?.ToString()
+			});
+			var resp = await http.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
+			var json = await resp.Content.ReadFromJsonAsync<RecaptchaVerifyResponse>();
+
+			if (json is null || !json.success)
+				return BadRequest(new { error = "reCAPTCHA 驗證失敗" });
 			// ⚠ 介面已改：IssueAsync 使用 userId（string），不再傳 ApplicationUser / EF 實體
 			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
 
