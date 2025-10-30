@@ -80,6 +80,8 @@ namespace tHerdBackend.Infra.Repositories.CS
 			await _db.SaveChangesAsync();
 			return entity.TicketId; // 回傳新ID
 		}
+		
 
-	} 
+
+	}
 }
