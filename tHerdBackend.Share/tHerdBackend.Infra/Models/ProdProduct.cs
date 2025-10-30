@@ -97,6 +97,8 @@ public partial class ProdProduct
 
     public virtual SupBrand Brand { get; set; }
 
+    public virtual ICollection<CntProductTag> CntProductTags { get; set; } = new List<CntProductTag>();
+
     public virtual ICollection<OrdOrderItem> OrdOrderItems { get; set; } = new List<OrdOrderItem>();
 
     public virtual ICollection<OrdShoppingCartItem> OrdShoppingCartItems { get; set; } = new List<OrdShoppingCartItem>();

@@ -15,6 +15,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace tHerdBackend.Infra.Repository.SYS
 {
+    //圖片模組完整邏輯
     public class SysAssetFileRepository : ISysAssetFileRepository
     {
         private readonly Cloudinary _cloudinary;

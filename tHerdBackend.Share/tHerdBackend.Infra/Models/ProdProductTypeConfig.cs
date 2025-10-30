@@ -52,4 +52,6 @@ public partial class ProdProductTypeConfig
     public virtual ICollection<ProdProductType> ProdProductTypes { get; set; } = new List<ProdProductType>();
 
     public virtual SysSeoMetum Seo { get; set; }
+
+    public virtual ICollection<SupBrandProductTypeFilter> SupBrandProductTypeFilters { get; set; } = new List<SupBrandProductTypeFilter>();
 }
