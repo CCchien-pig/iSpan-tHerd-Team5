@@ -13,13 +13,13 @@ namespace tHerdBackend.Services.ORD
 {
     public class ECPayService : IECPayService
     {
-        private readonly ECPayConfig _config;
+        private readonly ECPayConfigDTO _config;
         private readonly IEcpayNotificationRepository _notificationRepo;
         private readonly IPaymentRepository _paymentRepo;
         private readonly ILogger<ECPayService> _logger;
 
         public ECPayService(
-            IOptions<ECPayConfig> config,
+            IOptions<ECPayConfigDTO> config,
             IEcpayNotificationRepository notificationRepo,
             IPaymentRepository paymentRepo,
             ILogger<ECPayService> logger)

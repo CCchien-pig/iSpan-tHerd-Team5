@@ -9,6 +9,7 @@ using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.Abstractions.Security;
+using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Infra.DBSetting;
@@ -20,8 +21,6 @@ using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
 using tHerdBackend.SharedApi.Infrastructure.Config;
 using tHerdBackend.SharedApi.Infrastructure.Services;
-
-
 
 
 namespace tHerdBackend.SharedApi
@@ -40,6 +39,11 @@ namespace tHerdBackend.SharedApi
                     config.AddUserSecrets<Program>();
                 }
             });
+
+            builder.Services.Configure<ECPaySettings>(
+               builder.Configuration.GetSection("ECPay")
+           );
+
 
             //�إ߳s�u�r��
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
