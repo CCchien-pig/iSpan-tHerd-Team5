@@ -5,7 +5,7 @@ namespace tHerdBackend.Core.DTOs.ORD
     /// <summary>
     /// 綠界金流設定
     /// </summary>
-    public class ECPayConfig
+    public class ECPayConfigDTO
     {
         public string MerchantID { get; set; } = string.Empty;
         public string HashKey { get; set; } = string.Empty;

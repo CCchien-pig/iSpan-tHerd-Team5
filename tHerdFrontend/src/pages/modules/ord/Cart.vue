@@ -333,58 +333,31 @@ export default {
 
     // 🔥 提交綠界表單 (關鍵方法!)
     submitECPayForm(htmlString) {
-      try {
-        console.log("📝 正在處理綠界表單...");
-        
-        // 取得容器
-        const container = document.getElementById("ecpayFormContainer");
-        if (!container) {
-          throw new Error("找不到 ecpayFormContainer 元素");
-        }
+    try {
+      console.log("📝 正在處理綠界表單（改版）...");
 
-        // 插入 HTML
-        container.innerHTML = htmlString;
-        console.log("✅ 表單 HTML 已插入 DOM");
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlString, 'text/html');
+      const form = doc.querySelector('form');
 
-        // 找到表單
-        const form = container.querySelector("form");
-        if (!form) {
-          console.error("HTML 內容:", htmlString.substring(0, 500));
-          throw new Error("找不到 form 元素");
-        }
-
-        console.log("✅ 找到表單:", form.id || "無 ID");
-        console.log("📍 表單 action:", form.action);
-        console.log("📍 表單 method:", form.method);
-        
-        // 列出表單欄位 (開發時有用)
-        const inputs = form.querySelectorAll("input");
-        console.log(`📋 表單欄位數量: ${inputs.length}`);
-        inputs.forEach(input => {
-          const value = input.value.length > 50 
-            ? input.value.substring(0, 50) + "..." 
-            : input.value;
-          console.log(`  - ${input.name}: ${value}`);
-        });
-
-        // 🔥 提交表單 (會跳轉到綠界)
-        console.log("🚀 正在提交表單到綠界...");
-        form.submit();
-
-        // 提交後會離開當前頁面
-        console.log("✅ 表單已提交");
-      } catch (error) {
-        console.error("❌ 提交綠界表單失敗:", error);
-        alert("❌ 付款表單載入失敗: " + error.message);
-        this.isCheckingOut = false;
+      if (!form) {
+        throw new Error('❌ 找不到 <form> 元素，htmlString 無效');
       }
-    },
 
+      document.body.appendChild(form);
+      form.submit();
+      console.log("✅ 表單已提交至綠界");
+
+    } catch (error) {
+      console.error("❌ 提交綠界表單失敗:", error);
+      alert("❌ 付款表單載入失敗: " + error.message);
+      this.isCheckingOut = false;
+    }
+  },
     continueShopping() {
       window.location.href = "/";
     }
   },
-
   mounted() {
     console.log("🛒 購物車組件已載入");
     console.log("📦 商品數量:", this.cartItems.length);

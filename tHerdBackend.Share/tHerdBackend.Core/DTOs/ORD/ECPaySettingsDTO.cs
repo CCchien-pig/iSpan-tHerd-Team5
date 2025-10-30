@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace tHerdBackend.Core.DTOs.ORD
 {
-    public class ECPaySettings
+    public class ECPaySettingsDTO
     {
         public string MerchantID { get; set; } = string.Empty;
         public string HashKey { get; set; } = string.Empty;

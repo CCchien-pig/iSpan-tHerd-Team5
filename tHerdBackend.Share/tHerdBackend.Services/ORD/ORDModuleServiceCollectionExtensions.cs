@@ -33,7 +33,7 @@ namespace tHerdBackend.Services.ORD
                 return new tHerdDBContext(optionsBuilder.Options);
             });
 
-            services.Configure<ECPayConfig>(configuration.GetSection("ECPay"));
+            services.Configure<ECPayConfigDTO>(configuration.GetSection("ECPay"));
             services.AddScoped<IECPayService, ECPayService>();
             services.AddScoped<IEcpayNotificationRepository, EcpayNotificationRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
