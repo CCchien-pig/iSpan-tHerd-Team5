@@ -26,7 +26,7 @@
             <div class="p-3 border-bottom sticky-top bg-light" style="z-index:9;">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <div class="input-group input-group-sm" style="max-width: 260px;">
-                        <input id="filterInput" type="text" class="form-control" placeholder="搜尋 AltText / Caption / 資料夾...">
+                        <input id="filterInput" type="text" class="form-control" placeholder="搜尋 AltText / Caption...">
                         <button id="btnClearFilter" class="btn btn-outline-secondary" title="清除搜尋"><i class="bi bi-x-circle"></i></button>
                     </div>
 
@@ -320,4 +320,37 @@
         renderFileGrid(_allData);
         $(this).prop("disabled", true);
     });
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            // 初始化上傳模組
+            UploadImageModal.init("uploadImageModal");
+
+            // === ✅ 顯示全域遮罩 ===
+            if (typeof showGlobalLoading === "function") {
+                showGlobalLoading("載入中，請稍候...");
+            }
+
+            try {
+                // 呼叫初次載入函式（由 update-image.js 提供）
+                if (typeof refreshFileList === "function") {
+                    await refreshFileList();
+                } else {
+                    console.warn("⚠️ 找不到 refreshFileList()");
+                }
+            } catch (err) {
+                console.error("❌ 初次載入失敗：", err);
+                Swal.fire("錯誤", "載入圖片列表時發生問題", "error");
+            } finally {
+                // === ✅ 隱藏全域遮罩 ===
+                if (typeof hideGlobalLoading === "function") {
+                    hideGlobalLoading();
+                }
+            }
+
+            // Debug：確認全域遮罩存在
+            const loader = document.getElementById("globalLoading");
+            if (!loader) {
+                console.warn("⚠️ 找不到 #globalLoading，請確認 _GlobalLoadingPartial 有正確載入。");
+            }
+        });
 </script>

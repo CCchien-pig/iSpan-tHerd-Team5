@@ -91,3 +91,22 @@ else
 {
     <p class="text-muted">目前沒有圖片。</p>
 }
+
+<!-- 編輯圖片 --> @* 圖片模組 *@
+@await Component.InvokeAsync("UpdateImage", new {
+title = "圖片資訊",
+    file = new SysAssetFileDto()
+})
+
+@section Scripts {
+    <script>
+        // 打開圖片編輯 Modal
+        async function openUpdateImageModal(fileId) {
+            if (typeof openImageEditModal === "function") {
+                await openImageEditModal(fileId);
+            } else {
+                Swal.fire("錯誤", "找不到圖片編輯模組", "error");
+            }
+        }
+    </script>
+}

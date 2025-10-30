@@ -296,56 +296,67 @@ window.UploadImageModal = (function () {
 })();
 
 // === 🔹 統一回到圖片選擇器的函式 ===
+// === 🔹 統一回到圖片選擇器的函式 ===
 async function returnToImageSelector() {
-    // === 💡 統一使用 showGlobalLoading / hideGlobalLoading ===
     const showLoading = window.showGlobalLoading;
     const hideLoading = window.hideGlobalLoading;
 
     const uploadModalEl = document.getElementById("uploadImageModal");
     const selectorModalEl = document.getElementById("imageSelectorModal");
 
-    // 🔹 先關閉「上傳 Modal」
+    // 關閉上傳 Modal
     const uploadModal = bootstrap.Modal.getInstance(uploadModalEl);
     if (uploadModal) {
         uploadModal.hide();
-        await new Promise(r => setTimeout(r, 350)); // 等動畫結束
+        await new Promise(r => setTimeout(r, 350)); // 等動畫
     }
 
-    // 🔹 如果沒有 selectorModal，就直接結束（不做任何切換）
-    if (!selectorModalEl) {
-        return;
-    }
+    // 沒有 selectorModal 就跳過
+    if (!selectorModalEl) return;
 
-    // === 🌀 顯示 Loading ===
-    if (typeof showGlobalLoading === "function") {
-        showGlobalLoading("正在更新圖片清單...");
-    }
+    // 顯示 loading
+    if (typeof showLoading === "function") showLoading("正在更新圖片清單...");
 
-    // 🔹 顯示圖片選擇器 Modal
-    const selectorModal = bootstrap.Modal.getOrCreateInstance(selectorModalEl);
-    selectorModal.show();
+    try {
+        // 顯示選擇器 Modal
+        const selectorModal = bootstrap.Modal.getOrCreateInstance(selectorModalEl);
+        selectorModal.show();
 
-    // 延遲執行刷新（避免 modal 動畫重疊）
-    setTimeout(async () => {
-        try {
-            if (typeof loadModuleImages === "function") {
-                await loadModuleImages(_currentModuleId, _currentProgId);
-            }
-        } catch (err) {
-            console.error("❌ 刷新圖片清單失敗：", err);
-        } finally {
-            // === ✅ 確保 Loading 一定會關掉 ===
-            if (typeof hideLoading === "function") {
-                hideLoading();
-            }
+        // 延遲載入最新資料
+        if (typeof loadModuleImages === "function") {
+            await loadModuleImages(_currentModuleId, _currentProgId);
         }
-    }, 250);
+    } catch (err) {
+        console.error("❌ 無法返回圖片選擇器：", err);
+    } finally {
+        if (typeof hideLoading === "function") hideLoading();
+    }
 }
-
 
 // 🟢 成功與取消都刷新
 document.addEventListener("upload-success", () => returnToImageSelector());
+// 🟣 當上傳 Modal 被關閉（按取消或叉叉）時自動返回圖片選擇器
 document.addEventListener("hidden.bs.modal", e => {
-    if (e.target.id === "uploadImageModal" && !e.target.dataset.justUploaded)
+    if (e.target.id !== "uploadImageModal") return;
+
+    const modal = e.target;
+
+    // 🧹 清空預覽與暫存
+    const preview = modal.querySelector(".img-grid");
+    const previewArea = modal.querySelector("fieldset");
+    const fileInput = modal.querySelector("input[type='file']");
+    const hiddenInputs = modal.querySelector(`[id^='hiddenInputs_']`);
+    if (preview) preview.innerHTML = "";
+    if (hiddenInputs) hiddenInputs.innerHTML = "";
+    if (fileInput) fileInput.value = "";
+    if (previewArea) previewArea.classList.add("d-none");
+    if (Array.isArray(modal.allFiles)) modal.allFiles.length = 0;
+
+    // 🟢 若不是剛上傳成功，就返回圖片選擇器
+    if (!modal.dataset.justUploaded) {
         returnToImageSelector();
+    }
+
+    // 清除旗標
+    delete modal.dataset.justUploaded;
 });
