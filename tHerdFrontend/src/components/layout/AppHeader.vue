@@ -51,10 +51,10 @@
               <span class="main-color-white-text">登入</span>
             </button>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">登入</a></li>
-              <li><a class="dropdown-item" href="#">註冊</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath } })">登入</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="#">我的帳戶</a></li>
+              <li><a class="dropdown-item" v-if="isLogin" @click.prevent="$router.push({ name: 'userme' })">我的帳戶</a></li>
             </ul>
           </div>
           <!-- 訂單 -->
@@ -63,7 +63,7 @@
             <span class="main-color-white-text ms-1">訂單</span>
           </button>
           <!-- 購物車 -->
-          <button class="btn btn-md position-relative main-color-green">
+          <button class="btn btn-md position-relative main-color-green" @click="goToCart">
             <i class="bi bi-cart3 me-1 main-color-white-text"></i>
             <span class="main-color-white-text">購物車</span>
             <span
@@ -117,7 +117,7 @@
           <button class="btn btn-md w-100 main-color-green text-start">
             <i class="bi bi-person me-2"></i> 登入 / 註冊
           </button>
-          <button class="btn btn-md w-100 main-color-green text-start position-relative">
+          <button class="btn btn-md w-100 main-color-green text-start position-relative" @click="goToCart">
             <i class="bi bi-cart3 me-2"></i> 購物車
             <span
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -144,15 +144,18 @@ export default {
     };
   },
   methods: {
-    handleSearch() {
-      if (this.searchQuery.trim()) {
-        this.$router.push({
-          name: 'search',
-          query: { q: this.searchQuery },
-        });
-      }
-    },
+  handleSearch() {
+    if (this.searchQuery.trim()) {
+      this.$router.push({
+        name: 'search',
+        query: { q: this.searchQuery },
+      });
+    }
   },
+  goToCart() {
+    this.$router.push('/cart'); 
+  },
+},
 };
 </script>
 

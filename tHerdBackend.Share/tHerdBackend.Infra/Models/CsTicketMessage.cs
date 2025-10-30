@@ -39,4 +39,6 @@ public partial class CsTicketMessage
     /// 建立時間 (UTC)
     /// </summary>
     public DateTime CreatedDate { get; set; }
+
+    public virtual CsTicket Ticket { get; set; }
 }

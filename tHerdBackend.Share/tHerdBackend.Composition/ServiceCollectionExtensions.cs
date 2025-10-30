@@ -62,7 +62,7 @@ namespace tHerdBackend.Composition
             services.AddSYSModule();     // 例如系統權限/程式碼表
             services.AddUSERDModule();   // 會員
             services.AddPRODModule();    // 商品/庫存
-            services.AddORDModule();     // 訂單/金流
+            services.AddORDModule(config);     // 訂單/金流
             services.AddMKTModule();     // 活動/優惠
             services.AddSUPModule();     // 供應商
             services.AddCNTModule();     // 內容

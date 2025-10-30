@@ -1,9 +1,20 @@
 {
   "recommendations": [
+    // ========== 前端開發 ==========
     "Vue.volar",
     "dbaeumer.vscode-eslint",
     "EditorConfig.EditorConfig",
     "oxc.oxc-vscode",
-    "esbenp.prettier-vscode"
+    "esbenp.prettier-vscode",
+    
+    // ========== 後端開發 (.NET/C#) ==========
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "visualstudioexptteam.vscodeintellicode-csharp",
+    
+    // ========== 通用工具 ==========
+    "eamodio.gitlens",
+    "humao.rest-client"
   ]
 }

@@ -1,11 +1,9 @@
 <template>
   <section class="hero-section">
-    <div class="container-fluid h-100">
+    <div class="hero-inner container-fluid h-100">
       <div class="row h-100 m-0">
         <!-- 🔸 左側文字區 -->
-        <div
-          class="col-lg-6 col-12 d-flex flex-column justify-content-center align-items-start px-5"
-        >
+        <div class="col-lg-6 col-12 px-5 hero-text-container">
           <transition name="fade" mode="out-in">
             <div
               :key="currentSlide.id"
@@ -32,6 +30,16 @@
               </button>
             </div>
           </transition>
+
+          <!-- 🔸 輪播按鈕移到左邊底部 -->
+          <div class="carousel-indicators">
+            <button
+              v-for="(item, index) in slides"
+              :key="item.id"
+              @click="setSlide(index)"
+              :class="['indicator', { active: index === currentIndex }]"
+            ></button>
+          </div>
         </div>
 
         <!-- 🔸 右側圖片區 -->
@@ -45,16 +53,6 @@
             />
           </transition>
         </div>
-      </div>
-
-      <!-- 🔸 輪播指示點 -->
-      <div class="carousel-indicators">
-        <button
-          v-for="(item, index) in slides"
-          :key="item.id"
-          @click="setSlide(index)"
-          :class="['indicator', { active: index === currentIndex }]"
-        ></button>
       </div>
     </div>
   </section>
@@ -108,17 +106,17 @@ const currentSlide = computed(() => slides.value[currentIndex.value])
 const textColor = computed(() => {
   const name = currentSlide.value.title
   if (name.includes('生日') || name.includes('節慶') || name.includes('聖誕')) {
-    return 'rgb(178, 34, 34)' // 紅
+    return 'rgb(178, 34, 34)'
   } else if (name.includes('新客') || name.includes('首購')) {
-    return 'rgb(242, 140, 40)' // 橘
+    return 'rgb(242, 140, 40)'
   } else if (name.includes('免運') || name.includes('運費')) {
-    return 'rgb(242, 201, 76)' // 黃
+    return 'rgb(242, 201, 76)'
   } else if (name.toUpperCase().includes('中秋') || name.includes('專屬')) {
-    return 'rgb(123, 92, 168)' // 紫
+    return 'rgb(123, 92, 168)'
   } else if (name.includes('限時') || name.includes('活動')) {
-    return 'rgb(27, 42, 73)' // 深藍
+    return 'rgb(27, 42, 73)'
   } else {
-    return 'rgb(0, 112, 131)' // 主色
+    return 'rgb(0, 112, 131)'
   }
 })
 
@@ -143,18 +141,43 @@ onBeforeUnmount(() => {
 <style scoped>
 .hero-section {
   position: relative;
-  min-height: 70vh;
+  min-height: clamp(50vh, 70vh, 90vh); /* 跟著視窗縮放 */
   display: flex;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
   background-color: #fff;
   padding: 0;
 }
 
-/* 🖼 右側圖片全滿 */
-.hero-image-container {
-  height: 100%;
+/* 💡 限制左右寬度產生留白 */
+.hero-inner {
+  max-width: 1400px; /* 控制最大寬度 */
+  width: 100%;
 }
+
+/* 📝 左側文字區置中 */
+.hero-text-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.text-content {
+  max-width: 500px;
+  text-align: left;
+}
+
+/* 🖼 右側圖片只填右半邊 */
+.hero-image-container {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .hero-img {
   width: 100%;
   height: 100%;
@@ -162,22 +185,17 @@ onBeforeUnmount(() => {
   display: block;
 }
 
-/* 🧾 左側文字區域 */
-.text-content {
-  max-width: 550px;
-  text-align: left;
-}
-
-/* 📍 小圓點固定在底部中央 */
+/* 📍 輪播小圓點移到左邊文字區底部 */
 .carousel-indicators {
   position: absolute;
-  bottom: 15px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.8rem;
 }
+
 .indicator {
   width: 12px;
   height: 12px;
@@ -187,6 +205,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
+
 .indicator.active {
   background-color: #007083;
 }
@@ -205,17 +224,21 @@ onBeforeUnmount(() => {
 @media (max-width: 992px) {
   .hero-section {
     flex-direction: column;
-    min-height: 60vh;
   }
-  .hero-img {
+
+  .hero-image-container {
     height: 40vh;
   }
-  .text-content {
-    max-width: 100%;
-    text-align: center;
+
+  .hero-img {
+    height: 100%;
   }
+
   .carousel-indicators {
-    bottom: 10px;
+    position: relative;
+    bottom: auto;
+    margin-top: 1rem;
+    transform: none;
   }
 }
 </style>

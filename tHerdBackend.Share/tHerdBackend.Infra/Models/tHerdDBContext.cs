@@ -75,6 +75,10 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<CsTicket> CsTickets { get; set; }
 
+    public virtual DbSet<CsTicketHistory> CsTicketHistories { get; set; }
+
+    public virtual DbSet<CsTicketMessage> CsTicketMessages { get; set; }
+
     public virtual DbSet<MktAd> MktAds { get; set; }
 
     public virtual DbSet<MktAdLog> MktAdLogs { get; set; }
@@ -1132,7 +1136,10 @@ public partial class tHerdDBContext : DbContext
 
             entity.ToTable("CS_Ticket", tb => tb.HasComment("工單主表"));
 
+            entity.HasIndex(e => e.AssigneeId, "IX_CS_Ticket_AssigneeId");
+
             entity.Property(e => e.TicketId).HasComment("工單主鍵");
+            entity.Property(e => e.AssigneeId).HasComment("當前負責客服");
             entity.Property(e => e.CategoryId).HasComment("問題分類（對齊 FAQ 分類）");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -1153,6 +1160,65 @@ public partial class tHerdDBContext : DbContext
                 .HasConstraintName("FK_Ticket_CategoryId");
         });
 
+        modelBuilder.Entity<CsTicketHistory>(entity =>
+        {
+            entity.HasKey(e => e.HistoryId).HasName("PK__CS_Ticke__4D7B4ABD3A36D6FA");
+
+            entity.ToTable("CS_TicketHistory", tb => tb.HasComment("客服工單歷程"));
+
+            entity.HasIndex(e => e.ChangedDate, "IX_CS_TicketHistory_ChangedDate");
+
+            entity.HasIndex(e => e.TicketId, "IX_CS_TicketHistory_TicketId");
+
+            entity.Property(e => e.HistoryId).HasComment("歷程 ID");
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("動作名稱（建立 / 回覆 / 轉單 / 結案）");
+            entity.Property(e => e.ChangedBy).HasComment("操作者 ID");
+            entity.Property(e => e.ChangedDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("異動時間 (UTC)");
+            entity.Property(e => e.FromAssigneeId).HasComment("原負責客服");
+            entity.Property(e => e.NewStatus).HasComment("新狀態");
+            entity.Property(e => e.Note)
+                .HasMaxLength(500)
+                .HasComment("備註說明");
+            entity.Property(e => e.OldStatus).HasComment("原狀態");
+            entity.Property(e => e.TicketId).HasComment("對應工單 ID");
+            entity.Property(e => e.ToAssigneeId).HasComment("新負責客服");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketHistories)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketHistory_Ticket");
+        });
+
+        modelBuilder.Entity<CsTicketMessage>(entity =>
+        {
+            entity.HasKey(e => e.MessageId).HasName("PK__CS_Ticke__C87C0C9C0D0B5D0E");
+
+            entity.ToTable("CS_TicketMessage", tb => tb.HasComment("客服工單訊息"));
+
+            entity.HasIndex(e => e.TicketId, "IX_CS_TicketMessage_TicketId");
+
+            entity.Property(e => e.MessageId).HasComment("訊息 ID");
+            entity.Property(e => e.AttachmentUrl)
+                .HasMaxLength(200)
+                .HasComment("附件路徑（可空）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.MessageText)
+                .IsRequired()
+                .HasComment("訊息內容");
+            entity.Property(e => e.SenderType).HasComment("發送者類型（1=客戶，2=客服）");
+            entity.Property(e => e.TicketId).HasComment("所屬工單 ID");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketMessages)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketMessage_Ticket");
+        });
+
         modelBuilder.Entity<MktAd>(entity =>
         {
             entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
@@ -1160,6 +1226,18 @@ public partial class tHerdDBContext : DbContext
             entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
 
             entity.Property(e => e.AdId).HasComment("廣告編號");
+            entity.Property(e => e.AdType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("Carousel");
+            entity.Property(e => e.ButtonLink)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasDefaultValue("#");
+            entity.Property(e => e.ButtonText)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasDefaultValue("????");
             entity.Property(e => e.Content).HasComment("廣告內容");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
