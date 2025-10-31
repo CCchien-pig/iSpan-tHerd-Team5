@@ -742,12 +742,6 @@
     </div>
 </div>
 
-<!-- 編輯圖片 --> @* 圖片模組 *@
-@await Component.InvokeAsync("UpdateImage", new { 
-    title = "圖片資訊",
-    file = new SysAssetFileDto()
-})
-
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
@@ -758,39 +752,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <script>
-         @* 圖片模組 *@ 
-        document.addEventListener("DOMContentLoaded", async function () {
-             // 初始化上傳模組
-             UploadImageModal.init("uploadImageModal");
-
-             // === ✅ 顯示全域遮罩 ===
-             if (typeof showGlobalLoading === "function") {
-                 showGlobalLoading("載入中，請稍候...");
-             }
-
-             try {
-                 // 呼叫初次載入函式（由 update-image.js 提供）
-                 if (typeof refreshFileList === "function") {
-                     await refreshFileList();
-                 } else {
-                     console.warn("⚠️ 找不到 refreshFileList()");
-                 }
-             } catch (err) {
-                 console.error("❌ 初次載入失敗：", err);
-                 Swal.fire("錯誤", "載入圖片列表時發生問題", "error");
-             } finally {
-                 // === ✅ 隱藏全域遮罩 ===
-                  if (typeof hideGlobalLoading === "function") {
-                      hideGlobalLoading();
-                 }
-             }
-
-             // Debug：確認全域遮罩存在
-             const loader = document.getElementById("globalLoading");
-             if (!loader) {
-                 console.warn("⚠️ 找不到 #globalLoading，請確認 _GlobalLoadingPartial 有正確載入。");
-             }
-         });
          // 刪除圖片（改為用 hidden input）
          function removeExistingImage(btn) {
              const imgId = btn.dataset.imgId;
@@ -800,15 +761,6 @@
              input.value = imgId;
              document.forms[0].appendChild(input);
              btn.parentElement.remove();
-         }
-
-         // 打開圖片編輯 Modal
-         async function openUpdateImageModal(fileId) {
-             if (typeof openImageEditModal === "function") {
-                 await openImageEditModal(fileId);
-             } else {
-                 Swal.fire("錯誤", "找不到圖片編輯模組", "error");
-             }
          }
 
         // 從 Razor 序列化後端 Model 成前端可用的 JS 物件

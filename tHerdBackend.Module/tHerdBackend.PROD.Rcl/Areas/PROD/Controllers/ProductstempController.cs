@@ -27,6 +27,8 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
             // await LoadImgsFromCSV(); // 匯入圖片測試
 
+            // await LoadTypeFromCSV(); // 匯入圖片產品類別
+
             var products = await _db.ProdProducts.ToListAsync(ct);
 
 			var dtos = products.Select(p => new ProdProductDetailDto
@@ -43,6 +45,123 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
 			return View(dtos); // 型別跟 View 宣告一致
 		}
+
+		public async Task LoadTypeFromCSV()
+		{
+            string csvPath = @"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductTypeConfig\36PROD_ProductTypeConfig.csv";
+
+            if (!System.IO.File.Exists(csvPath))
+            {
+                Console.WriteLine($"❌ 找不到檔案：{csvPath}");
+                return;
+            }
+
+            try
+            {
+                // 用 FileStream + FileShare.ReadWrite 允許共用讀取
+                using (var fs = new FileStream(csvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(fs))
+                {
+                    // 跳過標題列
+                    reader.ReadLine();
+
+                    while (!reader.EndOfStream)
+                    {
+                        string? line = reader.ReadLine();
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        // 分割第一個逗號（避免 URL 內含逗號被切錯）
+                        var parts = line.Split(',', 2);
+                        if (parts.Length < 2)
+                            continue;
+
+                        if (!int.TryParse(parts[0].Trim(), out int productId))
+                        {
+                            Console.WriteLine($"⚠️ 無法解析 ProductId：{parts[0]}");
+                            continue;
+                        }
+
+                        productId = productId - 1000 + 15060;
+
+                        // 1️ 檢查產品是否存在
+                        var prod = await _db.ProdProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+                        if (prod == null)
+                        {
+                            Console.WriteLine($"⚠️ 找不到 ProductId={productId}，略過。");
+                            continue;
+                        }
+
+                        string productType = parts[1].Trim();
+                        if (string.IsNullOrEmpty(productType))
+                            continue;
+
+						var typeConfig = await _db.ProdProductTypeConfigs.Where(t => t.ProductTypeName == productType).FirstOrDefaultAsync();
+
+                        int productTypeId;
+
+                        if (typeConfig != null) {
+                            productTypeId = typeConfig.ProductTypeId;
+                        } else {
+                            // 產生 5 碼大寫英文字母亂碼
+                            string randomCode = GenerateRandomCode(5);
+
+                            // 轉型並預設 0（避免格式錯誤例外）
+                            int orderSeq = 0;
+                            if (parts.Length > 2 && int.TryParse(parts[2].Trim(), out int parsed))
+                                orderSeq = parsed;
+
+                            typeConfig = new ProdProductTypeConfig
+							{
+                                ProductTypeCode = randomCode,
+                                ProductTypeName = productType,
+                                OrderSeq = orderSeq,
+                                IsActive = true
+                            };
+							_db.ProdProductTypeConfigs.Add(typeConfig);
+							await _db.SaveChangesAsync(); // 產生 ProductTypeId
+
+                            productTypeId = typeConfig.ProductTypeId;
+                        }
+
+                        // 2️ 建立關聯表 Mapping
+						var mapping = await _db.ProdProductTypes
+							.FirstOrDefaultAsync(m => m.ProductId == productId && m.ProductTypeId == productTypeId);
+
+						if (mapping == null) {
+							mapping = new ProdProductType
+							{
+								ProductId = productId,
+								ProductTypeId = productTypeId,
+								IsPrimary = false
+							};
+							_db.ProdProductTypes.Add(mapping);
+							await _db.SaveChangesAsync();
+						}
+                    }
+                }
+
+                Console.WriteLine($"🎉 匯入完成。");
+            }
+            catch (IOException ioEx)
+            {
+                Console.WriteLine($"⚠️ 無法開啟 CSV（可能被佔用）：{ioEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 發生未預期錯誤：{ex.Message}");
+            }
+        }
+
+        // === 🔹 產生指定長度的大寫亂碼 ===
+        private static string GenerateRandomCode(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var random = new Random();
+            return new string(Enumerable.Range(0, length)
+                .Select(_ => chars[random.Next(chars.Length)])
+                .ToArray());
+        }
 
         public async Task LoadImgsFromCSV()
         {
