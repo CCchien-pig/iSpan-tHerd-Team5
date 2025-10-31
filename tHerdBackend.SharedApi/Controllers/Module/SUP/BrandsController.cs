@@ -110,6 +110,49 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+		/// <summary>
+		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
+		/// </summary>
+		// GET /api/sup/Brands/grouped
+		[HttpGet("grouped")]
+		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
+			bool? isActive = null,
+			bool? isDiscountActive = null,
+			bool? isFeatured = null)
+		{
+			try
+			{
+				var brands = await _service.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
+				if (brands == null || !brands.Any())
+					return NotFound(new { success = false, message = "沒有符合條件的品牌資料" });
+
+				// 按品牌名稱首字母分組
+				var grouped = brands
+					.GroupBy(b => char.ToUpper(b.BrandName[0]))
+					.OrderBy(g => g.Key)
+					.Select(g => new
+					{
+						Letter = g.Key.ToString(),
+						Brands = g.OrderBy(b => b.BrandName).Select(b => new {
+							b.BrandId,
+							b.BrandName,
+							b.BrandCode,
+							b.IsActive,
+							b.IsFeatured,
+							b.DiscountRate,
+							b.IsDiscountActive
+						}).ToList()
+					}).ToList();
+
+				return Ok(grouped);
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new { success = false, message = ex.Message });
+			}
+		}
+
+
 		#endregion
 
 		#region 查品牌折扣

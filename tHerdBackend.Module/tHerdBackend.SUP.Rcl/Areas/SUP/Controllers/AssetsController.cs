@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;                 // 引用 JsonSerializer
 using tHerdBackend.Core.DTOs;          // 引用 AssetFileUploadDto 和 AssetFileDetailsDto
 using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Core.DTOs.SYS;
 using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Models; // 引用 ISysAssetFileService
 
@@ -29,6 +30,8 @@ public class AssetsController : ControllerBase
 		_httpClientFactory = httpClientFactory;
 	}
 
+	#region === 檔案上傳 (Upload) ===
+
 	/// <summary>
 	/// 接收 TinyMCE 上傳的圖片，存入資料庫並回傳 URL。
 	/// </summary>
@@ -44,15 +47,11 @@ public class AssetsController : ControllerBase
 
 		try
 		{
-			int? folderId = await GetFolderIdByBlockType(dto.BlockType);
-
-			// 1. 準備上傳 DTO
+			// 【簡化】不再需要查詢 FolderId，直接將 ModuleId 和 ProgId 傳給 Service
 			var uploadDto = new AssetFileUploadDto
 			{
-				ModuleId = "Brand",
-				//ProgId = "ArticleEditor",
-				ProgId = "ContentEditor",
-				FolderId = folderId, // 使用查詢到的 FolderId
+				ModuleId = "Brand",       // 根據業務邏輯設定
+				ProgId = dto.BlockType,   // ProgId 直接對應前端傳來的 BlockType (例如: ContentEditor)
 				Meta = new List<AssetFileDetailsDto>
 				{
 					new AssetFileDetailsDto
@@ -65,7 +64,7 @@ public class AssetsController : ControllerBase
 				}
 			};
 
-			object resultObject = await _assetFileService.AddImages(uploadDto);
+			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
 			return ParseUploadResult(resultObject);
 		}
 		catch (Exception ex)
@@ -107,15 +106,17 @@ public class AssetsController : ControllerBase
 				ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream"
 			};
 
-            // 3. 獲取 FolderId
-			int? folderId = await GetFolderIdByBlockType(dto.BlockType);
+			// 3. 獲取 FolderId
+			//int? folderId = await GetFolderIdByBlockType(dto.BlockType);
+			// 【簡化】同樣不再需要查詢 FolderId
 
-            // 4. 準備上傳 DTO
+			// 4. 準備上傳 DTO
 			var uploadDto = new AssetFileUploadDto
 			{
 				ModuleId = "Brand",
-				ProgId = "ContentEditor",
-				FolderId = folderId,
+				//ProgId = "ContentEditor",
+				//FolderId = folderId,
+				ProgId = dto.BlockType, // ProgId 對應 BlockType
 				Meta = new List<AssetFileDetailsDto>
 				{
 					new AssetFileDetailsDto
@@ -129,7 +130,7 @@ public class AssetsController : ControllerBase
 			};
 
             // 5. 呼叫現有的上傳服務
-			object resultObject = await _assetFileService.AddImages(uploadDto);
+			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
 			
             // 6. 解析結果並回傳
 			return ParseUploadResult(resultObject);
@@ -140,8 +141,115 @@ public class AssetsController : ControllerBase
 		}
 	}
 
+	#endregion
 
-	// --- 私有輔助方法 (Private Helper Methods) ---
+	#region === 資料夾與檔案管理 (Folder & File Management) ===
+
+	/// <summary>
+	/// 取得指定資料夾下的內容 (子資料夾與檔案)
+	/// </summary>
+	[HttpGet("folder-items")]
+	[AllowAnonymous]
+	public async Task<IActionResult> GetFolderItems(
+		[FromQuery] int? parentId,
+		[FromQuery] string? keyword,
+		[FromQuery] int? start,
+		[FromQuery] int? length,
+		[FromQuery] int draw = 1,
+		[FromQuery] string? orderColumn = "Name",
+		[FromQuery] string? orderDir = "asc")
+	{
+		// 【修正】方法名稱 GetPagedFolderItemsAsync -> GetPagedFolderItems
+		var result = await _assetFileService.GetPagedFolderItems(parentId, keyword, start, length, draw, orderColumn, orderDir);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 建立新資料夾
+	/// </summary>
+	[HttpPost("create-folder")]
+	[AllowAnonymous]
+	public async Task<IActionResult> CreateFolder([FromBody] CreateFolderDto dto)
+	{
+		if (string.IsNullOrWhiteSpace(dto.FolderName))
+		{
+			return BadRequest(new { success = false, message = "資料夾名稱不可為空。" });
+		}
+		var result = await _assetFileService.CreateFolderAsync(dto.FolderName, dto.ParentId);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 重新命名資料夾
+	/// </summary>
+	[HttpPost("rename-folder")]
+	[AllowAnonymous]
+	public async Task<IActionResult> RenameFolder([FromBody] SysFolderDto dto)
+	{
+		if (dto.FolderId == 0 || string.IsNullOrWhiteSpace(dto.FolderName))
+		{
+			return BadRequest(new { success = false, message = "缺少必要的資料夾資訊。" });
+		}
+		var result = await _assetFileService.RenameFolder(dto);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 刪除空資料夾
+	/// </summary>
+	[HttpDelete("delete-folder/{folderId}")]
+	[AllowAnonymous]
+	public async Task<IActionResult> DeleteFolder(int folderId)
+	{
+		var result = await _assetFileService.DeleteFolder(folderId);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 移動檔案或資料夾
+	/// </summary>
+	[HttpPost("move-items")]
+	[AllowAnonymous]
+	public async Task<IActionResult> MoveItems([FromBody] MoveRequestDto dto)
+	{
+		if (dto.Ids == null || !dto.Ids.Any())
+		{
+			return BadRequest(new { success = false, message = "請提供要移動的項目 ID。" });
+		}
+		var result = await _assetFileService.MoveToFolder(dto);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 批次刪除檔案 (軟刪除)
+	/// </summary>
+	[HttpPost("batch-delete-files")]
+	[AllowAnonymous]
+	public async Task<IActionResult> BatchDeleteFiles([FromBody] List<int> ids)
+	{
+		if (ids == null || !ids.Any())
+		{
+			return BadRequest(new { success = false, message = "請提供要刪除的檔案 ID。" });
+		}
+		// 【修正】方法名稱 BatchDeleteFilesAsync -> BatchDelete
+		var result = await _assetFileService.BatchDelete(ids);
+		return Ok(result);
+	}
+
+	/// <summary>
+	/// 取得指定資料夾的麵包屑路徑
+	/// </summary>
+	[HttpGet("breadcrumb/{folderId}")]
+	[AllowAnonymous]
+	public async Task<IActionResult> GetBreadcrumb(int folderId)
+	{
+		var result = await _assetFileService.GetBreadcrumbPath(folderId);
+		return Ok(result);
+	}
+
+	#endregion
+
+	#region === 私有輔助方法 (Private Helper Methods) ===
 
 	/// <summary>
 	/// 根據前端傳來的區塊類型字串（"Banner", "Accordion", "Article"），去 SYS_Folders 資料表中查詢對應的 FolderId
@@ -158,23 +266,24 @@ public class AssetsController : ControllerBase
 	}
 
 	/// <summary>
-	/// 安全地解析 _assetFileService.AddImages 回傳的 object（匿名類型），避免 RuntimeBinderException，
-	/// 並將其轉換為 TinyMCE 期望的 IActionResult
+	/// 【核心變更】解析 AddFilesAsync 服務的回傳結果。
+	/// 現在它解析的是 Repository 回傳的標準格式 { success, message, data: { files: [...] } }
 	/// </summary>
 	private IActionResult ParseUploadResult(object resultObject)
 	{
-		// 使用 JSON 序列化/反序列化技巧，安全地解析 object
 		var jsonString = JsonSerializer.Serialize(resultObject);
 		using var doc = JsonDocument.Parse(jsonString);
 		var root = doc.RootElement;
 
 		if (root.TryGetProperty("success", out var successElement) && successElement.GetBoolean())
 		{
+			// 注意路徑變為 data -> files
 			if (root.TryGetProperty("data", out var dataElement) &&
-				dataElement.TryGetProperty("files", out var filesElement) &&
+				dataElement.TryGetProperty("files", out var filesElement) && // <--- 這裡的屬性名稱是 'files'
 				filesElement.GetArrayLength() > 0)
 			{
 				var firstFile = filesElement[0];
+				// Repository 回傳的屬性是大寫開頭 (FileUrl, FileId)
 				if (firstFile.TryGetProperty("FileUrl", out var fileUrlElement) &&
 					firstFile.TryGetProperty("FileId", out var fileIdElement))
 				{
@@ -197,5 +306,6 @@ public class AssetsController : ControllerBase
 			return BadRequest(new { error = new { message = errorMessage } });
 		}
 	}
+	#endregion
 
 }
