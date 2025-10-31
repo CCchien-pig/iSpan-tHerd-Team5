@@ -185,7 +185,7 @@ async function doLogin() {
         <div class="col-12">
           <a
             class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/api/auth/ExternalLogin?provider=Google&rememberMe=${rememberMe}&redirect=/user/me`"
+            :href="`https://localhost:7103/api/auth/ExternalLogin?provider=Google&rememberMe=${rememberMe}&redirect=/user/me`"
           >
             <i class="bi bi-google me-2"></i> 用google帳號登入
           </a>

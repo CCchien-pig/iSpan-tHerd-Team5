@@ -43,8 +43,11 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		[HttpGet("ExternalLogin")]
 		public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] bool rememberMe = true, [FromQuery] string? redirect = "/")
 		{
-			var callbackUrl = $"{Request.Scheme}://{Request.Host}/api/auth/ExternalLoginCallback" +
-		$"?rememberMe={rememberMe}&redirect={Uri.EscapeDataString(redirect ?? "/")}";
+			var callbackUrl = Url.ActionLink(
+		action: nameof(ExternalLoginCallback),
+		controller: "Auth",
+		values: new { rememberMe, redirect }  // query string
+	);
 			var props = _signInMgr.ConfigureExternalAuthenticationProperties(provider, callbackUrl);
 			return Challenge(props, provider);
 		}
