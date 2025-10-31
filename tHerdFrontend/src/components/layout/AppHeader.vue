@@ -46,15 +46,17 @@
               class="btn btn-md dropdown-toggle main-color-green"
               type="button"
               data-bs-toggle="dropdown"
+              data-bs-display="static"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
               <span class="main-color-white-text">登入</span>
             </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath } })">登入</a></li>
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })">註冊</a></li>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" v-if="isLogin" @click.prevent="$router.push({ name: 'userme' })">我的帳戶</a></li>
+              <li><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userme' })" href="#">我的帳戶</a></li>
+              <!-- 修正完在把我的帳戶新增：v-if="isLogin" -->
             </ul>
           </div>
           <!-- 訂單 -->
@@ -63,7 +65,7 @@
             <span class="main-color-white-text ms-1">訂單</span>
           </button>
           <!-- 購物車 -->
-          <button class="btn btn-md position-relative main-color-green">
+          <button class="btn btn-md position-relative main-color-green" @click="goToCart">
             <i class="bi bi-cart3 me-1 main-color-white-text"></i>
             <span class="main-color-white-text">購物車</span>
             <span
@@ -117,7 +119,7 @@
           <button class="btn btn-md w-100 main-color-green text-start">
             <i class="bi bi-person me-2"></i> 登入 / 註冊
           </button>
-          <button class="btn btn-md w-100 main-color-green text-start position-relative">
+          <button class="btn btn-md w-100 main-color-green text-start position-relative" @click="goToCart">
             <i class="bi bi-cart3 me-2"></i> 購物車
             <span
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -135,6 +137,7 @@
 </template>
 
 <script>
+import { Dropdown } from 'bootstrap'
 export default {
   name: 'AppHeader',
   data() {
@@ -143,16 +146,42 @@ export default {
       cartCount: 0,
     };
   },
-  methods: {
-    handleSearch() {
-      if (this.searchQuery.trim()) {
-        this.$router.push({
-          name: 'search',
-          query: { q: this.searchQuery },
-        });
-      }
-    },
+
+  mounted() {
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (!btn) return
+
+    const inst = Dropdown.getOrCreateInstance(btn, { autoClose: true })
+
+    // 捕獲階段先攔，避免其他全域 click 監聽吃掉事件
+    this.__onClickCapture = (e) => {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      inst.toggle()
+    }
+    btn.addEventListener('click', this.__onClickCapture, { capture: true })
   },
+
+  beforeUnmount() {
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (btn && this.__onClickCapture) {
+      btn.removeEventListener('click', this.__onClickCapture, { capture: true })
+    }
+  },
+  
+  methods: {
+  handleSearch() {
+    if (this.searchQuery.trim()) {
+      this.$router.push({
+        name: 'search',
+        query: { q: this.searchQuery },
+      });
+    }
+  },
+  goToCart() {
+    this.$router.push('/cart'); 
+  },
+},
 };
 </script>
 

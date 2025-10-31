@@ -10,21 +10,21 @@ export default [
   //   meta: { title: '會員資料' }
   // }
   {
-    path: '/login',
-    name: 'login',
-    component: () => import('../pages/modules/user/UserLogin.vue'),
-    meta: { title: '登入' }
+    path: '/user/login',
+    name: 'userlogin',
+    component: () => import('@/pages/modules/user/UserLogin.vue'),
+    meta: { title: '登入' },
   },
   {
-    path: '/register',
-    name: 'register',
-    component: () => import('../pages/modules/user/UserRegister.vue'),
-    meta: { title: '註冊' }
+    path: '/user/register',
+    name: 'userregister',
+    component: () => import('@/pages/modules/user/UserRegister.vue'),
+    meta: { title: '註冊' },
   },
   {
-    path: '/me',
-    name: 'me',
-    component: () => import('../pages/modules/user/UserMe.vue'),
-    meta: { title: '我的帳戶', requiresAuth: true } // 守門員會檢查
+    path: '/user/me',
+    name: 'userme',
+    component: () => import('@/pages/modules/user/UserMe.vue'),
+    meta: { title: '我的帳戶', requiresAuth: false },
   },
 ];

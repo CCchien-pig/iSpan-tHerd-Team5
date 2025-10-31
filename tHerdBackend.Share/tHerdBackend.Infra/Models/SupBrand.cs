@@ -108,5 +108,7 @@ public partial class SupBrand
 
     public virtual ICollection<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; } = new List<SupBrandLayoutConfig>();
 
+    public virtual ICollection<SupBrandProductTypeFilter> SupBrandProductTypeFilters { get; set; } = new List<SupBrandProductTypeFilter>();
+
     public virtual SupSupplier Supplier { get; set; }
 }

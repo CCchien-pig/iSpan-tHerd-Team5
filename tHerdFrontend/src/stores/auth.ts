@@ -140,8 +140,6 @@ export const useAuthStore = defineStore('auth', {
       this.setTokenPair(data.accessToken, data.accessExpiresAt, data.refreshToken)
       if (data.user) this.user = data.user
       return data
-},
-
-   
+    }, 
   },
 });

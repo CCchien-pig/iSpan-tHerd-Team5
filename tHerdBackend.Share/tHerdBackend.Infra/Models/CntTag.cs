@@ -36,4 +36,6 @@ public partial class CntTag
     public DateTime? RevisedDate { get; set; }
 
     public virtual ICollection<CntPageTag> CntPageTags { get; set; } = new List<CntPageTag>();
+
+    public virtual ICollection<CntProductTag> CntProductTags { get; set; } = new List<CntProductTag>();
 }

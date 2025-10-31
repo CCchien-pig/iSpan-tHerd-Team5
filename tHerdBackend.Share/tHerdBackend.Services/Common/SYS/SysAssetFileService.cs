@@ -24,11 +24,14 @@ namespace tHerdBackend.Services.Common.SYS
         public Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
             => _frepo.GetFilesByProg(moduleId, progId, ct);
 
-        public Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
-            => _frepo.GetFilesById(id, ct);
+        public Task<SysAssetFileDto?> GetFileById(int id, CancellationToken ct = default)
+            => _frepo.GetFileById(id, ct);
 
-        public Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default)
-            => _frepo.AddImages(uploadDto, ct);
+        public async Task AddLocalFileAsync(AssetFileUploadDto uploadDto, AssetFileDetailsDto meta, string fileUrl, CancellationToken ct = default)
+            => await _frepo.AddLocalFileAsync(uploadDto, meta, fileUrl, ct);
+
+        public Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default)
+            => _frepo.AddFilesAsync(uploadDto, ct);
 
         public Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default)
         {

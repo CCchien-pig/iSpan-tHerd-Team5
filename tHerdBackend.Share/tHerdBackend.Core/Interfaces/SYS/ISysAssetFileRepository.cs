@@ -10,7 +10,8 @@ namespace tHerdBackend.Core.Interfaces.SYS
         // ============================================================
         //  Cloudinary 上傳 / 刪除 / 清理
         // ============================================================
-        Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default);
+        Task AddLocalFileAsync(AssetFileUploadDto uploadDto, AssetFileDetailsDto meta, string fileUrl, CancellationToken ct = default);
+        Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default);
         Task<object> DeleteImage(int fileId, CancellationToken ct = default);
         Task<object> DeleteImages(List<int> ids, CancellationToken ct = default);
         Task<object> CleanOrphanCloudinaryFiles(CancellationToken ct = default);
@@ -20,7 +21,7 @@ namespace tHerdBackend.Core.Interfaces.SYS
         // ============================================================
         Task<PagedResult<SysAssetFileDto>> GetPagedFilesAsync(ImageFilterQueryDto query, CancellationToken ct = default);
         Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default);
-        Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default);
+        Task<SysAssetFileDto?> GetFileById(int id, CancellationToken ct = default);
         Task<object> UpdateImageMeta(SysAssetFileDto dto, CancellationToken ct = default);
         Task<bool> UpdateFileMetaField(FileMetaUpdateDto model);
         Task<object> BatchSetActive(BatchActiveRequest req);

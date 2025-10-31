@@ -31,6 +31,9 @@
     <link href="//cdn.datatables.net/2.3.3/css/dataTables.dataTables.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="//cdn.datatables.net/fixedheader/4.0.3/css/fixedHeader.bootstrap.min.css" />
 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/_content/tHerdBackend.UIKit.Rcl/css/update-image.css" asp-append-version="true" />
+
     @* 不准放自訂 *@
     <link rel="stylesheet" href="~/css/site.css">
 
@@ -230,6 +233,9 @@
         <script src="//cdn.datatables.net/2.3.3/js/dataTables.min.js"></script>
     <script src="//cdn.datatables.net/fixedheader/4.0.3/js/dataTables.fixedHeader.min.js"></script>
 
+    @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/upload-image-modal.js" asp-append-version="true"></script>
+    <script src="~/_content/tHerdBackend.UIKit.Rcl/js/update-image.js" asp-append-version="true"></script>
     
     @await RenderSectionAsync("Scripts", required: false)
 </body>

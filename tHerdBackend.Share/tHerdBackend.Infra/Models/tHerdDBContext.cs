@@ -49,6 +49,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<CntPageType> CntPageTypes { get; set; }
 
+    public virtual DbSet<CntProductTag> CntProductTags { get; set; }
+
     public virtual DbSet<CntPurchase> CntPurchases { get; set; }
 
     public virtual DbSet<CntSample> CntSamples { get; set; }
@@ -74,6 +76,10 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<CsFaqKeyword> CsFaqKeywords { get; set; }
 
     public virtual DbSet<CsTicket> CsTickets { get; set; }
+
+    public virtual DbSet<CsTicketHistory> CsTicketHistories { get; set; }
+
+    public virtual DbSet<CsTicketMessage> CsTicketMessages { get; set; }
 
     public virtual DbSet<MktAd> MktAds { get; set; }
 
@@ -157,8 +163,6 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<ProdSpecificationOption> ProdSpecificationOptions { get; set; }
 
-    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
-
     public virtual DbSet<SupBrand> SupBrands { get; set; }
 
     public virtual DbSet<SupBrandAccordionContent> SupBrandAccordionContents { get; set; }
@@ -168,6 +172,8 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<SupBrandFavorite> SupBrandFavorites { get; set; }
 
     public virtual DbSet<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; }
+
+    public virtual DbSet<SupBrandProductTypeFilter> SupBrandProductTypeFilters { get; set; }
 
     public virtual DbSet<SupLogistic> SupLogistics { get; set; }
 
@@ -736,6 +742,47 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("分類名稱");
         });
 
+        modelBuilder.Entity<CntProductTag>(entity =>
+        {
+            entity.HasKey(e => e.ProductTagId).HasName("PK__CNT_Prod__88A7F34A9D85D0A1");
+
+            entity.ToTable("CNT_ProductTag", tb => tb.HasComment("商品與標籤關聯表"));
+
+            entity.HasIndex(e => e.ProductId, "IX_CNT_ProductTag_ProductId");
+
+            entity.HasIndex(e => new { e.ProductId, e.IsPrimary, e.DisplayOrder, e.TagId }, "IX_CNT_ProductTag_ProductVisible").HasFilter("([IsVisible]=(1) AND [IsDeleted]=(0))");
+
+            entity.HasIndex(e => e.TagId, "IX_CNT_ProductTag_TagId");
+
+            entity.HasIndex(e => new { e.TagId, e.IsPrimary, e.DisplayOrder, e.ProductId }, "IX_CNT_ProductTag_TagPage").HasFilter("([IsVisible]=(1) AND [IsDeleted]=(0))");
+
+            entity.HasIndex(e => new { e.ProductId, e.TagId }, "UQ_CNT_ProductTag_Product_Tag").IsUnique();
+
+            entity.Property(e => e.ProductTagId).HasComment("關聯記錄ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DisplayOrder).HasComment("顯示順序");
+            entity.Property(e => e.IsDeleted).HasComment("軟刪除旗標");
+            entity.Property(e => e.IsPrimary).HasComment("是否主要標籤");
+            entity.Property(e => e.IsVisible)
+                .HasDefaultValue(true)
+                .HasComment("是否前台顯示");
+            entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.TagId).HasComment("標籤ID");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.CntProductTags)
+                .HasForeignKey(d => d.ProductId)
+                .HasConstraintName("FK_CNT_ProductTag_Product");
+
+            entity.HasOne(d => d.Tag).WithMany(p => p.CntProductTags)
+                .HasForeignKey(d => d.TagId)
+                .HasConstraintName("FK_CNT_ProductTag_Tag");
+        });
+
         modelBuilder.Entity<CntPurchase>(entity =>
         {
             entity.HasKey(e => e.PurchaseId).HasName("PK__CNT_Purc__6B0A6BBED3721F64");
@@ -1138,7 +1185,10 @@ public partial class tHerdDBContext : DbContext
 
             entity.ToTable("CS_Ticket", tb => tb.HasComment("工單主表"));
 
+            entity.HasIndex(e => e.AssigneeId, "IX_CS_Ticket_AssigneeId");
+
             entity.Property(e => e.TicketId).HasComment("工單主鍵");
+            entity.Property(e => e.AssigneeId).HasComment("當前負責客服");
             entity.Property(e => e.CategoryId).HasComment("問題分類（對齊 FAQ 分類）");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -1159,6 +1209,65 @@ public partial class tHerdDBContext : DbContext
                 .HasConstraintName("FK_Ticket_CategoryId");
         });
 
+        modelBuilder.Entity<CsTicketHistory>(entity =>
+        {
+            entity.HasKey(e => e.HistoryId).HasName("PK__CS_Ticke__4D7B4ABD3A36D6FA");
+
+            entity.ToTable("CS_TicketHistory", tb => tb.HasComment("客服工單歷程"));
+
+            entity.HasIndex(e => e.ChangedDate, "IX_CS_TicketHistory_ChangedDate");
+
+            entity.HasIndex(e => e.TicketId, "IX_CS_TicketHistory_TicketId");
+
+            entity.Property(e => e.HistoryId).HasComment("歷程 ID");
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasComment("動作名稱（建立 / 回覆 / 轉單 / 結案）");
+            entity.Property(e => e.ChangedBy).HasComment("操作者 ID");
+            entity.Property(e => e.ChangedDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("異動時間 (UTC)");
+            entity.Property(e => e.FromAssigneeId).HasComment("原負責客服");
+            entity.Property(e => e.NewStatus).HasComment("新狀態");
+            entity.Property(e => e.Note)
+                .HasMaxLength(500)
+                .HasComment("備註說明");
+            entity.Property(e => e.OldStatus).HasComment("原狀態");
+            entity.Property(e => e.TicketId).HasComment("對應工單 ID");
+            entity.Property(e => e.ToAssigneeId).HasComment("新負責客服");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketHistories)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketHistory_Ticket");
+        });
+
+        modelBuilder.Entity<CsTicketMessage>(entity =>
+        {
+            entity.HasKey(e => e.MessageId).HasName("PK__CS_Ticke__C87C0C9C0D0B5D0E");
+
+            entity.ToTable("CS_TicketMessage", tb => tb.HasComment("客服工單訊息"));
+
+            entity.HasIndex(e => e.TicketId, "IX_CS_TicketMessage_TicketId");
+
+            entity.Property(e => e.MessageId).HasComment("訊息 ID");
+            entity.Property(e => e.AttachmentUrl)
+                .HasMaxLength(200)
+                .HasComment("附件路徑（可空）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.MessageText)
+                .IsRequired()
+                .HasComment("訊息內容");
+            entity.Property(e => e.SenderType).HasComment("發送者類型（1=客戶，2=客服）");
+            entity.Property(e => e.TicketId).HasComment("所屬工單 ID");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.CsTicketMessages)
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("FK_CS_TicketMessage_Ticket");
+        });
+
         modelBuilder.Entity<MktAd>(entity =>
         {
             entity.HasKey(e => e.AdId).HasName("PK__MKT_Ad__7130D5AEDA030423");
@@ -1166,6 +1275,18 @@ public partial class tHerdDBContext : DbContext
             entity.ToTable("MKT_Ad", tb => tb.HasComment("廣告"));
 
             entity.Property(e => e.AdId).HasComment("廣告編號");
+            entity.Property(e => e.AdType)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("Carousel");
+            entity.Property(e => e.ButtonLink)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasDefaultValue("#");
+            entity.Property(e => e.ButtonText)
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasDefaultValue("????");
             entity.Property(e => e.Content).HasComment("廣告內容");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -2825,17 +2946,6 @@ public partial class tHerdDBContext : DbContext
                 .HasConstraintName("FK_PROD_SpecificationOption_SpecificationConfigId");
         });
 
-        modelBuilder.Entity<RefreshToken>(entity =>
-        {
-            entity.HasIndex(e => e.UserId, "IX_RefreshTokens_UserId");
-
-            entity.Property(e => e.JwtId).IsRequired();
-            entity.Property(e => e.TokenHash).IsRequired();
-            entity.Property(e => e.UserId).IsRequired();
-
-            entity.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId);
-        });
-
         modelBuilder.Entity<SupBrand>(entity =>
         {
             entity.HasKey(e => e.BrandId).HasName("PK__SUP_Bran__DAD4F05E8053B727");
@@ -3013,6 +3123,46 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.BrandId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_SUP_BrandLayoutConfig_BrandId");
+        });
+
+        modelBuilder.Entity<SupBrandProductTypeFilter>(entity =>
+        {
+            entity.HasKey(e => e.BrandProductTypeFilterId).HasName("PK__SUP_Bran__14140078F3F9C784");
+
+            entity.ToTable("SUP_BrandProductTypeFilter", tb => tb.HasComment("品牌與商品分類關聯表，用於設定品牌專頁篩選按鈕顯示內容"));
+
+            entity.HasIndex(e => e.BrandId, "IX_SUP_BrandProductTypeFilter_BrandId");
+
+            entity.HasIndex(e => e.ProductTypeId, "IX_SUP_BrandProductTypeFilter_ProductTypeId");
+
+            entity.HasIndex(e => new { e.BrandId, e.ProductTypeId }, "UQ_SUP_BrandProductTypeFilter_Brand_ProductType").IsUnique();
+
+            entity.Property(e => e.BrandProductTypeFilterId).HasComment("關聯記錄ID");
+            entity.Property(e => e.BrandId).HasComment("品牌ID (FK)");
+            entity.Property(e => e.ButtonOrder).HasComment("按鈕顯示順序（數字越小越前面）");
+            entity.Property(e => e.ButtonText)
+                .IsRequired()
+                .HasComment("按鈕顯示文字（如運動補充劑）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（1=啟用, 0=停用）");
+            entity.Property(e => e.ProductTypeId).HasComment("商品分類ID (FK)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandProductTypeFilters)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandProductTypeFilter_Brand");
+
+            entity.HasOne(d => d.ProductType).WithMany(p => p.SupBrandProductTypeFilters)
+                .HasForeignKey(d => d.ProductTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandProductTypeFilter_ProductType");
         });
 
         modelBuilder.Entity<SupLogistic>(entity =>

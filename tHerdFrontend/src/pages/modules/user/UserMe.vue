@@ -1,20 +1,3 @@
-<!-- /src/pages/account/Me.vue -->
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-
-const auth = useAuthStore()
-const router = useRouter()
-
-const me = computed(() => auth.user)
-
-async function doLogout() {
-  await auth.logout()
-  router.replace({ name: 'home' })
-}
-</script>
-
 <template>
   <div class="container py-4">
     <h2 class="mb-3">我的帳戶</h2>
@@ -33,3 +16,20 @@ async function doLogout() {
     </div>
   </div>
 </template>
+
+<!-- /src/pages/account/Me.vue -->
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+const me = computed(() => auth.user)
+
+async function doLogout() {
+  await auth.logout()
+  router.replace({ name: 'home' })
+}
+</script>
