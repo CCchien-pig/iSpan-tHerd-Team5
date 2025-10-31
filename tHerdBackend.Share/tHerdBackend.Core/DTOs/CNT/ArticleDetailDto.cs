@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using tHerdBackend.Core.DTOs.CNT;
 
 namespace tHerdBackend.Share.DTOs.CNT
 {
@@ -36,7 +37,7 @@ namespace tHerdBackend.Share.DTOs.CNT
 		public int PreviewLength { get; set; }
 
 		/// <summary>標籤清單（顯示、導購用）</summary>
-		public List<string> Tags { get; set; } = new();
+		public List<ArticleTagDto> Tags { get; set; } = new();
 
 		/// <summary>
 		/// 文章內容區塊（若為未購買付費內容，則 Blocks 為 null）

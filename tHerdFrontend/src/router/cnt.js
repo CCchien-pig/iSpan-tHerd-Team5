@@ -54,6 +54,20 @@ export default [
         name: 'cnt-nutrition-compare',
         component: () => import('../pages/modules/cnt/NutritionCompare.vue'),
         meta: { title: '營養比較' }
+      },
+      {
+        path: 'tag/:tagId/products',
+        name: 'cnt-tag-products',
+        component: () => import('@/pages/modules/cnt/TagProductList.vue'),
+        props: true,
+        meta: { title: '相關商品' }
+      },
+      {
+        path: '/prod/product/:id',
+        name: 'prod-detail',
+        component: () => import('@/pages/modules/prod/ProductDetail.vue'),
+        props: true,
+        meta: { title: '商品詳情' }
       }
     ]
   }

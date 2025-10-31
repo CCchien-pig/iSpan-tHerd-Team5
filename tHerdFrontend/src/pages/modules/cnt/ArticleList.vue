@@ -65,13 +65,18 @@
         :key="a.pageId"
         class="col-12 col-md-6 col-lg-4"
       >
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100 shadow-lg">
           <!-- <img :src="a.coverImage" class="card-img-top" :alt="a.title" /> -->
           <div class="card-body d-flex flex-column">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="badge rounded-pill bg-light main-color-green-text">{{
-                a.categoryName || "未分類"
-              }}</span>
+              <div class="mb-2 text-start">
+                <span
+                  class="badge rounded-pill main-color-green-text bg-light"
+                  style="border:1px solid rgba(0,128,0,.2); font-size:.8rem; font-weight:500;"
+                >
+                  {{ a.categoryName || "未分類" }}
+                </span>
+              </div>
               <span
                 v-if="a.isPaidContent"
                 class="badge rounded-pill bg-warning text-dark"
