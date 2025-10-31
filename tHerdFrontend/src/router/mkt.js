@@ -11,6 +11,12 @@ export default [
     path: '/mkt/coupons',
     name: 'mkt-coupons',
     component: CouponPage,
-    meta: { title: '會員優惠券', requiresAuth: true }, // ✅ 必須登入
+    meta: { title: '會員優惠券', requiresAuth: true },
+  },
+  {
+    path: '/mkt/game',
+    name: 'mkt-game',
+    component: () => import('@/pages/modules/mkt/Game.vue'), // ✅ 指向頁面層
+    meta: { title: '翻牌記憶遊戲', requiresAuth: true },
   },
 ]
