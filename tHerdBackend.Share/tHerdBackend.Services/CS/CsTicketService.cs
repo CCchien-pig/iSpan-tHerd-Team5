@@ -1,9 +1,11 @@
 ﻿using tHerdBackend.Core.DTOs.CS;
+using tHerdBackend.Core.Interfaces.CS;
 using tHerdBackend.Infra.Repositories.Interfaces.CS;
 
 namespace tHerdBackend.Services.CS
 {
-	public class CsTicketService
+	/// <summary>客服工單業務邏輯層</summary>
+	public class CsTicketService : ICsTicketService
 	{
 		private readonly ICsTicketRepository _repo;
 
@@ -12,42 +14,31 @@ namespace tHerdBackend.Services.CS
 			_repo = repo;
 		}
 
-		public async Task<IEnumerable<TicketsDto>> GetTicketsAsync()
+		/// <summary>取得全部工單清單</summary>
+		public async Task<IEnumerable<TicketsDto>> GetAllAsync()
 		{
 			return await _repo.GetAllAsync();
 		}
 
-		public async Task<TicketOut> CreateAsync(TicketIn input)
+		/// <summary>建立新工單，回傳 TicketId</summary>
+		public async Task<int> CreateAsync(TicketIn input)
 		{
-			var newId = await _repo.CreateAsync(input);
-
-			// 轉換輸出 DTO（簡化版）
-			return new TicketOut
-			{
-				TicketId = newId,
-				Subject = input.Subject,
-				CategoryName = GetCategoryName(input.CategoryId),
-				PriorityText = GetPriorityText(input.Priority),
-				CreatedDate = DateTime.Now
-			};
+			return await _repo.CreateAsync(input);
 		}
 
-		private string GetPriorityText(int p) => p switch
+		/// <summary>查單筆工單（建立後回傳）</summary>
+		public async Task<TicketOut?> GetTicketByIdAsync(int ticketId)
 		{
-			1 => "高",
-			2 => "中",
-			3 => "低",
-			_ => "中"
-		};
-
-		private string GetCategoryName(int? categoryId)
-		{
-			return categoryId switch
+			var tickets = await _repo.GetAllAsync();
+			var found = tickets.FirstOrDefault(x => x.TicketId == ticketId);
+			return found == null ? null : new TicketOut
 			{
-				1001 => "訂單問題",
-				1002 => "付款問題",
-				1003 => "運送問題",
-				_ => "未分類"
+				TicketId = found.TicketId,
+				Subject = found.Subject,
+				CategoryName = found.CategoryName ?? "未分類",
+				PriorityText = found.PriorityText,
+				CreatedDate = found.CreatedDate,
+				StatusText = found.StatusText
 			};
 		}
 	}

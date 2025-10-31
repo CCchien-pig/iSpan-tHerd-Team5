@@ -10,5 +10,6 @@
 		public string CategoryName { get; set; } = string.Empty;
 		public string PriorityText { get; set; } = "中";
 		public DateTime CreatedDate { get; set; }
+		public string StatusText { get; set; } = "待處理"; // 新增：狀態文字
 	}
 }

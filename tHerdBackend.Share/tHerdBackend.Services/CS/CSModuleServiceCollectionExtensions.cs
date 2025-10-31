@@ -17,7 +17,7 @@ namespace tHerdBackend.Services.CS
 			// Service
 			services.AddScoped<IFaqService, FaqService>();
 			services.AddScoped<ICsTicketRepository, CsTicketRepository>();
-			services.AddScoped<CsTicketService>();
+		services.AddScoped<ICsTicketService, CsTicketService>();
 
 			return services;
         }

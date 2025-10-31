@@ -11,9 +11,10 @@
 		public string StatusText { get; set; } = "待處理"; // 轉中文顯示
 		public string PriorityText { get; set; } = "中";
 		public DateTime CreatedDate { get; set; }
-		
-	
-	
-}
+		public string? AssigneeName { get; set; } // 之後可 join 員工表顯示客服名稱
+
+
+
+	}
 }
 
