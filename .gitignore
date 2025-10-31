@@ -376,3 +376,14 @@ FodyWeavers.xsd
 # Visual Studio History
 .vshistory/
 
+# === 忽略暫存上傳檔案 ===
+tHerdBackend.Admin/wwwroot/uploads/
+wwwroot/uploads/
+uploads/
+*.tmp
+*.bak
+*.log
+
+# === 允許 Cloudinary 設定或說明檔 ===
+!tHerdBackend.Admin/wwwroot/uploads/readme.md
+/FlexBackend.Admin/wwwroot/uploads/4dc07ea4f07a4424bbfba70c8537d4ee.png

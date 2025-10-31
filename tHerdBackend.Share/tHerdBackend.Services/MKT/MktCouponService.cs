@@ -47,37 +47,38 @@ namespace tHerdBackend.Infra.Services.MKT
 
         public bool ReceiveCoupon(int couponId, int memberId)
         {
-            // ✅ 撈優惠券
+            // 1️⃣ 檢查優惠券是否存在且啟用
             var coupon = _db.MktCoupons.FirstOrDefault(c => c.CouponId == couponId && c.IsActive);
             if (coupon == null) return false;
 
-            // ✅ 檢查庫存
+            // 2️⃣ 剩餘數量不足
             if (coupon.LeftQty <= 0) return false;
 
-            // ✅ 檢查是否超過領取上限
+            // 3️⃣ 檢查會員是否已領取過、或達上限
             var receiveCount = _db.UserCouponWallets
                 .Count(w => w.CouponId == couponId && w.UserNumberId == memberId);
-
             if (receiveCount >= coupon.UserLimit)
                 return false;
 
-            // ✅ 建立領券紀錄
+            // 4️⃣ 建立領券紀錄
             var wallet = new UserCouponWallet
             {
                 CouponId = coupon.CouponId,
                 UserNumberId = memberId,
                 ClaimedDate = DateTime.Now,
-                Status = "unused"
+                Status = "unuse"
             };
 
             _db.UserCouponWallets.Add(wallet);
 
-            // ✅ 扣庫存
+            // 5️⃣ 扣除剩餘數量
             coupon.LeftQty -= 1;
 
+            // 6️⃣ 寫入資料庫
             _db.SaveChanges();
             return true;
         }
+
         public List<MktCouponDto> GetAllActiveCouponsWithMemberStatus(int memberId)
         {
             var today = DateTime.Now;
@@ -86,7 +87,6 @@ namespace tHerdBackend.Infra.Services.MKT
                 .Where(c =>
                     c.IsActive &&
                     c.LeftQty > 0 &&
-                    // ✅ 新增有效期限判斷
                     c.StartDate <= today &&
                     (c.EndDate == null || c.EndDate >= today)
                 )
@@ -109,6 +109,7 @@ namespace tHerdBackend.Infra.Services.MKT
                     IsActive = c.IsActive,
                     Creator = c.Creator,
                     CreatedDate = c.CreatedDate,
+                    // ✅ 加入判斷會員是否已領取
                     IsReceived = _db.UserCouponWallets
                         .Any(w => w.CouponId == c.CouponId && w.UserNumberId == memberId)
                 })
@@ -117,6 +118,7 @@ namespace tHerdBackend.Infra.Services.MKT
 
             return coupons;
         }
+
 
     }
 }

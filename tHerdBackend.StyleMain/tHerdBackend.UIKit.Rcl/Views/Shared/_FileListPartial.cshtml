@@ -1,0 +1,93 @@
+﻿@using tHerdBackend.Core.DTOs
+@model List<SysAssetFileDto>
+
+@* 圖片模組 *@
+
+@{
+    const string updateApiUrl = "/SYS/Images/UpdateFile";
+    const string deleteApiUrl = "/SYS/Images/DeleteFile";
+}
+
+@if (Model != null && Model.Any())
+{
+    <div class="d-flex flex-wrap gap-2">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var file = Model[i];
+            var fileUrl = !string.IsNullOrWhiteSpace(file.FileUrl) ? file.FileUrl : "/images/no-image.png";
+            var alt = !string.IsNullOrWhiteSpace(file.AltText) ? file.AltText : System.IO.Path.GetFileName(fileUrl);
+
+            <div class="img-item position-relative @(file.IsActive ? "" : "inactive")">
+                @if (!string.IsNullOrEmpty(file.MimeType) && file.MimeType.StartsWith("video/"))
+                {
+                    <video src="@fileUrl"
+                           class="thumb-clickable img-zoomable"
+                           controls
+                           muted
+                           preload="metadata"
+                           poster="/images/video-placeholder.jpg"
+                           style="width:150px;height:150px;object-fit:cover;border-radius:6px;"
+                           data-bs-toggle="modal"
+                           data-bs-target="#imgMetaModal"
+                           data-file-id="@file.FileId"
+                           data-file-url="@fileUrl"
+                           data-alt-text="@alt"
+                           data-caption="@file.Caption"
+                           data-mime-type="@file.MimeType"
+                           data-is-active="@file.IsActive.ToString().ToLower()">
+                        您的瀏覽器不支援影片預覽。
+                    </video>
+                }
+                else
+                {
+                    <img loading="lazy"
+                         src="@fileUrl"
+                         alt="@alt"
+                         class="thumb-clickable img-zoomable"
+                         style="width:150px;height:150px;object-fit:cover;border-radius:6px;"
+                         data-bs-toggle="modal"
+                         data-bs-target="#imgMetaModal"
+                         data-file-id="@file.FileId"
+                         data-file-url="@fileUrl"
+                         data-alt-text="@alt"
+                         data-caption="@file.Caption"
+                         data-mime-type="@file.MimeType"
+                         data-is-active="@file.IsActive.ToString().ToLower()" />
+                }
+
+                <!-- 🔹 關鍵：讓 ASP.NET 在 POST 時能綁定 Images[i].ImgId -->
+                <input type="hidden" name="Images[@i].ImgId" value="@file.FileId" />
+                <input type="hidden" name="Images[@i].FileUrl" value="@file.FileUrl" />
+                <input type="hidden" name="Images[@i].AltText" value="@file.AltText" />
+                <input type="hidden" name="Images[@i].Caption" value="@file.Caption" />
+                <input type="hidden" name="Images[@i].IsActive" value="@file.IsActive" />
+
+                <input type="hidden" name="ImgId" value="@file.FileId" />
+
+                <!-- 🔹 Delete -->
+                <button type="button"
+                        class="btn-close-custom"
+                        aria-label="Close"
+                        onclick="deleteFile(@file.FileId, this)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- 🔹 Toggle Active -->
+                <button type="button"
+                        class="toggle-active-btn btn btn-sm"
+                        onclick="toggleActive(this)">
+                    @(file.IsActive ? "停用" : "啟用")
+                </button>
+
+                <!-- 🔹 停用遮罩 -->
+                <div class="disabled-overlay">
+                    <i class="bi bi-slash-circle"></i>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">目前沒有圖片。</p>
+}

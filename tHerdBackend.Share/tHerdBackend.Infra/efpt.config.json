@@ -92,6 +92,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[CNT_ProductTag]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[CNT_Purchase]",
          "ObjectType": 0
       },
@@ -337,6 +341,10 @@
       },
       {
          "Name": "[dbo].[SUP_BrandLayoutConfig]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SUP_BrandProductTypeFilter]",
          "ObjectType": 0
       },
       {
