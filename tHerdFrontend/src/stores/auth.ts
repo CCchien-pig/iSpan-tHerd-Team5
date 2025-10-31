@@ -79,17 +79,24 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // ★ 新增：正式登入
-    async login(email: string, password: string) {
-      const { data } = await http.post('/auth/login', { email, password })
-      // 你的 API 會回傳 { accessToken, accessExpiresAt, refreshToken?, user? }
-      if (data.refreshToken) this.setTokenPair(data.accessToken, data.accessExpiresAt, data.refreshToken)
-      else this.setToken(data.accessToken, data.accessExpiresAt)
+    async login(
+  email: string,
+  password: string,
+  opts?: { recaptchaToken?: string; rememberMe?: boolean }
+) {
+  const payload: any = { email, password };
+  if (opts?.recaptchaToken) payload.recaptchaToken = opts.recaptchaToken;
+  if (typeof opts?.rememberMe === 'boolean') payload.rememberMe = opts.rememberMe;
 
-      // 同步 user（若 API 已回 user）
-      if (data.user) this.user = data.user
-      else await this.ensureUser(true)
-      return data
-    },
+  const { data } = await http.post('/auth/login', payload);
+
+  if (data.refreshToken) this.setTokenPair(data.accessToken, data.accessExpiresAt, data.refreshToken);
+  else this.setTokenPair(data.accessToken, data.accessExpiresAt);
+
+  if (data.user) this.user = data.user;
+  else await this.ensureUser(true);
+  return data;
+},
 
     async logout() {
       try {

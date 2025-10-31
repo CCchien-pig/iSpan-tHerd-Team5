@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div class="container py-4">
     <h2 class="mb-3">我的帳戶</h2>
     <div v-if="!me" class="alert alert-warning">尚未登入</div>
@@ -15,10 +15,10 @@
       </div>
     </div>
   </div>
-</template>
+</template> -->
 
 <!-- /src/pages/account/Me.vue -->
-<script setup lang="ts">
+<!-- <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -32,4 +32,290 @@ async function doLogout() {
   await auth.logout()
   router.replace({ name: 'home' })
 }
+</script> -->
+
+<template>
+  <div class="myaccount container py-4">
+    <!-- 麵包屑 -->
+    <div class="breadcrumb">
+      <router-link :to="{ name: 'userme' }">我的帳戶</router-link>
+      <span>儀表板</span>
+    </div>
+
+    <div v-if="!me" class="alert alert-warning">尚未登入</div>
+
+    <div v-else class="layout">
+      <!-- 左側側邊欄 -->
+      <aside class="sidebar">
+        <MyAccountSidebar />
+      </aside>
+
+      <!-- 右側主內容 -->
+      <main class="content">
+        <!-- 基本資料卡 -->
+        <el-card class="base-card" shadow="never">
+          <div class="base-card__left">
+            <div class="avatar">
+              <svg v-if="!avatarUrl" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="28" fill="#FFF"></circle>
+                <path fill="#D8D8D8"
+                  d="M28 0c15.464 0 28 12.536 28 28S43.464 56 28 56 0 43.464 0 28 12.536 0 28 0zm-.039 29.647c-13.896 0-21.864 7.56-17.5 12.666 4.365 5.105 10.278 8.443 17.5 8.443 7.223 0 13.136-3.338 17.5-8.443 4.365-5.105-3.603-12.666-17.5-12.666zM27.96 5.56c-4.64 0-8.4 3.898-8.4 8.707 0 4.808 3.76 9.588 8.4 9.588 4.639 0 8.4-4.78 8.4-9.588 0-4.809-3.761-8.707-8.4-8.707z" />
+              </svg>
+              <img v-else :src="avatarUrl" alt="profile" />
+            </div>
+            <div class="base-info">
+              <div class="hello">嗨親好，{{ me.email }}！</div>
+              <div class="joined">用戶加入時間 {{ joinedAtText }}</div>
+              <div class="meta">
+                <span>姓名：{{ me.name }}</span>
+                <span>會員編號：#{{ me.userNumberId }}</span>
+                <span>角色：{{ (me.roles || []).join(', ') || '—' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="base-card__right">
+            <el-button class="me-2" @click="goHome" plain>回首頁</el-button>
+            <el-button type="danger" @click="doLogout">登出</el-button>
+          </div>
+        </el-card>
+
+        <!-- 等級 / 回饋率 / 使用推薦碼 & 領券卡 -->
+        <el-card class="referral-card" shadow="never">
+          <div class="referral-card__header">
+            <div class="title">會員等級</div>
+            <div class="desc">
+              <span class="rank-name">{{ memberRank?.RankName || '—' }}</span>
+              <span v-if="memberRank" class="rebate">（回饋 {{ memberRank.RebateRate }}%）</span>
+            </div>
+          </div>
+
+          <div class="referral-card__body">
+            <div class="code-box">
+              <div class="label">已使用的推薦碼</div>
+              <div class="code">{{ profile?.UsedReferralCode || '—' }}</div>
+            </div>
+
+            <div class="claim">
+              <el-button
+                type="primary"
+                :disabled="!profile?.UsedReferralCode || claiming"
+                :loading="claiming"
+                @click="claimReferralCoupon"
+              >
+                領取推薦碼優惠券
+              </el-button>
+              <div class="hint">＊需先有「已使用的推薦碼」才可領取。</div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 功能磚 -->
+        <div class="feature-grid">
+          <el-card class="feature" shadow="hover" @click="go('orders')">
+            <div class="title">訂單</div>
+            <div class="desc">跟蹤訂單、申請退貨、重新訂購、撰寫評價。</div>
+          </el-card>
+
+          <el-card class="feature" shadow="hover" @click="go('subscriptions')">
+            <div class="title">定期自動送貨享優惠</div>
+            <div class="desc">設定經常性訂購，輕鬆補貨更優惠。</div>
+          </el-card>
+
+          <el-card class="feature" shadow="hover" @click="go('promotions')">
+            <div class="title">促銷與優惠</div>
+            <div class="desc">查看全站優惠，領取活動折扣。</div>
+          </el-card>
+
+          <el-card class="feature" shadow="hover" @click="go('wishlist')">
+            <div class="title">我的清單</div>
+            <div class="desc">保留喜愛商品，補貨即買。</div>
+          </el-card>
+
+          <el-card class="feature" shadow="hover" @click="go('affiliate')">
+            <div class="title">聯盟計畫</div>
+            <div class="desc">成為聯盟成員，越分享越賺！</div>
+          </el-card>
+
+          <el-card class="feature" shadow="hover" @click="go('addressbook')">
+            <div class="title">地址簿</div>
+            <div class="desc">集中管理你的收貨地址。</div>
+          </el-card>
+        </div>
+
+        <!-- 猜你喜歡（容器，之後你可掛 Slick 或自家 Carousel） -->
+        <section class="recommend">
+          <h2>猜你喜歡</h2>
+          <div class="carousel-placeholder">
+            （此處保留你的輪播元件位，之後可接資料）
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
+import { http } from '@/api/http'
+import { ElMessage } from 'element-plus'
+
+type MemberRank = {
+  MemberRankId: string
+  RankName: string
+  RebateRate: number
+  RankDescription?: string | null
+}
+
+type ProfileDto = {
+  id: string
+  email: string
+  name: string
+  userNumberId: number
+  roles: string[]
+  // 下列欄位盡量從後端抓（對應 AspNetUsers）
+  MemberRankId?: string
+  ReferralCode?: string | null
+  UsedReferralCode?: string | null
+  CreatedDate?: string | null
+  LastLoginDate?: string | null
+  Gender?: string | null
+  Address?: string | null
+  IsActive?: boolean
+}
+
+const router = useRouter()
+const auth = useAuthStore()
+const me = computed<ProfileDto | null>(() => auth.user as any || null)
+
+// 進階檔案：從 API 補齊 AspNetUsers 欄位（若你已在 login 回傳就有，可省略）
+const profile = ref<ProfileDto | null>(null)
+const memberRank = ref<MemberRank | null>(null)
+const claiming = ref(false)
+const avatarUrl = ref<string | null>(null) // 若未來接 Cloudinary 可填入
+
+const joinedAtText = computed(() => {
+  const dt = profile.value?.CreatedDate
+  if (!dt) return '—'
+  try {
+    const d = new Date(dt)
+    return `${d.getFullYear()} 年 ${String(d.getMonth()+1).padStart(2,'0')} 月 ${String(d.getDate()).padStart(2,'0')} 日`
+  } catch { return '—' }
+})
+
+onMounted(async () => {
+  if (!me.value) return
+  await loadProfile()
+  await loadMemberRank()
+})
+
+async function loadProfile() {
+  try {
+    // 你可將此 API 調整為你現有的「取自己」端點
+    // 建議：GET /api/user/me/detail 直接回 AspNetUsers 主要欄位
+    const { data } = await http.get('/user/me/detail')
+    // 兜回基礎登入資訊
+    const result: ProfileDto = {
+      id: me.value!.id,
+      email: me.value!.email,
+      name: me.value!.name,
+      userNumberId: me.value!.userNumberId,
+      roles: me.value!.roles || [],
+      ...data
+    }
+    profile.value = result
+  } catch {
+    // 若沒有該 API，就以登入資訊暫代，頁面仍可顯示
+    profile.value = me.value
+  }
+}
+
+async function loadMemberRank() {
+  try {
+    const rankId = profile.value?.MemberRankId
+    if (!rankId) return
+    // 你可對應到你的查詢端點：GET /api/user/member-ranks/{id}
+    const { data } = await http.get(`/user/member-ranks/${encodeURIComponent(rankId)}`)
+    memberRank.value = data as MemberRank
+  } catch {
+    memberRank.value = null
+  }
+}
+
+async function claimReferralCoupon() {
+  if (!profile.value?.UsedReferralCode) return
+  claiming.value = true
+  try {
+    // 領券端點（請依你的後端調整）
+    // 建議：POST /api/mkt/referral/claim  body: { code: UsedReferralCode }
+    await http.post('/mkt/referral/claim', {
+      code: profile.value.UsedReferralCode
+    })
+    ElMessage.success('已成功領取推薦碼優惠券！')
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.error || '領取失敗，請稍後再試')
+  } finally {
+    claiming.value = false
+  }
+}
+
+function go(name: string) {
+  router.push({ name })
+}
+
+function goHome() {
+  router.push({ name: 'home' })
+}
+
+async function doLogout() {
+  await auth.logout()
+  router.replace({ name: 'home' })
+}
 </script>
+
+<style scoped>
+.myaccount { max-width: 1200px; }
+.breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px; }
+.breadcrumb a { color:#4183c4; }
+.layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+.sidebar { min-width: 0; }
+.content { min-width: 0; }
+
+.base-card { display:flex; align-items:center; justify-content:space-between; padding:16px; }
+.base-card__left { display:flex; align-items:center; gap:16px; }
+.avatar { width:98px; height:98px; border-radius:50%; overflow:hidden; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
+.avatar img { width:98px; height:98px; object-fit:cover; border-radius:50%; }
+.base-info .hello { font-weight:600; margin-bottom:4px; }
+.base-info .joined { font-size:12px; color:#666; margin-bottom:6px; }
+.base-info .meta { display:flex; gap:14px; flex-wrap: wrap; font-size:14px; color:#333; }
+
+.referral-card { margin-top:16px; }
+.referral-card__header { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; }
+.referral-card .title { font-weight:700; }
+.referral-card .desc { color:#333; }
+.rank-name { font-weight:600; }
+.rebate { color:#418a3b; }
+
+.referral-card__body { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.code-box { background:#f7faf7; border:1px solid #e2efe2; border-radius:8px; padding:12px 16px; min-width: 260px; }
+.code-box .label { font-size:12px; color:#666; }
+.code-box .code { font-size:20px; font-weight:700; margin-top:4px; letter-spacing:1px; }
+.claim { display:flex; align-items:center; gap:12px; }
+
+.feature-grid { margin-top:20px; display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+.feature { cursor:pointer; }
+.feature .title { font-weight:700; margin-bottom:6px; }
+.feature .desc { color:#555; font-size:14px; }
+
+.recommend { margin-top:28px; }
+.carousel-placeholder { background:#fafafa; border:1px dashed #ddd; padding:24px; text-align:center; color:#999; }
+
+@media (max-width: 992px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { order:2; }
+  .content { order:1; }
+}
+</style>
