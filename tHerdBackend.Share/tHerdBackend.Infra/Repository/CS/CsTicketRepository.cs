@@ -1,5 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.CS;
+using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Infra.Repositories.Interfaces.CS;
 
@@ -11,14 +14,17 @@ namespace tHerdBackend.Infra.Repositories.CS
 	public class CsTicketRepository : ICsTicketRepository
 	{
 		private readonly tHerdDBContext _db;
+		private readonly ISysAssetFileRepository _assetRepo; //注入共用圖片模組
 
-		public CsTicketRepository(tHerdDBContext db)
+		public CsTicketRepository(tHerdDBContext db, ISysAssetFileRepository assetRepo)
 		{
 			_db = db;
+			_assetRepo = assetRepo;
+
 		}
 
 		/// <summary>
-		/// 取得所有客服工單清單（含分類名稱）
+		/// 取得所有客服工單清單 JOIN FAQ 分類名稱、轉成 DTO
 		/// </summary>
 		public async Task<IEnumerable<TicketsDto>> GetAllAsync()
 		{
@@ -75,8 +81,8 @@ namespace tHerdBackend.Infra.Repositories.CS
 				var entity = new CsTicket
 			{
 				UserId = dto.UserId,
-				CategoryId = dto.CategoryId == 0 ? null : dto.CategoryId,
-				Subject = dto.Subject,
+					CategoryId = dto.CategoryId > 0 ? dto.CategoryId : null,
+					Subject = dto.Subject,
 				Status = 1, // 待處理
 				Priority = dto.Priority,
 				CreatedDate = DateTime.Now
@@ -98,7 +104,7 @@ namespace tHerdBackend.Infra.Repositories.CS
 				ChangedBy = dto.UserId,
 				ChangedDate = DateTime.Now
 			};
-			_db.CsTicketHistories.Add(history);
+			
 
 			// 第一則訊息
 			var message = new CsTicketMessage
@@ -108,10 +114,10 @@ namespace tHerdBackend.Infra.Repositories.CS
 				MessageText = dto.MessageText,
 				CreatedDate = DateTime.Now
 			};
-			_db.CsTicketMessages.Add(message);
-
-			await _db.SaveChangesAsync();
-			return entity.TicketId;
+				_db.CsTicketHistories.Add(history);
+				_db.CsTicketMessages.Add(message);
+				await _db.SaveChangesAsync();
+				return entity.TicketId;
 		}
     catch (Exception ex)
     {
@@ -124,7 +130,7 @@ namespace tHerdBackend.Infra.Repositories.CS
 /// <summary>
 /// 新增工單歷程（轉單、狀態變更等）
 /// </summary>
-public async Task AddHistoryAsync(int ticketId, string action, int? fromAssigneeId, int? toAssigneeId,
+        public async Task AddHistoryAsync(int ticketId, string action, int? fromAssigneeId, int? toAssigneeId,
 										  byte? oldStatus, byte? newStatus, string note, int changedBy)
 		{
 			var history = new CsTicketHistory
@@ -161,5 +167,47 @@ public async Task AddHistoryAsync(int ticketId, string action, int? fromAssignee
 			_db.CsTicketMessages.Add(msg);
 			await _db.SaveChangesAsync();
 		}
+		/// <summary>
+		/// 上傳一張圖片到 Cloudinary / 本地，並回傳 FileId
+		/// </summary>
+		public async Task<int?> AddAttachmentAsync(IFormFile file, CancellationToken ct = default)
+		{
+			if (file == null || file.Length == 0)
+				return null;
+
+			// 設定上傳的模組代號與子程式代號
+			var uploadDto = new AssetFileUploadDto
+			{
+				ModuleId = "CS",
+				ProgId = "Ticket",
+				Meta = new List<AssetFileDetailsDto>
+		  {
+			  new AssetFileDetailsDto
+			  {
+				  File = file,
+				  AltText = "客服工單附件",
+				  Caption = "客戶上傳圖片"
+			  }
+		  }
+			};
+
+			var result = await _assetRepo.AddFilesAsync(uploadDto, ct);
+			  
+			// dynamic 方式取出回傳資料
+			var data = result as dynamic;
+			var fileId = data?.data?.FirstOrDefault()?.FileId;
+			return (int?)fileId;
+
+		}
+		public async Task UpdateImgIdAsync(int ticketId, int fileId)
+		{
+			var ticket = await _db.CsTickets.FirstOrDefaultAsync(t => t.TicketId == ticketId);
+			if (ticket == null) return;
+
+			ticket.ImgId = fileId;
+			await _db.SaveChangesAsync();
+		}
+
 	}
 }
+

@@ -53,7 +53,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await http.get('/api/cs/tickets/list')
+    const res = await http.get('/cs/CsTickets/list')
     if (res.data?.success) tickets.value = res.data.data
   } catch (err) {
     console.error('取得工單清單失敗', err)

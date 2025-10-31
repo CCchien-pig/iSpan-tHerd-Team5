@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.DTOs.CS;
+﻿using Microsoft.AspNetCore.Http;
+using tHerdBackend.Core.DTOs.CS;
 
 namespace tHerdBackend.Core.Interfaces.CS
 {
@@ -9,7 +10,7 @@ namespace tHerdBackend.Core.Interfaces.CS
 		Task<IEnumerable<TicketsDto>> GetAllAsync();
 
 		/// <summary>建立新工單</summary>
-		Task<int> CreateAsync(TicketIn input);
+		Task<int> CreateAsync(TicketIn input, IFormFile? image = null);
 
 		/// <summary>查單筆工單（用於回傳建立結果）</summary>
 		Task<TicketOut?> GetTicketByIdAsync(int ticketId);
