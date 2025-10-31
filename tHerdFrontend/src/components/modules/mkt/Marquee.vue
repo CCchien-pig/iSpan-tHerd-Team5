@@ -18,7 +18,7 @@
 
 <script>
 import api from '@/components/modules/mkt/api'
-
+import axios from 'axios'
 export default {
   name: 'Marquee',
   data() {
@@ -39,7 +39,7 @@ export default {
   methods: {
     async fetchCampaignData() {
       try {
-        const res = await api.get('/api/mkt/campaign/active')
+        const res = await axios.get('/api/mkt/campaign/active')
         if (Array.isArray(res.data.data) && res.data.data.length > 0) {
           this.promoList = res.data.data
             .filter(item => item.campaignDescription)

@@ -46,15 +46,17 @@
               class="btn btn-md dropdown-toggle main-color-green"
               type="button"
               data-bs-toggle="dropdown"
+              data-bs-display="static"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
               <span class="main-color-white-text">登入</span>
             </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath } })">登入</a></li>
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })">註冊</a></li>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>
+              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })" href="#">註冊</a></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" v-if="isLogin" @click.prevent="$router.push({ name: 'userme' })">我的帳戶</a></li>
+              <li><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userme' })" href="#">我的帳戶</a></li>
+              <!-- 修正完在把我的帳戶新增：v-if="isLogin" -->
             </ul>
           </div>
           <!-- 訂單 -->
@@ -135,6 +137,7 @@
 </template>
 
 <script>
+import { Dropdown } from 'bootstrap'
 export default {
   name: 'AppHeader',
   data() {
@@ -143,6 +146,29 @@ export default {
       cartCount: 0,
     };
   },
+
+  mounted() {
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (!btn) return
+
+    const inst = Dropdown.getOrCreateInstance(btn, { autoClose: true })
+
+    // 捕獲階段先攔，避免其他全域 click 監聽吃掉事件
+    this.__onClickCapture = (e) => {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      inst.toggle()
+    }
+    btn.addEventListener('click', this.__onClickCapture, { capture: true })
+  },
+
+  beforeUnmount() {
+    const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
+    if (btn && this.__onClickCapture) {
+      btn.removeEventListener('click', this.__onClickCapture, { capture: true })
+    }
+  },
+  
   methods: {
   handleSearch() {
     if (this.searchQuery.trim()) {
