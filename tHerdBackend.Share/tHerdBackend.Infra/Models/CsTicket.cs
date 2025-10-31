@@ -55,9 +55,16 @@ public partial class CsTicket
     /// </summary>
     public int? AssigneeId { get; set; }
 
+    /// <summary>
+    /// 圖片 ID
+    /// </summary>
+    public int? ImgId { get; set; }
+
     public virtual CsFaqCategory Category { get; set; }
 
     public virtual ICollection<CsTicketHistory> CsTicketHistories { get; set; } = new List<CsTicketHistory>();
 
     public virtual ICollection<CsTicketMessage> CsTicketMessages { get; set; } = new List<CsTicketMessage>();
+
+    public virtual SysAssetFile Img { get; set; }
 }
