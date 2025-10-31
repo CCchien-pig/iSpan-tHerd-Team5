@@ -34,6 +34,7 @@ async function doLogout() {
 }
 </script> -->
 
+<!-- /src/pages/modules/user/UserMe.vue -->
 <template>
   <div class="myaccount container py-4">
     <!-- 麵包屑 -->
@@ -110,40 +111,40 @@ async function doLogout() {
           </div>
         </el-card>
 
-        <!-- 功能磚 -->
+        <!-- 功能磚（尚未建路由 → 僅視覺可點、彈提示，不跳轉） -->
         <div class="feature-grid">
-          <el-card class="feature" shadow="hover" @click="go('orders')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('訂單')">
             <div class="title">訂單</div>
             <div class="desc">跟蹤訂單、申請退貨、重新訂購、撰寫評價。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="go('subscriptions')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('定期自動送貨享優惠')">
             <div class="title">定期自動送貨享優惠</div>
             <div class="desc">設定經常性訂購，輕鬆補貨更優惠。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="go('promotions')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('促銷與優惠')">
             <div class="title">促銷與優惠</div>
             <div class="desc">查看全站優惠，領取活動折扣。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="go('wishlist')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
             <div class="title">我的清單</div>
             <div class="desc">保留喜愛商品，補貨即買。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="go('affiliate')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('聯盟計畫')">
             <div class="title">聯盟計畫</div>
             <div class="desc">成為聯盟成員，越分享越賺！</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="go('addressbook')">
+          <el-card class="feature" shadow="hover" @click="todoFeature('地址簿')">
             <div class="title">地址簿</div>
             <div class="desc">集中管理你的收貨地址。</div>
           </el-card>
         </div>
 
-        <!-- 猜你喜歡（容器，之後你可掛 Slick 或自家 Carousel） -->
+        <!-- 猜你喜歡（容器） -->
         <section class="recommend">
           <h2>猜你喜歡</h2>
           <div class="carousel-placeholder">
@@ -155,55 +156,34 @@ async function doLogout() {
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+<script setup>
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
 import { http } from '@/api/http'
 import { ElMessage } from 'element-plus'
 
-type MemberRank = {
-  MemberRankId: string
-  RankName: string
-  RebateRate: number
-  RankDescription?: string | null
-}
-
-type ProfileDto = {
-  id: string
-  email: string
-  name: string
-  userNumberId: number
-  roles: string[]
-  // 下列欄位盡量從後端抓（對應 AspNetUsers）
-  MemberRankId?: string
-  ReferralCode?: string | null
-  UsedReferralCode?: string | null
-  CreatedDate?: string | null
-  LastLoginDate?: string | null
-  Gender?: string | null
-  Address?: string | null
-  IsActive?: boolean
-}
-
 const router = useRouter()
 const auth = useAuthStore()
-const me = computed<ProfileDto | null>(() => auth.user as any || null)
+const me = computed(() => auth.user || null)
 
-// 進階檔案：從 API 補齊 AspNetUsers 欄位（若你已在 login 回傳就有，可省略）
-const profile = ref<ProfileDto | null>(null)
-const memberRank = ref<MemberRank | null>(null)
+const profile = ref(null)
+const memberRank = ref(null)
 const claiming = ref(false)
-const avatarUrl = ref<string | null>(null) // 若未來接 Cloudinary 可填入
+const avatarUrl = ref(null)
 
 const joinedAtText = computed(() => {
-  const dt = profile.value?.CreatedDate
+  const dt = profile.value && profile.value.CreatedDate
   if (!dt) return '—'
   try {
     const d = new Date(dt)
-    return `${d.getFullYear()} 年 ${String(d.getMonth()+1).padStart(2,'0')} 月 ${String(d.getDate()).padStart(2,'0')} 日`
-  } catch { return '—' }
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${d.getFullYear()} 年 ${mm} 月 ${dd} 日`
+  } catch {
+    return '—'
+  }
 })
 
 onMounted(async () => {
@@ -214,56 +194,50 @@ onMounted(async () => {
 
 async function loadProfile() {
   try {
-    // 你可將此 API 調整為你現有的「取自己」端點
-    // 建議：GET /api/user/me/detail 直接回 AspNetUsers 主要欄位
+    // 建議：GET /api/user/me/detail 回傳 AspNetUsers 主要欄位
     const { data } = await http.get('/user/me/detail')
-    // 兜回基礎登入資訊
-    const result: ProfileDto = {
-      id: me.value!.id,
-      email: me.value!.email,
-      name: me.value!.name,
-      userNumberId: me.value!.userNumberId,
-      roles: me.value!.roles || [],
+    profile.value = {
+      id: me.value.id,
+      email: me.value.email,
+      name: me.value.name,
+      userNumberId: me.value.userNumberId,
+      roles: me.value.roles || [],
       ...data
     }
-    profile.value = result
   } catch {
-    // 若沒有該 API，就以登入資訊暫代，頁面仍可顯示
+    // 沒有此 API 時，先用登入基本資訊
     profile.value = me.value
   }
 }
 
 async function loadMemberRank() {
   try {
-    const rankId = profile.value?.MemberRankId
+    const rankId = profile.value && profile.value.MemberRankId
     if (!rankId) return
-    // 你可對應到你的查詢端點：GET /api/user/member-ranks/{id}
     const { data } = await http.get(`/user/member-ranks/${encodeURIComponent(rankId)}`)
-    memberRank.value = data as MemberRank
+    memberRank.value = data
   } catch {
     memberRank.value = null
   }
 }
 
 async function claimReferralCoupon() {
-  if (!profile.value?.UsedReferralCode) return
+  if (!profile.value || !profile.value.UsedReferralCode) return
   claiming.value = true
   try {
-    // 領券端點（請依你的後端調整）
-    // 建議：POST /api/mkt/referral/claim  body: { code: UsedReferralCode }
-    await http.post('/mkt/referral/claim', {
-      code: profile.value.UsedReferralCode
-    })
+    await http.post('/mkt/referral/claim', { code: profile.value.UsedReferralCode })
     ElMessage.success('已成功領取推薦碼優惠券！')
-  } catch (err: any) {
-    ElMessage.error(err?.response?.data?.error || '領取失敗，請稍後再試')
+  } catch (err) {
+    const msg = err && err.response && err.response.data && err.response.data.error
+    ElMessage.error(msg || '領取失敗，請稍後再試')
   } finally {
     claiming.value = false
   }
 }
 
-function go(name: string) {
-  router.push({ name })
+// 功能磚暫不導路由：僅提示
+function todoFeature(label) {
+  ElMessage && ElMessage.info && ElMessage.info(`「${label}」尚未開通`)
 }
 
 function goHome() {
@@ -319,3 +293,4 @@ async function doLogout() {
   .content { order:1; }
 }
 </style>
+

@@ -20,12 +20,15 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		private readonly IJwtTokenService _jwt;
 		private readonly IRefreshTokenService _refreshSvc;
 		private readonly IReferralCodeGenerator _refGen;
+		private readonly IConfiguration _cfg;
+
 		public AuthController(
 			SignInManager<ApplicationUser> signInMgr,
 			UserManager<ApplicationUser> userMgr,
 			IJwtTokenService jwt,
 			IRefreshTokenService refreshSvc,
-			IReferralCodeGenerator refGen)
+			IReferralCodeGenerator refGen,
+			IConfiguration cfg)
 
 		{
 			_signInMgr = signInMgr;
@@ -33,9 +36,122 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			_jwt = jwt;
 			_refreshSvc = refreshSvc;
 			_refGen = refGen;
+			_cfg = cfg;
 		}
 
+		[AllowAnonymous]
+		[HttpGet("ExternalLogin")]
+		public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] bool rememberMe = true, [FromQuery] string? redirect = "/")
+		{
+			var callbackUrl = $"{Request.Scheme}://{Request.Host}/api/auth/ExternalLoginCallback" +
+		$"?rememberMe={rememberMe}&redirect={Uri.EscapeDataString(redirect ?? "/")}";
+			var props = _signInMgr.ConfigureExternalAuthenticationProperties(provider, callbackUrl);
+			return Challenge(props, provider);
+		}
+
+		// GET /auth/Account/ExternalLoginCallback?rememberMe=true&redirect=/user/me
+		[AllowAnonymous]
+		[HttpGet("ExternalLoginCallback")]
+		public async Task<IActionResult> ExternalLoginCallback([FromQuery] bool rememberMe = true, [FromQuery] string? redirect = "/")
+		{
+			var info = await _signInMgr.GetExternalLoginInfoAsync();
+			if (info == null)
+				return Redirect($"{(redirect ?? "/")}?login=failed");
+
+			// 取外部提供者 claims
+			var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+			var givenName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "";
+			var familyName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "";
+			var displayName = info.Principal.FindFirstValue(ClaimTypes.Name) ?? (email ?? "");
+
+			if (string.IsNullOrWhiteSpace(email))
+				return Redirect($"{(redirect ?? "/")}?login=failed");
+
+			var signInResult = await _signInMgr.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: rememberMe);
+			ApplicationUser user;
+
+			if (!signInResult.Succeeded)
+			{
+				// 沒綁定過 → 用 email 找；沒有就新建（對齊 register：IsActive / MemberRankId / ReferralCode）
+				user = await _userMgr.FindByEmailAsync(email);
+				if (user == null)
+				{
+					// ★ 產生推薦碼（與 register 對齊）
+					var referralCode = await GenerateUniqueReferralCodeAsync();
+
+					user = new ApplicationUser
+					{
+						UserName = email,
+						Email = email,
+						EmailConfirmed = true,   // Google 基本驗證過 email
+						LastName = familyName,
+						FirstName = givenName,
+						IsActive = true,         // ★ 對齊 register
+						MemberRankId = "MR001",  // ★ 對齊 register 預設等級
+						ReferralCode = referralCode,   // ★ 對齊 register
+					};
+					var createRes = await _userMgr.CreateAsync(user);
+					if (!createRes.Succeeded)
+						return Redirect($"{(redirect ?? "/")}?login=failed");
+
+					// 與 register 對齊：預設加入 Member 角色
+					try { await _userMgr.AddToRoleAsync(user, "Member"); } catch { /* 忽略失敗，不影響登入 */ }
+				}
+				else
+				{
+					// 帳號已存在但未有推薦碼 → 回填一次（與 register 規則一致）
+					if (string.IsNullOrEmpty(user.ReferralCode))
+					{
+						user.ReferralCode = await GenerateUniqueReferralCodeAsync();
+						await _userMgr.UpdateAsync(user);
+					}
+					// 若帳號被停用
+					if (!user.IsActive)
+						return Redirect($"{(redirect ?? "/")}?login=disabled");
+				}
+
+				// 綁定外部登入
+				var bindRes = await _userMgr.AddLoginAsync(user, info);
+				if (!bindRes.Succeeded)
+					return Redirect($"{(redirect ?? "/")}?login=failed");
+			}
+			else
+			{
+				// 已綁定 → 取回 user
+				user = await _userMgr.FindByLoginAsync(info.LoginProvider, info.ProviderKey)
+					   ?? await _userMgr.FindByEmailAsync(email);
+				if (user == null)
+					return Redirect($"{(redirect ?? "/")}?login=failed");
+
+				// 若已存在但沒推薦碼 → 也補上
+				if (string.IsNullOrEmpty(user.ReferralCode))
+				{
+					user.ReferralCode = await GenerateUniqueReferralCodeAsync();
+					await _userMgr.UpdateAsync(user);
+				}
+				if (!user.IsActive)
+					return Redirect($"{(redirect ?? "/")}?login=disabled");
+			}
+
+			// 發 JWT + Refresh（沿用既有）
+			var roles = await _userMgr.GetRolesAsync(user);
+			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+
+			// 回前端
+			var frontCallback = _cfg["Auth:FrontCallback"] ?? "/user/login/callback";
+			var target =
+				$"{frontCallback}" +
+				$"?token={Uri.EscapeDataString(accessToken)}" +
+				$"&refresh={Uri.EscapeDataString(refreshPlain)}" +
+				$"&exp={Uri.EscapeDataString(accessExpiresUtc.ToString("o"))}" +
+				$"&rememberMe={(rememberMe ? "1" : "0")}" +
+				$"&redirect={Uri.EscapeDataString(redirect ?? "/")}";
+
+			return Redirect(target);
+		}
 		public record RecaptchaVerifyResponse(bool success, decimal score, string action, DateTime challenge_ts, string hostname, string[]? errorCodes);
+		
 		[AllowAnonymous]
 		[HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginDto dto, [FromServices] IHttpClientFactory httpClientFactory, IConfiguration cfg)

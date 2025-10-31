@@ -21,9 +21,11 @@ using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.SharedApi.Infrastructure.Referral;
-
 using tHerdBackend.SharedApi.Infrastructure.Config;
 using tHerdBackend.SharedApi.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;           // AuthenticationBuilder 擴充
+using Microsoft.AspNetCore.Authentication.Google;    // AddGoogle 擴充方法所在組件
 
 
 namespace tHerdBackend.SharedApi
@@ -82,15 +84,22 @@ namespace tHerdBackend.SharedApi
 	.AddEntityFrameworkStores<ApplicationDbContext>()
 	.AddDefaultTokenProviders();
 
+			builder.Services.ConfigureExternalCookie(options =>
+			{
+				options.Cookie.Name = ".ExternalAuth.Temp";
+				options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+				options.SlidingExpiration = false;
+			});
 			//關閉預設 Claims 映射
 			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 			// JWT Authentication
 			builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+			{
+				options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+				options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+				options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+			})
+			.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 { // 設定驗證參數
@@ -138,7 +147,24 @@ namespace tHerdBackend.SharedApi
 				//		return Task.CompletedTask;
 				//	}
 				//};
-			});
+			})
+			//.AddCookie(IdentityConstants.ExternalScheme, options =>
+			//{// 2) 外部登入暫存 Cookie（**必要**，用來存 Google 回傳的外部票證）
+			// // 這個 Cookie 只作「外部登入流程暫存」，不當站內登入 Cookie，用預設即可
+			//	options.Cookie.Name = ".ExternalAuth.Temp";
+			//	options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+			//	options.SlidingExpiration = false;
+			//})
+			.AddGoogle("Google", options =>
+			{// 3) Google OAuth（把 SignInScheme 指到外部 Cookie）
+				options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+		options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"]; // 例：/auth/external/google-callback
+		options.SignInScheme = IdentityConstants.ExternalScheme; // ★ 重點：外部 Cookie
+		options.SaveTokens = true;
+		// options.Scope.Add("profile"); // 預設已含
+		// options.Scope.Add("email");   // 預設已含
+	});
 
 			builder.Services.AddAuthorization();
 

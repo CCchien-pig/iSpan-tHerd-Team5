@@ -27,4 +27,8 @@ export default [
     component: () => import('@/pages/modules/user/UserMe.vue'),
     meta: { title: '我的帳戶', requiresAuth: false },
   },
+  { path: '/user/login/callback', 
+    name: 'userlogincallback', 
+    component: () => import('@/pages/modules/user/UserLoginCallback.vue') 
+  },
 ];

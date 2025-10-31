@@ -1,4 +1,4 @@
-<!-- /src/pages/auth/Login.vue -->
+<!-- /src/pages/auth/UserLogin.vue -->
 
 <!-- <template>
   <div class="container py-4">
@@ -57,7 +57,7 @@ async function doLogin() {
 </script>
  -->
 <!--模仿iherb架構--> 
-<!-- /src/pages/auth/Login.vue -->
+<!-- /src/pages/modules/user/Login.vue -->
 <template>
   <div class="container py-4">
     <!-- 標題與副標題（iHerb 風格） -->
@@ -185,25 +185,9 @@ async function doLogin() {
         <div class="col-12">
           <a
             class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Google&rememberMe=${rememberMe}`"
+            :href="`/api/auth/ExternalLogin?provider=Google&rememberMe=${rememberMe}&redirect=/user/me`"
           >
-            <i class="bi bi-google me-2"></i> 用谷歌帳號登入
-          </a>
-        </div>
-        <div class="col-12">
-          <a
-            class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Facebook&rememberMe=${rememberMe}`"
-          >
-            <i class="bi bi-facebook me-2"></i> 用臉書帳號登入
-          </a>
-        </div>
-        <div class="col-12">
-          <a
-            class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Apple&rememberMe=${rememberMe}`"
-          >
-            <i class="bi bi-apple me-2"></i> Apple 帳號登錄
+            <i class="bi bi-google me-2"></i> 用google帳號登入
           </a>
         </div>
       </div>

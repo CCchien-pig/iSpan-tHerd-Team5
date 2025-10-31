@@ -55,6 +55,41 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('refreshToken')
     },
 
+    async loginWithExternalToken(
+  token: string,
+  opts: { rememberMe?: boolean; refreshToken?: string | null; accessTokenExpiresAt?: string | null } = {}
+) {
+  const rememberMe = opts.rememberMe !== false; // 預設 true
+  const storage = rememberMe ? localStorage : sessionStorage;
+  const otherStorage = rememberMe ? sessionStorage : localStorage;
+
+  // 狀態
+  this.accessToken = token;
+  if (opts.accessTokenExpiresAt) this.accessExpiresAt = opts.accessTokenExpiresAt;
+  if (opts.refreshToken) this.refreshToken = opts.refreshToken;
+
+  // 持久化（沿用你原本的 key 命名：accessToken / accessExpiresAt / refreshToken）
+  storage.setItem('accessToken', token);
+  if (opts.accessTokenExpiresAt) storage.setItem('accessExpiresAt', opts.accessTokenExpiresAt);
+  if (opts.refreshToken) storage.setItem('refreshToken', opts.refreshToken);
+
+  // 清掉另一個儲存區，避免兩邊同時殘留舊值
+  otherStorage.removeItem('accessToken');
+  otherStorage.removeItem('accessExpiresAt');
+  otherStorage.removeItem('refreshToken');
+
+  // 設定 http Authorization header
+  http.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+  // 取使用者資料（失敗不拋錯，交給後續流程處理）
+  try {
+    const { data } = await http.get('/auth/me');
+    this.user = data;
+  } catch {
+    this.user = null;
+  }
+},
+
     // ★ 取得/快取目前登入者
      async ensureUser(force = false) {
       if (!this.isAuthenticated) {
