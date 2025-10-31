@@ -2607,6 +2607,10 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Percentage)
                 .HasComment("百分比或含量（單位可於前台說明）")
                 .HasColumnType("decimal(6, 3)");
+            entity.Property(e => e.PercentageText)
+                .HasMaxLength(100)
+                .HasDefaultValueSql("(NULL)")
+                .HasComment("原始百分比或文字（如 \"50%\", \"含少許\" 等）");
 
             entity.HasOne(d => d.Ingredient).WithMany(p => p.ProdProductIngredients)
                 .HasForeignKey(d => d.IngredientId)
