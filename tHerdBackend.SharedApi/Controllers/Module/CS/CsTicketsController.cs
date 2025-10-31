@@ -17,14 +17,40 @@ public class CsTicketsController : ControllerBase
 		_faqService = faqService;
 	}
 
-	/// <summary>取得全部客服工單清單（限後台登入者）</summary>
-	[HttpGet("list")]
-	[Authorize(Roles = "Admin,CustomerService")] // 👈 只有後台能看
-	public async Task<IActionResult> GetAllAsync()
+	///// <summary>取得全部客服工單清單（限後台登入者）</summary>
+	//[HttpGet("list")]
+	//[Authorize(Roles = "Admin,CustomerService")] // 👈 只有後台能看
+	//public async Task<IActionResult> GetAllAsync()
+	//{
+	//	try
+	//	{
+	//		var data = await _service.GetAllAsync();
+	//		return Ok(ApiResponse<IEnumerable<TicketsDto>>.Ok(data));
+	//	}
+	//	catch (Exception ex)
+	//	{
+	//		return BadRequest(ApiResponse<string>.Fail(ex.Message));
+	//	}
+	//}
+	
+	/// <summary>取得「我的工單」清單（前台會員使用）</summary>
+	[HttpGet("my")]
+	[Authorize] // ✅ 只要登入會員即可
+	public async Task<IActionResult> GetMyTickets()
 	{
 		try
 		{
-			var data = await _service.GetAllAsync();
+			// 1️⃣ 從 JWT Token 取出登入的 UserId
+			var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+			if (userIdClaim == null)
+				return BadRequest(ApiResponse<string>.Fail("無法取得使用者資訊"));
+
+			int userId = int.Parse(userIdClaim.Value);
+
+			// 2️⃣ 呼叫 service 層
+			var data = await _service.GetByUserIdAsync(userId);
+
+			// 3️⃣ 用統一格式回傳
 			return Ok(ApiResponse<IEnumerable<TicketsDto>>.Ok(data));
 		}
 		catch (Exception ex)
@@ -32,6 +58,7 @@ public class CsTicketsController : ControllerBase
 			return BadRequest(ApiResponse<string>.Fail(ex.Message));
 		}
 	}
+
 
 	/// <summary>建立新客服工單（前台客戶可匿名，上傳 1 張附件圖片）</summary>
 	[HttpPost("create")]

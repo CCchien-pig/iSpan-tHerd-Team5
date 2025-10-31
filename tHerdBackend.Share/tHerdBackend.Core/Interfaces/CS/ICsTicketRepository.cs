@@ -12,6 +12,7 @@ namespace tHerdBackend.Infra.Repositories.Interfaces.CS
 		Task AddMessageAsync(int ticketId, byte senderType, string messageText, string? attachmentUrl = null);
 		Task<int?> AddAttachmentAsync(IFormFile file, CancellationToken ct = default);
 		Task UpdateImgIdAsync(int ticketId, int fileId);
+		Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId);
 	}
 }
 

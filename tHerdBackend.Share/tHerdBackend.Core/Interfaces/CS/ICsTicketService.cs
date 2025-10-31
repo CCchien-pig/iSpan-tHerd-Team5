@@ -14,6 +14,10 @@ namespace tHerdBackend.Core.Interfaces.CS
 
 		/// <summary>查單筆工單（用於回傳建立結果）</summary>
 		Task<TicketOut?> GetTicketByIdAsync(int ticketId);
+
+		/// <summary>取得某會員工單清單</summary>
+		Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId);
+
 	}
 }
 

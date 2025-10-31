@@ -47,8 +47,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router' 
 import { getCategories, createTicket } from '@/api/modules/cs/cstickets'
 
+const router = useRouter() 
 const loading = ref(false)
 const categories = ref([])
 const previewUrl = ref('')
@@ -91,10 +93,10 @@ async function submitTicket() {
 
     const res = await createTicket(formData)
     if (res.success) {
-      alert('工單建立成功！')
-      // TODO: 可導到「我的工單」頁
-      resetForm()
-    } else {
+router.push('/cs/ticket/success') // ✅ 跳轉到成功頁面
+  resetForm()
+}
+ else {
       alert(res.message || '建立失敗')
     }
   } catch (err) {

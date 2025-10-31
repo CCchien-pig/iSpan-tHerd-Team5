@@ -12,6 +12,12 @@ export default [
     component: () => import('@/pages/modules/cs/TicketCreate.vue'),
     meta: { title: '聯絡我們' }      // 可在標題或麵包屑顯示
   },
+    {
+    path: '/cs/ticket/success',
+    name: 'CsTicketSuccess',
+    component: () => import('@/pages/modules/cs/TicketSuccess.vue'),
+    meta: { title: '送出成功' }
+  },
   {
     path: '/cs/tickets',
     name: 'TicketList',

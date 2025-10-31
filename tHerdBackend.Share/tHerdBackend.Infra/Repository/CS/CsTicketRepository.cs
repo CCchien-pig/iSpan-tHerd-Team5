@@ -207,6 +207,30 @@ namespace tHerdBackend.Infra.Repositories.CS
 			ticket.ImgId = fileId;
 			await _db.SaveChangesAsync();
 		}
+		/// <summary>
+		/// /// 取得指定使用者的客服工單清單
+		/// </summary>
+		/// <param name="userId"></param>
+		/// <returns></returns>
+		public async Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId)
+		{
+			return await (
+				from t in _db.CsTickets
+				join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
+				from c in cat.DefaultIfEmpty()
+				where t.UserId == userId // ✅ 關鍵：過濾使用者
+				orderby t.CreatedDate descending
+				select new TicketsDto
+				{
+					TicketId = t.TicketId,
+					Subject = t.Subject,
+					CategoryName = c.CategoryName ?? "未分類",
+					StatusText = t.Status.ToString(),
+					PriorityText = t.Priority.ToString(),
+					CreatedDate = t.CreatedDate
+				}
+			).ToListAsync();
+		}
 
 	}
 }

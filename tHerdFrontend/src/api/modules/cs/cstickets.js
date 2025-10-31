@@ -15,10 +15,11 @@ export async function createTicket(formData) {
   })
   return res.data
 }
-// 取得「我的工單」清單
-export async function getTickets() {
-  const res = await http.get('/cs/CsTickets/list')
+// 取得「我的工單」
+export async function getMyTickets() {
+  const res = await http.get('cs/CsTickets/my')
   if (res.data?.success) return res.data.data
   return []
 }
+
 

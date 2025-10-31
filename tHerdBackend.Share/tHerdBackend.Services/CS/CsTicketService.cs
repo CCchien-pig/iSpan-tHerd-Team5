@@ -88,5 +88,11 @@ namespace tHerdBackend.Services.CS
 				StatusText = found.StatusText
 			};
 		}
+		/// <summary>取得某會員工單清單</summary>
+		public async Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId)
+		{
+			return await _repo.GetByUserIdAsync(userId);
+		}
+
 	}
 }
