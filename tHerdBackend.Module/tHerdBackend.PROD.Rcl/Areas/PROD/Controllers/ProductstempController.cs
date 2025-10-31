@@ -46,7 +46,145 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 			return View(dtos); // 型別跟 View 宣告一致
 		}
 
-		public async Task LoadTypeFromCSV()
+        public async Task LoadIngredientFromCSV()
+        {
+			var index = "15";
+
+			int numStart = 12824 - 1000; // 商品ID起始偏移量
+
+            string ingredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_Ingredient\PROD_Ingredient_{index}.csv";
+
+            string productIngredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductIngredient\PROD_ProductIngredient_{index}.csv";
+
+            if (!System.IO.File.Exists(productIngredientPath) || !System.IO.File.Exists(ingredientPath))
+            {
+                Console.WriteLine("❌ 找不到 CSV 檔案。");
+                return;
+            }
+
+            try
+            {
+                // 1️ 先讀取成分主檔
+                using (var fs1 = new FileStream(ingredientPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader1 = new StreamReader(fs1))
+                {
+                    reader1.ReadLine(); // 跳過標題
+                    while (!reader1.EndOfStream)
+                    {
+                        var line = reader1.ReadLine();
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var parts = line.Split(',', StringSplitOptions.TrimEntries);
+                        if (parts.Length < 1) continue;
+
+                        if (!int.TryParse(parts[0], out int productId)) continue;
+
+                        productId = productId + numStart;
+
+                        string ingredientFullName = parts[1];
+                        if (string.IsNullOrWhiteSpace(ingredientFullName))
+                            continue;
+
+                        // 🔹 1. 拆分括號內容
+                        string ingredientName = ingredientFullName;
+                        string? description = null;
+
+                        int start = ingredientFullName.IndexOf('(');
+                        int end = ingredientFullName.IndexOf(')');
+                        if (start > 0 && end > start)
+                        {
+                            ingredientName = ingredientFullName[..start].Trim();
+                            description = ingredientFullName.Substring(start + 1, end - start - 1).Trim();
+                        }
+
+                        // 🔹 2. 檢查是否已存在
+                        var existing = await _db.ProdIngredients
+                            .FirstOrDefaultAsync(x => x.IngredientName == ingredientName && x.Description == description);
+
+                        if (existing == null)
+                        {
+                            var newIngredient = new ProdIngredient
+                            {
+                                IngredientName = ingredientName,
+                                // 🔹 3. 暫時把別名設成空字串（或日後爬蟲補上）
+                                Alias = null,
+                                // 🔹 4. 若有括號內文字，放入 Description
+                                Description = description
+                            };
+
+                            _db.ProdIngredients.Add(newIngredient);
+                        }
+                    }
+                    await _db.SaveChangesAsync();
+                    Console.WriteLine("✅ 成分主檔匯入完成");
+                }
+
+                // 2️ 再讀商品成分關聯
+                using (var fs2 = new FileStream(productIngredientPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader2 = new StreamReader(fs2))
+                {
+                    reader2.ReadLine(); // 跳過標題
+					while (!reader2.EndOfStream)
+					{
+						var line = reader2.ReadLine();
+						if (string.IsNullOrWhiteSpace(line)) continue;
+
+						var parts = line.Split(',', StringSplitOptions.TrimEntries);
+						if (parts.Length < 2) continue;
+
+						if (!int.TryParse(parts[0], out int productId)) continue;
+
+						productId = productId + numStart;
+
+						string ingredientFullName = parts[1];
+						if (string.IsNullOrWhiteSpace(ingredientFullName))
+							continue;
+
+						// 🔹 1. 拆分括號內容
+						string ingredientName = ingredientFullName;
+						string? description = null;
+
+						int start = ingredientFullName.IndexOf('(');
+						int end = ingredientFullName.IndexOf(')');
+						if (start > 0 && end > start)
+						{
+							ingredientName = ingredientFullName[..start].Trim();
+							description = ingredientFullName.Substring(start + 1, end - start - 1).Trim();
+						}
+
+                        // 🔹 2. 檢查是否已存在
+                        var ingredient = await _db.ProdIngredients
+                             .FirstOrDefaultAsync(x => x.IngredientName == ingredientName && x.Description == description);
+
+                        if (ingredient != null)
+						{
+							// 取得
+                            var newIngredient = new ProdIngredient
+							{
+								IngredientName = ingredientName,
+								// 🔹 3. 暫時把別名設成空字串（或日後爬蟲補上）
+								Alias = null,
+								// 🔹 4. 若有括號內文字，放入 Description
+								Description = description
+							};
+
+							_db.ProdIngredients.Add(newIngredient);
+						}
+					}
+
+                    await _db.SaveChangesAsync();
+                    Console.WriteLine("✅ 商品成分匯入完成");
+                }
+
+                Console.WriteLine("🎉 兩個 CSV 匯入完成。");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 匯入失敗：{ex.Message}");
+            }
+        }
+
+        public async Task LoadTypeFromCSV()
 		{
             string csvPath = @"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductTypeConfig\36PROD_ProductTypeConfig.csv";
 
