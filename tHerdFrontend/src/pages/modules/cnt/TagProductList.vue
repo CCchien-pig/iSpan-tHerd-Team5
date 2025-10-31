@@ -27,7 +27,7 @@
           role="button"
           @click="goDetail(prod.productId)"
         >
-          <!-- 直接塞商品模組現成的 ProductCard -->
+          <!-- 使用現成的商品卡 -->
           <ProductCard
             :product="prod"
             @add-to-cart.stop="addToCart"
@@ -40,6 +40,49 @@
     <div v-else class="text-center text-muted py-5">
       這個標籤目前沒有可顯示的商品
     </div>
+
+    <!-- ⭐ 分頁列：只有在有資料而且總頁數>1時顯示 -->
+    <nav
+      v-if="items.length && totalPages > 1"
+      class="mt-4 d-flex justify-content-center"
+    >
+      <ul class="pagination clean-pill align-items-stretch">
+        <!-- 上一頁 -->
+        <li
+          class="page-item"
+          :class="{ disabled: page === 1 }"
+        >
+          <a
+            class="page-link nav-pill-left"
+            href="javascript:;"
+            @click="goPage(page - 1)"
+          >
+            上一頁
+          </a>
+        </li>
+
+        <!-- 中間資訊 -->
+        <li class="page-item disabled">
+          <span class="page-link nav-pill-mid">
+            第 {{ page }} / {{ totalPages }} 頁（共 {{ total }} 件）
+          </span>
+        </li>
+
+        <!-- 下一頁 -->
+        <li
+          class="page-item"
+          :class="{ disabled: page >= totalPages }"
+        >
+          <a
+            class="page-link nav-pill-right"
+            href="javascript:;"
+            @click="goPage(page + 1)"
+          >
+            下一頁
+          </a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
@@ -47,8 +90,9 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import ProductCard from "@/components/modules/prod/card/ProductCard.vue";
 
-// 這頁會掛在 /cnt/tag/:tagId/products （router 已經在 cnt.js 註冊了 name: 'cnt-tag-products'）:contentReference[oaicite:2]{index=2}
+// 這頁會掛在 /cnt/tag/:tagId/products
 const props = defineProps({
   tagId: {
     type: [String, Number],
@@ -58,13 +102,21 @@ const props = defineProps({
 
 const router = useRouter();
 
-// 這是要丟給 <ProductCard /> 的資料陣列
+// 給 ProductCard 用的商品陣列
 const items = ref([]);
 
-/* 把圖片路徑補成能用的完整 URL（同你內容模組裡處理文章內圖的邏輯）:contentReference[oaicite:3]{index=3} */
+// ⭐ 分頁 state
+const page = ref(1);          // 目前第幾頁 (1-based)
+const pageSize = ref(24);     // 一頁幾筆
+const total = ref(0);         // 總筆數（後端回來）
+const totalPages = ref(1);    // Math.ceil(total/pageSize)
+
+// 把圖片路徑補成完整 URL
 function fixImageUrl(path) {
   if (!path) {
-    return "https://via.placeholder.com/400?text=No+Image";
+    // 你現在 console 有 via.placeholder.com DNS fail
+    // 如果內網沒網路，可以改成本機預設圖
+    return "/images/no-image.png";
   }
   if (/^https?:\/\//i.test(path)) return path;
   if (path.startsWith("/uploads/")) {
@@ -79,15 +131,35 @@ function fixImageUrl(path) {
   return path;
 }
 
-/* 從後端抓「這個標籤底下的商品」，並整理成 ProductCard 可以吃的格式。:contentReference[oaicite:4]{index=4} */
+// 從後端抓「這個標籤底下的商品」
+// ⭐ 期望後端回傳 { total, items: [...] }
 async function loadProducts() {
-  const res = await axios.get(`/api/cnt/tags/${props.tagId}/products`, {
-    params: { take: 24 },
-  });
+  const res = await axios.get(
+    `/api/cnt/tags/${props.tagId}/products`,
+    {
+      params: {
+        page: page.value,
+        pageSize: pageSize.value,
+      },
+    }
+  );
 
-  const rawList = res.data || [];
+  // 後端建議長這樣：
+  // {
+  //   "total": 57,
+  //   "items": [ {...}, {...} ]
+  // }
+  // 但如果你後端目前還是直接回陣列，就做 fallback
+  const rawTotal = res.data?.total ?? 0;
+  const rawItems = res.data?.items ?? [];
 
-  items.value = rawList.map((p) => {
+  total.value = rawTotal;
+  totalPages.value = Math.max(
+    1,
+    Math.ceil(total.value / pageSize.value)
+  );
+
+  items.value = rawItems.map((p) => {
     const imgCandidate =
       p.imageUrl ||
       p.mainImageUrl ||
@@ -96,7 +168,6 @@ async function loadProducts() {
       "";
 
     return {
-      // ProductCard.vue 需要的各欄位結構（含品牌、名稱、標籤、評分、價格等）:contentReference[oaicite:5]{index=5}
       productId: p.productId,
       productName: p.productName,
       shortDesc: p.shortDesc || "",
@@ -106,18 +177,29 @@ async function loadProducts() {
       avgRating: p.avgRating ?? 0,
       reviewCount: p.reviewCount ?? 0,
 
-      salePrice: p.salePrice ?? p.price ?? 0,         // 現價
-      listPrice: p.listPrice ?? p.originalPrice ?? 0, // 原價(拿來畫刪除線)
+      salePrice: p.salePrice ?? p.price ?? 0,
+      listPrice: p.listPrice ?? p.originalPrice ?? 0,
 
       imageUrl: fixImageUrl(imgCandidate),
     };
   });
 }
 
-/* 點商品卡片 => 進商品詳情頁  
-   router 裡已經有 name:'prod-detail' 指到你的商品詳情元件 ProductDetail.vue，props: true。:contentReference[oaicite:6]{index=6} */
+// 換頁
+function goPage(newPage) {
+  if (newPage < 1) return;
+  if (newPage > totalPages.value) return;
+
+  page.value = newPage;
+  loadProducts();
+}
+
+// 點商品卡片 => 進商品詳情頁
 function goDetail(productId) {
-  router.push({ name: "prod-detail", params: { id: productId } });
+  router.push({
+    name: "prod-detail",
+    params: { id: productId },
+  });
 }
 
 // 左上「← 返回文章」
@@ -125,7 +207,7 @@ function goBack() {
   router.back();
 }
 
-// 購物車按鈕（有需要可往後串購物車模組）
+// 加入購物車（可後續串購物車模組）
 function addToCart(prod) {
   console.log("加入購物車:", prod);
 }
@@ -133,40 +215,34 @@ function addToCart(prod) {
 // 初次載入
 onMounted(loadProducts);
 
-// 同一個 component 被重用但 tagId 不同時，自動重抓
+// 如果同一個 component 被重用，但 tagId 改變，就重抓第 1 頁
 watch(
   () => props.tagId,
   () => {
+    page.value = 1; // ⭐ 重要：切換標籤時回到第一頁
     loadProducts();
   }
 );
-
-// 從商品模組匯入卡片元件（你首頁展示商品就是用這顆的結構，只是那邊是手刻樣式，這裡改用統一版元件維護會比較爽）:contentReference[oaicite:7]{index=7}
-import ProductCard from "@/components/modules/prod/card/ProductCard.vue";
 </script>
 
 <style scoped>
-/* 類似首頁那種有邊框、圓角、hover 提升一點陰影的感覺 */
+/* 外殼卡片的視覺：微圓角、邊框、hover 陰影 */
 .card-shell {
   border: 1px solid #ddd;
   background-color: #fff;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
   cursor: pointer;
-  border-radius: 0.75rem; /* 跟首頁那種 rounded-3 一樣柔一點 */
+  border-radius: 0.75rem;
   overflow: hidden;
   height: 100%;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
 }
-
-/* hover 效果：跟你首頁卡片那種「浮一點」的視覺 */
 .card-shell:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
-
-/* 讓內部 ProductCard 填滿，避免裡面再塞一層白底造成雙邊框不齊 */
 .card-shell :deep(.product-card) {
   border: 0;
   border-radius: 0;
@@ -176,5 +252,52 @@ import ProductCard from "@/components/modules/prod/card/ProductCard.vue";
   max-width: 100%;
 }
 
-/* ProductCard 裡面那顆「加入購物車」原本是 hover 才浮出，我們保持那個互動 */
+/* ------- 分頁膠囊外觀 ------- */
+
+/* 讓三顆按鈕視覺上像一條膠囊（上一頁 | 中間資訊 | 下一頁） */
+.pagination.clean-pill {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  overflow: hidden; /* 把圓角吃進去 */
+  background-color: #fff;
+  border: 1px solid #ccc;
+}
+
+/* 拿掉 bootstrap 預設的 li > a spacing 行為干擾 */
+.pagination.clean-pill .page-item {
+  margin: 0;
+}
+.pagination.clean-pill .page-item.disabled .page-link {
+  opacity: .4;
+  pointer-events: none;
+}
+
+/* 每段膠囊的樣式 */
+.pagination.clean-pill .page-link {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: .5rem .75rem;
+  font-size: .9rem;
+  line-height: 1.2rem;
+  white-space: nowrap;
+  color: #004f4a; /* 深綠系字色，跟整體主色系靠近 */
+}
+
+.nav-pill-left {
+  border-right: 1px solid #ccc;
+}
+.nav-pill-mid {
+  border-right: 1px solid #ccc;
+}
+.nav-pill-right {
+  /* 最右段不用邊框 */
+}
 </style>

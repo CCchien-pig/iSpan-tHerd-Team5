@@ -6,10 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 {
-	//用標籤ID查
-	//用標籤ID查
-	//用標籤ID查
-	// GET /api/cnt/tags/{tagId}/products
+	// GET /api/cnt/tags/{tagId}/products?page=1&pageSize=24
 	[ApiController]
 	[Route("api/cnt/tags/{tagId:int}/products")]
 	public class TagProductsController : ControllerBase
@@ -22,22 +19,26 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 		}
 
 		[HttpGet]
-		public async Task<ActionResult<IEnumerable<ProductBriefDto>>> GetByTagId(
+		public async Task<ActionResult> GetByTagId(
 			[FromRoute] int tagId,
-			[FromQuery] int take = 24)
+			[FromQuery] int page = 1,
+			[FromQuery] int pageSize = 24
+		)
 		{
-			// 從 CNT_ProductTag(CntProductTag) 出發
-			// 注意：CntProductTag 已經有 Product 導覽屬性，指向商品 ProdProduct，包含 ProductName / IsPublished 等欄位。:contentReference[oaicite:1]{index=1}
+			// 防呆，避免 page=0 / pageSize=0
+			if (page < 1) page = 1;
+			if (pageSize < 1) pageSize = 24;
 
-			var query =
+			// 先組查詢（注意：這裡的欄位要和你前端需要的東西一致）
+			var baseQuery =
 				from pt in _db.CntProductTags
 				where pt.TagId == tagId
 					  && pt.IsVisible == true
 					  && pt.IsDeleted == false
 					  && pt.Product.IsPublished == true
 				orderby
-					pt.IsPrimary descending,                          // 主要標籤優先顯示
-					pt.DisplayOrder ascending,                        // 手動排序
+					pt.IsPrimary descending,
+					pt.DisplayOrder ascending,
 					(pt.Product.RevisedDate ?? pt.Product.CreatedDate) descending
 				select new ProductBriefDto
 				{
@@ -45,14 +46,24 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 					ProductName = pt.Product.ProductName,
 					ShortDesc = pt.Product.ShortDesc,
 					Badge = pt.Product.Badge,
-					MainSkuId = pt.Product.MainSkuId
+					MainSkuId = pt.Product.MainSkuId,
 				};
 
-			var list = await query
-				.Take(take)
+			// 總筆數（這個 tag 總共有幾個可顯示商品）
+			var total = await baseQuery.CountAsync();
+
+			// 這一頁要回的資料
+			var items = await baseQuery
+				.Skip((page - 1) * pageSize)
+				.Take(pageSize)
 				.ToListAsync();
 
-			return Ok(list);
+			// 回傳物件，讓前端知道總共有幾筆、這頁有哪些項目
+			return Ok(new
+			{
+				total,
+				items
+			});
 		}
 	}
 }
