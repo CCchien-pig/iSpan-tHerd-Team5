@@ -43,14 +43,14 @@ class productsApi {
   async getProductList(params = {}) {
     const defaultParams = {
       pageIndex: 1,
-      pageSize: 20,
+      pageSize: 40,
       keyword: '',
       productTypeId: null,
       brandId: null,
       minPrice: null,
       maxPrice: null,
       sortBy: 'date',
-      sortDesc: true,
+      sortDesc: false,
       isPublished: true,
       IsFrontEnd: true
     }

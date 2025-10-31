@@ -142,9 +142,14 @@ defineEmits(['add-to-cart'])
 }
 
 .product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 85%;              /* ✅ 從 100% 改成 85%，圖片會縮小 */
+  height: 85%;             /* ✅ 保持正方形比例 */
+  object-fit: contain;     /* ✅ 改成 contain，確保不被裁切 */
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image img {
+  transform: scale(1.05);  /* ✅ 滑鼠移入時略微放大，增加動態感 */
 }
 
 .add-to-cart-btn {
