@@ -20,12 +20,17 @@ class productsApi {
   /**
    * 查詢商品列表
    * @param {Object} params - 查詢參數
-   * @param {string} params.keyword - 關鍵字搜尋（名稱、品牌）
-   * @param {number} params.brandId - 篩選品牌 ID
-   * @param {number} params.attrId - 篩選屬性 ID
-   * @param {string} params.sort - 排序方式 (price_asc, price_desc, rating_desc, date_desc)
-   * @param {number} params.page - 頁碼（預設：1）
+   * @param {number} params.pageIndex - 頁碼（預設：1）
    * @param {number} params.pageSize - 每頁筆數（預設：20）
+   * @param {string} params.keyword - 關鍵字搜尋（名稱、品牌）
+   * @param {number} params.productTypeId - 產品分類
+   * @param {number} params.brandId - 品牌 ID
+   * @param {number} params.minPrice - 最小價錢
+   * @param {number} params.maxPrice - 最大價錢
+  //  * @param {number} params.attrId - 篩選屬性 ID
+   * @param {string} params.sortBy - 排序方式 (price, rating, date)
+   * @param {boolean} params.sortDesc - 降幕
+
    * @returns {Promise} API 回應
    * @example
    * const result = await productsApi.getProductList({
@@ -36,7 +41,23 @@ class productsApi {
    * })
    */
   async getProductList(params = {}) {
-    return await baseApi.get(`${this.path}/Products`, params)
+    const defaultParams = {
+      pageIndex: 1,
+      pageSize: 20,
+      keyword: '',
+      productTypeId: null,
+      brandId: null,
+      minPrice: null,
+      maxPrice: null,
+      sortBy: 'date',
+      sortDesc: true,
+      isPublished: true,
+      IsFrontEnd: true
+    }
+
+    const finalParams = { ...defaultParams, ...params }
+    // ✅ 用 POST 而不是 GET
+    return await baseApi.post(`${this.path}/Products/search`, finalParams)
   }
 
   /**

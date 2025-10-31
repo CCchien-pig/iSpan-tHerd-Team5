@@ -12,6 +12,7 @@ public partial class ProductFilterQueryDto
 	public string? SortBy { get; set; }         // 排序欄位
     public bool SortDesc { get; set; } = false; // 是否倒序
     public bool? IsPublished { get; set; }      // 是否發佈
+    public bool? IsFrontEnd { get; set; }       // 是否來自前端
 
     public int? ProductId { get; set; }
 }

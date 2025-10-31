@@ -35,7 +35,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
             {
                 var result = await _service.GetFrontProductListAsync(query, ct);
 
-                return Ok(ApiResponse<PagedResult<ProdProductDto>>.Ok(result));
+                return Ok(ApiResponse<PagedResult<ProdProductSearchDto>>.Ok(result));
             }
             catch (Exception ex)
             {

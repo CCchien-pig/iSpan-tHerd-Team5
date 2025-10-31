@@ -26,7 +26,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 		{
 			// await SeedSkuDataAsync();
 
-			// await LoadImgsFromCSV(); // 匯入圖片測試
+		    // await LoadImgsFromCSV(); // 匯入圖片測試
 
 			// await LoadTypeFromCSV(); // 匯入圖片產品類別
 
@@ -360,7 +360,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
         public async Task LoadImgsFromCSV()
         {
-            string csvPath = @"D:\iSpanProj\專題文件\PROD_imgs-20251019T145911Z-1-001\PROD_imgs\PROD_imgs_35-2.csv";
+            string csvPath = @"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_imgs\36PROD_imgs.csv";
 
             if (!System.IO.File.Exists(csvPath))
             {
@@ -394,7 +394,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                             continue;
                         }
 
-                        productId = productId - 1000 + 14882;
+                        productId = productId - 1000 + 15060;
 
                         string imgUrl = parts[1].Trim().Trim('"').Trim('\\');
                         if (string.IsNullOrEmpty(imgUrl))
