@@ -12,12 +12,16 @@
       <div class="d-flex justify-content-between align-items-center mb-5">
         <h2>{{ title }}</h2>
         <a href="#" class="btn btn-outline-primary">{{ viewAllText }}</a>
+        <p>共 {{ products.length }} 筆商品</p>
       </div>
       <!-- 產品卡片網格 -->
-      <div class="row g-4">
-        <!-- 遍歷產品數據，生成產品卡片 -->
-        <div v-for="product in products" :key="product.id" class="col-lg-3 col-md-6">
-          <!-- 產品卡片組件 -->
+      <!-- 若有資料才顯示 -->
+      <div v-if="products && products.length > 0" class="row g-4">
+        <div
+          v-for="product in products"
+          :key="product.productId"
+          class="col-lg-3 col-md-6"
+        >
           <ProductCard
             :product="product"
             @add-to-cart="handleAddToCart"
@@ -26,6 +30,65 @@
           />
         </div>
       </div>
+
+      <!-- 若沒有資料顯示提示 -->
+      <div v-else class="text-center text-muted py-5 fs-5">
+        找不到符合的商品
+      </div>
+
+      <!-- 分頁按鈕 -->
+      <nav v-if="totalPages > 1" class="mt-5">
+        <ul class="pagination justify-content-center mb-0">
+
+          <!-- 第一頁 -->
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(1)"
+            >第一頁</a>
+          </li>
+
+          <!-- 上一頁 -->
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(currentPage - 1)"
+            >上一頁</a>
+          </li>
+
+          <!-- 動態頁碼 -->
+          <li
+            v-for="page in visiblePages"
+            :key="page"
+            class="page-item"
+            :class="{ active: currentPage === page }"
+          >
+            <a class="page-link" href="#" @click.prevent="changePage(page)">
+              {{ page }}
+            </a>
+          </li>
+
+          <!-- 下一頁 -->
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(currentPage + 1)"
+            >下一頁</a>
+          </li>
+
+          <!-- 最後一頁 -->
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(totalPages)"
+            >最後一頁</a>
+          </li>
+        </ul>
+      </nav>
     </div>
   </section>
 </template>
@@ -69,6 +132,39 @@ export default {
       type: String,
       default: '查看全部',
     },
+
+    totalCount: { type: Number, default: 0 }, // API 回傳的總筆數
+    pageSize: { type: Number, default: 40 },
+    pageIndex: { type: Number, default: 1 },
+  },
+
+  data() {
+    return {
+      currentPage: this.pageIndex,
+    }
+  },
+
+  computed: {
+    totalPages() {
+      return Math.ceil(this.totalCount / this.pageSize)
+    },
+    visiblePages() {
+      const maxVisible = 5
+      const pages = []
+      let start = Math.max(this.currentPage - Math.floor(maxVisible / 2), 1)
+      let end = Math.min(start + maxVisible - 1, this.totalPages)
+      if (end - start < maxVisible - 1) {
+        start = Math.max(end - maxVisible + 1, 1)
+      }
+      for (let i = start; i <= end; i++) pages.push(i)
+      return pages
+    },
+  },
+
+  watch: {
+    pageIndex(newVal) {
+      this.currentPage = newVal
+    },
   },
 
   /**
@@ -103,10 +199,31 @@ export default {
     handleQuickView(product) {
       this.$emit('quick-view', product)
     },
+    
+    changePage(page) {
+      if (page < 1 || page > this.totalPages) return
+      this.currentPage = page
+      this.$emit('page-change', page)
+    },
   },
 }
 </script>
 
 <style scoped>
 /* 使用Bootstrap類，無需自定義CSS */
+.pagination .page-link {
+  color: #0d6efd;
+  transition: all 0.2s;
+}
+
+.pagination .page-link:hover {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #999;
+  pointer-events: none;
+  background-color: #f8f9fa;
+}
 </style>

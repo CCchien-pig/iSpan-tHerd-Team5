@@ -1,4 +1,5 @@
-﻿using tHerdBackend.Core.Interfaces.PROD;
+﻿using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.Core.DTOs.PROD
@@ -74,5 +75,7 @@ namespace tHerdBackend.Core.DTOs.PROD
         /// 主商品優惠價
         /// </summary>
         public virtual decimal? SalePrice { get; set; }
+
+        public virtual string? ProductTypeName { get; set; }
     }
 }
