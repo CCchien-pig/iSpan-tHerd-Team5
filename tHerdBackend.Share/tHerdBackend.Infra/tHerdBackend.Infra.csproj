@@ -35,7 +35,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" PrivateAssets="all" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Syncfusion.EJ2.AspNet.Core" Version="31.2.3" />
   </ItemGroup>
 
@@ -44,7 +44,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Repository\CNT\" />
     <Folder Include="Repository\CS\" />
     <Folder Include="Repository\ORD\" />
     <Folder Include="Repository\USER\" />

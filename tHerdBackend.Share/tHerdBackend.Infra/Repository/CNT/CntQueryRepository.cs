@@ -162,12 +162,17 @@ WHERE p.PageId = @PageId AND p.IsDeleted = 0;";
 				if (main == null) return null;
 
 				const string tagSql = @"
-SELECT t.TagName
+SELECT t.TagId,
+       t.TagName
 FROM CNT_PageTag pt
 JOIN CNT_Tag t ON t.TagId = pt.TagId
 WHERE pt.PageId = @PageId
 ORDER BY t.TagName;";
-				var tags = (await conn.QueryAsync<string>(tagSql, new { PageId = pageId }, tx)).ToList();
+				var tagRows = (await conn.QueryAsync<ArticleTagDto>(
+					tagSql,
+					new { PageId = pageId },
+					tx
+				)).ToList();
 
 				bool hasPurchased = false;
 				if ((bool)main.IsPaidContent && userNumberId.HasValue)
@@ -190,7 +195,7 @@ WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
 					IsPaidContent = main.IsPaidContent,
 					HasPurchased = hasPurchased,
 					PreviewLength = (int)main.PreviewLength,
-					Tags = tags,
+					Tags = tagRows,
 					// ★ 關鍵：把 PageTypeId 塞進 DTO，給 Service 作推薦使用
 					PageTypeId = (int)main.PageTypeId
 				};
