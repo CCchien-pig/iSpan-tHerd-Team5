@@ -130,15 +130,6 @@ const handleQuickView = (product) => {
     -->
       <!-- <HeroCarousel /> -->
     <HeroSection @test-loading="testLoading" @custom-loading="handleCustomLoading" />
-<div class="gameblock">
-    <div class="game ">
-    <h1>遊戲活動專區</h1>
-    <h3>挑戰翻牌遊戲，贏取專屬獎勵！</h3>
-    <router-link to="/mkt/game">
-      <button class="start-btn">前往遊戲頁面</button>
-    </router-link>
-  </div>
-</div>
 
     <!--
   優惠券區塊 - 展示可領取的優惠券
@@ -411,34 +402,5 @@ export default {
 .start-btn:hover {
   background-color: #009aa8;
   transform: scale(1.05);
-}
-
-
-.game {
-  border: 2px solid rgb(0, 112, 131);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 112, 131, 0.25);
-  padding: 40px 24px;
-  transition: all 0.4s ease;
-  background-color: #fff; /* 若背景是白的可省略 */
-  display: inline-block; 
-}
-
-/* 滑鼠移入動畫效果 */
-.game:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow:
-    0 6px 20px rgba(0, 112, 131, 0.35),
-    0 0 12px rgba(0, 112, 131, 0.25);
-  border-color: rgb(0, 150, 160);
-}
-
-/* 文字置中可加上這段 */
-.game h1, .game h3 {
-  text-align: center;
-}
-
-.gameblock{
-    text-align: center;;
 }
 </style>
