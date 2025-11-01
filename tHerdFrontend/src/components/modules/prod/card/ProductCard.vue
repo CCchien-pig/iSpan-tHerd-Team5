@@ -1,52 +1,57 @@
 <template>
-  <div class="product-card d-flex flex-column">
-    <!-- 商品徽章 -->
-    <div v-if="product.badge" class="product-badge">
-      <span class="badge bg-danger">{{ product.badge }}</span>
-    </div>
-
-    <!-- 商品圖片 -->
-    <div class="product-image position-relative">
-      <img :src="productImage" :alt="productName" class="img-fluid" />
-
-      <!-- 加入購物車按鈕 -->
-      <button
-        class="btn btn-warning add-to-cart-btn fw-bold"
-        @click="$emit('add-to-cart', product)"
-      >
-        加入購物車
-      </button>
-    </div>
-
-    <!-- 商品資訊 -->
-    <div class="product-info flex-grow-1 d-flex flex-column justify-content-between p-2">
-      <!-- 品牌名稱 -->
-      <p class="brand-name text-muted mb-1">{{ product.brandName }}</p>
-
-      <!-- 商品名稱 -->
-      <p class="product-name mb-1">{{ productName }}</p>
-
-      <!-- 評分 + 評價數 -->
-      <div class="rating d-flex align-items-center mb-1">
-        <span v-for="i in 5" :key="i" class="star">
-          <i
-            class="bi"
-            :class="
-              i <= Math.round(avgRating) ? 'bi-star-fill text-warning' : 'bi-star text-warning'
-            "
-          >
-          </i>
-        </span>
-        <span class="reviews text-primary ms-1">{{ reviewCount }}</span>
+    <router-link
+    :to="`/prod/products/${product.productId}`"
+    class="product-card d-flex flex-column"
+  >
+    <div class="product-card d-flex flex-column">
+      <!-- 商品徽章 -->
+      <div v-if="product.badge" class="product-badge">
+        <span class="badge bg-danger">{{ product.badge }}</span>
       </div>
 
-      <!-- 價格 -->
-      <div class="price">
-        <span class="current-price">NT${{ currentPrice }}</span>
-        <span v-if="hasDiscount" class="original-price">NT${{ originalPrice }}</span>
+      <!-- 商品圖片 -->
+      <div class="product-image position-relative">
+        <img :src="productImage" :alt="productName" class="img-fluid" />
+
+        <!-- 加入購物車按鈕 -->
+        <button
+          class="btn btn-warning add-to-cart-btn fw-bold"
+          @click="$emit('add-to-cart', product)"
+        >
+          加入購物車
+        </button>
+      </div>
+
+      <!-- 商品資訊 -->
+      <div class="product-info flex-grow-1 d-flex flex-column justify-content-between p-2">
+        <!-- 品牌名稱 -->
+        <p class="brand-name text-muted mb-1">{{ product.brandName }}</p>
+
+        <!-- 商品名稱 -->
+        <p class="product-name mb-1">{{ productName }}</p>
+
+        <!-- 評分 + 評價數 -->
+        <div class="rating d-flex align-items-center mb-1">
+          <span v-for="i in 5" :key="i" class="star">
+            <i
+              class="bi"
+              :class="
+                i <= Math.round(avgRating) ? 'bi-star-fill text-warning' : 'bi-star text-warning'
+              "
+            >
+            </i>
+          </span>
+          <span class="reviews text-primary ms-1">{{ reviewCount }}</span>
+        </div>
+
+        <!-- 價格 -->
+        <div class="price">
+          <span class="current-price">NT${{ currentPrice }}</span>
+          <span v-if="hasDiscount" class="original-price">NT${{ originalPrice }}</span>
+        </div>
       </div>
     </div>
-  </div>
+  </router-link>
 </template>
 
 <script setup>
