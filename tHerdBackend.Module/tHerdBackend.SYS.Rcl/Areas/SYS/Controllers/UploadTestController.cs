@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Interfaces.SYS;
+using tHerdBackend.Infra.Helpers;
 
 namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
 {

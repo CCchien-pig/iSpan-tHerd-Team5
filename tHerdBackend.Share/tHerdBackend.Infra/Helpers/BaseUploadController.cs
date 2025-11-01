@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.Interfaces.SYS;
 
-namespace tHerdBackend.SYS.Rcl.Areas.SYS.Controllers
+namespace tHerdBackend.Infra.Helpers
 {
     /// <summary>
     /// 共用上傳控制器基底，處理 Cloudinary / 本地上傳邏輯

@@ -1193,6 +1193,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建檔時間");
+            entity.Property(e => e.ImgId).HasComment("圖片 ID");
             entity.Property(e => e.Priority)
                 .HasDefaultValue(2)
                 .HasComment("優先序，數字越小越急");
@@ -1207,6 +1208,10 @@ public partial class tHerdDBContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.CsTickets)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK_Ticket_CategoryId");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.CsTickets)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_CS_Ticket_Img");
         });
 
         modelBuilder.Entity<CsTicketHistory>(entity =>
@@ -2592,9 +2597,13 @@ public partial class tHerdDBContext : DbContext
 
             entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
             entity.Property(e => e.IngredientId).HasComment("成分ID（外鍵）");
+            entity.Property(e => e.IngredientType)
+                .HasDefaultValue((byte)1)
+                .HasComment("成分類型：1=主成分、2=其他成分、3=過敏原、4=製程附註");
             entity.Property(e => e.Note)
                 .HasMaxLength(300)
                 .HasComment("劑量、產地或其他備註");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
             entity.Property(e => e.Percentage)
                 .HasComment("百分比或含量（單位可於前台說明）")
                 .HasColumnType("decimal(6, 3)");
