@@ -5,8 +5,16 @@
 }
 
 .img-item {
+    background-color: #fafafa;
+    border: 1px solid #e4e4e4;
+    border-radius: 8px;
+    padding: 10px;
+    display: inline-block;
+    width: 180px;
+    margin: 8px;
+    vertical-align: top;
     position: relative;
-    overflow: hidden;
+    transition: box-shadow 0.2s ease-in-out;
 }
 
     .img-item img {
@@ -151,3 +159,48 @@ fieldset {
 .pe-none {
     pointer-events: none; /* 禁止互動但保留原色 */
 }
+
+.preview-video {
+    width: 200px;
+    height: 140px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.preview-pdf {
+    width: 100%;
+    text-align: left;
+}
+
+.preview-img {
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.img-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.preview-icon i {
+    display: block;
+    margin: 0 auto;
+}
+
+    .btn-close-custom:hover {
+        color: #333;
+    }
+
+.img-grid video {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    display: block;
+}
+
+    .img-grid video:hover {
+        box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    }

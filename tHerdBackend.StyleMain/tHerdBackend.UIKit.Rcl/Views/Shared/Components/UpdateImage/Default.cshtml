@@ -1,115 +1,110 @@
-﻿@model tHerdBackend.UIKit.Rcl.ViewComponents.UpdateImage.UpdateImageViewModel
-
-@{
-    bool isExternal = false;
-    if (Model.File?.IsExternal is bool b)
-        isExternal = b;
-    else if (Model.File?.IsExternal.ToString().ToLower() == "true")
-        isExternal = true;
-}
-
-<div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-hidden="true">
+﻿@* ✅ 改成純前端版，不再依賴 Razor Model *@
+<div class="modal fade" id="imgMetaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@Model.Title</h5>
+                <h5 class="modal-title">圖片編輯</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="modalImg"
-                     src="@Model.File.FileUrl"
-                     alt="@Model.File.AltText"
-                     class="img-fluid mb-3 rounded img-zoomable"
-                     style="max-width:600px; max-height:400px; object-fit:contain; cursor: zoom-in;"
-                     data-file-id="@Model.File.FileId"
-                     data-alt="@Model.File.AltText"
-                     data-caption="@Model.File.Caption"
-                     data-is-active="@Model.File.IsActive.ToString().ToLower()"
-                     data-update-api="@Model.UpdateApiUrl"
-                     data-delete-api="@Model.DeleteApiUrl" />
+
+            <div class="modal-body">
+
+                <!-- 🔹 預覽區 -->
+                <div class="preview-container text-center mb-4">
+                    <img id="modalPreview"
+                         src="/images/No-Image.svg"
+                         class="img-zoomable rounded shadow-sm"
+                         style="max-width: 600px; max-height: 400px; object-fit: contain; cursor: zoom-in; border: 1px solid #ccc; border-radius: 8px;"
+                         data-file-id=""
+                         data-update-api="/SYS/Images/UpdateFile"
+                         alt="預覽圖片" />
+                    <div class="text-muted small">(點擊縮圖可預覽完整檔案)</div>
+                </div>
 
                 <div class="row g-4">
                     <!-- 左側：檔案資訊 -->
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 h-100">
-                            <div class="card-header bg-light fw-bold">
+                            <div class="card-header bg-light text-dark fw-bold">
                                 📁 檔案資訊
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">檔案代號 (Cloudinary 產生)</label>
-                                    <input type="text" id="modalFileKey" class="form-control" value="@Model.File.FileKey" readonly />
+                                    <input type="text" id="modalFileKey" class="form-control" readonly />
                                 </div>
 
                                 <div class="row">
                                     <div class="col-6 mb-3 text-start">
                                         <label class="form-label fw-semibold">寬度 (px)</label>
-                                        <input type="number" id="modalWidth" name="Width" class="form-control" value="@Model.File.Width" />
+                                        <input type="number" id="modalWidth" class="form-control" />
                                     </div>
                                     <div class="col-6 mb-3 text-start">
                                         <label class="form-label fw-semibold">高度 (px)</label>
-                                        <input type="number" id="modalHeight" name="Height" class="form-control" value="@Model.File.Height" />
+                                        <input type="number" id="modalHeight" class="form-control" />
                                     </div>
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">檔案大小</label>
-                                    <input type="text" id="modalFileSizeBytes" class="form-control" value="@Model.File.FileSizeBytes + " Bytes"" readonly />
+                                    <input type="text" id="modalFileSizeBytes" class="form-control" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">MIME 類型</label>
-                                    <input type="text" id="modalMimeType" class="form-control" value="@Model.File.MimeType" readonly />
+                                    <input type="text" id="modalMimeType" class="form-control" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label fw-semibold">建檔時間</label>
-                                    <input type="text" id="modalCreatedDate" class="form-control" value="@Model.File.FormateCreatedDate?.ToString()" readonly />
+                                    <input type="text"
+                                           id="modalCreatedDate"
+                                           class="form-control"
+                                           readonly
+                                           onchange="this.value = this.value.replace('T', ' ').split('.')[0].replace(/-/g, '/')" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 右側：編輯資訊 -->
+                    <!-- 右側：說明與狀態 -->
                     <div class="col-md-6">
                         <div class="card shadow-sm border-0 h-100">
-                            <div class="card-header bg-light fw-bold">
+                            <div class="card-header bg-light text-dark fw-bold">
                                 📝 說明與狀態
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 text-start">
-                                    <label for="modalFileId" class="form-label fw-semibold text-danger">檔案編號</label>
-                                    <input type="text" id="modalFileId" class="form-control" value="@Model.File.FileId" readonly />
+                                    <label class="form-label fw-semibold text-danger">檔案編號</label>
+                                    <input type="text" id="modalFileId" class="form-control" readonly />
                                 </div>
 
                                 <div class="mb-3 text-start">
-                                    <label for="modalAlt" class="form-label fw-semibold">AltText（圖片替代文字）</label>
-                                    <input type="text" id="modalAlt" class="form-control" value="@Model.File.AltText" />
+                                    <label for="modalAlt" class="form-label fw-semibold">AltText（替代文字）</label>
+                                    <input type="text" id="modalAlt" class="form-control" />
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label for="modalCaption" class="form-label fw-semibold">Caption（說明文字）</label>
-                                    <textarea id="modalCaption" class="form-control" rows="3">@Model.File.Caption</textarea>
+                                    <textarea id="modalCaption" class="form-control" rows="3"></textarea>
                                 </div>
 
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="modalIsActive" @(Model.File.IsActive ? "checked" : "") />
+                                    <input class="form-check-input" type="checkbox" id="modalIsActive" />
                                     <label class="form-check-label fw-semibold" for="modalIsActive">是否啟用</label>
                                 </div>
 
                                 <div class="mb-3 d-flex align-items-center">
                                     <label class="form-label fw-semibold me-2">是否外部連結：</label>
-                                    <span class="badge @(isExternal ? "bg-success" : "bg-secondary") fs-6">
-                                        @(isExternal ? "外部連結" : "自有檔案")
-                                    </span>
+                                    <span id="modalIsExternalBadge" class="badge bg-secondary fs-6">自有檔案</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-
             </div>
+
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                 <button type="button" id="confirmMetaBtn" class="btn btn-primary">確定</button>
@@ -122,17 +117,128 @@
     @await Html.PartialAsync("/Views/Shared/_SweetAlertPartial.cshtml")
 
     <script>
-        document.addEventListener("shown.bs.modal", (event) => {
-            const modal = event.target;
-            const img = modal.querySelector(".img-zoomable");
-            if (!img) return;
-
-            img.addEventListener("click", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+        // === 開啟原圖 ===
+        document.addEventListener("click", e => {
+            const img = e.target.closest(".img-zoomable");
+            if (img && img.id === "modalPreview") {
                 window.open(img.src, "_blank");
-            });
+            }
         });
+
+        // === 關閉時暫停影片（若有）===
+        document.addEventListener("hidden.bs.modal", e => {
+            if (e.target.id !== "imgMetaModal") return;
+            const video = e.target.querySelector("video");
+            if (video) video.pause();
+        });
+
+        // === 儲存按鈕 ===
+        document.addEventListener("click", async e => {
+            if (e.target.id !== "confirmMetaBtn") return;
+
+            const modal = e.target.closest(".modal");
+            const payload = {
+                FileId: modal.querySelector("#modalFileId").value,
+                AltText: modal.querySelector("#modalAlt").value,
+                Caption: modal.querySelector("#modalCaption").value,
+                IsActive: modal.querySelector("#modalIsActive").checked,
+                Width: modal.querySelector("#modalWidth").value,
+                Height: modal.querySelector("#modalHeight").value
+            };
+
+            showGlobalLoading("正在儲存中...");
+
+            try {
+                const res = await fetch("/SYS/Images/UpdateFile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+
+                if (!result.success) {
+                    Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+                    hideGlobalLoading();
+                    return;
+                }
+
+                // ✅ 成功提示
+                Swal.fire({
+                    icon: "success",
+                    title: "更新成功",
+                    timer: 1000,
+                    showConfirmButton: false
+                });
+
+                // ✅ 更新畫面資料（不 reload 全頁）
+                if (typeof updateBoundImage === "function") updateBoundImage(result.data);
+                if (typeof fillImageModal === "function") fillImageModal(result.data);
+
+                bootstrap.Modal.getInstance(modal)?.hide();
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "錯誤", text: err.message });
+            } finally {
+                hideGlobalLoading();
+            }
+        });
+
+        // === 將 DTO 套入 Modal（唯一真實資料來源）===
+        window.fillImageModal = function (fileDto) {
+            const modal = document.getElementById("imgMetaModal");
+            if (!modal || !fileDto) return;
+
+            // 預覽圖
+            const img = modal.querySelector("#modalPreview");
+            img.src = fileDto.fileUrl || "/images/No-Image.svg";
+            img.dataset.fileId = fileDto.fileId;
+
+            // 基本資訊
+            modal.querySelector("#modalFileId").value = fileDto.fileId ?? "";
+            modal.querySelector("#modalFileKey").value = fileDto.fileKey ?? "";
+            modal.querySelector("#modalWidth").value = fileDto.width ?? "";
+            modal.querySelector("#modalHeight").value = fileDto.height ?? "";
+            modal.querySelector("#modalFileSizeBytes").value = `${fileDto.fileSizeBytes ?? 0} Bytes`;
+            modal.querySelector("#modalMimeType").value = fileDto.mimeType ?? "";
+        // === 直接在這裡強制格式化 ===
+        const rawCreated = fileDto.formateCreatedDate || fileDto.FormateCreatedDate || fileDto.createdDate || fileDto.CreatedDate || "";
+        modal.querySelector("#modalCreatedDate").value = String(rawCreated)
+            .replace("T", " ")
+            .split(".")[0]
+            .replace(/-/g, "/");
+
+            // Meta 資料
+            modal.querySelector("#modalAlt").value = fileDto.altText ?? "";
+            modal.querySelector("#modalCaption").value = fileDto.caption ?? "";
+            modal.querySelector("#modalIsActive").checked = fileDto.isActive === true || fileDto.isActive === "true";
+
+            // 外部連結顯示
+            const badge = modal.querySelector("#modalIsExternalBadge");
+            const isExternal = fileDto.isExternal === true || fileDto.isExternal === "true";
+            badge.textContent = isExternal ? "外部連結" : "自有檔案";
+            badge.classList.remove("bg-success", "bg-secondary");
+            badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+        };
+
+        // === 通用日期格式化 ===
+        function formatDateTime(dateStr) {
+            if (!dateStr) return "";
+
+            // 若已是格式化字串（例如 "2025/10/19 18:24:15"），直接回傳
+            if (typeof dateStr === "string" && dateStr.includes("/") && !dateStr.includes("T"))
+                return dateStr;
+
+            // 🔹 若含「.」(毫秒) 時，去掉小數部分
+            if (typeof dateStr === "string" && dateStr.includes("T") && dateStr.includes(".")) {
+                dateStr = dateStr.split(".")[0]; // 去掉 .3050966
+            }
+
+            // 🔹 嘗試解析成日期物件
+            const d = new Date(dateStr);
+            if (isNaN(d)) return dateStr; // 若仍無法解析，保留原樣
+
+            const pad = n => n.toString().padStart(2, "0");
+            return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
     </script>
 }
-

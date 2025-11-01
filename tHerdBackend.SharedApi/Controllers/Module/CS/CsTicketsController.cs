@@ -1,41 +1,100 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs.CS;
+using tHerdBackend.Core.Interfaces.CS;
 using tHerdBackend.Core.ValueObjects;
-using tHerdBackend.Services.CS;
 
-namespace tHerdBackend.SharedApi.Controllers.CS
+[ApiController]
+[AllowAnonymous] 
+[Route("api/cs/[controller]")]
+public class CsTicketsController : ControllerBase
 {
-	/// <summary>
-	/// 客服工單 API
-	/// </summary>
-	[ApiController]
-	[Route("api/cs/tickets")]
-	public class CsTicketsController : ControllerBase
+	private readonly ICsTicketService _service;
+	private readonly IFaqService _faqService;
+	public CsTicketsController(ICsTicketService service, IFaqService faqService)
 	{
-		private readonly CsTicketService _service;
+		_service = service;
+		_faqService = faqService;
+	}
 
-		public CsTicketsController(CsTicketService service)
+	///// <summary>取得全部客服工單清單（限後台登入者）</summary>
+	//[HttpGet("list")]
+	//[Authorize(Roles = "Admin,CustomerService")] // 👈 只有後台能看
+	//public async Task<IActionResult> GetAllAsync()
+	//{
+	//	try
+	//	{
+	//		var data = await _service.GetAllAsync();
+	//		return Ok(ApiResponse<IEnumerable<TicketsDto>>.Ok(data));
+	//	}
+	//	catch (Exception ex)
+	//	{
+	//		return BadRequest(ApiResponse<string>.Fail(ex.Message));
+	//	}
+	//}
+	
+	/// <summary>取得「我的工單」清單（前台會員使用）</summary>
+	[HttpGet("my")]
+	[Authorize] // ✅ 只要登入會員即可
+	public async Task<IActionResult> GetMyTickets()
+	{
+		try
 		{
-			_service = service;
+			// 1️⃣ 從 JWT Token 取出登入的 UserId
+			var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+			if (userIdClaim == null)
+				return BadRequest(ApiResponse<string>.Fail("無法取得使用者資訊"));
+
+			int userId = int.Parse(userIdClaim.Value);
+
+			// 2️⃣ 呼叫 service 層
+			var data = await _service.GetByUserIdAsync(userId);
+
+			// 3️⃣ 用統一格式回傳
+			return Ok(ApiResponse<IEnumerable<TicketsDto>>.Ok(data));
 		}
-
-		/// <summary>
-		/// 取得所有工單（後台或測試用）
-		/// </summary>
-		[HttpGet("list")]
-		[Authorize(Roles = "Admin,CS")]
-		public async Task<IActionResult> GetTickets()
+		catch (Exception ex)
 		{
-			try
-			{
-				var data = await _service.GetTicketsAsync();
-				return Ok(ApiResponse<IEnumerable<TicketsDto>>.Ok(data));
-			}
-			catch (Exception ex)
-			{
-				return BadRequest(ApiResponse<string>.Fail(ex.Message));
-			}
+			return BadRequest(ApiResponse<string>.Fail(ex.Message));
 		}
 	}
+
+
+	/// <summary>建立新客服工單（前台客戶可匿名，上傳 1 張附件圖片）</summary>
+	[HttpPost("create")]
+	[AllowAnonymous]
+	[RequestSizeLimit(10_000_000)] // 限制上傳大小（10MB）
+	public async Task<IActionResult> CreateAsync([FromForm] TicketIn dto, IFormFile? image)
+	{
+		try
+		{
+			// ✅ 呼叫 Service，傳入工單資料與圖片
+			var id = await _service.CreateAsync(dto, image);
+
+			var data = await _service.GetTicketByIdAsync(id);
+			return Ok(ApiResponse<object>.Ok(data, "建立成功"));
+		}
+		catch (Exception ex)
+		{
+			return BadRequest(ApiResponse<string>.Fail(ex.Message));
+		}
+	}
+
+	/// <summary>取得 FAQ 問題分類（供工單下拉選單用）</summary>
+	[HttpGet("categories")]
+	[AllowAnonymous]
+	public async Task<IActionResult> GetCategoriesAsync()
+	{
+		try
+		{
+			// 從 FAQ Service 抓啟用的分類
+			var data = await _faqService.GetActiveCategoriesAsync();
+			return Ok(ApiResponse<IEnumerable<FaqCategoryDto>>.Ok(data));
+		}
+		catch (Exception ex)
+		{
+			return BadRequest(ApiResponse<string>.Fail(ex.Message));
+		}
+	}
+
 }

@@ -33,7 +33,6 @@
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
     <Folder Include="DTOs\CNT\" />
-    <Folder Include="DTOs\ORD\" />
     <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\ORD\" />
     <Folder Include="Interfaces\USER\" />

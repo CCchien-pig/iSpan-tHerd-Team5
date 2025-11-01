@@ -1,146 +1,129 @@
-<!-- src/pages/modules/cs/TicketCreate.vue -->
 <template>
-  <div class="ticket-create container py-5">
-    <!-- 導覽 -->
-    <nav aria-label="breadcrumb">
-      <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><router-link to="/">首頁</router-link></li>
-        <li class="breadcrumb-item"><router-link to="/cs">客服中心</router-link></li>
-        <li class="breadcrumb-item active" aria-current="page">建立工單</li>
-      </ol>
-    </nav>
+  <div class="center-narrow py-5">
+    <h3 class="text-center mb-4 main-color-green-text">聯絡客服</h3>
 
-    <h3 class="mb-4 fw-bold">建立客服工單</h3>
+    <form @submit.prevent="submitTicket" class="card p-4 shadow-sm">
+      <!-- 問題分類 -->
+      <div class="mb-3">
+        <label class="form-label">問題分類</label>
+        <select v-model="form.categoryId" class="form-select">
+          <option disabled value="">請選擇</option>
+          <option v-for="c in categories" :key="c.categoryId" :value="c.categoryId">
+            {{ c.categoryName }}
+          </option>
+        </select>
+      </div>
 
-    <el-form
-      :model="form"
-      ref="formRef"
-      label-width="120px"
-      :rules="rules"
-      status-icon
-    >
-      <el-form-item label="主題" prop="subject">
-        <el-input v-model="form.subject" placeholder="請輸入您的問題主題"></el-input>
-      </el-form-item>
+      <!-- 主旨 -->
+      <div class="mb-3">
+        <label class="form-label">主旨</label>
+        <input v-model="form.subject" class="form-control" placeholder="請輸入問題主旨" />
+      </div>
 
-      <el-form-item label="問題分類" prop="categoryId">
-        <el-select v-model="form.categoryId" placeholder="請選擇分類">
-          <el-option
-            v-for="c in categories"
-            :key="c.categoryId"
-            :label="c.categoryName"
-            :value="c.categoryId"
-          />
-        </el-select>
-      </el-form-item>
+      <!-- 問題描述 -->
+      <div class="mb-3">
+        <label class="form-label">問題描述</label>
+        <textarea v-model="form.messageText" rows="4" class="form-control"></textarea>
+      </div>
 
-      <el-form-item label="問題描述" prop="content">
-        <el-input
-          type="textarea"
-          rows="5"
-          v-model="form.content"
-          placeholder="請詳細描述您的問題或情況"
-        />
-      </el-form-item>
+      <!-- 上傳圖片 -->
+      <div class="mb-3">
+        <label class="form-label">上傳附件（限 1 張圖片）</label>
+        <input type="file" accept="image/*" @change="onFileChange" class="form-control" />
+        <div v-if="previewUrl" class="text-center mt-3">
+          <img :src="previewUrl" alt="預覽" style="max-width: 200px; border-radius: 8px;" />
+        </div>
+      </div>
 
-      <el-form-item label="附件上傳">
-        <el-upload
-          class="upload-demo"
-          action="#"
-          :auto-upload="false"
-          :on-change="handleFileChange"
-          multiple
-        >
-          <el-button>選擇檔案</el-button>
-          <template #tip>
-            <div class="el-upload__tip">（可附上截圖或文件，最多 3 個檔案）</div>
-          </template>
-        </el-upload>
-      </el-form-item>
-
-      <el-form-item label="優先等級">
-        <el-radio-group v-model="form.priority">
-          <el-radio :label="1">一般</el-radio>
-          <el-radio :label="2">中等</el-radio>
-          <el-radio :label="3">高</el-radio>
-        </el-radio-group>
-      </el-form-item>
-
-      <el-form-item>
-        <el-button type="primary" :loading="loading" @click="onSubmit">
-          送出工單
-        </el-button>
-        <el-button @click="resetForm">重填</el-button>
-      </el-form-item>
-    </el-form>
-
-    <el-dialog v-model="dialogVisible" title="提交成功" width="400px" center>
-      <p>您的問題已成功送出，我們會盡快處理並通知您結果。</p>
-      <template #footer>
-        <el-button type="primary" @click="toList">查看我的工單</el-button>
-      </template>
-    </el-dialog>
+      <div class="text-center">
+        <button class="btn btn-success px-4" type="submit" :disabled="loading">
+          <span v-if="!loading">送出工單</span>
+          <span v-else class="spinner-border spinner-border-sm"></span>
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { createTicket, getFaqCategories } from '@/api/modules/cs/csticket'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router' 
+import { getCategories, createTicket } from '@/api/modules/cs/cstickets'
 
-const formRef = ref()
-const dialogVisible = ref(false)
+const router = useRouter() 
 const loading = ref(false)
 const categories = ref([])
+const previewUrl = ref('')
+const file = ref(null)
 
-const form = reactive({
+const form = ref({
+  userId: 1, // 測試階段可固定
+  categoryId: '',
   subject: '',
-  categoryId: null,
-  content: '',
-  attachments: [],
-  priority: 1,
+  priority: 2,
+  messageText: ''
 })
 
-const rules = {
-  subject: [{ required: true, message: '請輸入主題', trigger: 'blur' }],
-  categoryId: [{ required: true, message: '請選擇分類', trigger: 'change' }],
-  content: [{ required: true, message: '請輸入內容', trigger: 'blur' }],
+// 預覽圖片
+const onFileChange = (e) => {
+  const selected = e.target.files[0]
+  if (!selected) return
+  file.value = selected
+  previewUrl.value = URL.createObjectURL(selected)
 }
 
-const handleFileChange = (file, fileList) => {
-  form.attachments = fileList
-}
-
-const onSubmit = async () => {
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-    loading.value = true
-    try {
-      const res = await createTicket(form)
-      if (res) {
-        dialogVisible.value = true
-      }
-    } catch {
-      ElMessage.error('送出失敗，請稍後再試')
-    } finally {
-      loading.value = false
-    }
-  })
-}
-
-const resetForm = () => formRef.value.resetFields()
-const toList = () => {
-  dialogVisible.value = false
-  window.location.href = '/cs/ticket/list'
-}
-
+// 初始化載入 FAQ 分類
 onMounted(async () => {
-  categories.value = await getFaqCategories()
+  categories.value = await getCategories()
 })
+
+// 提交工單
+async function submitTicket() {
+  try {
+    loading.value = true
+
+    // 使用 FormData 封裝文字 + 檔案
+    const formData = new FormData()
+    formData.append('userId', form.value.userId)
+    formData.append('categoryId', form.value.categoryId)
+    formData.append('subject', form.value.subject)
+    formData.append('priority', form.value.priority)
+    formData.append('messageText', form.value.messageText)
+    if (file.value) formData.append('image', file.value) // ✅ 關鍵：加上圖片
+
+    const res = await createTicket(formData)
+    if (res.success) {
+router.push('/cs/ticket/success') // ✅ 跳轉到成功頁面
+  resetForm()
+}
+ else {
+      alert(res.message || '建立失敗')
+    }
+  } catch (err) {
+    console.error(err)
+    alert('伺服器錯誤')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重置表單
+function resetForm() {
+  form.value = {
+    userId: 1,
+    categoryId: '',
+    subject: '',
+    priority: 2,
+    messageText: ''
+  }
+  file.value = null
+  previewUrl.value = ''
+}
 </script>
 
 <style scoped>
-.ticket-create {
-  max-width: 720px;
+.center-narrow {
+  max-width: 600px;
+  margin: auto;
 }
 </style>

@@ -45,13 +45,13 @@ function formatDate(dateStr) {
 // 🎨 根據 couponName 判斷背景色
 const couponColor = computed(() => {
   const name = props.coupon.couponName || ''
-  if (name.includes('生日') || name.includes('節慶')||name.includes('聖誕')) {
+  if (name.includes('生日') || name.includes('節慶') || name.includes('聖誕')) {
     return 'rgb(178, 34, 34)'        // 紅
   } else if (name.includes('新客') || name.includes('首購')) {
     return 'rgb(242, 140, 40)'       // 橘
   } else if (name.includes('免運') || name.includes('運費')) {
     return 'rgb(242, 201, 76)'       // 黃
-  } else if (name.toUpperCase().includes('中秋') || name.includes('專屬')) {
+  } else if (name.includes('中秋') || name.includes('專屬')) {
     return 'rgb(123, 92, 168)'       // 紫
   } else if (name.includes('限時') || name.includes('活動')) {
     return 'rgb(27, 42, 73)'         // 深藍
@@ -84,7 +84,6 @@ const textColor = computed(() => {
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 
-/* ✅ 領取後整張券變灰 */
 .ticket-coupon.received {
   opacity: 0.6;
   filter: grayscale(0.6);
@@ -151,36 +150,35 @@ const textColor = computed(() => {
 /* 📱 RWD 手機版 */
 @media (max-width: 768px) {
   .ticket-coupon {
-    flex-direction: column;          /* 改成上下排列 */
+    flex-direction: column;
     align-items: stretch;
   }
 
   .ticket-info {
-    border-right: none;              /* 拿掉中間虛線 */
-    border-bottom: 2px dashed #ccc;  /* 改成水平線 */
+    border-right: none;
+    border-bottom: 2px dashed #ccc;
     padding: 12px 16px;
-    text-align: center;              /* 文字置中 */
+    text-align: center;
   }
 
   .ticket-price {
-    min-width: unset;
     width: 100%;
     padding: 16px;
   }
 
   .amount {
-    font-size: 1.6rem;               /* 手機上稍微縮小 */
+    font-size: 1.6rem;
   }
 
   .use-btn {
     margin-top: 8px;
-    width: 100%;                     /* 手機上按鈕滿版 */
+    width: 100%;
     max-width: 280px;
   }
 
   .ticket-coupon::before,
   .ticket-coupon::after {
-    display: none;                   /* 手機上不顯示圓孔 */
+    display: none;
   }
 }
 </style>

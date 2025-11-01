@@ -13,21 +13,21 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// 商品ID
 	/// </summary>
 	[Display(Name = "商品編號")]
-	public new int ProductId { get; set; }
+	public override int ProductId { get; set; }
 
 	/// <summary>
 	/// 商品名稱
 	/// </summary>
 	[Display(Name = "商品名稱")]
 	[Required(ErrorMessage = "{0}為必填")]
-	public new string ProductName { get; set; }
+	public override string ProductName { get; set; }
 
 	/// <summary>
 	/// 商品簡碼
 	/// </summary>
 	[Display(Name = "商品簡碼")]
 	[Required(ErrorMessage = "{0}為必填")]
-	public new string ProductCode { get; set; }
+	public override string ProductCode { get; set; }
 
 	/// <summary>
 	/// 供應商ID(FK)
@@ -37,7 +37,7 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// <summary>
 	/// 供應商名稱
 	/// </summary>
-	public new string SupplierName { get; set; }
+	public override string SupplierName { get; set; }
 
 	/// <summary>
 	/// 品牌ID
@@ -49,7 +49,7 @@ public partial class ProdProductDetailDto : ProdProductDto
 	/// <summary>
 	/// 品牌名稱
 	/// </summary>
-	public new string BrandName { get; set; }
+	public override string BrandName { get; set; }
 
     /// <summary>
     /// 品牌簡碼，唯一，非空，英文
@@ -79,7 +79,7 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 是否上架（0=否，1=是）
     /// </summary>
     [Display(Name = "是否上架")]
-    public new bool IsPublished { get; set; }
+    public override bool IsPublished { get; set; }
 
 	/// <summary>
 	/// 重量（公斤）
@@ -106,34 +106,34 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 建檔人員
     /// </summary>
     [Display(Name = "建檔人員")]
-    public new int Creator { get; set; }
+    public override int Creator { get; set; }
 
 	/// <summary>
 	/// 建檔姓名
 	/// </summary>
 	[BindNever]
-	public new string? CreatorNm { get; set; }
+	public override string? CreatorNm { get; set; }
 
 	/// <summary>
 	/// 建立時間
 	/// </summary>
 	[BindNever]
-	public new DateTime CreatedDate { get; set; }
+	public override DateTime CreatedDate { get; set; }
 
-	public new string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
+	public override string FormateCreatedDate => DateTimeHelper.ToDateTimeString(CreatedDate);
 
 	/// <summary>
 	/// 異動人員
 	/// </summary>
 	[BindNever]
     [Display(Name = "異動人員")]
-    public new int? Reviser { get; set; }
+    public override int? Reviser { get; set; }
 
 	/// <summary>
 	/// 異動姓名
 	/// </summary>
 	[BindNever]
-	public new string ReviserNm { get; set; }
+	public override string ReviserNm { get; set; }
 
 	/// <summary>
 	/// 異動時間
@@ -156,12 +156,12 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 商品狀態標籤
     /// </summary>
     [Display(Name = "商品標籤")]
-    public new string Badge { get; set; } = string.Empty;
+    public override string Badge { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 分類敘述
 	/// </summary>
-	public new List<string> ProductTypeDesc { get; set; }
+	public override List<string> ProductTypeDesc { get; set; }
 
     /// <summary>
     /// 分類敘述
@@ -198,36 +198,36 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// <summary>
     /// 評價星數
     /// </summary>
-    public new decimal? AvgRating { get; set; }
+    public override decimal? AvgRating { get; set; }
 
     /// <summary>
     /// 評價總數
     /// </summary>
-    public new int? ReviewCount { get; set; }
+    public override int? ReviewCount { get; set; }
 
     /// <summary>
     /// 商品主圖
     /// </summary>
-    public new string ImageUrl { get; set; } = string.Empty;
+    public override string ImageUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// 主商品SkuId
     /// </summary>
-    public new int? MainSkuId { get; set; }
+    public int? MainSkuId { get; set; }
 
     /// <summary>
     /// 主商品原價
     /// </summary>
-    public new decimal? ListPrice { get; set; }
+    public override decimal? ListPrice { get; set; }
 
 
     /// <summary>
     /// 主商品單價
     /// </summary>
-    public new decimal? UnitPrice { get; set; }
+    public override decimal? UnitPrice { get; set; }
 
     /// <summary>
     /// 主商品優惠價
     /// </summary>
-    public new decimal? SalePrice { get; set; }
+    public override decimal? SalePrice { get; set; }
 }

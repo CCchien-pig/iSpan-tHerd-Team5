@@ -1,4 +1,5 @@
-﻿@using tHerdBackend.Core.DTOs.PROD
+﻿@using tHerdBackend.Core.DTOs
+@using tHerdBackend.Core.DTOs.PROD
 @using System.Text.Json
 @using tHerdBackend.Core.Models
 @model tHerdBackend.Core.DTOs.PROD.ProdProductDetailDto
@@ -321,6 +322,16 @@
             color: #fff;
             margin: 0;
         }
+
+        .img-item.selected {
+            outline: 3px solid #007bff;
+            border-radius: 6px;
+        }
+
+        .select-file:checked + img,
+        .select-file:checked + video {
+            outline: 3px solid #0d6efd;
+        }
     </style>
 }
 
@@ -551,7 +562,7 @@
                                         </button>
                                     </div>
 
-                                    <div id="collapseSku" class="collapse show">
+                                    <div id="collapseSku" class="collapse"> @* show*@
                                             <div class="card-body" style="background-color: #E5DEEA;">
                                                 <!-- 規格分類 -->
                                                 <div class="mb-3">
@@ -615,7 +626,7 @@
                                 </div>
 
                                 <!-- 圖片 設定：初始收起 -->
-                                    <div class="card shadow mb-3">
+                                <div class="card shadow mb-3">
                                     <div class="card-header d-flex justify-content-between align-items-center" style="background:#69779B">
                                         <h6 class="m-0 fw-bold">圖片 設定</h6>
                                         <button class="btn btn-sm btn-outline-light" type="button"
@@ -624,9 +635,14 @@
                                             <i class="fas fa-chevron-up chevron"></i>
                                         </button>
                                     </div>
-                                    <div id="collapseImg" class="collapse">
+                                    <div id="collapseImg" class="collapse show">
                                         <div class="card-body">
-                                            @Html.Partial("_ProductImageUpload", Model.Images)
+                                            <div class="row g-3 align-items-start">
+                                                <div>
+                                                    @* 圖片模組 *@
+                                                    @Html.Partial("_ProductImageUpload", Model.Images)
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -693,57 +709,6 @@
                         
                     </div>
                 </div>
-
-                <div class="col-md-2">
-                             @* 輪播圖 *@
-                        <div id="productCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
-
-                        <!-- 輪播圖片 -->
-                        <div class="carousel-inner rounded shadow-sm">
-                            @for (var i = 0; i < Model.Images.Count; i++)
-                            {
-                                var img = Model.Images[i];
-                                <div class="carousel-item @(i == 0 ? "active" : "")">
-                                    <img src="@Url.Action("GetImage", "Images", new { area = "PROD", fileName = System.IO.Path.GetFileName(img.FileUrl) })"
-                                         class="d-block w-100"
-                                         style="max-height:400px; object-fit:contain;"
-                                         alt="@img.AltText ?? Model.ProductName" />
-
-                                    @if (!string.IsNullOrEmpty(img.AltText))
-                                    {
-                                        <div class="carousel-caption d-none d-md-block">
-                                            <p>@img.AltText</p>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-
-                        <!-- 左右切換 -->
-                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
-                            <span class="visually-hidden">上一張</span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
-                            <span class="visually-hidden">下一張</span>
-                        </button>
-
-                        <!-- 小圓點 indicators -->
-                        <div class="carousel-indicators">
-                            @for (var i = 0; i < Model.Images.Count; i++)
-                            {
-                                <button type="button"
-                                        data-bs-target="#productCarousel"
-                                        data-bs-slide-to="@i"
-                                        class="@(i == 0 ? "active" : "")"
-                                        aria-current="@(i == 0 ? "true" : "false")"
-                                        aria-label="Slide @(i + 1)">
-                                </button>
-                            }
-                        </div>
-                    </div>
-                 </div>
             </div>
         </form>
     </div>
@@ -786,9 +751,18 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-    @await Html.PartialAsync("_SweetAlertPartial")
-
     <script>
+         // 刪除圖片（改為用 hidden input）
+         function removeExistingImage(btn) {
+             const imgId = btn.dataset.imgId;
+             const input = document.createElement("input");
+             input.type = "hidden";
+             input.name = "DeletedImageIds";
+             input.value = imgId;
+             document.forms[0].appendChild(input);
+             btn.parentElement.remove();
+         }
+
         // 從 Razor 序列化後端 Model 成前端可用的 JS 物件
         let Model = {
             ProductId: @Model.ProductId,
@@ -1139,7 +1113,6 @@
 
         // 初始值從 Model 帶進來
         var specConfigs = @Html.Raw(JsonSerializer.Serialize(Model.SpecConfigs ?? new List<ProdSpecificationConfigDto>()));
-        console.log("初始化 specConfigs =", specConfigs);
 
         // 生成規格值區塊
         // 4) 規格值卡片（對應每個 SKU）
@@ -1402,6 +1375,14 @@
             // 初始強制同步一次（避免第一次點要按兩次）
             btn.setAttribute('aria-expanded', tgt.classList.contains('show') ? 'true' : 'false');
           });
+
+            // 🔒 防止 Enter 鍵觸發送出（僅在非 textarea 內）
+            document.getElementById("productCreateForm").addEventListener("keydown", function (e) {
+              if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+                e.preventDefault();
+                return false;
+              }
+            });
         });
     </script>
 }

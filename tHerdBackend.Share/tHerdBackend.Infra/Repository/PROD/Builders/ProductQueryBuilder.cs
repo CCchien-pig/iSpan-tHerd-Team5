@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using tHerdBackend.Core.DTOs.PROD;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace tHerdBackend.Infra.Repository.PROD.Builders
 {
@@ -10,7 +11,9 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
     {
         public static void AppendFilters(StringBuilder sql, ProductFilterQueryDto query)
         {
-            if (!string.IsNullOrWhiteSpace(query.Keyword))
+			if (query.ProductId.HasValue)
+				sql.Append(" AND p.ProductId = @ProductId");
+			if (!string.IsNullOrWhiteSpace(query.Keyword))
                 sql.Append(" AND p.ProductName LIKE CONCAT('%', @Keyword, '%')");
             if (query.BrandId.HasValue)
                 sql.Append(" AND p.BrandId = @BrandId");
@@ -20,6 +23,8 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
                 sql.Append(" AND sp.MinSkuPrice >= @MinPrice");
             if (query.MaxPrice.HasValue)
                 sql.Append(" AND sp.MaxSkuPrice <= @MaxPrice");
+            if (query.IsPublished.HasValue)
+                sql.Append(" AND p.IsPublished = @IsPublished");
         }
 
         public static string BuildOrderClause(ProductFilterQueryDto query) => query.SortBy switch
