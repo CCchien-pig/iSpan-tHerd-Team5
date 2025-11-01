@@ -47,24 +47,25 @@ public class AssetsController : ControllerBase
 
 		try
 		{
-			// 【簡化】不再需要查詢 FolderId，直接將 ModuleId 和 ProgId 傳給 Service
-			var uploadDto = new AssetFileUploadDto
+			// ✅ 讓 Meta 仍是 List，但只有一筆
+			var meta = new AssetFileDetailsDto
 			{
-				ModuleId = "Brand",       // 根據業務邏輯設定
-				ProgId = dto.BlockType,   // ProgId 直接對應前端傳來的 BlockType (例如: ContentEditor)
-				Meta = new List<AssetFileDetailsDto>
-				{
-					new AssetFileDetailsDto
-					{
-						File = dto.File,
-						AltText = dto.AltText,
-						Caption = dto.Caption,
-						IsActive = dto.IsActive
-					}
-				}
+				File = dto.File,
+				AltText = dto.AltText,
+				Caption = dto.Caption,
+				IsActive = dto.IsActive
 			};
 
+			var uploadDto = new AssetFileUploadDto
+			{
+				ModuleId = "SUP",
+				ProgId = dto.BlockType,
+				Meta = new List<AssetFileDetailsDto> { meta }
+			};
+
+			// ✅ 呼叫 AddFilesAsync，內部仍會拿到 List，但只含單一元素
 			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
+
 			return ParseUploadResult(resultObject);
 		}
 		catch (Exception ex)
@@ -111,25 +112,24 @@ public class AssetsController : ControllerBase
 			// 【簡化】同樣不再需要查詢 FolderId
 
 			// 4. 準備上傳 DTO
+			// ✅ 將單一檔案封裝為 List
 			var uploadDto = new AssetFileUploadDto
 			{
-				ModuleId = "Brand",
-				//ProgId = "ContentEditor",
-				//FolderId = folderId,
-				ProgId = dto.BlockType, // ProgId 對應 BlockType
+				ModuleId = "SUP",
+				ProgId = dto.BlockType,
 				Meta = new List<AssetFileDetailsDto>
+			{
+				new AssetFileDetailsDto
 				{
-					new AssetFileDetailsDto
-					{
-						File = formFile,
-						AltText = dto.AltText,
-						Caption = dto.Caption,
-						IsActive = dto.IsActive
-					}
+					File = formFile,
+					AltText = dto.AltText,
+					Caption = dto.Caption,
+					IsActive = dto.IsActive
 				}
+			}
 			};
 
-            // 5. 呼叫現有的上傳服務
+			// 5. 呼叫現有的上傳服務
 			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
 			
             // 6. 解析結果並回傳
@@ -157,11 +157,36 @@ public class AssetsController : ControllerBase
 		[FromQuery] int? length,
 		[FromQuery] int draw = 1,
 		[FromQuery] string? orderColumn = "Name",
-		[FromQuery] string? orderDir = "asc")
+		[FromQuery] string? orderDir = "asc",
+		[FromQuery] string? blockType = null)  // 新增區塊類型參數)
 	{
-		// 【修正】方法名稱 GetPagedFolderItemsAsync -> GetPagedFolderItems
+		// 固定使用 AltText 排序
+		orderColumn = "AltText";
+		orderDir = "asc";
+
 		var result = await _assetFileService.GetPagedFolderItems(parentId, keyword, start, length, draw, orderColumn, orderDir);
-		return Ok(result);
+
+		// 根據區塊類型設定每行卡片數與顯示資訊
+		int cardsPerRow = 6; // 預設每行 6 張卡片
+		string cardInfoField = "Caption"; // 預設顯示 Caption
+
+		if (!string.IsNullOrWhiteSpace(blockType))
+		{
+			if (blockType.Equals("Banner", StringComparison.OrdinalIgnoreCase))
+			{
+				cardsPerRow = 3; // Banner 區塊每行 3 張卡片
+			}
+		}
+
+		// 封裝回傳，附加卡片設定
+		var response = new
+		{
+			data = result,
+			cardsPerRow = cardsPerRow,
+			cardInfoField = cardInfoField
+		};
+
+		return Ok(response);
 	}
 
 	/// <summary>
@@ -277,35 +302,64 @@ public class AssetsController : ControllerBase
 
 		if (root.TryGetProperty("success", out var successElement) && successElement.GetBoolean())
 		{
-			// 注意路徑變為 data -> files
-			if (root.TryGetProperty("data", out var dataElement) &&
-				dataElement.TryGetProperty("files", out var filesElement) && // <--- 這裡的屬性名稱是 'files'
-				filesElement.GetArrayLength() > 0)
+			if (!root.TryGetProperty("data", out var dataElement))
+				return BadRequest(new { error = new { message = "上傳成功，但找不到 data 區塊。" } });
+
+			JsonElement filesElement;
+
+			// 🧩 第一種情況：data = { files: [...] }
+			if (dataElement.ValueKind == JsonValueKind.Object &&
+				dataElement.TryGetProperty("files", out filesElement))
 			{
-				var firstFile = filesElement[0];
-				// Repository 回傳的屬性是大寫開頭 (FileUrl, FileId)
-				if (firstFile.TryGetProperty("FileUrl", out var fileUrlElement) &&
-					firstFile.TryGetProperty("FileId", out var fileIdElement))
+				if (filesElement.ValueKind == JsonValueKind.Array && filesElement.GetArrayLength() > 0)
 				{
-					return Ok(new
-					{
-						location = fileUrlElement.GetString(),
-						fileId = fileIdElement.GetInt32()
-					});
+					var firstFile = filesElement[0];
+					return ExtractFileResult(firstFile);
 				}
 			}
+			// 🧩 第二種情況：data = [ {...}, {...} ]
+			else if (dataElement.ValueKind == JsonValueKind.Array && dataElement.GetArrayLength() > 0)
+			{
+				var firstFile = dataElement[0];
+				return ExtractFileResult(firstFile);
+			}
+			// 🧩 第三種情況：data = {...} (單一物件)
+			else if (dataElement.ValueKind == JsonValueKind.Object)
+			{
+				return ExtractFileResult(dataElement);
+			}
+
 			return BadRequest(new { error = new { message = "上傳成功，但解析回傳資料時發生錯誤。" } });
 		}
 		else
 		{
 			string errorMessage = "上傳失敗";
 			if (root.TryGetProperty("message", out var messageElement))
-			{
-				errorMessage = messageElement.GetString();
-			}
+				errorMessage = messageElement.GetString() ?? errorMessage;
+
 			return BadRequest(new { error = new { message = errorMessage } });
 		}
 	}
+
+	// ✅ 專用：提取 FileUrl / FileId
+	private IActionResult ExtractFileResult(JsonElement element)
+	{
+		if (element.TryGetProperty("FileUrl", out var fileUrlElement))
+		{
+			int fileId = element.TryGetProperty("FileId", out var fileIdElement)
+				? fileIdElement.GetInt32()
+				: 0;
+
+			return Ok(new
+			{
+				location = fileUrlElement.GetString(),
+				fileId = fileId
+			});
+		}
+
+		return BadRequest(new { error = new { message = "找不到 FileUrl 屬性。" } });
+	}
+
 	#endregion
 
 }

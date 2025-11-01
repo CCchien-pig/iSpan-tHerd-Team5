@@ -332,11 +332,11 @@ namespace tHerdBackend.Services.SUP
 				int finalLayoutId;
 
 				// 5. 將 JSON 骨架儲存到 SUP_BrandLayoutConfig
-				if (dto.ActiveLayoutId.HasValue && dto.ActiveLayoutId.Value > 0)
+				if (dto.LayoutId.HasValue && dto.LayoutId.Value > 0)
 				{
 					// 更新現有的 Layout 紀錄
-					await _repo.UpdateLayoutJsonAsync(dto.ActiveLayoutId.Value, cleanLayoutJson, dto.LayoutVersion, reviserId);
-					finalLayoutId = dto.ActiveLayoutId.Value;
+					await _repo.UpdateLayoutJsonAsync(dto.LayoutId.Value, cleanLayoutJson, dto.LayoutVersion, reviserId);
+					finalLayoutId = dto.LayoutId.Value;
 				}
 				else
 				{

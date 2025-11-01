@@ -1080,10 +1080,14 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 
 				// 【版本號重複驗證】
-				bool versionExists = await _layoutService.VersionExistsAsync(dto.BrandId, dto.LayoutVersion, dto.ActiveLayoutId);
+				bool versionExists = await _layoutService.VersionExistsAsync(dto.BrandId, dto.LayoutVersion, dto.LayoutId);
 				if (versionExists)
 				{
-					return BadRequest(new { success = false, message = $"版本號 '{dto.LayoutVersion}' 已存在，請使用不同的版本號。" });
+					return BadRequest(new
+					{
+						success = false,
+						message = $"版本號 '{dto.LayoutVersion}' 已存在，請使用不同的版本號。"
+					});
 				}
 
 				// 3. 核心業務邏輯 (Create/Update/Activate)
@@ -1092,13 +1096,21 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				// 啟用邏輯現在可以安全地放在交易之外
 
 				// 4. 成功回傳
+				// 從資料庫取出剛儲存的 Layout，判斷是否為啟用中版本
+				var layout = await _context.SupBrandLayoutConfigs
+					.AsNoTracking()
+					.FirstOrDefaultAsync(x => x.LayoutId == finalLayoutId);
+
+				bool isActive = layout?.IsActive ?? false;
+
 				return Json(new
 				{
 					success = true,
-					//message = "品牌版面配置已成功儲存並啟用為現行版本。",
 					message = "版面配置已儲存成功。",
-					layoutId = finalLayoutId
+					layoutId = finalLayoutId,
+					isActive = isActive // ✅ 新增：讓前端能知道此版本是否啟用
 				});
+
 			}
 			catch (Exception ex)
 			{

@@ -25,9 +25,10 @@
 
     @* 新增區塊按鈕 *@
     <div id="component-palette" class="mb-3">
-        <button @@click="addBlock('Banner')" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
-        <button @@click="addBlock('Accordion')" class="btn btn-sm btn-outline-info me-2">新增 Accordion</button>
-        <button @@click="addBlock('Article')" class="btn btn-sm btn-outline-warning me-2">新增 Article</button>
+        @* 在點擊時傳入 $event 物件 *@
+        <button @@click="addBlock('Banner', $event)" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
+        <button @@click="addBlock('Accordion', $event)" class="btn btn-sm btn-outline-info me-2">新增 Accordion</button>
+        <button @@click="addBlock('Article', $event)" class="btn btn-sm btn-outline-warning me-2">新增 Article</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
     </div>
 
@@ -89,7 +90,7 @@
 
                 @* 內容區塊 (Accordion & Article) 的摺疊標題列 *@
                 <div v-if="block.type === 'Accordion' || block.type === 'Article'" class="border rounded mb-3">
-                    
+
                     @* 1. 摺疊標題列 (Header) *@
                     <div class="collapsible-header" @@click="block.props.isContentUploaderOpen = !block.props.isContentUploaderOpen" style="cursor: pointer;">
                         <h6 class="mb-0">標題與內容</h6>
@@ -98,23 +99,24 @@
                             <svg v-else width="20" height="20" viewBox="0 0 448 512" fill="currentColor"><path d="M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z" /></svg>
                         </span>
                     </div>
-                    
+
                     @* 2. 可摺疊的內容區 (Content) *@
                     <div v-if="block.props.isContentUploaderOpen" class="collapsible-content">
                         <div class="mb-3"><label class="form-label">{{ block.type === 'Accordion' ? '摺疊標題' : '文章標題' }}：</label><input type="text" class="form-control" v-model="block.props.contentTitle"></div>
-                        <div class="mb-3"><label class="form-label">{{ block.type === 'Accordion' ? '摺疊內容' : '文章內容' }} (富文本)：</label><textarea class="form-control" rows="5" :id="'editor-' + block.id"></textarea></div>
+                        <div class="mb-3"><label class="form-label">{{ block.type === 'Accordion' ? '摺疊內容' : '文章內容' }}：</label><textarea class="form-control" rows="5" :id="'editor-' + block.id"></textarea></div>
                         <div class="form-check form-switch mb-3" style="margin-left: 5px;">
-                            <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive">
+                            <input class="form-check-input" type="checkbox" role="switch" v-model="block.props.isActive" 
+                                @@change="handleSwitchChange($event.target.checked, '此內容')">
                             <label class="form-check-label">啟用此內容</label>
                         </div>
                     </div>
                 </div>
 
-                @* 統一的圖片上傳介面 *@
+                @* 統一的圖片上傳區 *@
                 <div class="border rounded mb-3">
 
                     @* 1. 摺疊標題列 (Header) *@
-                    <div class="collapsible-header" @@click="block.props.isImageUploaderOpen = !block.props.isImageUploaderOpen" :style="{ cursor: block.type === 'Banner' ? 'default' : 'pointer' }">
+                    <div class="collapsible-header" @@click="block.type !== 'Banner' && (block.props.isImageUploaderOpen = !block.props.isImageUploaderOpen)" :style="{ cursor: block.type === 'Banner' ? 'default' : 'pointer' }">
                         <h6 class="mb-0">
                             <template v-if="block.type === 'Banner'">Banner 圖片 (必上傳)</template>
                             <template v-else>圖片 (可選)</template>
@@ -129,15 +131,20 @@
                     @* 2. 可摺疊的內容區 (Content) *@
                     <div v-if="block.props.isImageUploaderOpen !== false" class="collapsible-content">
                         <div v-if="block.props.fileUrl || pendingFileUrl" class="text-center mb-3">
+                            @* 預覽 *@
                             <img :src="pendingFileUrl || block.props.fileUrl" style="max-width: 100%; max-height: 200px; border-radius: 4px;" alt="圖片預覽" />
-                            <p v-if="pendingFileUrl" class="text-muted small mt-1">本地暫存預覽，尚未上傳</p>
+                            <p v-if="pendingFileUrl" class="text-muted small mt-1">
+                                <template v-if="pendingUpload">本地暫存預覽</template>
+                                <template v-else>URL 暫存預覽</template>
+                            </p>
                             <div class="mt-2">
                                 <button v-if="block.type === 'Article' && block.props.fileUrl" class="btn btn-sm btn-outline-primary me-2" @@click="insertImageIntoEditor(block)">插入至文章</button>
                                 <button class="btn btn-sm btn-outline-danger" type="button" @@click="removeBlockImage(block)">移除圖片</button>
                             </div>
+                            
                         </div>
 
-                        @* 【問題 3 修正】AltText 和 Caption 現在無論是否有圖片都會顯示 *@
+                        @* AltText 和 Caption 現在無論是否有圖片都會顯示 *@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">圖片替代文字 (AltText 必填)</label>
@@ -153,38 +160,55 @@
                             </div>
                         </div>
 
+                        <div class="form-check form-switch mb-3" style="margin-left: 5px;">
+                            <input class="form-check-input" type="checkbox" role="switch" :id="'image-active-switch-' + block.id" v-model="block.props.imageIsActive"
+                                   @@change="handleSwitchChange($event.target.checked, '此圖片')">
+                            <label class="form-check-label" :for="'image-active-switch-' + block.id">啟用此圖片</label>
+                        </div>
+
                         @* 只有在還沒有圖片時，才顯示「選擇」和「上傳」按鈕 *@
                         <div v-if="!block.props.fileUrl">
-                            <div class="d-grid gap-2 mb-3">
-                                <button class="btn btn-info text-white" type="button" @@click="openMediaBrowser(block)">
-                                    <i class="fa-solid fa-photo-film me-2"></i>從媒體庫選擇
-                                </button>
-                            </div>
-                            <div class="text-center my-2 fw-bold text-muted small">或</div>
-                            <div class="mb-3">
-                                <label class="form-label">上傳本地圖片</label>
-                                <input :id="'file-upload-' + block.id" type="file" class="form-control" @@change="handleImageSelection($event)" accept="image/*">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">圖片 URL 上傳</label>
-                                <div class="input-group">
-                                    <input type="url" class="form-control" v-model="block.props.fileUrl" placeholder="https://example.com/image.jpg">
-                                    @* 【核心修正】這個按鈕現在只負責預覽 *@
-                                    <button class="btn btn-outline-primary" type="button" @@click="previewUrlImage">
-                                        <i class="fa-solid fa-eye"></i> 預覽 URL 圖片
+                            <div class="card bg-light">
+                                @* --- 選項 A：從現有媒體庫選擇 --- *@
+                                <div class="d-grid gap-2 mb-3">
+                                    <button class="btn text-white" type="button" @@click="openMediaBrowser(block)" style="background-color:rgb(0,112,131)">
+                                        <i class="fa-solid fa-photo-film me-2"></i>選擇現有圖片 (從媒體庫)
                                     </button>
+                                </div>
+
+                                <div class="text-center mb-3 fw-bold text-muted small">或</div>
+
+                                @* --- 選項 B：新增圖片 --- *@
+                                <div class="card-header collapsible-header" @@click="isUploaderCollapsed = !isUploaderCollapsed">
+                                    <h6 class="mb-0">新增圖片 (從本機或 URL)</h6>
+                                    <span>
+                                        <svg v-if="!isUploaderCollapsed" width="20" height="20" viewBox="0 0 448 512" fill="currentColor"><path d="M224 160c-8.188 0-16.38 3.125-22.62 9.375l-192 192c-12.5 12.5-12.5 32.75 0 45.25s32.75 12.5 45.25 0L224 233.4l169.4 173.2c12.5 12.5 32.75 12.5 45.25 0s12.5-32.75 0-45.25l-192-192C240.4 163.1 232.2 160 224 160z" /></svg>
+                                        <svg v-else width="20" height="20" viewBox="0 0 448 512" fill="currentColor"><path d="M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z" /></svg>
+                                    </span>
+                                </div>
+                                <div class="card-body" v-if="!isUploaderCollapsed">
+                                    <div class="mb-3">
+                                        <label class="form-label">上傳本地圖片</label>
+                                        <input :id="'file-upload-' + block.id" type="file" class="form-control" @@change="handleImageSelection($event)" accept="image/*">
+                                    </div>
+                                    @* <div class="text-center my-2 fw-bold text-muted small">或</div> *@
+                                    <div class="mb-3">
+                                        <label class="form-label">貼上圖片 URL</label>
+                                        <input type="url" class="form-control" v-model="pastedUrl" placeholder="https://example.com/image.jpg">
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-3 text-center" v-if="pendingUpload">
+                        @* 確認上傳按鈕區 *@
+                        <div class="mt-3 text-center">
                             @* 本地上傳的確認按鈕 *@
                             <button v-if="pendingUpload" class="btn btn-success" type="button" @@click="handleUpload(block, 'file')">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
                                 {{ block.props.fileUrl ? '確認上傳並替換' : '確認上傳已選檔案' }}
                             </button>
 
-                            @* 【核心修正】新增 URL 上傳的確認按鈕 *@
+                            @* URL 上傳的確認按鈕 *@
                             <button v-if="isUrlReadyForUpload" class="btn btn-success" type="button" @@click="handleUpload(block, 'url')">
                                 <i class="fa-solid fa-cloud-arrow-up"></i> 確認上傳此 URL
                             </button>
@@ -208,7 +232,8 @@
 
     @* 按鈕區 *@
     <div class="d-flex justify-content-between mt-4">
-        <button @@click="goToVersions" class="btn btn-outline-secondary ms-auto me-1">
+        @* 為了讓 goToVersions 函式能夠移除按鈕焦點，在呼叫它時傳入 $event *@
+        <button @@click="goToVersions($event)" class="btn btn-outline-secondary ms-auto me-1">
             <i class="fa-solid fa-arrow-left"></i> 返回
         </button>
 
@@ -240,14 +265,21 @@
                         </div>
                     </div>
 
-                    <div v-else-if="filteredMediaFiles.length > 0" class="row g-2">
-                        <div v-for="file in filteredMediaFiles" :key="file.id" class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    @* 媒體庫顯示 *@
+                    <div v-else-if="mediaFiles.length > 0" class="row g-2">
+                        <div v-for="file in filteredMediaFiles" :key="file.id" :class="getColClass()">
                             <div class="media-item card h-100"
                                  :class="{ 'selected': selectedMediaFileId === file.id }"
-                                 @@click="selectMediaFile(file)">
-                                <img :src="file.url" class="card-img-top" :alt="file.altText || file.caption || file.name">
+                                 @@click ="selectMediaFile(file)">
+                                <img :src="file.url" class="card-img-top"
+                                     :alt="file.caption || file.altText || file.name"
+                                     style="white-space: normal; word-break: break-word;" />
                                 <div class="card-body p-2">
-                                    <p class="card-text small text-truncate" :title="file.altText || file.caption || file.name">{{ file.altText || file.caption || file.name }}</p>
+                                    <p class="card-text small"
+                                       :title="file.caption || file.altText || file.name"
+                                       style="white-space: normal; word-break: break-word;">
+                                        {{ file.caption || file.altText || file.name }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -268,9 +300,6 @@
 </div>
 
 <script>
-    // ---------------------------------------------------------------------
-    // 【重構完整版】
-    // ---------------------------------------------------------------------
     (function () {
         // 在局部作用域中安全地解構賦值
         const { createApp, ref, onMounted, nextTick, watch, computed } = Vue;
@@ -286,7 +315,7 @@
         const initialVersion = '@(Model.LayoutVersion ?? "")';
         const existingVersions = @Html.Raw(JsonSerializer.Serialize(Model.AllLayoutVersions ?? new List<string>()));
         const currentActiveLayoutId = @(Model.CurrentActiveLayoutId?.ToString() ?? "null");
-
+        
         // =====================================================================
         // 【新增】從後端傳入 Folder ID 對應表
         // 這樣即使未來資料庫 ID 變更，您也只需要修改後端，前端程式碼無需改動。
@@ -452,26 +481,63 @@
                 const editingId = ref(null);
                 const isSaving = ref(false);
                 const layoutIdState = ref(initialLayoutId);
-                const layoutVersion = ref(initialVersion);
+                const layoutVersion = ref(initialVersion); // 當前輸入框中的版本號
+                const isCurrentlyActive = ref(currentActiveLayoutId !== 'null' && parseInt(initialLayoutId) === parseInt(currentActiveLayoutId));
+                const brandName = ref(initialBrandName); // 將 brandName 也變成 ref，雖然它通常不變
+                // 【新增】用於追蹤表單是否被修改
+                const isDirty = ref(false);
+                // 儲存初始狀態的快照
+                const initialStateSnapshot = JSON.stringify({
+                    blocks: initialBlocks,
+                    version: initialVersion
+                });
 
                 // --- 上傳相關狀態 ---
                 const pendingUpload = ref(null);      // 存放待上傳的 File 物件
                 const pendingFileUrl = ref(null);     // 存放本地或遠端預覽 URL
                 const pastedUrl = ref('');            // 綁定 URL 輸入框
                 const isUrlReadyForUpload = ref(false); // 控制「確認上傳 URL」按鈕的顯示
+                // 【新增】用於控制「新增圖片」區塊的摺疊狀態，預設為收合
+                const isUploaderCollapsed = ref(true);
 
-                const isCurrentlyActive = ref(currentActiveLayoutId !== 'null' && parseInt(layoutIdState.value) === parseInt(currentActiveLayoutId));
-                const brandName = ref(initialBrandName); // 將 brandName 也變成 ref，雖然它通常不變
-
-                // =====================================================================
                 // 【新增】媒體庫相關的響應式資料
-                // =====================================================================
                 const isMediaLibraryOpen = ref(false);
                 const isLoadingMedia = ref(false);
                 const mediaFiles = ref([]);         // 存放從 API 獲取的原始檔案列表
+                const cardsPerRow = ref(6); // 預設為6
+                const cardInfoField = ref('caption');  // 預設 caption 顯示欄位
+                const blockType = ref(''); // 區塊類型
+                const currentBlockType = ref(''); // 當前區塊類型 (因為會傳入 API 並判斷)
+                const responsiveColClasses = 'col-6 col-sm-4 col-md-3 col-lg-2'; // 12/2 = 6欄
+                // 根據 cardsPerRow 及區塊類型回傳欄位 class
+                const getColClass = () => {
+                    // Banner 時固定每行3張 = col-4 (12/4=3)
+                    if (currentBlockType.value.toLowerCase() === 'banner') {
+                        return 'col-4';
+                    }
+                    // 其他響應式依預設類別
+                    return responsiveColClasses;
+                };
                 const mediaSearchTerm = ref('');      // 綁定搜尋框
                 const selectedMediaFileId = ref(null); // 追蹤被點選的圖片 ID
                 const blockToUpdate = ref(null);      // 記住是哪個區塊觸發了媒體庫
+
+                // =====================================================================
+                // 【問題 2 修正】初始化載入的資料，為其補充前端 UI 狀態
+                // =====================================================================
+                blocks.value.forEach(block => {
+                    // 只處理需要摺疊狀態的區塊
+                    if (block.type === 'Accordion' || block.type === 'Article') {
+                        // 如果從後端來的資料沒有 isImageUploaderOpen 屬性，就給它一個預設值 false
+                        if (block.props.isImageUploaderOpen === undefined) {
+                            block.props.isImageUploaderOpen = false;
+                        }
+                        // 如果從後端來的資料沒有 isContentUploaderOpen 屬性，也給它一個預設值 false
+                        if (block.props.isContentUploaderOpen === undefined) {
+                            block.props.isContentUploaderOpen = false;
+                        }
+                    }
+                });
 
                 // --- 使用 computed 屬性來實現即時搜尋過濾 ---
                 const filteredMediaFiles = computed(() => {
@@ -544,32 +610,59 @@
                 };
 
                 // 輔助函式
-                const generateUniqueId = () => 'xxxxxxxx'.replace(/[x]/g, c => (Math.random() * 16 | 0).toString(16));
-                const addBlock = (type) => {
+                const addBlock = (type, event) => {
                     const newBlock = {
-                        id: 'id-' + Date.now(), // 簡易唯一 ID
+                        id: 'id-' + Date.now()+ Math.floor(Math.random() * 10000), // 唯一 ID
                         type: type,
                         // 將 brandName.value 作為參數傳遞
                         props: createProps(type, brandName.value)
                     };
                     blocks.value.push(newBlock);
                     editingId.value = newBlock.id;
+
+                    // 在新增區塊後，讓被點擊的按鈕失去焦點
+                    if (event && event.target) {
+                        event.target.blur();
+                    }
+
                     nextTick(() => {
                         const container = document.getElementById('layout-blocks-container');
                         if (container) container.scrollTop = container.scrollHeight;
                     });
                 };
                 const handleSwitchChange = (isActive, itemName) => Swal.fire({ toast: true, position: 'center', icon: isActive ? 'success' : 'info', title: `${itemName} 已${isActive ? '啟用' : '停用'}`, showConfirmButton: false, timer: 1500 });
+                // 移除圖片時，清除所有相關狀態
                 const removeBlockImage = (block) => {
-                    block.props.imgId = null;
-                    block.props.fileId = null;
-                    block.props.fileUrl = null;
+                    // 1. 清除 Vue 實例中的所有暫存狀態
                     pendingUpload.value = null;
                     pendingFileUrl.value = null;
-                    block.props.imageAltText = '';
-                    block.props.imageCaption = '';
-                    Swal.fire('圖片已移除', '請點擊儲存以確認變更。', 'info');
-                };
+                    pastedUrl.value = '';
+                    isUrlReadyForUpload.value = false;
+
+                    // 2. 清除 block 本身的圖片數據
+                    block.props.fileUrl = null;
+                    if (block.type === 'Banner') {
+                        block.props.fileId = null;
+                    } else {
+                        block.props.imgId = null;
+                    }
+
+                    // 3. 嘗試清空 <input type="file"> 的值
+                    // 這是瀏覽器允許的最佳實踐
+                    const fileInput = document.querySelector(`#file-upload-${block.id}`);
+                    if (fileInput) {
+                        fileInput.value = '';
+                    }
+
+                    // 【核心修正】改用 toast 提示
+                    Swal.fire({
+                        toast: true,
+                        position: 'center',
+                        icon: 'info',
+                        title: '圖片已移除',
+                        showConfirmButton: false,
+                        timer: 1500 // 顯示 1.5 秒後自動消失
+                    });                };
                 const removeBlock = (id) => {
                     Swal.fire({ title: '確定移除此區塊嗎？', icon: 'warning', showCancelButton: true, confirmButtonText: '確定移除' })
                         .then((result) => {
@@ -581,10 +674,38 @@
                         });
                 };
                 const toggleEdit = (id) => editingId.value = editingId.value === id ? null : id;
-                const goToVersions = () => {
-                    if (typeof loadLayoutEditor === 'function') {
-                        const indexUrl = '@Url.Action("GetLayoutVersions", "Brands", new { area = "SUP", id = "__ID__" })'.replace('__ID__', brandId);
-                        loadLayoutEditor(indexUrl, `版本管理：${brandName}`);
+                // 返回版本列表的函式
+                const goToVersions = (event) => {
+                    const performReturn = () => {
+                        // 將呼叫包在 setTimeout 中，以打破同步銷毀鏈
+                        setTimeout(() => {
+                            reloadVersionIndex(brandId);
+                        }, 0);
+                    };
+
+                    // 如果表單已被修改，彈出確認框
+                    if (isDirty.value) {
+                        Swal.fire({
+                            title: '您有未儲存的變更',
+                            text: "確定要放棄編輯嗎？",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: '放棄變更',
+                            cancelButtonText: '繼續編輯'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                performReturn(); // 使用者確認放棄
+                            } else if (result.isDismissed) {
+                                // 移除按鈕的焦點
+                                if (event && event.target) {
+                                    event.target.blur();
+                                }
+                            }
+                        });
+                    } else {
+                        performReturn(); // 表單未被修改，直接返回
                     }
                 };
 
@@ -606,16 +727,46 @@
                     return null;
                 };
 
+                tinymce.triggerSave(); // 此時 cleanBlocks 應該已含最新 props.content
                 // 儲存版面配置
                 const saveLayout = async () => {
                     if (!layoutVersion.value) { Swal.fire('錯誤', '請輸入版型版本號。', 'warning'); return; }
                     const validationError = validateBlocks(blocks.value);
                     if (validationError) { Swal.fire('驗證失敗', validationError, 'warning'); return; }
 
+                    // ==========================================================
+                    // 【修正】在前端進行版本號唯一性驗證
+                    // ==========================================================
+                    const isEditing = layoutIdState.value && layoutIdState.value !== 'null';
+                    const currentVersion = layoutVersion.value;
+
+                    if (isEditing) {
+                        // 編輯模式：只有在版本號被修改時，才需要檢查是否與「其他」版本衝突
+                        if (currentVersion !== initialVersion) {
+                            const otherVersions = existingVersions.filter(v => v !== initialVersion);
+                            if (otherVersions.includes(currentVersion)) {
+                                Swal.fire('儲存失敗', `版本號 '${currentVersion}' 已被其他版本使用，請更換。`, 'error');
+                                return;
+                            }
+                        }
+                    } else {
+                        // 新增模式：檢查版本號是否已存在
+                        if (existingVersions.includes(currentVersion)) {
+                            Swal.fire('儲存失敗', `版本號 '${currentVersion}' 已存在，請使用不同的版本號。`, 'error');
+                            return;
+                        }
+                    }
+
+                    // 【核心修正】在儲存之前，強制所有 TinyMCE 實例將其內容
+                    // 同步回它們綁定的 <textarea>，這會觸發 Vue 的 v-model 更新。
+                    tinymce.triggerSave();
+
                     isSaving.value = true;
                     try {
+                        // 數據淨化
                         const cleanBlocks = blocks.value.map(b => ({
-                            id: b.id, type: b.type,
+                            id: b.id, 
+                            type: b.type,
                             props: {
                                 contentId: b.props.contentId || 0, isActive: b.props.isActive,
                                 contentTitle: b.props.contentTitle, content: b.props.content,
@@ -627,6 +778,7 @@
 
                         const payload = {
                             BrandId: brandId,
+                            // 保證編輯模式傳 LayoutId
                             LayoutId: layoutIdState.value !== 'null' ? parseInt(layoutIdState.value) : null,
                             LayoutVersion: layoutVersion.value,
                             FullLayoutJson: cleanBlocks,
@@ -635,35 +787,67 @@
                         const resJson = await apiService.saveLayout(payload);
                         layoutIdState.value = resJson.layoutId.toString();
 
+                        // ✅ 修正版：直接比對回傳值的 IsActive 狀態
+                        isCurrentlyActive.value = !!resJson.isActive; // 後端回傳是否啟用的布林欄位
+
+                        // 如果正在編輯一個「已啟用」的版本
                         if (isCurrentlyActive.value) {
-                            await Swal.fire('儲存成功！', "此版本已是當前啟用狀態，變更已生效。", 'success');
-                            if (typeof reloadVersionIndex === 'function') reloadVersionIndex(brandId);
-                        } else {
-                            const result = await Swal.fire({ title: '儲存成功！', text: "是否要立即啟用此版本？", icon: 'success', showCancelButton: true, confirmButtonText: '立即啟用', cancelButtonText: '稍後再說' });
-                            if (result.isConfirmed) {
-                                const activateResult = await apiService.activateLayout(resJson.layoutId);
-                                await Swal.fire('啟用成功', activateResult.message, 'success');
-                            }
-                            if (typeof reloadVersionIndex === 'function') reloadVersionIndex(brandId);
+                            await Swal.fire('儲存成功！', '當前啟用中版本的已儲存變更。', 'success');
                         }
+                        // 如果正在編輯一個「未啟用」的版本，或正在「新增」版本
+                        else {
+                            const result = await Swal.fire({
+                                title: '儲存成功！',
+                                text: "是否要立即啟用此版本？",
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonText: '立即啟用',
+                                cancelButtonText: '稍後再說'
+                            });
+
+                            if (result.isConfirmed) {
+                                await apiService.activateLayout(resJson.layoutId);
+                                await Swal.fire('啟用成功', '新版本已儲存並在前台生效。', 'success');
+                            }
+                        }
+
+                        // 無論結果如何，都重新載入版本列表
+                        reloadVersionIndex(brandId);
+
                     } catch (error) {
                         const errorHtml = error.message || (error.errors ? `<ul>${Object.values(error.errors).flat().map(e => `<li>${e}</li>`).join('')}</ul>` : '儲存時發生未預期錯誤。');
                         Swal.fire({ title: '儲存失敗', html: errorHtml, icon: 'error' });
                     } finally {
                         isSaving.value = false;
+                        // 無論成功或失敗，都移除當前焦點
+                        if (document.activeElement) {
+                            document.activeElement.blur();
+                        }
                     }
                 };
+
+                // 【新增】監聽資料變化，以設定 isDirty 狀態
+                watch([blocks, layoutVersion], (newValue, oldValue) => {
+                    const currentState = JSON.stringify({
+                        blocks: newValue[0],
+                        version: newValue[1]
+                    });
+                    isDirty.value = currentState !== initialStateSnapshot;
+                }, { deep: true }); // deep watch 才能偵測到 blocks 內部的變化
 
                 // =====================================================================
                 // 圖片上傳相關
                 // =====================================================================
                 // 允許的圖片 MIME 類型
-                const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg', 'image/avif', 'image/pjpeg', 'image/ico'];
 
-                // 步驟 1: 選擇檔案，純粹用於本地預覽
+                // 處理本地檔案選擇
                 const handleImageSelection = (event) => {
                     const file = event.target.files[0];
-                    if (!file) return;
+                    if (!file) {
+                        removeBlockImage(null); // 如果使用者取消選擇，也清空狀態
+                        return;
+                    }
 
                     // 1. 執行檔案類型驗證
                     if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
@@ -683,20 +867,6 @@
                         pendingUpload.value = file; // 存放 File 物件，等待確認
                     };
                     reader.readAsDataURL(file);
-                };
-
-                // 按下「預覽 URL 圖片」按鈕時觸發
-                const previewUrlImage = () => {
-                    if (pastedUrl.value && (pastedUrl.value.startsWith('http://') || pastedUrl.value.startsWith('https://'))) {
-                        // 將貼上的 URL 賦值給預覽用的 ref
-                        pendingFileUrl.value = pastedUrl.value;
-                        isUrlReadyForUpload.value = true; // 顯示確認按鈕
-                        // 清除本地檔案的暫存，避免同時顯示兩個確認按鈕
-                        pendingUpload.value = null;
-                    } else {
-                        Swal.fire('錯誤', '請輸入有效的圖片 URL (http:// 或 https:// 開頭)', 'warning');
-                        isUrlReadyForUpload.value = false;
-                    }
                 };
 
                 // --- 統一的確認上傳函式 (本地檔案或URL) ---
@@ -757,7 +927,7 @@
 
                     } catch (error) {
                         const errorMessage = error.message || '上傳失敗，請稍後再試。';
-                        Swal.fire('上傳失敗', errorMessage, 'error');
+                        Swal.fire('上傳失敗', errorMessage, 'error'|| '請稍後再試。', 'error');
                     }
                 };
 
@@ -797,46 +967,115 @@
 
                 // --- 【核心修正】現在只 watch 這個精準的 computed 屬性 ---
                 watch(activeEditorInfo, (newInfo, oldInfo) => {
-                    // 1. 如果之前有 active editor，先銷毀它
+                    // 【核心修正】加入守衛，如果 ID 沒變，就什麼都不做
+                    if (newInfo?.id === oldInfo?.id) {
+                        return; // 打破更新循環！
+                    }
+
+                    // 1. 銷毀舊編輯器
                     if (oldInfo && oldInfo.id) {
+                        // 【語法修正】將 '_' 改為 '+'
                         const editorToDestroy = tinymce.get('editor-' + oldInfo.id);
                         if (editorToDestroy) {
-                            console.log(`銷毀 TinyMCE: #editor-${oldInfo.id}`);
+                            console.log(`銷毀 TinyMCE: #editor-${oldInfo.id}`);                            
+                            const html = editorToDestroy.getContent();
+                            const idx = blocks.value.findIndex(b => b.id === oldInfo.id);
+                            if (idx !== -1) blocks.value[idx].props.content = html;  // 保存離開前的內容
+                            editorToDestroy.save();        // 更新 textarea
+                            tinymce.triggerSave();         // 全域同步
                             editorToDestroy.destroy();
                         }
                     }
 
-                    // 2. 如果現在有新的 active editor，就初始化它
+                    // 2. 初始化新編輯器
                     if (newInfo && newInfo.id) {
-                        // 使用 nextTick 確保 <textarea> 元素已經被 Vue 渲染到 DOM 中
                         nextTick(() => {
+                            // 【語法修正】將 '_' 改為 '+'
                             const editorId = 'editor-' + newInfo.id;
                             console.log(`初始化 TinyMCE: #${editorId}`);
-
                             tinymce.init({
                                 selector: '#' + editorId,
-                                plugins: 'lists link image table code help wordcount',
-                                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
-                                menubar: false,
+                                plugins: 'lists link image table code help wordcount template',
+                                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link table template | code',
+                                menubar: 'file edit view insert format tools table help',
+                                menu: {
+
+                                    insert: { title: 'insert', items: 'link table template | hr' }
+
+                                },
+                                content_css: '@Url.Content("~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css")',
+                                // 3. 定義可用的模板
+                                templates: [
+                                    {
+                                        title: '左右雙欄佈局',
+                                        description: '說明：建立一個響應式的左右分區，用於圖文排版。',
+                                        content: `
+                                            <div class="two-column-container">
+                                                <div class="column">
+                                                    <p>這裡是<strong>左邊</strong>的內容...</p>
+                                                </div>
+                                                <div class="column">
+                                                    <p>這裡是<em>右邊</em>的內容...</p>
+                                                </div>
+                                            </div>
+                                        `
+                                    },
+                                    {
+                                        title: '提示框 (Info Box)',
+                                        description: '說明：插入一個藍色的提示框。',
+                                        content: `
+                                            <div style="border:1px solid #bde5f8; background-color:#f0faff; padding:15px; border-radius:5px;">
+                                                <p>請在此輸入提示內容...</p>
+                                            </div>
+                                            </br>
+                                        `
+                                    }
+                                ],
                                 branding: false,
                                 height: 400,
+                                language: "zh_TW",
                                 setup: function (editor) {
-                                    editor.on('init', () => editor.setContent(newInfo.content));
-                                    editor.on('OpenWindow', () => bootstrap.Modal.getInstance(document.querySelector('#brandLayoutModal'))?._focustrap?.deactivate());
-                                    editor.on('CloseWindow', () => bootstrap.Modal.getInstance(document.querySelector('#brandLayoutModal'))?._focustrap?.activate());
-                                    // 找到對應的 block 並更新其 content
-                                    editor.on('input change', () => {
-                                        const currentBlock = blocks.value.find(b => b.id === newInfo.id);
-                                        if (currentBlock) {
-                                            currentBlock.props.content = editor.getContent();
+                                    // 主選單 showAdvTemplate 註冊
+                                    editor.ui.registry.addMenuItem('showAdvTemplate', {
+                                      text: '插入範例版型',
+                                      onAction: function() { editor.execCommand('mceAdvTemplate'); }
+                                    });
+
+                                    // Bootstrap 焦點修正
+                                    const modalInstance = bootstrap.Modal.getInstance(document.querySelector('#brandLayoutModal'));
+                                    editor.on('focus', () => modalInstance?._focustrap?.deactivate());
+                                    editor.on('blur', () => modalInstance?._focustrap?.activate());
+                                    editor.on('OpenWindow', () => modalInstance?._focustrap?.deactivate());
+                                    editor.on('CloseWindow', () => {
+                                        modalInstance?._focustrap?.activate();
+                                        editor.focus();
+                                    });
+                                    editor.on('Menu', () => modalInstance?._focustrap?.deactivate());
+                                    editor.on('MenuHide', () => {
+                                        modalInstance?._focustrap?.activate();
+                                        editor.focus();
+                                    });
+
+                                    editor.on('change keyup undo redo input', () => {
+                                        const html = editor.getContent();                 // 取當前內容
+                                        const id = newInfo.id;
+                                        const idx = blocks.value.findIndex(b => b.id === id);
+                                        if (idx !== -1) {
+                                            blocks.value[idx].props.content = html;         // 直接回寫到你的來源模型
                                         }
+                                        editor.save();                                    // 同步 textarea
+                                    });
+                                    editor.on('init', () => {
+                                        editor.setContent(newInfo.content || '');
+                                        editor.save();           // 同步回 textarea
+                                        tinymce.triggerSave();   // 確保外層所有編輯器同步
                                     });
                                 }
                             });
                         });
                     }
+                    console.log('已掛載 plugins:', tinymce.PluginManager);
                 });
-
 
                 // =====================================================================
                 // 【新增】媒體庫相關的函式
@@ -846,20 +1085,40 @@
                  * 載入指定資料夾的媒體檔案
                  * @@param {number|null} folderId - 要載入的資料夾 ID，若為 null 則載入根目錄
                  */
-                const loadMediaFiles = async (folderId) => {
+                const loadMediaFiles = async (folderId, blockType) => {
                     isLoadingMedia.value = true;
-                    mediaFiles.value = []; // 先清空
-                    try {
-                        // 【修正】將 folderId 傳遞給 apiService
-                        const result = await apiService.getFolderItems(folderId);
+                    mediaFiles.value = [];
 
-                        if (result && result.data && Array.isArray(result.data.items)) {
-                            // 過濾掉資料夾，只保留檔案
-                            mediaFiles.value = result.data.items.filter(item => !item.isFolder);
-                        }
+                    try {
+                    const url = `/api/assets/folder-items?parentId=${folderId || ''}&blockType=${blockType || ''}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            [csrfHeaderName]: csrfToken,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`媒體庫 API 錯誤: ${response.status} - ${response.statusText}`);
+                        console.error(`錯誤內容: ${errorText}`);
+                        Swal.fire('錯誤', `無法載入媒體庫資料，狀態碼：${response.status}`, 'error');
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    console.log('媒體庫 API 回傳:', result);
+
+                    // 多一層 data，改這裡
+                    mediaFiles.value = result.data?.data?.items?.filter(item => !item.isFolder) || [];
+                    cardsPerRow.value = result.cardsPerRow || 6;
+                    cardInfoField.value = result.cardInfoField || 'caption';
+
                     } catch (error) {
-                        Swal.fire('錯誤', '無法載入媒體庫資料。', 'error');
-                        mediaFiles.value = []; // 載入失敗時清空
+                        console.error('載入媒體庫失敗:', error);
+                        Swal.fire('錯誤', '無法載入媒體庫資料，請查看控制台錯誤資訊。', 'error');
+                        mediaFiles.value = [];
                     } finally {
                         isLoadingMedia.value = false;
                     }
@@ -875,11 +1134,11 @@
 
                     // 【修正】從 FOLDER_ID_MAP 中查找對應的 folderId
                     const folderId = FOLDER_ID_MAP[block.type] || null; // 如果找不到對應，就載入根目錄 (null)
-
-                    console.log(`為區塊 "${block.type}" 打開媒體庫，載入 Folder ID: ${folderId}`);
+                    
+                    console.log(`開啟媒體庫，區塊類型: ${block.type}, Folder ID: ${folderId}`);
 
                     // 呼叫更新後的 loadMediaFiles，並傳入 folderId
-                    await loadMediaFiles(folderId);
+                    await loadMediaFiles(folderId, block.type); // 傳入區塊類型
                 };
 
                 // --- 關閉媒體庫 Modal ---
@@ -895,7 +1154,27 @@
                     selectedMediaFileId.value = file.id;
                 };
 
+                // 使用 watch 監聽 URL 輸入，實現自動預覽和顯示按鈕
+                watch(pastedUrl, (newValue) => {
+                    // 如果 URL 有效
+                    if (newValue && (newValue.startsWith('http://') || newValue.startsWith('https://'))) {
+                        // 清除本地檔案相關狀態
+                        pendingUpload.value = null;
+                        const fileInput = document.querySelector(`input[type=file]`);
+                        if (fileInput) fileInput.value = '';
 
+                        pendingFileUrl.value = newValue; // 設定預覽
+                        isUrlReadyForUpload.value = true; // 顯示確認按鈕
+                    }
+                    // 如果 URL 被清空或無效
+                    else {
+                        isUrlReadyForUpload.value = false;
+                        // 只有在沒有本地檔案預覽的情況下，才清空預覽區
+                        if (!pendingUpload.value) {
+                            pendingFileUrl.value = null;
+                        }
+                    }
+                });
 
                 // --- 確認選擇 ---
                 const confirmMediaSelection = () => {
@@ -928,29 +1207,52 @@
                 onMounted(() => initSortable());
 
                 return {
-                    blocks, editingId, isSaving, layoutVersion, isCurrentlyActive,
-                    addBlock, removeBlock, toggleEdit, goToVersions, saveLayout,
-                    handleSwitchChange, removeBlockImage, brandName,
+                    // --- 核心狀態 (Core State) ---
+                    blocks,
+                    editingId,
+                    isSaving,
+                    layoutVersion,
+                    brandName,
+                    isDirty,
+                    isCurrentlyActive,
+                    cardInfoField,
 
-                    // 媒體庫相關功能
+                    // --- 核心方法 (Core Methods) ---
+                    addBlock,
+                    removeBlock,
+                    toggleEdit,
+                    saveLayout,
+                    goToVersions,
+                    handleSwitchChange,
+
+                    // --- 圖片上傳狀態 (Uploader State) ---
                     pendingUpload,
                     pendingFileUrl,
                     pastedUrl,
                     isUrlReadyForUpload,
+                    isUploaderCollapsed,
+
+                    // --- 圖片上傳方法 (Uploader Methods) ---
                     handleImageSelection,
-                    previewUrlImage,
                     handleUpload,
+                    removeBlockImage,
+                    updateImageMeta,
+                    insertImageIntoEditor,
+
+                    // --- 媒體庫狀態 (Media Library State) ---
                     isMediaLibraryOpen,
                     isLoadingMedia,
                     mediaSearchTerm,
                     filteredMediaFiles,
                     selectedMediaFileId,
+                    mediaFiles,
+
+                    // --- 媒體庫方法 (Media Library Methods) ---
+                    getColClass,
                     openMediaBrowser,
                     closeMediaBrowser,
                     selectMediaFile,
                     confirmMediaSelection,
-                    updateImageMeta,
-                    loadMediaFiles
                 };
             }
         };
@@ -958,10 +1260,12 @@
         // Vue App 掛載
         const appElement = document.getElementById('brand-layout-editor-app');
         if (appElement) {
-             // 【核心修正點】將新建立的 Vue 實例賦值給全域的 window.currentLayoutVueApp
-             // 這樣父層的 AJAX 函式才能找到並卸載它
-             window.currentLayoutVueApp = createApp(App).mount('#brand-layout-editor-app');
-             console.log("新的 Vue 實例已建立並掛載。");
+            // ✅ 改成分開兩步
+            const app = createApp(App);
+            window.currentLayoutVueApp = app; // 保存 app 物件（而非 mount 回傳值）
+            app.mount('#brand-layout-editor-app');
+            console.log("新的 Vue 實例已建立並掛載。");
+
         } else {
             console.error("Vue 掛載失敗：找不到 DOM 元素 #brand-layout-editor-app");
         }

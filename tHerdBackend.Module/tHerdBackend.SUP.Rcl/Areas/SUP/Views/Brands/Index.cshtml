@@ -881,7 +881,7 @@
                             if (selectedValue === 'blank') {
                                 // 選擇「建立空白版本」
                                 url = `@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", fromScratch = true })`.replace('__ID__', brandId);
-                                title = `新增版面 (空白)：${brandName}`;
+                                title = `新增版面 (空白)：${brandName}(${brandId})`;
                             } else {
                                 // 【核心修正點】從 versions 陣列中找到對應的版本號
                                 const selectedVersion = versions.find(v => v.layoutId == selectedValue);
@@ -913,7 +913,7 @@
                 let url = layoutEditUrl.replace('__ID__', brandId).replace('__LAYOUTID__', layoutId);
 
                 // loadLayoutEditor(url, `編輯版本 (品牌名稱：${brandName}、版本ID：${layoutId})`);
-                loadLayoutEditor(url, `編輯版本`);
+                loadLayoutEditor(url, `編輯版本 (品牌ID：${brandId}、品牌名稱：${brandName})`);
             });
 
             // 3. 啟用按鈕 (PATCH)
@@ -972,7 +972,7 @@
                 });
             });
 
-            // 4. 刪除按鈕 (DELETE/軟刪除)
+            // 4. 刪除/停用按鈕 (DELETE/軟刪除)
             $('#brandLayoutModalContent').on('click', '.delete-btn', function() {
                 const layoutId = $(this).data('layout-id');
                 const brandId = getCurrentBrandIdFromModal();
@@ -981,11 +981,11 @@
                 const url = `/SUP/Brands/layouts/${layoutId}`; 
 
                 Swal.fire({
-                    title: `確定移除 Layout (ID: ${layoutId}) 嗎？`,
-                    text: "此操作將軟刪除此版本紀錄。",
+                    title: `確定停用 Layout (ID: ${layoutId}) 嗎？`,
+                    text: "此操作將停用此版本紀錄。",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: '確定移除',
+                    confirmButtonText: '確定停用',
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -996,17 +996,17 @@
                             },
                             success: function(data) {
                                 if (data.success) {
-                                    Swal.fire('移除成功', data.message, 'success').then(() => {
+                                    Swal.fire('停用成功', data.message, 'success').then(() => {
                                         // 重新載入版本列表頁面
                                         reloadVersionIndex(brandId);
                                     });
                                 } else {
-                                    Swal.fire('移除失敗', data.message, 'error');
+                                    Swal.fire('停用失敗', data.message, 'error');
                                 }
                             },
                             error: function(jqXHR) {
-                                console.error("❌ DELETE 錯誤:", jqXHR.status, jqXHR.responseText);
-                                Swal.fire('伺服器錯誤', '移除操作失敗。', 'error');
+                                console.error("❌ 停用錯誤:", jqXHR.status, jqXHR.responseText);
+                                Swal.fire('伺服器錯誤', '停用操作失敗。', 'error');
                             }
                         });
                     }
@@ -1043,6 +1043,7 @@
 
                 // ... (其他事件) ...
             });
+
         });
 
 
@@ -1244,23 +1245,66 @@
         }
 
 
-        // 輔助函式：載入 Partial View 到 Modal 中
+        /**
+         * 透過 AJAX 載入 Partial View 到 Modal 中，並妥善處理 Vue 實例的生命週期。
+         * 這是解決所有 AJAX 內容替換問題的核心函式。
+         * @@param {string} url - 要載入的 Partial View URL
+         * @@param {string} title - 要顯示在 Modal 標題的文字
+         */
         function loadLayoutEditor(url, title) {
-            const isEditor = url.includes('EditLayout'); // 簡單判斷是否為編輯器頁面
-            $("#brandLayoutModalTitle").text(title);
+            const $modalContent = $('#brandLayoutModalContent');
+            const $modalTitle = $('#brandLayoutModalTitle');
+            const isEditor = url.includes('EditLayout');
 
-            // 【核心修正】控制全屏按鈕的顯示/隱藏
-            if (isEditor) {
-                $('#toggleFullscreenBtn').show();
-            } else {
-                $('#toggleFullscreenBtn').hide();
+            // 1. 設定 Modal 的靜態部分 (標題、切換編輯器大小按鈕)
+            $modalTitle.text(title);
+            $('#toggleFullscreenBtn').toggle(isEditor); // .toggle(boolean) 是 .show()/.hide() 的簡寫
+
+            // 2. 【核心修正】在發起新請求「之前」，先同步卸載舊的 Vue 實例。
+            // 這是解決 "Identifier has already been declared" 錯誤的關鍵步驟。
+            if (window.currentLayoutVueApp) {
+                try {
+                    console.log("偵測到舊的 Vue 實例，立即卸載...");
+                    window.currentLayoutVueApp.unmount();
+                    window.currentLayoutVueApp = null; // 徹底清除引用
+                    console.log("舊的 Vue 實例已成功卸載。");
+                } catch (e) {
+                    console.error("卸載舊 Vue 實例時發生錯誤:", e);
+                    window.currentLayoutVueApp = null; // 即使出錯也要清除引用
+                }
             }
 
-            $.get(url).done(function(html) {
-                $('#brandLayoutModalContent').html(html);
-                // 注意：這裡不需要手動呼叫 initLayoutEditor，因為 Vue 腳本在 HTML 內
-            }).fail(function() {
-                Swal.fire('載入失敗', '無法載入目標頁面。', 'error');
+            // 3. 顯示讀取中動畫，提供即時反饋
+            $modalContent.html('<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">載入中...</span></div></div>');
+
+            // 4. 使用更穩健的 $.ajax 方法發起請求
+            $.ajax({
+                url: url,
+                type: 'GET',
+                cache: false, // 禁用瀏覽器快取，確保每次都獲取最新內容
+                success: function (html) {
+                    // 5. 在一個乾淨的環境中注入新的 HTML 內容。
+                    // jQuery 會自動執行其中的 <script> 標籤。
+                    $modalContent.html(html);
+
+                    // 6. 載入後管理焦點，提升使用者體驗
+                    setTimeout(() => {
+                        if (isEditor) {
+                            // 如果是編輯器頁面，自動聚焦到「版號」輸入框
+                            const $versionInput = $modalContent.find('input[type="text"]').first();
+                            $versionInput.focus();
+                        } else {
+                            // 如果是版本列表，移除按鈕的焦點框
+                            $(document.activeElement).blur();
+                        }
+                    }, 100); // 稍微延遲以確保 Vue 完成渲染
+                },
+                error: function (xhr) {
+                    // 7. 優雅地處理載入失敗的情況
+                    const errorMsg = `<div class="alert alert-danger m-3">載入失敗: ${xhr.status} ${xhr.statusText}</div>`;
+                    $modalContent.html(errorMsg);
+                    Swal.fire('載入失敗', '無法載入目標頁面，請檢查網路連線或聯繫管理員。', 'error');
+                }
             });
         }
         // 獲取當前 Modal 內容中隱藏欄位的 Brand ID
