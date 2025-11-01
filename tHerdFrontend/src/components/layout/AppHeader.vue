@@ -140,6 +140,7 @@
 import { Dropdown } from 'bootstrap'
 export default {
   name: 'AppHeader',
+
   data() {
     return {
       searchQuery: '',
@@ -171,12 +172,14 @@ export default {
   
   methods: {
   handleSearch() {
-    if (this.searchQuery.trim()) {
-      this.$router.push({
-        name: 'search',
-        query: { q: this.searchQuery },
-      });
-    }
+    // 🔹 不帶參數，直接導向 ProductMainSearch 頁面
+    this.$router.push({ name: 'product-main-search' });
+    // if (this.searchQuery.trim()) {
+    //   this.$router.push({
+    //     name: 'search',
+    //     query: { q: this.searchQuery },
+    //   });
+    // }
   },
   goToCart() {
     this.$router.push('/cart'); 

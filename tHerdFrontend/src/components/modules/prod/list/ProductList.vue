@@ -1,6 +1,6 @@
 <!--
   ProductList.vue - 產品列表組件
-  功能：展示產品列表，包含標題、查看全部按鈕和產品卡片網格
+  功能：展示產品列表，包含查詢條件和產品卡片網格
   特色：響應式網格布局、事件傳遞、可配置標題
   用途：用於首頁、產品頁面等需要展示多個產品的區域
 -->
@@ -8,12 +8,6 @@
   <!-- 產品列表區塊容器 -->
   <section class="products-section py-5 bg-light">
     <div class="container">
-      <!-- 標題和查看全部按鈕 -->
-      <div class="d-flex justify-content-between align-items-center mb-5">
-        <h2>{{ title }}</h2>
-        <a href="#" class="btn btn-outline-primary">{{ viewAllText }}</a>
-        <p>共 {{ products.length }} 筆商品</p>
-      </div>
       <!-- 產品卡片網格 -->
       <!-- 若有資料才顯示 -->
       <div v-if="products && products.length > 0" class="row g-4">
@@ -88,6 +82,22 @@
             >最後一頁</a>
           </li>
         </ul>
+
+        <!-- 🔹 新增：跳至指定頁 -->
+        <div class="d-flex justify-content-center align-items-center gap-2">
+          <span class="text-muted">跳至第</span>
+          <input
+            v-model.number="jumpPageInput"
+            type="number"
+            class="form-control form-control-sm"
+            style="width: 80px"
+            min="1"
+            :max="totalPages"
+            @keyup.enter="jumpToPage"
+          />
+          <span class="text-muted">頁</span>
+          <button class="btn btn-sm btn-primary" @click="jumpToPage">Go</button>
+        </div>
       </nav>
     </div>
   </section>
@@ -141,6 +151,7 @@ export default {
   data() {
     return {
       currentPage: this.pageIndex,
+      jumpPageInput: '', // 🔹 新增：用於跳頁輸入框
     }
   },
 
@@ -204,6 +215,17 @@ export default {
       if (page < 1 || page > this.totalPages) return
       this.currentPage = page
       this.$emit('page-change', page)
+    },
+
+    // 🔹 新增：跳頁邏輯
+    jumpToPage() {
+      const page = Number(this.jumpPageInput)
+      if (!page || page < 1 || page > this.totalPages) {
+        alert(`請輸入 1 到 ${this.totalPages} 之間的頁碼`)
+        return
+      }
+      this.changePage(page)
+      this.jumpPageInput = ''
     },
   },
 }
