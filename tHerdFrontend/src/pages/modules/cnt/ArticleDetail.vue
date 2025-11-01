@@ -112,14 +112,14 @@
     <div v-if="article.tags && article.tags.length" class="mt-4 pt-3 border-top">
       <h5 class="main-color-green-text mb-2">相關標籤</h5>
       <div class="d-flex flex-wrap gap-2">
-        <router-link
-          v-for="tag in article.tags"
-          :key="tag"
-          :to="{ name: 'cnt-articles', query: { tag: tag } }"
-          class="badge bg-light main-color-green-text text-decoration-none p-2"
-        >
-          # {{ tag }}
-        </router-link>
+      <router-link
+        v-for="t in article.tags"
+        :key="t.tagId"
+        :to="{ name: 'cnt-tag-products', params: { tagId: t.tagId } }"
+        class="badge bg-light main-color-green-text text-decoration-none p-2"
+      >
+        # {{ t.tagName }}
+      </router-link>
       </div>
     </div>
 
@@ -129,10 +129,33 @@
       <div class="row g-3">
         <div class="col-12 col-md-6 col-lg-4" v-for="p in recommended" :key="p.pageId">
           <div class="card h-100 shadow-sm">
-            <img :src="p.coverImage" class="card-img-top" :alt="p.title" />
             <div class="card-body d-flex flex-column">
-              <h6 class="mb-2 main-color-green-text">{{ p.title }}</h6>
-              <div class="mt-auto">
+
+              <!-- 類別 Badge -->
+              <div class="mb-2 text-start">
+                <span
+                  v-if="p.categoryName"
+                  class="badge rounded-pill bg-light main-color-green-text"
+                  style="border:1px solid rgba(0,128,0,.2); font-size:.8rem; font-weight:500;"
+                >
+                  {{ p.categoryName }}
+                </span>
+              </div>
+
+              <!-- 標題 -->
+              <h5 class="mb-2 main-color-green-text fw-bold" style="line-height:1.4;">
+                {{ p.title }}
+              </h5>
+
+              <!-- 摘要 / 前幾行 -->
+              <p class="text-muted flex-grow-1" style="line-height:1.6;">
+                {{ p.excerpt }}
+              </p>
+
+              <!-- 日期 + 閱讀更多 -->
+              <div class="d-flex justify-content-between align-items-end mt-3">
+                <small class="text-muted">{{ formatDate(p.publishedDate) }}</small>
+
                 <router-link
                   :to="{ name: 'cnt-article-detail', params: { id: p.pageId }, query: { scroll: 'body' } }"
                   class="btn btn-sm teal-reflect-button text-white"
@@ -140,6 +163,7 @@
                   閱讀更多 →
                 </router-link>
               </div>
+
             </div>
           </div>
         </div>
@@ -154,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed, onBeforeUnmount } from "vue";
+import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getArticleDetail, getArticleList } from "./api/cntService";
 
@@ -164,17 +188,17 @@ const article = ref(null);
 const blocks = ref([]);
 const canViewFullContent = ref(true); // 後端控制
 const contentRef = ref(null);
-
+// 推薦文章
+const recommended = ref([]);
 // TOC 狀態
 const toc = ref({ open: false, headings: [], activeId: null });
 let observer = null;
 
-// 推薦文章
-const recommended = ref([]);
-
 // === 全域導覽列偏移控制 ===
 let currentNavbarOffset = 80;
 const STICKY_EXTRA = 10; // h2/h3 的 sticky 額外間距，需與 CSS 的 +10px 一致
+
+
 function getNavbarOffset() {
   const nav = document.querySelector(".navbar.fixed-top, header.fixed-top, nav.fixed-top");
   if (nav) {
@@ -237,14 +261,11 @@ function handleResize() {
 }
 window.addEventListener("resize", handleResize);
 
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", handleResize);
-});
-
+// lifecycle：抓文章、建 TOC、啟動 stickyAssist
 let disposeSticky = null; //加一個變數來接收清理函式，並統一清理
 // ==== lifecycle ====
 onMounted(async () => {
-  // 只在本頁動態載入 Bootstrap Icons
+  // 只要負責載入 icon
   const existing = document.head.querySelector('link[href*="bootstrap-icons"]');
   if (!existing) {
     const link = document.createElement("link");
@@ -253,34 +274,26 @@ onMounted(async () => {
     document.head.appendChild(link);
   }
 
-  const pageId = route.params.id;
-  const res = await getArticleDetail(pageId);
-  if (res) {
-    canViewFullContent.value = res.canViewFullContent ?? true;
-    if (res.data) {
-      article.value = res.data;
-      blocks.value = Array.isArray(res.data.blocks) ? res.data.blocks : [];
-    }
-  }
-  
-  await nextTick();
-
-  // ✅ 若從列表/首頁帶入 scroll=body，進入就捲到正文
-  if (route.query.scroll === "body") {
-    setTimeout(() => {
-      scrollToWithOffset("article-top", 0); // ← 改這行：鎖在標題區塊
-    }, 300);
-  }
-  buildHeadings();
-  await loadRecommended();
-  syncNavbarCssVar();       // 進頁就把 --navbar-height 設準
-  disposeSticky = setupStickyAssist(); // 啟用並保存清理函式
+  // 然後交給 loadPage() 做真正的載入與定位
+  await loadPage();
 });
+
+
+// ⭐ 監聽 URL 上的文章 id 變了沒
+watch(
+  () => route.params.id,
+  async () => {
+    await loadPage();
+  }
+);
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", handleResize);
+
   if (observer) observer.disconnect();
-  if (disposeSticky) disposeSticky();    // ✅ 這裡統一清理 sticky 相關監聽
+  if (disposeSticky) disposeSticky();
 });
+
 
 // ==== computed（付費遮罩時顯示部分內容）====
 const displayBlocks = computed(() => {
@@ -540,25 +553,114 @@ function toggleToc() {
 // 推薦文章：同分類 + 第一個 tag
 async function loadRecommended() {
   try {
-    const cat = article.value?.categoryName || "";
-    const tag = (article.value?.tags || [])[0] || "";
-    const keyword = tag || cat || "";
-    const res = await getArticleList({ q: keyword, page: 1, pageSize: 10 });
-    let pool = (res.items || []).map(wireToCamel).filter((x) => x.pageId !== article.value?.pageId);
-    let pick = pool.filter((x) => x.categoryName === cat);
-    if (pick.length < 3 && tag) {
-      pick = pick.concat(pool.filter((x) => (x.tags || []).includes(tag) && !pick.find((p) => p.pageId === x.pageId)));
+    // 從目前文章抓一些線索
+    const catName = article.value?.categoryName || "";
+    const firstTagName = article.value?.tags?.[0]?.tagName || "";
+
+    // 我們要嘗試使用的搜尋關鍵字（優先用第一個標籤）
+    let keyword = firstTagName || catName || "";
+
+    // 步驟1：用 keyword 去抓候選文章
+    let res = await getArticleList({
+      q: keyword || undefined,
+      page: 1,
+      pageSize: 10
+    });
+
+    let pool = (res.items || [])
+      .map(wireToCamel)
+      .filter(x => x.pageId !== article.value?.pageId);
+
+    // 如果第一輪抓不到任何東西，就退而求其次：抓「不過濾的熱門/最新」
+    if (!pool.length) {
+      const fallbackRes = await getArticleList({
+        // 不帶 q，請求一批最常用列表 (你的後端應該是預設排序：最新 / 熱門)
+        page: 1,
+        pageSize: 10
+      });
+
+      pool = (fallbackRes.items || [])
+        .map(wireToCamel)
+        .filter(x => x.pageId !== article.value?.pageId);
     }
-    if (pick.length < 3) {
-      for (const x of pool) {
-        if (!pick.find((p) => p.pageId === x.pageId)) pick.push(x);
-        if (pick.length >= 3) break;
+
+    // 現在 pool 是候選，我們來排序一下，盡量放相關的在前面
+    const pick = [];
+    for (const x of pool) {
+      // 先塞「同分類」或「包含同標籤名稱的」
+      const sameCat = catName && x.categoryName === catName;
+      const sameTag =
+        firstTagName &&
+        Array.isArray(x.tags) &&
+        x.tags.includes(firstTagName);
+
+      if (sameCat || sameTag) {
+        pick.push(x);
       }
+      if (pick.length >= 3) break;
     }
+
+    // 如果還不夠 3 篇，拿 pool 其他的來補滿
+    for (const x of pool) {
+      if (pick.find(p => p.pageId === x.pageId)) continue;
+      pick.push(x);
+      if (pick.length >= 3) break;
+    }
+
     recommended.value = pick.slice(0, 3);
-  } catch {
+  } catch (err) {
+    console.warn("loadRecommended() 失敗", err);
     recommended.value = [];
   }
+}
+
+// 👇 新增這個：把整個載入流程包成一個可重複呼叫的函式
+async function loadPage() {
+  // 1. 如果上一篇文章已經裝過 sticky 監聽，要先拆掉，避免越疊越多
+  if (disposeSticky) {
+    disposeSticky();
+    disposeSticky = null;
+  }
+
+  // 2. 抓目前的 pageId
+  const pageId = route.params.id;
+
+  // 3. 從後端拿文章詳情
+  const res = await getArticleDetail(pageId);
+  if (res) {
+    canViewFullContent.value = res.canViewFullContent ?? true;
+    if (res.data) {
+      article.value = res.data;
+      blocks.value = Array.isArray(res.data.blocks) ? res.data.blocks : [];
+    }
+  }
+
+  // 4. 等 DOM 真的畫出來 (h2/h3、richtext…)
+  await nextTick();
+
+  // 5. 如果 query 帶 scroll=body，就往正文/標題區捲
+  if (route.query.scroll === "body") {
+    setTimeout(() => {
+      // 你檔案裡現在用的是 "article-top" 當目標錨點，這行沿用
+      scrollToWithOffset("article-top", 0);
+    }, 300);
+  } else {
+    // 如果沒有 scroll=body，通常是你從推薦文章跳過來
+    // 這時候我們至少應該把畫面捲回頁首，避免還卡在舊文章中段
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  // 6. 重建 TOC 標題們 (h2/h3)
+  buildHeadings();
+
+  // 7. 重新抓推薦文章 (它會用 article.value 的分類/標籤去推別篇)
+  await loadRecommended();
+
+  // 8. 同步 navbar 高度到 CSS 變數，讓 sticky 正常
+  syncNavbarCssVar();
+
+  // 9. 最後重新啟動 stickyAssist (h2/h3 貼頂 + TOC 高亮)
+  disposeSticky = setupStickyAssist();
 }
 
 function slugify(s) {
