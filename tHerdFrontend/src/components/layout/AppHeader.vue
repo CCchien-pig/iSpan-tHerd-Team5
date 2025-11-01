@@ -60,7 +60,7 @@
             </ul>
           </div>
           <!-- 訂單 -->
-          <button class="btn btn-md position-relative main-color-green">
+          <button class="btn btn-md position-relative main-color-green" @click="goToOrders">
             <i class="bi bi-bag main-color-white-text"></i>
             <span class="main-color-white-text ms-1">訂單</span>
           </button>
@@ -127,7 +127,7 @@
               {{ cartCount }}
             </span>
           </button>
-          <button class="btn btn-md w-100 main-color-green text-start">
+          <button class="btn btn-md w-100 main-color-green text-start" @click="goToOrders">
             <i class="bi bi-bag me-2"></i> 訂單
           </button>
         </div>
@@ -181,7 +181,10 @@ export default {
   goToCart() {
     this.$router.push('/cart'); 
   },
-},
+  goToOrders() {
+  this.$router.push('/orders');
+  }
+}
 };
 </script>
 
