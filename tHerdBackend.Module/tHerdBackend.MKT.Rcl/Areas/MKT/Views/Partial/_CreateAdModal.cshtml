@@ -1,4 +1,5 @@
-﻿<div class="modal fade" id="createAdModal" tabindex="-1">
+﻿<!-- ✅ Create Ad Modal -->
+<div class="modal fade" id="createAdModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-teal text-white">
@@ -8,6 +9,8 @@
 
             <div class="modal-body">
                 <form id="createAdForm">
+                    @Html.AntiForgeryToken()
+
                     <!-- 廣告種類 -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">廣告種類</label>
@@ -27,7 +30,19 @@
                     <!-- 內容 -->
                     <div class="mb-3" id="contentField">
                         <label class="form-label fw-bold">內容</label>
-                        <textarea class="form-control" name="Content" rows="3"></textarea>
+                        <textarea class="form-control" name="Content" id="adContent" rows="3"></textarea>
+                    </div>
+
+                    <!-- 開始日期（必填） -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">開始日期</label>
+                        <input type="date" class="form-control" name="StartDate" id="startDateInput" required />
+                    </div>
+
+                    <!-- 結束日期（可留空） -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">結束日期</label>
+                        <input type="date" class="form-control" name="EndDate" id="endDateInput" />
                     </div>
 
                     <!-- 按鈕文字 -->
@@ -53,6 +68,11 @@
                         <img id="adImagePreview" class="img-fluid mt-2 d-none border rounded" style="max-height:200px;" />
                     </div>
 
+                    <!-- 預設值暫存（不會被提交） -->
+                    <input type="hidden" id="hiddenContentDefault" value="這是預設內容" />
+                    <input type="hidden" id="hiddenButtonTextDefault" value="了解更多" />
+                    <input type="hidden" id="hiddenButtonLinkDefault" value="/shop" />
+
                     <div class="text-end">
                         <button type="submit" class="btn btn-teal">儲存</button>
                     </div>
@@ -63,60 +83,139 @@
 </div>
 
 <script>
-    // 🧠 根據 AdType 動態控制欄位
+    // === 🧠 動態欄位控制 ===
     function updateAdFields() {
-      const type = $('#adTypeSelect').val();
+        const type = $('#adTypeSelect').val();
 
-      $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
+        $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
 
-      if (type === 'Popup') {
-        $('#contentField, #buttonTextField, #buttonLinkField').hide();
-        $('[name="ButtonText"]').val('了解更多');
-        $('[name="ButtonLink"]').val('/shop');
-      } else if (type === 'Marquee') {
-        $('#imageField, #buttonTextField, #buttonLinkField').hide();
-        $('[name="ButtonText"]').val('');
-        $('[name="ButtonLink"]').val('');
-      }
+        const $btnText = $('[name="ButtonText"]');
+        const $btnLink = $('[name="ButtonLink"]');
+        const $content = $('#adContent');
+
+        if (type === 'Popup') {
+            $('#contentField, #buttonTextField, #buttonLinkField').hide();
+            $btnText.val('了解更多');
+            $btnLink.val('#');
+            $content.val('');
+        } else if (type === 'Marquee') {
+            $('#imageField, #buttonTextField, #buttonLinkField').hide();
+            $btnText.val('');
+            $btnLink.val('');
+            if (!$content.val()) $content.val('最新活動快訊');
+        } else if (type === 'Carousel') {
+            $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
+            if (!$content.val()) $content.val('主打活動優惠內容');
+        }
     }
 
     $('#adTypeSelect').on('change', updateAdFields);
     updateAdFields();
 
-    // ☁️ 圖片上傳
+    // === ☁️ 圖片上傳 ===
     $('#btnUploadToCloud').on('click', async () => {
-      const fileInput = $('#adImageUpload')[0];
-      if (!fileInput.files.length) return Swal.fire('請選擇圖片！');
-      const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
+        const fileInput = $('#adImageUpload')[0];
+        if (!fileInput.files.length)
+            return Swal.fire('請選擇圖片！');
 
-      Swal.fire({ title: '上傳中...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      const res = await fetch('/MKT/Ads/UploadToCloud', { method: 'POST', body: formData });
-      const result = await res.json();
-      Swal.close();
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
 
-      if (result.success && result.data && result.data.data) {
-        const file = result.data.data[0];
-        $('#ImgId').val(file.FileId);
-        $('#adImagePreview').attr('src', file.FileUrl).removeClass('d-none');
-        Swal.fire({ icon: 'success', title: '上傳成功', timer: 1000, showConfirmButton: false });
-      } else {
-        Swal.fire({ icon: 'error', title: '上傳失敗', text: result.message });
-      }
+        Swal.fire({
+            title: '上傳中...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const res = await fetch('/MKT/Ads/UploadToCloud', { method: 'POST', body: formData });
+            const result = await res.json();
+            Swal.close();
+
+            if (result.success) {
+                $('#ImgId').val(result.fileId);
+                $('#adImagePreview').attr('src', result.fileUrl).removeClass('d-none');
+                Swal.fire({ icon: 'success', title: '上傳成功', timer: 1200, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', title: '上傳失敗', text: result.message || '未知錯誤' });
+            }
+        } catch (err) {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: '伺服器錯誤', text: err.message });
+        }
     });
 
-    // 💾 儲存表單
+    // === 💾 儲存表單 ===
     $('#createAdForm').on('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const res = await fetch('/MKT/Ads/Create', { method: 'POST', body: formData });
-      const result = await res.json();
+        e.preventDefault();
 
-      if (result.success) {
-        Swal.fire({ icon: 'success', title: '廣告已新增' });
-        $('#createAdModal').modal('hide');
-      } else {
-        Swal.fire({ icon: 'error', title: '錯誤', text: result.message });
-      }
+        const formData = new FormData(e.target);
+        const startDateStr = $('#startDateInput').val();
+        const endDateStr = $('#endDateInput').val();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 🧩 檢查開始日期
+        if (!startDateStr) {
+            Swal.fire({ icon: 'warning', title: '開始日期未填寫', text: '請選擇廣告的開始日期！' });
+            return;
+        }
+
+        const startDate = new Date(startDateStr);
+        const endDate = endDateStr ? new Date(endDateStr) : null;
+
+        if (startDate < today) {
+            Swal.fire({
+                icon: 'warning',
+                title: '開始日期無效',
+                text: '開始日期不得早於今天！'
+            });
+            return;
+        }
+
+        // 🧩 檢查結束日期
+        if (endDate && endDate < startDate) {
+            Swal.fire({
+                icon: 'warning',
+                title: '結束日期無效',
+                text: '結束日期不可早於開始日期！'
+            });
+            return;
+        }
+
+        if (!endDate) formData.delete('EndDate');
+
+        if ($('#contentField').is(':hidden') && !formData.get('Content')) {
+            formData.set('Content', $('#hiddenContentDefault').val());
+        }
+        if ($('#buttonTextField').is(':hidden') && !formData.get('ButtonText')) {
+            formData.set('ButtonText', $('#hiddenButtonTextDefault').val());
+        }
+        if ($('#buttonLinkField').is(':hidden') && !formData.get('ButtonLink')) {
+            formData.set('ButtonLink', $('#hiddenButtonLinkDefault').val());
+        }
+
+        try {
+            const res = await fetch('/MKT/Ads/Create', { method: 'POST', body: formData });
+            const result = await res.json();
+
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: '廣告已新增', timer: 1200, showConfirmButton: false });
+                $('#createAdModal').modal('hide');
+
+                // ✅ 刷新日曆與廣告總數
+                if (window.calendar && typeof window.calendar.refetchEvents === 'function') {
+                    window.calendar.refetchEvents();
+                }
+                if (typeof window.updateAdCount === 'function') {
+                    window.updateAdCount();
+                }
+            } else {
+                Swal.fire({ icon: 'error', title: '錯誤', text: result.message });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: '伺服器錯誤', text: err.message });
+        }
     });
 </script>
