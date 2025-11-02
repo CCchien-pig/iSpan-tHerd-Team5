@@ -8,6 +8,10 @@
       <h5 class="mb-2">步驟 1：設定驗證器</h5>
       <div v-if="busySetup" class="text-muted">載入中…</div>
       <div v-else>
+        <!-- ★ 新增：QR Code 圖片 -->
+        <div v-if="qrDataUrl" class="mb-2">
+          <img :src="qrDataUrl" alt="Authenticator QR" style="width:220px;height:220px;border:1px solid #eee;border-radius:8px;padding:6px;background:#fff" />
+        </div>
         <div class="mb-2">
           <div class="small text-muted">金鑰（如無法掃 QR 可手動輸入）：</div>
           <code class="fs-5">{{ sharedKey || '—' }}</code>
@@ -42,8 +46,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref,nextTick  } from 'vue'
 import { http } from '@/api/http'
+import QRCode from 'qrcode'
 
 const busySetup = ref(true)
 const busyEnable = ref(false)
@@ -51,10 +56,33 @@ const busyDisable = ref(false)
 const sharedKey = ref('')
 const authenticatorUri = ref('')
 const issuerHint = 'tHerd' // 與後端 issuer 保持一致
+const qrDataUrl = ref('') 
 const code = ref('')
 const msg = ref('')
 const isErr = ref(false)
 const recoveryCodes = ref([])
+
+async function genQr () {          // ★ 新增：把 otpauth URI 轉成 QR data URL
+  if (!authenticatorUri.value) {
+    qrDataUrl.value = ''
+    return
+  }
+  // 等 DOM 稍微穩定（非必要，但較穩），再產圖
+  await nextTick()
+  qrDataUrl.value = await QRCode.toDataURL(authenticatorUri.value, {
+    width: 220,    // 你可以調整
+    margin: 1,
+    errorCorrectionLevel: 'M'
+  })
+}
+
+async function refreshMeDetailBadge() {
+  try {
+    const { data } = await http.get('/user/me/detail')
+    // 若你想即時同步到側欄，可以透過全域 store 或 event bus 告知；
+    // 簡化作法：當前頁面顯示提示即可，側欄下次進頁或刷新會自己抓。
+  } catch {}
+}
 
 async function loadSetup() {
   busySetup.value = true
@@ -62,6 +90,7 @@ async function loadSetup() {
     const { data } = await http.get('/auth/2fa/setup')
     sharedKey.value = data.sharedKey || ''
     authenticatorUri.value = data.authenticatorUri || ''
+    await genQr() //★ 新增：載到 otpauth 後立刻產 QR
   } catch (e) {
     msg.value = '讀取設定資料失敗，請稍後再試'
     isErr.value = true
@@ -78,6 +107,7 @@ async function enable2fa() {
     const { data } = await http.post('/auth/2fa/enable', { code: code.value })
     recoveryCodes.value = data.recoveryCodes || []
     msg.value = '已成功啟用 2FA！請妥善保存復原碼。'
+    await refreshMeDetailBadge() // 可選
   } catch (e) {
     msg.value = e?.response?.data?.error || '啟用失敗，請確認驗證碼或稍後再試'
     isErr.value = true
@@ -92,8 +122,8 @@ async function disable2fa() {
   try {
     await http.post('/auth/2fa/disable')
     msg.value = '已停用 2FA。'
-    // 重新取一次 setup，方便重新啟用
     await loadSetup()
+    await refreshMeDetailBadge() // 可選
   } catch (e) {
     msg.value = e?.response?.data?.error || '停用失敗，請稍後再試'
     isErr.value = true

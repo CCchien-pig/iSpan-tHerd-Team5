@@ -117,6 +117,27 @@
         </router-link>
       </div>
 
+      <!-- 2FA 驗證碼區塊（僅在 requiresTwoFactor 時顯示） -->
+<div v-if="show2fa" class="card p-3 mt-3 border-warning">
+  <h5 class="mb-2">需要兩步驗證</h5>
+  <div class="d-flex gap-2 align-items-center">
+    <input
+      class="form-control"
+      v-model.trim="twoFactorCode"
+      maxlength="6"
+      placeholder="輸入 6 位數驗證碼"
+      style="max-width:180px"
+      :disabled="busy2fa"
+    />
+    <button class="btn btn-warning" :disabled="busy2fa || twoFactorCode.length!==6" @click="doLogin2FA">
+      {{ busy2fa ? '驗證中…' : '送出驗證碼' }}
+    </button>
+    <button class="btn btn-link ms-auto" type="button" @click="cancel2fa" :disabled="busy2fa">返回重新輸入</button>
+  </div>
+  <div class="form-text mt-1">請打開你的驗證器 App（Google Authenticator / 1Password / Microsoft Authenticator）。</div>
+</div>
+
+
       <!-- 需要幫助？ -->
       <div class="text-center my-3">
         <i class="bi bi-question-circle me-1"></i>
@@ -164,10 +185,14 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { http } from '@/api/http' 
 
 const RECAPTCHA_SITE_KEY = document.querySelector('meta[name="recaptcha-site-key"]')?.getAttribute('content') ?? ''
 const RECAPTCHA_SRC = 'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
 const KEEP_SIGNED_IN_TIP = '保持登錄狀態以加快操作。若為共用裝置，請勿勾選此選項。'
+
+const FRONT_CALLBACK = '/user/login/callback'  // ★ 沿用你外登/信箱驗證成功時用的 callback
+const DEFAULT_REDIRECT = '/'                   // ★ 成功後預設轉回首頁（或從 query.redirect 來）
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -188,17 +213,26 @@ const resendBusy = ref(false)
 const resendMsg = ref('')
 const unlockAtText = ref('') // 顯示鎖定解除時間（本地）
 
+
+
 // reCAPTCHA v2
 const recaptchaBox = ref(null)
 let recaptchaWidgetId = null
 const recaptchaToken = ref('')
+
+// ✅ 2FA 相關狀態
+const show2fa = ref(false)
+const busy2fa = ref(false)
+const twoFactorCode = ref('')
+let twoFactorSession = ''  // 從 /auth/login 回來的暫時 session token
 
 const canSubmit = computed(() => {
   return (
     email.value.length > 3 &&
     password.value.length >= 8 &&
     !!recaptchaToken.value &&
-    !busy.value
+    !busy.value&&
+    !show2fa.value // ← 若已進入 2FA，就不允許再按第一階段「登入」
   )
 })
 
@@ -310,6 +344,19 @@ function setFriendlyError(e) {
   }
 }
 
+function gotoCallbackAndFinish(tokenBundle) {
+  const back = (route.query.redirect && String(route.query.redirect)) || DEFAULT_REDIRECT
+  const url =
+    `${FRONT_CALLBACK}` +
+    `?token=${encodeURIComponent(tokenBundle.accessToken)}` +
+    `&refresh=${encodeURIComponent(tokenBundle.refreshToken)}` +
+    `&exp=${encodeURIComponent(tokenBundle.accessExpiresAt || tokenBundle.accessExpiresUtc || '')}` +
+    `&rememberMe=${rememberMe.value ? '1' : '0'}` +
+    `&redirect=${encodeURIComponent(back)}`
+  window.location.href = url
+}
+
+// ✅ 第一步：帳密登入 → 可能收到 requiresTwoFactor
 async function doLogin() {
   errMsg.value = ''
   recaptchaErr.value = ''
@@ -324,26 +371,81 @@ async function doLogin() {
 
   busy.value = true
   try {
-    await auth.login(email.value, password.value, {
+    // ★ 改為直接打 API，因為需要分支處理 requiresTwoFactor
+    const { data } = await http.post('/auth/login', {
+      email: email.value,
+      password: password.value,
       rememberMe: rememberMe.value,
       recaptchaToken: recaptchaToken.value,
       recaptchaVersion: 'v2'
     })
-    const back = (route.query.redirect && String(route.query.redirect)) || '/'
-    router.replace(back)
+
+    // 分支一：需要 2FA
+    if (data?.requiresTwoFactor) {
+      show2fa.value = true
+      twoFactorSession = data.twoFactorSession || ''
+      twoFactorCode.value = ''
+      // 進入 2FA 後，建議立即重置 reCAPTCHA（避免 user 回上一階段時 token 過期）
+      resetRecaptcha()
+      return
+    }
+
+    // 分支二：直接回 token → 用既有 callback 寫 localStorage，保持一致
+    if (data?.accessToken && data?.refreshToken) {
+      gotoCallbackAndFinish(data)
+      return
+    }
+
+    // 其他情況（防呆）
+    errMsg.value = data?.error || '登入回應格式不正確'
   } catch (e) {
-    setFriendlyError(e)
+    setFriendlyError(e)  // 你的友善錯誤處理
     resetRecaptcha()
   } finally {
     busy.value = false
   }
 }
 
+// ✅ 第二步：提交 6 碼 → 取得 token 後導向 callback
+async function doLogin2FA() {
+  if (!twoFactorSession || twoFactorCode.value.length !== 6) return
+  busy2fa.value = true
+  errMsg.value = ''
+  try {
+    const { data } = await http.post('/auth/login-2fa', {
+      code: twoFactorCode.value,
+      twoFactorSession
+    })
+    if (data?.accessToken && data?.refreshToken) {
+      gotoCallbackAndFinish(data)
+      return
+    }
+    errMsg.value = data?.error || '兩步驗證回應格式不正確'
+  } catch (e) {
+    // 2FA 常見錯誤：代碼錯誤/過期
+    const msg =
+      e?.response?.data?.error ||
+      e?.response?.data?.message ||
+      '兩步驗證失敗，請確認驗證碼'
+    errMsg.value = msg
+  } finally {
+    busy2fa.value = false
+  }
+}
+
+// ✅ 取消 2FA，回到第一階段（讓使用者能重打帳密或改信箱）
+function cancel2fa() {
+  show2fa.value = false
+  busy2fa.value = false
+  twoFactorCode.value = ''
+  twoFactorSession = ''
+  // 回到第一階段 → 重新要一次 reCAPTCHA
+  resetRecaptcha()
+}
+
 onMounted(async () => {
-  // 若上個頁面傳來 email（例如註冊後導到登入頁）
   const preset = route.query.email && String(route.query.email)
   if (preset) email.value = preset
-
   try {
     await loadRecaptchaV2()
     renderRecaptcha()

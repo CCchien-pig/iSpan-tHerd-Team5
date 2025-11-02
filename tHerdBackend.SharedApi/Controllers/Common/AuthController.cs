@@ -6,9 +6,12 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Net.Sockets;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
@@ -27,6 +30,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		private readonly IReferralCodeGenerator _refGen;
 		private readonly IConfiguration _cfg;
 		private readonly IEmailSender _email;
+		private readonly IDistributedCache _cache;
 
 		public AuthController(
 			SignInManager<ApplicationUser> signInMgr,
@@ -35,7 +39,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			IRefreshTokenService refreshSvc,
 			IReferralCodeGenerator refGen,
 			IConfiguration cfg,
-			IEmailSender email)
+			IEmailSender email,
+			IDistributedCache cache)
 
 		{
 			_signInMgr = signInMgr;
@@ -45,7 +50,35 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			_refGen = refGen;
 			_cfg = cfg;
 			_email = email;
+			_cache = cache;
 		}
+
+		public record TwoFactorSessionPayload(string UserId, bool RememberMe, DateTime CreatedUtc);
+
+		private static string TwoFaCacheKey(string sessionId) => $"2fa:session:{sessionId}";
+
+		private async Task<string> CreateTwoFaSessionAsync(string userId, bool rememberMe)
+		{
+			var sessionId = Guid.NewGuid().ToString("N");
+			var payload = new TwoFactorSessionPayload(userId, rememberMe, DateTime.UtcNow);
+			var json = JsonSerializer.Serialize(payload);
+			var options = new DistributedCacheEntryOptions
+			{
+				AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+			};
+			await _cache.SetStringAsync(TwoFaCacheKey(sessionId), json, options);
+			return sessionId;
+		}
+
+		private async Task<TwoFactorSessionPayload?> ReadTwoFaSessionAsync(string sessionId)
+		{
+			var json = await _cache.GetStringAsync(TwoFaCacheKey(sessionId));
+			if (string.IsNullOrEmpty(json)) return null;
+			return JsonSerializer.Deserialize<TwoFactorSessionPayload>(json);
+		}
+
+		private Task DeleteTwoFaSessionAsync(string sessionId)
+			=> _cache.RemoveAsync(TwoFaCacheKey(sessionId));
 
 		[AllowAnonymous]
 		[HttpGet("ExternalLogin")]
@@ -166,7 +199,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 		[AllowAnonymous]
 		[HttpPost("login")]
-		public async Task<IActionResult> Login([FromBody] LoginDto dto, [FromServices] IHttpClientFactory httpClientFactory, IConfiguration cfg)
+		public async Task<IActionResult> Login([FromBody] LoginDto dto,
+	[FromServices] IHttpClientFactory httpClientFactory, IConfiguration cfg)
 		{
 			if (string.IsNullOrWhiteSpace(dto?.Email) || string.IsNullOrWhiteSpace(dto?.Password))
 				return BadRequest(new { error_code = "missing_fields", message = "請輸入帳號與密碼" });
@@ -175,17 +209,28 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			if (user == null || !user.IsActive)
 				return Unauthorized(new { error_code = "not_found_or_inactive", message = "帳號不存在或已停用" });
 
-			// 先做密碼驗證（會自動計數與鎖定）
-			var signIn = await _signInMgr.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
-			if (signIn.RequiresTwoFactor)
+			// ---- 建議：先驗 recaptcha ----
+			var secret = cfg["Recaptcha:Secret"];
+			using (var http = httpClientFactory.CreateClient())
 			{
-				return Unauthorized(new { error_code = "mfa_required", mfaUserId = user.Id });
+				var content = new FormUrlEncodedContent(new Dictionary<string, string>
+				{
+					["secret"] = secret,
+					["response"] = dto.RecaptchaToken
+				});
+				var resp = await http.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
+				var json = await resp.Content.ReadFromJsonAsync<RecaptchaVerifyResponse>();
+				if (json is null || !json.success)
+					return BadRequest(new { error_code = "recaptcha_failed", message = "reCAPTCHA 驗證失敗" });
 			}
+
+			// ---- 驗密碼（會計數與鎖定）----
+			var signIn = await _signInMgr.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
 
 			if (signIn.IsLockedOut)
 			{
 				var lockoutEnd = await _userMgr.GetLockoutEndDateAsync(user); // UTC
-				Response.Headers["Retry-After"] = TimeSpan.FromMinutes(1).TotalSeconds.ToString("0"); // 你的鎖定時間可動態換算
+				Response.Headers["Retry-After"] = TimeSpan.FromMinutes(1).TotalSeconds.ToString("0");
 				return StatusCode(StatusCodes.Status423Locked, new
 				{
 					error_code = "account_locked",
@@ -194,9 +239,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 				});
 			}
 
-			if (signIn.IsNotAllowed) // 通常是 RequireConfirmedEmail = true 未驗證
+			if (signIn.IsNotAllowed)
 			{
-				// 這裡提供重寄驗證信的 API，讓前端出一顆「重寄驗證信」按鈕（自行實作 /auth/resend-confirm）
 				var resendUrl = Url.ActionLink(nameof(ResendConfirmEmail), "Auth", new { email = user.Email }, Request.Scheme, Request.Host.ToString());
 				return Unauthorized(new
 				{
@@ -208,33 +252,29 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 			if (!signIn.Succeeded)
 			{
-				// 計算剩餘嘗試次數（顯示友善提醒）
-				var max = _signInMgr.Options.Lockout.MaxFailedAccessAttempts; // 你在 Program.cs 設的 5
-																			  // 注意：CheckPasswordSignInAsync 已經「+1」了，所以這裡用 user.AccessFailedCount 直接算剩餘
+				var max = _signInMgr.Options.Lockout.MaxFailedAccessAttempts;
 				var remaining = Math.Max(0, max - user.AccessFailedCount);
 				return Unauthorized(new
 				{
 					error_code = "bad_credentials",
 					message = "帳號或密碼錯誤",
-					remainingAttempts = remaining // 例：還可以嘗試 N 次（再錯就鎖）
+					remainingAttempts = remaining
 				});
 			}
 
-			// ---- 到這邊才核 recaptcha（你原邏輯保留）----
-			var secret = cfg["Recaptcha:Secret"];
-			using var http = httpClientFactory.CreateClient();
-			var content = new FormUrlEncodedContent(new Dictionary<string, string>
+			// ★ 密碼正確 → 需要 2FA？
+			if (signIn.RequiresTwoFactor || user.TwoFactorEnabled)
 			{
-				["secret"] = secret,
-				["response"] = dto.RecaptchaToken
-			});
-			var resp = await http.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
-			var json = await resp.Content.ReadFromJsonAsync<RecaptchaVerifyResponse>();
+				// 建立臨時 twoFactorSession（保存 userId 與 rememberMe）
+				var sessionId = await CreateTwoFaSessionAsync(user.Id, dto.RememberMe);
+				return Ok(new
+				{
+					requiresTwoFactor = true,
+					twoFactorSession = sessionId
+				});
+			}
 
-			if (json is null || !json.success)
-				return BadRequest(new { error_code = "recaptcha_failed", message = "reCAPTCHA 驗證失敗", hint = "請重新整理網頁後再嘗試" });
-
-			// ---- 成功發 Token ----
+			// ---- 不需要 2FA → 直接發 token ----
 			var roles = await _userMgr.GetRolesAsync(user);
 			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
 			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
@@ -254,6 +294,55 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 				}
 			});
 		}
+
+		public record Login2FaDto(string TwoFactorSession, string Code);
+
+		[AllowAnonymous]
+		[HttpPost("login-2fa")]
+		public async Task<IActionResult> Login2Fa([FromBody] Login2FaDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto?.TwoFactorSession) || string.IsNullOrWhiteSpace(dto.Code))
+				return BadRequest(new { error = "缺少 twoFactorSession 或 code" });
+
+			var sess = await ReadTwoFaSessionAsync(dto.TwoFactorSession);
+			if (sess is null)
+				return Unauthorized(new { error = "2FA 會話已失效或不存在" });
+
+			var user = await _userMgr.FindByIdAsync(sess.UserId);
+			if (user == null || !user.IsActive)
+				return Unauthorized(new { error = "帳號不存在或已停用" });
+
+			var code = dto.Code.Replace(" ", "").Replace("-", "");
+			var valid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
+			if (!valid)
+				return BadRequest(new { error = "驗證碼錯誤或已過期" });
+
+			// （可選）成功後重置密碼失敗次數
+			await _userMgr.ResetAccessFailedCountAsync(user);
+
+			var roles = await _userMgr.GetRolesAsync(user);
+			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+
+			// 用完即丟，避免重放
+			await DeleteTwoFaSessionAsync(dto.TwoFactorSession);
+
+			return Ok(new
+			{
+				accessToken,
+				accessExpiresAt = accessExpiresUtc,
+				refreshToken = refreshPlain,
+				user = new
+				{
+					id = user.Id,
+					email = user.Email,
+					name = $"{user.LastName}{user.FirstName}",
+					userNumberId = user.UserNumberId,
+					roles
+				}
+			});
+		}
+
 
 
 		public class RefreshDto { public string? RefreshToken { get; set; } }
@@ -557,9 +646,9 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			{
 				await _userMgr.ResetAuthenticatorKeyAsync(user);
 				key = await _userMgr.GetAuthenticatorKeyAsync(user);
-				var secret = Uri.EscapeDataString(key);
+				
 			}
-
+			var secret = Uri.EscapeDataString(key);
 			var email = user.Email ?? user.UserName ?? user.Id;
 			var issuer = "tHerd"; // 與前端 issuerHint 一致
 			string uri = $"otpauth://totp/{UrlEncoder.Default.Encode(issuer)}:{UrlEncoder.Default.Encode(email)}?secret={secret}&issuer={UrlEncoder.Default.Encode(issuer)}&digits=6";
@@ -598,43 +687,43 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 		public record TwoFaVerifyDto(string userIdOrEmail, string code, bool rememberMe);
 
-		[AllowAnonymous]
-		[HttpPost("2fa/verify")]
-		public async Task<IActionResult> TwoFaVerify([FromBody] TwoFaVerifyDto dto)
-		{
-			if (string.IsNullOrWhiteSpace(dto?.userIdOrEmail) || string.IsNullOrWhiteSpace(dto.code))
-				return BadRequest(new { error = "缺少必要參數" });
+		//[AllowAnonymous]
+		//[HttpPost("2fa/verify")]
+		//public async Task<IActionResult> TwoFaVerify([FromBody] TwoFaVerifyDto dto)
+		//{
+		//	if (string.IsNullOrWhiteSpace(dto?.userIdOrEmail) || string.IsNullOrWhiteSpace(dto.code))
+		//		return BadRequest(new { error = "缺少必要參數" });
 
-			ApplicationUser? user =
-				(await _userMgr.FindByIdAsync(dto.userIdOrEmail)) ??
-				(await _userMgr.FindByEmailAsync(dto.userIdOrEmail));
+		//	ApplicationUser? user =
+		//		(await _userMgr.FindByIdAsync(dto.userIdOrEmail)) ??
+		//		(await _userMgr.FindByEmailAsync(dto.userIdOrEmail));
 
-			if (user == null || !user.IsActive)
-				return Unauthorized(new { error = "帳號不存在或已停用" });
+		//	if (user == null || !user.IsActive)
+		//		return Unauthorized(new { error = "帳號不存在或已停用" });
 
-			var code = dto.code.Replace(" ", "").Replace("-", "");
-			var valid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
-			if (!valid) return Unauthorized(new { error = "驗證碼錯誤" });
+		//	var code = dto.code.Replace(" ", "").Replace("-", "");
+		//	var valid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
+		//	if (!valid) return Unauthorized(new { error = "驗證碼錯誤" });
 
-			var roles = await _userMgr.GetRolesAsync(user);
-			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
-			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+		//	var roles = await _userMgr.GetRolesAsync(user);
+		//	var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+		//	var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
 
-			return Ok(new
-			{
-				accessToken,
-				accessExpiresAt = accessExpiresUtc,
-				refreshToken = refreshPlain,
-				user = new
-				{
-					id = user.Id,
-					email = user.Email,
-					name = $"{user.LastName}{user.FirstName}",
-					userNumberId = user.UserNumberId,
-					roles
-				}
-			});
-		}
+		//	return Ok(new
+		//	{
+		//		accessToken,
+		//		accessExpiresAt = accessExpiresUtc,
+		//		refreshToken = refreshPlain,
+		//		user = new
+		//		{
+		//			id = user.Id,
+		//			email = user.Email,
+		//			name = $"{user.LastName}{user.FirstName}",
+		//			userNumberId = user.UserNumberId,
+		//			roles
+		//		}
+		//	});
+		//}
 
 		// ★ 極低機率碰撞時的唯一性檢查（最多重試 5 次）
 		//    若你的 DB 有 UNIQUE 索引也可在異常時重試一次。

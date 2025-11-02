@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'     // ★ 新增：呼叫 API
 
@@ -86,10 +86,8 @@ const badges = reactive({
   passkeys: false,
 })
 
-this.onMounted(async () => {
+onMounted(async () => {
   try {
-    // 建議你後端提供 /api/user/me/detail 回 ApplicationUser 主要欄位
-    // 若暫時沒有，就先呼叫 /api/auth/me（然後再補一支 /user/me/detail 取 TwoFactorEnabled）
     const { data } = await http.get('/user/me/detail') // 需回傳 { twoFactorEnabled: bool } 或 TwoFactorEnabled 欄位
     badges.twostep = !!(data.twoFactorEnabled ?? data.TwoFactorEnabled)
   } catch {

@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
@@ -103,7 +105,9 @@ namespace tHerdBackend.SharedApi
 				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 			});
 			//關閉預設 Claims 映射
-			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+			//System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+			JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+			JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
 			// JWT Authentication
 			builder.Services.AddAuthentication(options =>
 			{
@@ -113,20 +117,28 @@ namespace tHerdBackend.SharedApi
 			})
 			.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+				options.MapInboundClaims = false; // 不要把標準 JWT claim 亂映射
+
+				var cfg = builder.Configuration.GetSection("Jwt");
+				var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(cfg["SigningKey"]!));
+				options.TokenValidationParameters = new TokenValidationParameters
                 { // 設定驗證參數
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
+					ValidateIssuerSigningKey = true,
+					IssuerSigningKey = key,
+
+					ValidateIssuer = true,
+					ValidIssuer = cfg["Issuer"],      // 必須 = 你簽 token 的 Issuer（tHerdBackend.AuthServer）
+
+					ValidateAudience = true,
+					ValidAudience = cfg["Audience"],  // 必須 = 你簽 token 的 Audience（tHerdFrontend.WebClient）
+
+					ValidateLifetime = true,
+					ClockSkew = TimeSpan.Zero,
+
+					// 對齊你簽的 claims：role 用 "role"，使用者識別用 "sub"
 					RoleClaimType = "role",
-					NameClaimType = "name",
-					ClockSkew = TimeSpan.FromMinutes(1),
-					ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                    ValidAudience = builder.Configuration["Jwt:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SigningKey"] ?? string.Empty))
-                };
+					NameClaimType = "sub"
+				};
                 options.Events = new JwtBearerEvents // 自訂未授權回應，避免 401 回 HTML
                 {
                     OnChallenge = context =>
@@ -135,8 +147,20 @@ namespace tHerdBackend.SharedApi
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                         context.Response.ContentType = "application/json";
                         return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
-                    }
-                };
+                    },
+
+					OnTokenValidated = ctx =>
+					{
+						var id = ctx.Principal?.Identities.FirstOrDefault();
+						if (id is not null && !id.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
+						{
+							var sub = id.FindFirst("sub")?.Value;
+							if (!string.IsNullOrEmpty(sub))
+								id.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub));
+						}
+						return Task.CompletedTask;
+					}
+				};
 				
 
 				//除錯用
