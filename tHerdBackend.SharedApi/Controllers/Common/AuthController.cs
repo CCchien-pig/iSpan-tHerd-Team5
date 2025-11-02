@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
@@ -175,6 +177,10 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 			// 先做密碼驗證（會自動計數與鎖定）
 			var signIn = await _signInMgr.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
+			if (signIn.RequiresTwoFactor)
+			{
+				return Unauthorized(new { error_code = "mfa_required", mfaUserId = user.Id });
+			}
 
 			if (signIn.IsLockedOut)
 			{
@@ -402,23 +408,24 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 		[AllowAnonymous]
 		[HttpGet("confirm-email")]
-		public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+		public async Task<IActionResult> ConfirmEmail(
+	[FromQuery] string userId,
+	[FromQuery] string token,
+	[FromQuery] string? redirect = "/")
 		{
-			if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
-				return BadRequest("缺少必要參數。");
+			// —— 工具函式：只允許相對路徑（避免外站跳轉）——
+			static string SafeRedirect(string? raw)
+				=> !string.IsNullOrWhiteSpace(raw) && raw.StartsWith("/") ? raw : "/";
 
-			var user = await _userMgr.FindByIdAsync(userId);
-			if (user == null) return NotFound("找不到使用者。");
+			// 記錄 rememberMe（支援 1/0/true/false），預設視為 true
+			var remember =
+				string.Equals(Request.Query["rememberMe"], "1", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(Request.Query["rememberMe"], "true", StringComparison.OrdinalIgnoreCase);
+			var rememberStr = remember ? "1" : "0";
 
-			// 還原 token
-			var decoded = WebEncoders.Base64UrlDecode(token);
-			var realToken = Encoding.UTF8.GetString(decoded);
-
-			var result = await _userMgr.ConfirmEmailAsync(user, realToken);
-
-			string Html(string title, string bodyHtml, string redirect)
+			// 你原本的落地頁 HTML（保留）
+			string Html(string title, string bodyHtml, string goUrl)
 			{
-				// 2 秒後自動導回；同時提供可點選連結（避免 meta 被阻擋時）
 				return $@"<!doctype html>
 <html lang=""zh-Hant"">
 <head>
@@ -426,7 +433,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
   <meta http-equiv=""X-UA-Compatible"" content=""IE=edge"">
   <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
   <title>{title}</title>
-  <meta http-equiv=""refresh"" content=""2;url={redirect}"">
+  <meta http-equiv=""refresh"" content=""2;url={goUrl}"">
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', 'Helvetica Neue', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif; padding: 40px; color: #333; }}
     .card {{ max-width: 560px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; padding: 24px; box-shadow: 0 6px 16px rgba(0,0,0,.06); }}
@@ -438,16 +445,82 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 <body>
   <div class=""card"">
     {bodyHtml}
-    <p>2 秒後將自動導向：<br><code>{redirect}</code></p>
-    <p><a class=""btn"" href=""{redirect}"">立即前往</a></p>
+    <p>2 秒後將自動導向：<br><code>{goUrl}</code></p>
+    <p><a class=""btn"" href=""{goUrl}"">立即前往</a></p>
   </div>
 </body>
 </html>";
 			}
-			// 驗證完導回前端（個資頁）
-			var front = _cfg["Auth:EmailConfirmRedirect"] ?? "http://localhost:5173/user/me";
-			var url = $"{front}?emailVerified={(result.Succeeded ? "1" : "0")}";
-			return Redirect(url);
+
+			// 前端資訊頁（導轉目標，用於 emailVerified 展示）
+			var frontInfo = _cfg["Auth:EmailConfirmRedirect"] ?? "http://localhost:5173/user/me";
+			// 構成「前端資訊頁 + emailVerified」的完整 URL（給失敗頁自動導轉用）
+			string InfoWithVerified(string v) => $"{frontInfo}?emailVerified={v}";
+
+			// 前端 callback（重用你外登邏輯來收 token）
+			var frontCallback = _cfg["Auth:FrontCallback"] ?? "http://localhost:5173/user/login/callback";
+
+			// 驗參數：失敗則回 HTML 落地頁（保留你現有體驗）
+			if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+			{
+				var html = Html("驗證失敗", "<h1>驗證失敗</h1><p>缺少必要參數。</p>", InfoWithVerified("0"));
+				return Content(html, "text/html; charset=utf-8");
+			}
+
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null)
+			{
+				var html = Html("驗證失敗", "<h1>驗證失敗</h1><p>找不到使用者。</p>", InfoWithVerified("0"));
+				return Content(html, "text/html; charset=utf-8");
+			}
+
+			// 還原 token
+			string realToken;
+			try
+			{
+				var decoded = WebEncoders.Base64UrlDecode(token);
+				realToken = Encoding.UTF8.GetString(decoded);
+			}
+			catch
+			{
+				var html = Html("驗證失敗", "<h1>驗證失敗</h1><p>驗證連結無效或已損毀。</p>", InfoWithVerified("0"));
+				return Content(html, "text/html; charset=utf-8");
+			}
+
+			// 尚未確認才執行確認；已確認視為成功（避免重複點擊造成不友善）
+			if (!user.EmailConfirmed)
+			{
+				var result = await _userMgr.ConfirmEmailAsync(user, realToken);
+				if (!result.Succeeded)
+				{
+					var html = Html("驗證失敗", "<h1>驗證失敗</h1><p>連結無效或已過期，請重新索取驗證信。</p>", InfoWithVerified("0"));
+					return Content(html, "text/html; charset=utf-8");
+				}
+			}
+
+			// ✅ 確認成功 → 簽發 JWT + Refresh，讓前端 callback 儲存後自動導回個資頁
+			var roles = await _userMgr.GetRolesAsync(user);
+			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+
+			// 將 redirect（若寄信時帶了）限制為相對路徑，並附帶 emailVerified=1
+			var safeRedirect = SafeRedirect(redirect);
+			// 在 redirect 後面加上 emailVerified=1（用最簡單方式拼接；若有現成 UrlHelper 可改用）
+			var redirectWithVerify = safeRedirect.Contains("?")
+				? $"{safeRedirect}&emailVerified=1"
+				: $"{safeRedirect}?emailVerified=1";
+
+			// 組 callback URL（前端 UserLoginCallback.vue 會收下並登入，然後 replace 到 redirect）
+			var target =
+				$"{frontCallback}" +
+				$"?token={Uri.EscapeDataString(accessToken)}" +
+				$"&refresh={Uri.EscapeDataString(refreshPlain)}" +
+				$"&exp={Uri.EscapeDataString(accessExpiresUtc.ToString("o"))}" +
+				$"&rememberMe=1" +
+				$"&redirect={Uri.EscapeDataString(redirectWithVerify)}";
+
+			// ↪️ 最終仍「Redirect」到前端 callback（維持你原本的導轉結構，並保留上方的 HTML 失敗頁）
+			return Redirect(target);
 		}
 
 		[AllowAnonymous]
@@ -471,6 +544,97 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			return Ok(new { ok = true });
 		}
 		public record EmailDto(string Email);
+
+		[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+		[HttpGet("2fa/setup")]
+		public async Task<IActionResult> TwoFaSetup()
+		{
+			var user = await _userMgr.GetUserAsync(User);
+			if (user == null) return Unauthorized();
+
+			var key = await _userMgr.GetAuthenticatorKeyAsync(user);
+			if (string.IsNullOrEmpty(key))
+			{
+				await _userMgr.ResetAuthenticatorKeyAsync(user);
+				key = await _userMgr.GetAuthenticatorKeyAsync(user);
+				var secret = Uri.EscapeDataString(key);
+			}
+
+			var email = user.Email ?? user.UserName ?? user.Id;
+			var issuer = "tHerd"; // 與前端 issuerHint 一致
+			string uri = $"otpauth://totp/{UrlEncoder.Default.Encode(issuer)}:{UrlEncoder.Default.Encode(email)}?secret={secret}&issuer={UrlEncoder.Default.Encode(issuer)}&digits=6";
+
+			return Ok(new { sharedKey = key, authenticatorUri = uri });
+		}
+
+		public record TwoFaEnableDto(string Code);
+
+		[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+		[HttpPost("2fa/enable")]
+		public async Task<IActionResult> TwoFaEnable([FromBody] TwoFaEnableDto dto)
+		{
+			var user = await _userMgr.GetUserAsync(User);
+			if (user == null) return Unauthorized();
+			if (string.IsNullOrWhiteSpace(dto?.Code)) return BadRequest(new { error = "請輸入驗證碼" });
+
+			var code = dto.Code.Replace(" ", "").Replace("-", "");
+			var isValid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
+			if (!isValid) return BadRequest(new { error = "驗證碼錯誤，請重試" });
+
+			await _userMgr.SetTwoFactorEnabledAsync(user, true);
+			var recoveryCodes = await _userMgr.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+			return Ok(new { ok = true, recoveryCodes });
+		}
+
+		[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+		[HttpPost("2fa/disable")]
+		public async Task<IActionResult> TwoFaDisable()
+		{
+			var user = await _userMgr.GetUserAsync(User);
+			if (user == null) return Unauthorized();
+			await _userMgr.SetTwoFactorEnabledAsync(user, false);
+			return Ok(new { ok = true });
+		}
+
+		public record TwoFaVerifyDto(string userIdOrEmail, string code, bool rememberMe);
+
+		[AllowAnonymous]
+		[HttpPost("2fa/verify")]
+		public async Task<IActionResult> TwoFaVerify([FromBody] TwoFaVerifyDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto?.userIdOrEmail) || string.IsNullOrWhiteSpace(dto.code))
+				return BadRequest(new { error = "缺少必要參數" });
+
+			ApplicationUser? user =
+				(await _userMgr.FindByIdAsync(dto.userIdOrEmail)) ??
+				(await _userMgr.FindByEmailAsync(dto.userIdOrEmail));
+
+			if (user == null || !user.IsActive)
+				return Unauthorized(new { error = "帳號不存在或已停用" });
+
+			var code = dto.code.Replace(" ", "").Replace("-", "");
+			var valid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
+			if (!valid) return Unauthorized(new { error = "驗證碼錯誤" });
+
+			var roles = await _userMgr.GetRolesAsync(user);
+			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
+
+			return Ok(new
+			{
+				accessToken,
+				accessExpiresAt = accessExpiresUtc,
+				refreshToken = refreshPlain,
+				user = new
+				{
+					id = user.Id,
+					email = user.Email,
+					name = $"{user.LastName}{user.FirstName}",
+					userNumberId = user.UserNumberId,
+					roles
+				}
+			});
+		}
 
 		// ★ 極低機率碰撞時的唯一性檢查（最多重試 5 次）
 		//    若你的 DB 有 UNIQUE 索引也可在異常時重試一次。

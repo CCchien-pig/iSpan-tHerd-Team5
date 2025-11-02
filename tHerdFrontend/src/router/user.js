@@ -31,4 +31,10 @@ export default [
     name: 'userlogincallback', 
     component: () => import('@/pages/modules/user/UserLoginCallback.vue') 
   },
+  {
+  path: '/user/security/2fa',
+  name: 'twostep',
+  component: () => import('@/pages/modules/user/UserTwoStep.vue'),
+  meta: { requiresAuth: true }
+}
 ];

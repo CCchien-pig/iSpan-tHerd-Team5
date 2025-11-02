@@ -49,7 +49,8 @@
               data-bs-display="static"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
-              <span class="main-color-white-text">登入</span>
+              <span v-if="!isLogin" class="main-color-white-text">登入</span>
+              <span v-if="isLogin" class="main-color-white-text">已登入</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
               <li v-if="!isLogin"><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>

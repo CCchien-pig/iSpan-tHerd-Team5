@@ -87,7 +87,19 @@
       </div>
 
       <!-- 錯誤訊息 -->
-      <div v-if="errMsg" class="alert alert-danger py-2">{{ errMsg }}</div>
+      <div v-if="errMsg" class="alert alert-danger py-2">
+  {{ errMsg }}
+  <div v-if="unlockAtText" class="small text-muted mt-1">{{ unlockAtText }}</div>
+</div>
+
+<!-- ✅ 未驗證信箱時的重寄提示 -->
+<div v-if="canResend" class="alert alert-info py-2">
+  尚未收到驗證信？您可以
+  <button class="btn btn-sm btn-outline-secondary ms-1" :disabled="resendBusy" @click="resendConfirmEmail">
+    {{ resendBusy ? '重寄中…' : '重新寄送驗證信' }}
+  </button>
+  <div v-if="resendMsg" class="small text-muted mt-1">{{ resendMsg }}</div>
+</div>
 
       <!-- 登入按鈕 -->
       <div class="d-grid gap-2">
@@ -153,17 +165,9 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-/**
- * 🔐 reCAPTCHA v2 Checkbox 設定
- * - 請在 .env 設定 VITE_RECAPTCHA_V2_SITE_KEY=你的_site_key
- * - 這裡採「顯式渲染」（explicit），用 grecaptcha.render 顯示核取方塊。
- */
-const RECAPTCHA_SITE_KEY = document.querySelector('meta[name="recaptcha-site-key"]')?.getAttribute('content') ?? '';
-const RECAPTCHA_SRC =
-  'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
-
-const KEEP_SIGNED_IN_TIP =
-  '保持登錄狀態以加快操作。若為共用裝置，請勿勾選此選項。'
+const RECAPTCHA_SITE_KEY = document.querySelector('meta[name="recaptcha-site-key"]')?.getAttribute('content') ?? ''
+const RECAPTCHA_SRC = 'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
+const KEEP_SIGNED_IN_TIP = '保持登錄狀態以加快操作。若為共用裝置，請勿勾選此選項。'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -174,39 +178,41 @@ const password = ref('')
 const rememberMe = ref(true)
 const showPassword = ref(false)
 const busy = ref(false)
+
 const errMsg = ref('')
 const recaptchaErr = ref('')
 
+// ✅ 針對 email 未驗證與鎖定情境的 UI 控制
+const canResend = ref(false)
+const resendBusy = ref(false)
+const resendMsg = ref('')
+const unlockAtText = ref('') // 顯示鎖定解除時間（本地）
+
+// reCAPTCHA v2
 const recaptchaBox = ref(null)
 let recaptchaWidgetId = null
-const recaptchaToken = ref('') // 由 v2 核取方塊回傳
+const recaptchaToken = ref('')
 
 const canSubmit = computed(() => {
   return (
     email.value.length > 3 &&
     password.value.length >= 8 &&
-    !!recaptchaToken.value && // 必須已通過人機驗證
+    !!recaptchaToken.value &&
     !busy.value
   )
 })
 
-/** 動態載入 v2 api.js（只載一次） */
 function loadRecaptchaV2() {
   return new Promise((resolve, reject) => {
     if (window.grecaptcha && window.grecaptcha.render) return resolve(true)
-    if (!RECAPTCHA_SITE_KEY) {
-      return reject(new Error('reCAPTCHA v2 site key 未設定（VITE_RECAPTCHA_V2_SITE_KEY）'))
-    }
+    if (!RECAPTCHA_SITE_KEY) return reject(new Error('reCAPTCHA v2 site key 未設定'))
 
-    // 若已存在同 src 的 script，掛上事件即可
     const existed = document.querySelector(`script[src^="${RECAPTCHA_SRC}"]`)
     if (existed) {
       existed.addEventListener('load', () => resolve(true))
       existed.addEventListener('error', reject)
     } else {
-      // 先把全域 onload callback 掛上
       window.onRecaptchaApiLoaded = () => resolve(true)
-
       const s = document.createElement('script')
       s.src = RECAPTCHA_SRC
       s.async = true
@@ -217,13 +223,12 @@ function loadRecaptchaV2() {
   })
 }
 
-/** 建立 v2 Checkbox 小工具 */
 function renderRecaptcha() {
   if (!window.grecaptcha || !recaptchaBox.value || recaptchaWidgetId !== null) return
   recaptchaWidgetId = window.grecaptcha.render(recaptchaBox.value, {
     sitekey: RECAPTCHA_SITE_KEY,
     theme: 'light',
-    size: 'normal', // 可改 'compact'
+    size: 'normal',
     callback: (token) => {
       recaptchaToken.value = token
       recaptchaErr.value = ''
@@ -239,21 +244,78 @@ function renderRecaptcha() {
   })
 }
 
-/** 失敗或想重來時重置 Checkbox */
 function resetRecaptcha() {
-  if (window.grecaptcha && recaptchaWidgetId !== null) {
-    window.grecaptcha.reset(recaptchaWidgetId)
-  }
+  if (window.grecaptcha && recaptchaWidgetId !== null) window.grecaptcha.reset(recaptchaWidgetId)
   recaptchaToken.value = ''
 }
 
-function toast(msg) {
-  alert(msg)
+function toast(msg) { alert(msg) }
+
+// ✅ 重寄驗證信
+async function resendConfirmEmail() {
+  if (!email.value) return
+  resendBusy.value = true
+  resendMsg.value = ''
+  try {
+    // 對應後端 /api/auth/resend-confirm
+    await fetch('/api/auth/resend-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value })
+    })
+    resendMsg.value = '已重新寄出驗證信，請稍候並再次查看收件匣／垃圾信件匣。'
+  } catch (e) {
+    resendMsg.value = '重寄失敗，請稍後再試'
+  } finally {
+    resendBusy.value = false
+  }
+}
+
+function setFriendlyError(e) {
+  const payload = e?.response?.data || {}
+  const code = payload.error_code
+  const message = payload.message || payload.error
+
+  // 預設訊息
+  errMsg.value = message || '登入失敗，請確認帳號或密碼'
+  canResend.value = false
+  unlockAtText.value = ''
+
+  switch (code) {
+    case 'email_unconfirmed':
+      errMsg.value = '請先完成信箱驗證。'
+      canResend.value = true
+      break
+    case 'account_locked':
+      errMsg.value = '帳號已被鎖定，請稍後再試。'
+      if (payload.unlockAt) {
+        // 轉成本地時間顯示
+        const t = new Date(payload.unlockAt)
+        unlockAtText.value = `預計解除時間：${t.toLocaleString()}`
+      }
+      break
+    case 'bad_credentials':
+      if (typeof payload.remainingAttempts === 'number') {
+        errMsg.value = `帳號或密碼錯誤（剩餘嘗試 ${payload.remainingAttempts} 次）。`
+      } else {
+        errMsg.value = '帳號或密碼錯誤'
+      }
+      break
+    case 'recaptcha_failed':
+      errMsg.value = 'reCAPTCHA 驗證失敗，請重試。'
+      break
+    default:
+      // 沒帶 error_code，保留後端訊息或預設
+      break
+  }
 }
 
 async function doLogin() {
   errMsg.value = ''
   recaptchaErr.value = ''
+  canResend.value = false
+  resendMsg.value = ''
+  unlockAtText.value = ''
 
   if (!recaptchaToken.value) {
     recaptchaErr.value = '請先勾選「我不是機器人」。'
@@ -262,23 +324,15 @@ async function doLogin() {
 
   busy.value = true
   try {
-    // 將 recaptchaToken 一併送到後端驗證（v2 驗證端點）
     await auth.login(email.value, password.value, {
       rememberMe: rememberMe.value,
       recaptchaToken: recaptchaToken.value,
       recaptchaVersion: 'v2'
     })
-
     const back = (route.query.redirect && String(route.query.redirect)) || '/'
     router.replace(back)
   } catch (e) {
-    const msg =
-      (e && e.response && e.response.data && (e.response.data.error || e.response.data.message)) ||
-      (e && e.message) ||
-      '登入失敗，請確認帳號或密碼'
-    errMsg.value = msg
-
-    // 失敗時重置 reCAPTCHA，避免舊 token 重用
+    setFriendlyError(e)
     resetRecaptcha()
   } finally {
     busy.value = false
@@ -286,6 +340,10 @@ async function doLogin() {
 }
 
 onMounted(async () => {
+  // 若上個頁面傳來 email（例如註冊後導到登入頁）
+  const preset = route.query.email && String(route.query.email)
+  if (preset) email.value = preset
+
   try {
     await loadRecaptchaV2()
     renderRecaptcha()
@@ -295,12 +353,13 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  // 清掉全域 onload（避免多次掛上）
   if (window.onRecaptchaApiLoaded) {
     try { delete window.onRecaptchaApiLoaded } catch {}
   }
 })
 </script>
+
+
 
 <style scoped>
 .container {
