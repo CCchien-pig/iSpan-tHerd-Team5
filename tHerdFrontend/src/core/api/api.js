@@ -66,7 +66,7 @@ apiClient.interceptors.response.use(
       console.error('❌ Response Interceptor Error:', err)
     }
 
-    console.log(response)
+    // console.log(response)
 
     // 若沒有 data 屬性，直接回傳原始 response（for mock）
     return response ?? {}

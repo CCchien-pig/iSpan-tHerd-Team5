@@ -40,6 +40,11 @@ public partial class ProdProductIngredient
     /// </summary>
     public int OrderSeq { get; set; }
 
+    /// <summary>
+    /// 原始百分比或文字（如 &quot;50%&quot;, &quot;含少許&quot; 等）
+    /// </summary>
+    public string PercentageText { get; set; }
+
     public virtual ProdIngredient Ingredient { get; set; }
 
     public virtual ProdProduct Product { get; set; }
