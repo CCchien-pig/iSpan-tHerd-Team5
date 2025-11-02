@@ -207,31 +207,94 @@ namespace tHerdBackend.Infra.Repositories.CS
 			ticket.ImgId = fileId;
 			await _db.SaveChangesAsync();
 		}
-		/// <summary>
-		/// /// 取得指定使用者的客服工單清單
-		/// </summary>
-		/// <param name="userId"></param>
-		/// <returns></returns>
-		public async Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId)
-		{
-			return await (
-				from t in _db.CsTickets
-				join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
-				from c in cat.DefaultIfEmpty()
-				where t.UserId == userId // ✅ 關鍵：過濾使用者
-				orderby t.CreatedDate descending
-				select new TicketsDto
-				{
-					TicketId = t.TicketId,
-					Subject = t.Subject,
-					CategoryName = c.CategoryName ?? "未分類",
-					StatusText = t.Status.ToString(),
-					PriorityText = t.Priority.ToString(),
-					CreatedDate = t.CreatedDate
-				}
-			).ToListAsync();
-		}
+        /// <summary>
+        /// /// 取得指定使用者的客服工單清單
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId)
+        {
+            return await (
+                from t in _db.CsTickets
+                join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
+                from c in cat.DefaultIfEmpty()
 
-	}
+                    // 🔹 撈使用者第一則留言（SenderType=1）
+                let firstMsg = _db.CsTicketMessages
+                    .Where(m => m.TicketId == t.TicketId && m.SenderType == 1)
+                    .OrderBy(m => m.CreatedDate)
+                    .Select(m => m.MessageText)
+                    .FirstOrDefault()
+
+                where t.UserId == userId
+                orderby t.CreatedDate descending
+
+                select new TicketsDto
+                {
+                    TicketId = t.TicketId,
+                    Subject = t.Subject,
+                    CategoryName = c.CategoryName ?? "未分類",
+                    // 🔹 狀態轉中文
+                    StatusText = t.Status == 0 ? "未處理" :
+                                 t.Status == 1 ? "處理中" :
+                                 t.Status == 2 ? "已回覆" : "已結案",
+                    PriorityText = t.Priority.ToString(),
+                    CreatedDate = t.CreatedDate,
+                    // 🔹 新增這行：使用者留言文字
+                    UserMessage = firstMsg
+                }
+            ).ToListAsync();
+        }
+		/// <summary>
+		/// 工單詳情
+		/// </summary>
+		/// <param name="ticketId"></param>
+		/// <returns></returns>
+        public async Task<TicketsDto?> GetByIdAsync(int ticketId)
+        {
+            return await (
+                from t in _db.CsTickets
+                join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
+                from c in cat.DefaultIfEmpty()
+                where t.TicketId == ticketId
+                select new TicketsDto
+                {
+                    TicketId = t.TicketId,
+                    Subject = t.Subject,
+                    CategoryName = c.CategoryName ?? "未分類",
+                    StatusText = t.Status == 0 ? "未處理" :
+                                 t.Status == 1 ? "處理中" :
+                                 t.Status == 2 ? "已回覆" : "已結案",
+                    PriorityText = t.Priority.ToString(),
+                    CreatedDate = t.CreatedDate
+                }
+            ).FirstOrDefaultAsync();
+        }
+        public async Task AddMessageAsync(int ticketId, string messageText, int senderType)
+        {
+            var msg = new CsTicketMessage
+            {
+                TicketId = ticketId,
+                SenderType = (byte)senderType,
+                MessageText = messageText,
+                CreatedDate = DateTime.Now
+            };
+            _db.CsTicketMessages.Add(msg);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task UpdateStatusAsync(int ticketId, int newStatus)
+        {
+            var ticket = await _db.CsTickets.FindAsync(ticketId);
+            if (ticket != null)
+            {
+                ticket.Status = newStatus;
+                await _db.SaveChangesAsync();
+            }
+        }
+
+
+
+    }
 }
 

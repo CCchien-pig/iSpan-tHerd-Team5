@@ -93,6 +93,14 @@ namespace tHerdBackend.Services.CS
 		{
 			return await _repo.GetByUserIdAsync(userId);
 		}
+        public async Task AddReplyAsync(int ticketId, string messageText)
+        {
+            // 新增客服留言
+            await _repo.AddMessageAsync(ticketId, messageText, senderType: 0);
 
-	}
+            // 更新工單狀態為已回覆
+            await _repo.UpdateStatusAsync(ticketId, 2);
+        }
+
+    }
 }

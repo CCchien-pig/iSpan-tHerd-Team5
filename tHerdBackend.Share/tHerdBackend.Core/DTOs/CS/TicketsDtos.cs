@@ -13,8 +13,9 @@
 		public DateTime CreatedDate { get; set; }
 		public string? AssigneeName { get; set; } // 之後可 join 員工表顯示客服名稱
 
+        public string? UserMessage { get; set; } //某會員的工單清單（含使用者留言）
 
 
-	}
+    }
 }
 

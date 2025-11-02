@@ -18,6 +18,10 @@
           <small class="text-muted">{{ formatDate(t.createdDate) }}</small>
         </div>
         <p class="text-muted mb-1">分類：{{ t.categoryName || '未分類' }}</p>
+        <p class="text-muted small mt-2">
+  {{ t.userMessage || '（尚無留言內容）' }}
+</p>
+
         <p class="text-muted small">狀態：
           <span class="badge bg-secondary">{{ t.statusText }}</span>
         </p>

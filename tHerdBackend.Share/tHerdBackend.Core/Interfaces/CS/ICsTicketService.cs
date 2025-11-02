@@ -17,6 +17,7 @@ namespace tHerdBackend.Core.Interfaces.CS
 
         /// <summary>取得某會員工單清單</summary>
         Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userNumberId);
+        Task AddReplyAsync(int ticketId, string messageText);
     }
 
 }

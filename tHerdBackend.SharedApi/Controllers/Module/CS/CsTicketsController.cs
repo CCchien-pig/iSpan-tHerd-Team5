@@ -60,6 +60,19 @@ public class CsTicketsController : ControllerBase
         }
     }
 
+    /// <summary>查詢單筆工單（含分類名稱與留言）</summary>
+    [HttpGet("{ticketId}")]
+    [Authorize] // 必須登入
+    public async Task<IActionResult> GetById(int ticketId)
+    {
+        var ticket = await _service.GetTicketByIdAsync(ticketId);
+        if (ticket == null)
+            return NotFound(ApiResponse<string>.Fail("找不到該工單"));
+
+        return Ok(ApiResponse<TicketOut>.Ok(ticket));
+    }
+
+
 
 
     /// <summary>建立新客服工單（前台客戶可匿名，上傳 1 張附件圖片）</summary>
