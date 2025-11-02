@@ -75,5 +75,27 @@ namespace tHerdBackend.Services.PROD.API
                 throw;
             }
         }
+
+        /// <summary>
+        /// 取得商品分類樹狀結構（含子分類）
+        /// 用於前台 MegaMenu 或分類篩選
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                // 查詢商品詳細
+                var item = await _repo.GetProductTypeTreeAsync(ct);
+
+                // 回傳分頁結果
+                return item;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
     }
 }

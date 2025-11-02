@@ -833,18 +833,62 @@ namespace tHerdBackend.Infra.Repository.PROD
 	                .Where(p => p.ProductName == name && p.ProductId != id).Count()>0;
 		}
 
-		//public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
-		//{
-		//	if (barcodes == null || !barcodes.Any())
-		//		return string.Empty;
+        /// <summary>
+        /// 取得商品分類樹狀結構（含子分類）
+        /// 用於前台 MegaMenu 或分類篩選
+        /// </summary>
+        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        {
+            const string sql = @"
+                SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
+                FROM PROD_ProductTypeConfig
+                WHERE IsActive = 1
+                ORDER BY ParentId, OrderSeq, ProductTypeName;
+            ";
 
-		//	var exists = await _db.ProdProductSkus
-		//		.AsNoTracking()
-		//		.Where(p => barcodes.Contains(p.Barcode))
-		//		.Select(p => p.Barcode)   // 只取出條碼字串
-		//		.ToListAsync(ct);
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var list = (await conn.QueryAsync<ProductTypeTreeDto>(
+                    new CommandDefinition(sql, tx, cancellationToken: ct))).ToList();
 
-		//	return string.Join("、", exists);
-		//}
-	}
+                // === Step 2. 建立樹狀結構 ===
+                var lookup = list.ToDictionary(x => x.ProductTypeId);
+                var roots = new List<ProductTypeTreeDto>();
+
+                foreach (var item in list)
+                {
+                    if (item.ParentId.HasValue && lookup.TryGetValue(item.ParentId.Value, out var parent))
+                    {
+                        parent.Children ??= new List<ProductTypeTreeDto>();
+                        parent.Children.Add(item);
+                    }
+                    else
+                    {
+                        roots.Add(item);
+                    }
+                }
+
+                return roots;
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+        //public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
+        //{
+        //	if (barcodes == null || !barcodes.Any())
+        //		return string.Empty;
+
+        //	var exists = await _db.ProdProductSkus
+        //		.AsNoTracking()
+        //		.Where(p => barcodes.Contains(p.Barcode))
+        //		.Select(p => p.Barcode)   // 只取出條碼字串
+        //		.ToListAsync(ct);
+
+        //	return string.Join("、", exists);
+        //}
+    }
 }

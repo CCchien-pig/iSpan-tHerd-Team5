@@ -45,6 +45,28 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         }
 
         /// <summary>
+        /// 前台：查詢產品清單 (支援關鍵字、分類、價格區間、分頁)
+        /// </summary>
+        /// <param name="query">查詢條件</param>
+        /// <param name="ct">連線</param>
+        /// <returns></returns>
+        [AllowAnonymous]  // 不用 JWT，前台也能看
+        [HttpGet("ProductTypetree")]
+        public async Task<IActionResult> GetProductTypeTree(
+            CancellationToken ct = default)
+        {
+            try
+            {
+                var data = await _service.GetProductTypeTreeAsync(ct);
+                return Ok(ApiResponse<List<ProductTypeTreeDto>>.Ok(data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.Fail("查詢商品分類時發生錯誤：" + ex.Message));
+            }
+        }
+
+        /// <summary>
         /// 前台：查詢產品詳細
         /// </summary>
         /// <param name="id">商品編號</param>

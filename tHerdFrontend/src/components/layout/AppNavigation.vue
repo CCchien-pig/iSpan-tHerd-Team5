@@ -21,9 +21,11 @@
           <!-- 🖥️ 桌面版導航 -->
           <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
             <li
-              v-for="item in navigationItemsWithIcon"
-              :key="item.name"
+              v-for="item in productMenus"
+              :key="item.id"
               class="nav-item position-relative"
+              @mouseenter="openMegaMenu(item)"
+              @mouseleave="closeMegaMenu"
             >
               <router-link
                 :to="item.path"
@@ -108,86 +110,120 @@
             </li>
           </ul>
 
+          <!-- ✅ 把 MegaMenu 放在 ul 外 -->
+          <transition name="fade">
+            <div 
+              v-if="activeMenuId"
+              class="mega-menu shadow-lg bg-white"
+              @mouseenter="openMegaMenu({ id: activeMenuId })"
+              @mouseleave="closeMegaMenu"
+            >
+              <div v-if="isLoadingMenu" class="p-4 text-center text-muted">載入中...</div>
+              <div v-else-if="megaMenuData" class="container-fluid py-4 px-4">
+                <div class="row g-4">
+                  <div
+                    v-for="col in megaMenuData.columns"
+                    :key="col.title"
+                    class="col-6 col-md-2"
+                  >
+                    <h6 class="fw-bold text-success mb-3">{{ col.title }}</h6>
+                    <ul class="list-unstyled mb-0">
+                      <li v-for="sub in col.items" :key="sub.id" class="mb-2">
+                        <router-link
+                          :to="sub.url"
+                          class="text-dark text-decoration-none brand-link"
+                          @click="closeMegaMenu"
+                        >
+                          {{ sub.name }}
+                        </router-link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
+
           <!-- 📱 手機版側邊選單 -->
-<transition name="slide">
-  <div v-if="showMobileMenu" class="mobile-menu">
-    <div class="mobile-menu-header">
-      <h5 class="mb-0 fw-bold text-white">選單</h5>
-      <button class="close-btn" @click="closeMobileMenu">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+          <transition name="slide">
+            <div v-if="showMobileMenu" class="mobile-menu">
+              <div class="mobile-menu-header">
+                <h5 class="mb-0 fw-bold text-white">選單</h5>
+                <button class="close-btn" @click="closeMobileMenu">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
 
-    <div class="mobile-menu-body">
-      <!-- 有圖標的分類 -->
-      <div class="menu-section">
-        <h6 class="menu-section-title">產品分類</h6>
-        <router-link
-          v-for="item in navigationItemsWithIcon.filter(i => i.icon)"
-          :key="item.name"
-          :to="item.path"
-          class="mobile-menu-item"
-          :class="{ active: $route.path.startsWith(item.path) }"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-icon-wrapper">
-            <img :src="item.icon" alt="" />
-          </div>
-          <span>{{ item.name }}</span>
-          <i class="bi bi-chevron-right ms-auto"></i>
-        </router-link>
-      </div>
+              <div class="mobile-menu-body">
+                <!-- 有圖標的分類 -->
+                <div class="menu-section">
+                  <h6 class="menu-section-title">產品分類</h6>
+                  <router-link
+                    v-for="item in navigationItemsWithIcon.filter(i => i.icon)"
+                    :key="item.name"
+                    :to="item.path"
+                    class="mobile-menu-item"
+                    :class="{ active: $route.path.startsWith(item.path) }"
+                    @click="closeMobileMenu"
+                  >
+                    <div class="mobile-icon-wrapper">
+                      <img :src="item.icon" alt="" />
+                    </div>
+                    <span>{{ item.name }}</span>
+                    <i class="bi bi-chevron-right ms-auto"></i>
+                  </router-link>
+                </div>
 
-      <!-- 無圖標的分類 -->
-      <div class="menu-section">
-        <h6 class="menu-section-title">快速連結</h6>
-        <router-link
-          v-for="item in navigationItemsWithIcon.filter(i => !i.icon)"
-          :key="item.name"
-          :to="item.path"
-          class="mobile-menu-item text-only-item"
-          :class="{ active: $route.path.startsWith(item.path) }"
-          @click="closeMobileMenu"
-        >
-          <i class="bi bi-dot"></i>
-          <span>{{ item.name }}</span>
-          <i class="bi bi-chevron-right ms-auto"></i>
-        </router-link>
-      </div>
+                <!-- 無圖標的分類 -->
+                <div class="menu-section">
+                  <h6 class="menu-section-title">快速連結</h6>
+                  <router-link
+                    v-for="item in navigationItemsWithIcon.filter(i => !i.icon)"
+                    :key="item.name"
+                    :to="item.path"
+                    class="mobile-menu-item text-only-item"
+                    :class="{ active: $route.path.startsWith(item.path) }"
+                    @click="closeMobileMenu"
+                  >
+                    <i class="bi bi-dot"></i>
+                    <span>{{ item.name }}</span>
+                    <i class="bi bi-chevron-right ms-auto"></i>
+                  </router-link>
+                </div>
 
-      <!-- ✅ 品牌選單（修正版） -->
-      <div class="menu-section">
-        <h6 
-          class="menu-section-title clickable" 
-          @click="toggleBrandsInMobile"
-        >
-          <span>品牌 A-Z</span>
-          <i 
-            class="bi" 
-            :class="showBrandsInMobile ? 'bi-chevron-up' : 'bi-chevron-down'"
-          ></i>
-        </h6>
-        
-        <transition name="expand">
-          <div v-if="showBrandsInMobile" class="brands-list">
-            <!-- ✅ 正確的雙層 v-for 結構 -->
-            <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
-              <router-link
-                v-for="brand in group"
-                :key="brand"
-                :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
-                class="brand-item"
-                @click="closeMobileMenu"
-              >
-                {{ brand }}
-              </router-link>
-            </template>
-          </div>
-        </transition>
-      </div>
-    </div>
-  </div>
-</transition>
+                <!-- ✅ 品牌選單（修正版） -->
+                <div class="menu-section">
+                  <h6 
+                    class="menu-section-title clickable" 
+                    @click="toggleBrandsInMobile"
+                  >
+                    <span>品牌 A-Z</span>
+                    <i 
+                      class="bi" 
+                      :class="showBrandsInMobile ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    ></i>
+                  </h6>
+                  
+                  <transition name="expand">
+                    <div v-if="showBrandsInMobile" class="brands-list">
+                      <!-- ✅ 正確的雙層 v-for 結構 -->
+                      <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
+                        <router-link
+                          v-for="brand in group"
+                          :key="brand"
+                          :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                          class="brand-item"
+                          @click="closeMobileMenu"
+                        >
+                          {{ brand }}
+                        </router-link>
+                      </template>
+                    </div>
+                  </transition>
+                </div>
+              </div>
+            </div>
+          </transition>
 
           <!-- 🎭 背景遮罩 -->
           <transition name="fade-mask">
@@ -203,68 +239,121 @@
   </nav>
 </template>
 
-<script>
-export default {
-  name: 'AppNavigation',
-  data() {
-    return {
-      showMobileMenu: false,
-      showBrands: false,
-      showBrandsInMobile: false,
+<script setup>
+import { ref, onMounted, onBeforeUnmount  } from 'vue'
 
-      navigationItemsWithIcon: [
-        { name: '補充劑', path: '/supplements', icon: '/homePageIcon/supplement.png' },
-        { name: '運動營養', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
-        { name: '沐浴', path: '/bath', icon: '/homePageIcon/bath.png' },
-        { name: '美容美妝', path: '/beauty', icon: '/homePageIcon/makeup.png' },
-        { name: '食品百貨', path: '/grocery', icon: '/homePageIcon/food.png' },
-        { name: '健康家居', path: '/healthy-home', icon: '/homePageIcon/health.png' },
-        { name: '嬰童用品', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
-        { name: '寵物用品', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
+// ==================== 狀態變數 ====================
+const showMobileMenu = ref(false)
+const showBrands = ref(false)
+const showBrandsInMobile = ref(false)
+const productMenus = ref([])
+const activeMenuId = ref(null)
+const megaMenuData = ref(null)
+const isLoadingMenu = ref(false)
+const loadedMenus = ref({}) // ✅ 預載快取資料
+
+const navigationItemsWithIcon = [
+        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png' },
+        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
+        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png' },
+        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png' },
+        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png' },
+        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
+        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
+        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
         { name: '健康主題', path: '/health-topics' },
         { name: '特惠', path: '/specials' },
         { name: '暢銷', path: '/bestsellers' },
         { name: '試用', path: '/trials' },
         { name: '新產品', path: '/new-products' },
         { name: '健康中心', path: '/cnt' },
-      ],
+      ]
 
-      brandGroups: [
-        ['21st Century', 'ACURE', 'ALLMAX', 'Beauty of Joseon'],
-        ["Doctor's Best", 'Eucerin', 'Fairhaven Health', 'Garden of Life'],
-        ['Life Extension', 'MegaFood', 'NOW Foods', "Nature's Bounty"],
-        ['Solgar', 'Thorne', 'Vital Proteins', 'The Vitamin Shoppe'],
-      ],
+// === 初始化 ===
+onMounted(() => {
+  productMenus.value = navigationItemsWithIcon
+    .filter(i => i.type === 'pr')
+    .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
 
-      recommendedBrands: [
-        { name: "Nature's Bounty", url: '/brands/natures-bounty' },
-        { name: '21st Century', url: '/brands/21st-century' },
-        { name: 'Fairhaven Health', url: '/brands/fairhaven-health' },
-      ],
-    };
-  },
-  methods: {
-    toggleMobileMenu() {
-      this.showMobileMenu = !this.showMobileMenu;
-      // 防止背景滾動
-      document.body.style.overflow = this.showMobileMenu ? 'hidden' : '';
-    },
-    closeMobileMenu() {
-      this.showMobileMenu = false;
-      document.body.style.overflow = '';
-    },
-    toggleBrands() {
-      this.showBrands = !this.showBrands;
-    },
-    toggleBrandsInMobile() {
-      this.showBrandsInMobile = !this.showBrandsInMobile;
-    },
-  },
-  beforeUnmount() {
-    // 清理
-    document.body.style.overflow = '';
-  },
-};
+  preloadMegaMenus() // 一次預載所有資料
+})
+
+// === 預先載入所有分類資料 ===
+function preloadMegaMenus() {
+  const sampleData = {
+    columns: [
+      {
+        title: '熱門分類',
+        items: [
+          { id: 1, name: '維生素', url: '/category/vitamins' },
+          { id: 2, name: '魚油', url: '/category/fishoil' },
+          { id: 3, name: '益生菌', url: '/category/probiotics' },
+        ],
+      },
+      {
+        title: '品牌推薦',
+        items: [
+          { id: 4, name: "Nature’s Bounty", url: '/brands/natures-bounty' },
+          { id: 5, name: 'NOW Foods', url: '/brands/now-foods' },
+          { id: 6, name: 'Solgar', url: '/brands/solgar' },
+        ],
+      },
+    ],
+  }
+
+  productMenus.value.forEach(menu => {
+    loadedMenus.value[menu.id] = JSON.parse(JSON.stringify(sampleData))
+  })
+}
+
+// === 開關 MegaMenu ===
+function openMegaMenu(item) {
+  activeMenuId.value = item.id
+  megaMenuData.value = loadedMenus.value[item.id] // ✅ 直接讀快取，不用 loading
+}
+
+function closeMegaMenu() {
+  activeMenuId.value = null
+}
+
+// 品牌清單
+const brandGroups = [
+  ['21st Century', 'ACURE', 'ALLMAX', 'Beauty of Joseon'],
+  ["Doctor's Best", 'Eucerin', 'Fairhaven Health', 'Garden of Life'],
+  ['Life Extension', 'MegaFood', 'NOW Foods', "Nature's Bounty"],
+  ['Solgar', 'Thorne', 'Vital Proteins', 'The Vitamin Shoppe']
+]
+
+const recommendedBrands = [
+  { name: "Nature's Bounty", url: '/brands/natures-bounty' },
+  { name: '21st Century', url: '/brands/21st-century' },
+  { name: 'Fairhaven Health', url: '/brands/fairhaven-health' }
+]
+
+// ==================== 手機選單 ====================
+function toggleMobileMenu() {
+  showMobileMenu.value = !showMobileMenu.value
+  document.body.style.overflow = showMobileMenu.value ? 'hidden' : ''
+}
+
+function closeMobileMenu() {
+  showMobileMenu.value = false
+  document.body.style.overflow = ''
+}
+
+// ==================== 品牌選單 ====================
+function toggleBrands() {
+  showBrands.value = !showBrands.value
+}
+function toggleBrandsInMobile() {
+  showBrandsInMobile.value = !showBrandsInMobile.value
+}
+
+// 關閉前清理滾動鎖定
+onBeforeUnmount(() => {
+  document.body.style.overflow = ''
+})
+
 </script>
 
 <style scoped>

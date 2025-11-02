@@ -60,6 +60,21 @@ class productsApi {
     return await baseApi.post(`${this.path}/Products/search`, finalParams)
   }
 
+    // ==================== 商品分類 ====================
+
+  /**
+   * 查詢商品分類清單
+   * @param {Object} [params] - 可選參數
+   * @param {boolean} [params.includeSub] - 是否包含子分類（預設：true）
+   * @param {boolean} [params.isActiveOnly] - 是否只取啟用分類（預設：true）
+   * @returns {Promise} API 回應
+   * @example
+   * const result = await productsApi.getProductCategories({ includeSub: true })
+   */
+async getProductCategories() {
+  // ✅ 注意：不需要 params
+  return await baseApi.get(`${this.path}/Products/ProductTypetree`)
+}
   /**
    * 查詢商品詳細資訊
    * @param {number} productId - 商品 ID
