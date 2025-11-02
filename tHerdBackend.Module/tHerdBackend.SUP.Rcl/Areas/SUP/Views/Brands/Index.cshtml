@@ -5,8 +5,15 @@
 @section Styles {
     <!-- Area 專用 CSS -->
     <link rel="stylesheet" href="~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css" />
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+    @* <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" /> *@
     <style>
+        /* 【新增】SweetAlert2 垂直排列的自訂樣式 */
+        .swal2-radio-vertical .swal2-radio {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 選項靠左對齊 */
+            padding-left: 2em; /* 增加一些左邊距，使其美觀 */
+        }
     </style>
 }
 
@@ -101,7 +108,14 @@
         <div class="modal-content bg-white container">
             <div class="modal-header">
                 <h5 id="brandLayoutModalTitle" class="modal-title">品牌版面編輯</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <div class="d-flex align-items-center ms-auto" style="margin-left: 0 !important;">
+                    <button id="toggleFullscreenBtn" class="btn btn-sm me-2" title="切換編輯器大小" style="display:none;">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div id="brandLayoutModalContent" class="modal-body p-4"></div>
         </div>
@@ -113,6 +127,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    @* 【新增】TinyMCE CDN Script *@
+    <script src="https://cdn.tiny.cloud/1/evvuqtan82drarrrms6chtn8qnyyyuc850vh8wj4gt4wnhtd/tinymce/6/tinymce.min.js"
+            referrerpolicy="origin"></script>
     @{
         // 為了避免 Razor 執行順序錯誤，我們在頂部只定義變數，不執行複雜邏輯
         var antiForgeryTokens = Antiforgery.GetTokens(Context);
@@ -207,9 +224,9 @@
                             } else if (data.includes('結束')) {
                                 colorClass = 'text-danger';
                             }
-                            // 加上 discount-status class 及 data-id
-                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;">${data}</span>`;
-                        }
+                            
+                            // 加上 discount-status class 及 data-id，並新增 title, data-bs-toggle
+                            return `<span class="${colorClass} discount-status" data-id="${row.brandId}" style="cursor:pointer;" title="顯示折扣詳情" data-bs-toggle="tooltip">${data}</span>`;                        }
                     },
                     {
                         data: 'isFeatured',
@@ -759,6 +776,18 @@
                     });
             });
 
+            // 放在全域 JS (非 TinyMCE init 內)
+            $(document).on('focusin', function(e) {
+                if ($(e.target).closest(".tox-tinymce, .tox-tinymce-aux").length) {
+                e.stopImmediatePropagation();
+                }
+            });
+            // ✅ 當品牌版面 Modal 顯示後，移除 tabindex
+            $('#brandLayoutModal').on('shown.bs.modal', function () {
+              console.log('🩵 移除 tabindex=-1 防止 TinyMCE 鎖焦點');
+              $(this).removeAttr('tabindex');
+            });
+
             // ======= 編輯品牌版面 Layout (修正為載入版本管理頁面) =======
             $('#brandTable').on('click', '.layout-edit-btn', function () {
                 this.blur();
@@ -810,16 +839,65 @@
 
             // 1. 新增版面按鈕
             $('#brandLayoutModalContent').on('click', '#addNewVersionBtn', function() {
-                // 獲取 Brand ID 和 Name
                 const brandId = getCurrentBrandIdFromModal();
                 const brandName = getCurrentBrandNameFromModal();
-
                 if (!brandId) return;
 
-                // 【修正】使用 ID 佔位符，並替換，確保是路由參數
-                const url = createLayoutUrl.replace('__ID__', brandId);
+                // 1. 先透過 AJAX 獲取所有版本列表
+                $.get(`/SUP/Brands/GetLayoutVersionsAsJson/${brandId}`).done(function(versions) {
+        
+                    // 2. 構建 Swal 的選項
+                    const inputOptions = {
+                        'blank': '建立一個全新的空白版面'
+                    };
+                    versions.forEach(v => {
+                        // key 是 layoutId，value 是顯示的文字
+                        inputOptions[v.layoutId] = `複製版本：${v.layoutVersion} (ID: ${v.layoutId})`;
+                    });
 
-                loadLayoutEditor(url, `新增版面版本：${brandName}`);
+                    // 3. 彈出 Swal 選擇框
+                    Swal.fire({
+                        title: '請選擇建立方式',
+                        input: 'radio',
+                        inputOptions: inputOptions,
+                        // 【新增】應用我們的自訂 CSS 類
+                        customClass: {
+                            popup: 'swal2-radio-vertical' 
+                        },
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return '您需要選擇一個選項！'
+                            }
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: '下一步',
+                        cancelButtonText: '取消'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const selectedValue = result.value;
+                            let url;
+                            let title;
+
+                            if (selectedValue === 'blank') {
+                                // 選擇「建立空白版本」
+                                url = `@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", fromScratch = true })`.replace('__ID__', brandId);
+                                title = `新增版面 (空白)：${brandName}(${brandId})`;
+                            } else {
+                                // 【核心修正點】從 versions 陣列中找到對應的版本號
+                                const selectedVersion = versions.find(v => v.layoutId == selectedValue);
+                                const versionName = selectedVersion ? selectedVersion.layoutVersion : `ID: ${selectedValue}`;
+
+                                url = `@Url.Action("EditLayout", "Brands", new { area = "SUP", id = "__ID__", copyFromLayoutId = "__LAYOUTID__" })`
+                                        .replace('__ID__', brandId)
+                                        .replace('__LAYOUTID__', selectedValue);
+
+                                // 使用版本號，而不是 ID
+                                title = `新增版面 (複製自 ${versionName})：${brandName}`;
+                            }
+                            loadLayoutEditor(url, title);
+                        }
+                    });
+                });
             });
 
             // 2. 編輯特定版本按鈕 (載入 EditLayout)
@@ -835,7 +913,7 @@
                 let url = layoutEditUrl.replace('__ID__', brandId).replace('__LAYOUTID__', layoutId);
 
                 // loadLayoutEditor(url, `編輯版本 (品牌名稱：${brandName}、版本ID：${layoutId})`);
-                loadLayoutEditor(url, `編輯版本`);
+                loadLayoutEditor(url, `編輯版本 (品牌ID：${brandId}、品牌名稱：${brandName})`);
             });
 
             // 3. 啟用按鈕 (PATCH)
@@ -894,7 +972,7 @@
                 });
             });
 
-            // 4. 刪除按鈕 (DELETE/軟刪除)
+            // 4. 刪除/停用按鈕 (DELETE/軟刪除)
             $('#brandLayoutModalContent').on('click', '.delete-btn', function() {
                 const layoutId = $(this).data('layout-id');
                 const brandId = getCurrentBrandIdFromModal();
@@ -903,11 +981,11 @@
                 const url = `/SUP/Brands/layouts/${layoutId}`; 
 
                 Swal.fire({
-                    title: `確定移除 Layout (ID: ${layoutId}) 嗎？`,
-                    text: "此操作將軟刪除此版本紀錄。",
+                    title: `確定停用 Layout (ID: ${layoutId}) 嗎？`,
+                    text: "此操作將停用此版本紀錄。",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: '確定移除',
+                    confirmButtonText: '確定停用',
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -918,21 +996,52 @@
                             },
                             success: function(data) {
                                 if (data.success) {
-                                    Swal.fire('移除成功', data.message, 'success').then(() => {
+                                    Swal.fire('停用成功', data.message, 'success').then(() => {
                                         // 重新載入版本列表頁面
                                         reloadVersionIndex(brandId);
                                     });
                                 } else {
-                                    Swal.fire('移除失敗', data.message, 'error');
+                                    Swal.fire('停用失敗', data.message, 'error');
                                 }
                             },
                             error: function(jqXHR) {
-                                console.error("❌ DELETE 錯誤:", jqXHR.status, jqXHR.responseText);
-                                Swal.fire('伺服器錯誤', '移除操作失敗。', 'error');
+                                console.error("❌ 停用錯誤:", jqXHR.status, jqXHR.responseText);
+                                Swal.fire('伺服器錯誤', '停用操作失敗。', 'error');
                             }
                         });
                     }
                 });
+            });
+
+            // 【新增事件】版面編輯 Modal 大小切換邏輯
+            $('#toggleFullscreenBtn').on('click', function() {
+                var $thisBtn = $(this);
+                $thisBtn.blur();
+
+                var $modalDialog = $('#brandLayoutModal').find('.modal-dialog');
+                var isFullscreen = $modalDialog.hasClass('custom-fullscreen');
+
+                // 1. 切換 CSS Class
+                if (!isFullscreen) {
+                    $modalDialog.addClass('custom-fullscreen');
+                    $(this).find('i').removeClass('fa-expand').addClass('fa-compress');
+                } else {
+                    $modalDialog.removeClass('custom-fullscreen');
+                    $(this).find('i').removeClass('fa-compress').addClass('fa-expand');
+                }
+
+                // TinyMCE 重新繪製
+                if (typeof tinymce !== 'undefined' && tinymce.editors && tinymce.editors.length > 0) {
+                    setTimeout(() => {
+                        tinymce.editors.forEach(editor => {
+                            if (editor && editor.initialized) {
+                                editor.execCommand('mceRepaint');
+                            }
+                        });
+                    }, 50);
+                }
+
+                // ... (其他事件) ...
             });
 
         });
@@ -1136,14 +1245,66 @@
         }
 
 
-        // 輔助函式：載入 Partial View 到 Modal 中
+        /**
+         * 透過 AJAX 載入 Partial View 到 Modal 中，並妥善處理 Vue 實例的生命週期。
+         * 這是解決所有 AJAX 內容替換問題的核心函式。
+         * @@param {string} url - 要載入的 Partial View URL
+         * @@param {string} title - 要顯示在 Modal 標題的文字
+         */
         function loadLayoutEditor(url, title) {
-            $("#brandLayoutModalTitle").text(title);
-            $.get(url).done(function(html) {
-                $('#brandLayoutModalContent').html(html);
-                // 注意：這裡不需要手動呼叫 initLayoutEditor，因為 Vue 腳本在 HTML 內
-            }).fail(function() {
-                Swal.fire('載入失敗', '無法載入目標頁面。', 'error');
+            const $modalContent = $('#brandLayoutModalContent');
+            const $modalTitle = $('#brandLayoutModalTitle');
+            const isEditor = url.includes('EditLayout');
+
+            // 1. 設定 Modal 的靜態部分 (標題、切換編輯器大小按鈕)
+            $modalTitle.text(title);
+            $('#toggleFullscreenBtn').toggle(isEditor); // .toggle(boolean) 是 .show()/.hide() 的簡寫
+
+            // 2. 【核心修正】在發起新請求「之前」，先同步卸載舊的 Vue 實例。
+            // 這是解決 "Identifier has already been declared" 錯誤的關鍵步驟。
+            if (window.currentLayoutVueApp) {
+                try {
+                    console.log("偵測到舊的 Vue 實例，立即卸載...");
+                    window.currentLayoutVueApp.unmount();
+                    window.currentLayoutVueApp = null; // 徹底清除引用
+                    console.log("舊的 Vue 實例已成功卸載。");
+                } catch (e) {
+                    console.error("卸載舊 Vue 實例時發生錯誤:", e);
+                    window.currentLayoutVueApp = null; // 即使出錯也要清除引用
+                }
+            }
+
+            // 3. 顯示讀取中動畫，提供即時反饋
+            $modalContent.html('<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">載入中...</span></div></div>');
+
+            // 4. 使用更穩健的 $.ajax 方法發起請求
+            $.ajax({
+                url: url,
+                type: 'GET',
+                cache: false, // 禁用瀏覽器快取，確保每次都獲取最新內容
+                success: function (html) {
+                    // 5. 在一個乾淨的環境中注入新的 HTML 內容。
+                    // jQuery 會自動執行其中的 <script> 標籤。
+                    $modalContent.html(html);
+
+                    // 6. 載入後管理焦點，提升使用者體驗
+                    setTimeout(() => {
+                        if (isEditor) {
+                            // 如果是編輯器頁面，自動聚焦到「版號」輸入框
+                            const $versionInput = $modalContent.find('input[type="text"]').first();
+                            $versionInput.focus();
+                        } else {
+                            // 如果是版本列表，移除按鈕的焦點框
+                            $(document.activeElement).blur();
+                        }
+                    }, 100); // 稍微延遲以確保 Vue 完成渲染
+                },
+                error: function (xhr) {
+                    // 7. 優雅地處理載入失敗的情況
+                    const errorMsg = `<div class="alert alert-danger m-3">載入失敗: ${xhr.status} ${xhr.statusText}</div>`;
+                    $modalContent.html(errorMsg);
+                    Swal.fire('載入失敗', '無法載入目標頁面，請檢查網路連線或聯繫管理員。', 'error');
+                }
             });
         }
         // 獲取當前 Modal 內容中隱藏欄位的 Brand ID

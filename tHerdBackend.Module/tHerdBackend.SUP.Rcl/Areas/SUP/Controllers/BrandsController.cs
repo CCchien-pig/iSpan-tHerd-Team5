@@ -862,111 +862,69 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		/// <summary>
 		/// 讀取 JSON 骨架 -> 遍歷 -> 從各 Service 獲取內容 -> 組合成完整的 BaseLayoutBlockDto 列表
-		/// </summary>		
+		/// 載入品牌版面編輯器。
+		/// 支援：編輯特定版本、新增時複製啟用版本、新增時建立空白版本、新增時複製特定版本。
+		/// </summary>
+		/// <param name="id">品牌 ID (來自路由)</param>
+		/// <param name="layoutId">要編輯的版面 ID (來自路由，可選)</param>
+		/// <param name="fromScratch">是否建立空白版本 (來自查詢字串)</param>
+		/// <param name="copyFromLayoutId">要複製的來源版面 ID (來自查詢字串)</param>		
 		// GET: SUP/Brands/EditLayout/{brandId}/{layoutId?}
-		[HttpGet]
-		public async Task<IActionResult> EditLayout(int id, int? layoutId)
+		[HttpGet("EditLayout/{id}/{layoutId?}")]
+		public async Task<IActionResult> EditLayout(
+			int id,
+			int? layoutId,
+			[FromQuery] bool fromScratch = false,
+			[FromQuery] int? copyFromLayoutId = null) // 【新增】接收 copyFromLayoutId 參數
 		{
 			int brandId = id;
 			var brand = await _brandService.GetByIdAsync(brandId);
 			if (brand == null) return NotFound("找不到該品牌");
 
-			// 用於儲存組合後的、包含完整內容的區塊列表
 			var hydratedBlocks = new List<BaseLayoutBlockDto>();
-			BrandLayoutDto? layoutToEdit = null;
+			BrandLayoutDto? layoutAsTemplate = null;
 
+			// =================================================================
+			// 【核心修正點】重構整個條件判斷邏輯，確保流程互斥
+			// =================================================================
 			if (layoutId.HasValue)
 			{
-				// =================================================
-				// A. 編輯模式：載入指定的 JSON 骨架並組合完整內容
-				// =================================================
-				layoutToEdit = await _layoutService.GetLayoutByLayoutIdAsync(layoutId.Value);
+				// 模式 1：編輯現有版本
+				layoutAsTemplate = await _layoutService.GetLayoutByLayoutIdAsync(layoutId.Value);
+				if (layoutAsTemplate != null)
+				{
+					// 直接組合 (Hydrate)
+					hydratedBlocks = await HydrateBlocksFromJson(layoutAsTemplate.LayoutJson);
+				}
+			}
+			else if (copyFromLayoutId.HasValue)
+			{
+				// 模式 2：從指定版本複製來新增
+				layoutAsTemplate = await _layoutService.GetLayoutByLayoutIdAsync(copyFromLayoutId.Value);
+				if (layoutAsTemplate != null)
+				{
+					hydratedBlocks = await HydrateBlocksFromJson(layoutAsTemplate.LayoutJson);
+				}
+			}
+			else if (fromScratch)
+			{
+				// 模式 3：建立空白版本
+				// 保持 hydratedBlocks 為空列表，不做任何事。
 			}
 			else
 			{
-				// =================================================
-				// B. 新增模式：先嘗試載入啟用中的版本作為範本
-				// =================================================
-				layoutToEdit = await _layoutService.GetActiveLayoutAsync(brandId);
-			}
-
-			// --- 統一的組合 (Hydrate) 邏輯 ---
-			if (layoutToEdit != null && !string.IsNullOrWhiteSpace(layoutToEdit.LayoutJson))
-			{
-				// 【核心修正點 1】在反序列化時，加入 JsonSerializerOptions
-				var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-				var skeletonBlocks = JsonSerializer.Deserialize<List<BrandLayoutSkeletonBlockDto>>(layoutToEdit.LayoutJson, jsonOptions)
-					?? new List<BrandLayoutSkeletonBlockDto>();
-
-				// 2. 遍歷骨架，從各自的 Service 獲取完整內容並組合 (Hydrate)
-				foreach (var blockSkeleton in skeletonBlocks) 
+				// 模式 4：預設新增 (先試著複製啟用版，若無則讀取舊資料)
+				layoutAsTemplate = await _layoutService.GetActiveLayoutAsync(brandId);
+				if (layoutAsTemplate != null)
 				{
-					// 【核心修正點 1】檢查 blockSkeleton 本身是否為 null，並檢查 Type 屬性是否為 null/空
-					if (blockSkeleton == null || string.IsNullOrEmpty(blockSkeleton.Type))
-					{
-						Console.Error.WriteLine("[JSON] Found invalid or null Type in skeleton block, skipping.");
-						continue; // 跳過該無效/不完整區塊
-					}
-
-					// 這裡的 blockSkeleton.ContentId 也必須是合法的 int > 0，否則 GetContentByIdAsync 會失敗
-					if (blockSkeleton.ContentId <= 0)
-					{
-						Console.Error.WriteLine($"[JSON] Found ContentId = {blockSkeleton.ContentId}, skipping.");
-						continue;
-					}
-
-					var uniqueId = $"{blockSkeleton.Type}-{blockSkeleton.ContentId}-{Guid.NewGuid().ToString("N").Substring(0, 4)}";
-
-					switch (blockSkeleton.Type.ToLower())
-					{
-						case "accordion":
-							// 使用新的通用服務 IContentService
-							var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
-
-							// 【核心修正】如果找不到內容，則跳過此區塊
-							if (accordionContent != null)
-							{
-								hydratedBlocks.Add(new BaseLayoutBlockDto
-								{
-									Id = uniqueId,
-									Type = "Accordion",
-									Props = accordionContent
-								});
-							}
-							else
-							{
-								Console.Error.WriteLine($"[Layout Hydrate] Accordion Content ID {blockSkeleton.ContentId} not found, skipping block.");
-							}
-							break;
-
-						case "banner":
-							// 【核心修正點】加入 Banner 的處理邏輯 使用新的通用服務 IContentService
-							var bannerContent = await _contentService.GetContentByIdAsync<BannerDto>(blockSkeleton.ContentId);
-							
-							// 【核心修正】如果找不到內容，則跳過此區塊
-							if (bannerContent != null)
-							{
-								hydratedBlocks.Add(new BaseLayoutBlockDto
-								{
-									Id = uniqueId,
-									Type = "Banner",
-									Props = bannerContent // Props 現在是完整的 BannerDto
-								});
-							}
-							else
-							{
-								Console.Error.WriteLine($"[Layout Hydrate] Banner Content ID {blockSkeleton.ContentId} not found, skipping block.");
-							}
-							break;
-
-							// TODO: case "article": ...
-					}
+					// 如果有啟用中的新版資料，組合它
+					hydratedBlocks = await HydrateBlocksFromJson(layoutAsTemplate.LayoutJson);
 				}
-			}
-			else if (!layoutId.HasValue) // 只有在新增模式且找不到新版面時，才讀取舊表
-			{
-				// 如果沒有任何新版資料，則讀取舊表作為初始資料
-				hydratedBlocks = await _layoutService.GetLegacyAccordionBlocksAsync(brandId);
+				else
+				{
+					// 如果連啟用中的新版都沒有，才去讀取舊資料表
+					hydratedBlocks = await _layoutService.GetLegacyAccordionBlocksAsync(brandId);
+				}
 			}
 
 			// 3. 手動映射到 ViewModel (因為不使用 AutoMapper)
@@ -977,18 +935,67 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				Props = b.Props // 直接傳遞 Props DTO
 			}).ToList();
 
-			// 4. 準備最終 ViewModel
 			var layoutModel = new BrandLayoutEditViewModel
 			{
 				BrandId = brandId,
 				BrandName = brand.BrandName,
-				LayoutId = layoutId, // 在新增模式下，layoutId 為 null
-				LayoutVersion = layoutId.HasValue ? layoutToEdit?.LayoutVersion : null, // 新增模式下為 null
 				LayoutBlocks = layoutBlockViewModels,
+				LayoutId = layoutId, // 只有編輯模式才有值
+				LayoutVersion = layoutId.HasValue ? layoutAsTemplate?.LayoutVersion : null, // 只有編輯模式才有值
 				AllLayoutVersions = (await _layoutService.GetLayoutsByBrandIdAsync(brandId)).Select(l => l.LayoutVersion).ToList()
 			};
 
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", layoutModel);
+		}
+
+		// 【新增輔助函式】將重複的組合 (Hydrate) 邏輯提取出來
+		private async Task<List<BaseLayoutBlockDto>> HydrateBlocksFromJson(string layoutJson)
+		{
+			var hydratedBlocks = new List<BaseLayoutBlockDto>();
+			if (string.IsNullOrWhiteSpace(layoutJson)) return hydratedBlocks;
+
+			var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+			var skeletonBlocks = JsonSerializer.Deserialize<List<BrandLayoutSkeletonBlockDto>>(layoutJson, jsonOptions)
+				?? new List<BrandLayoutSkeletonBlockDto>();
+
+			foreach (var blockSkeleton in skeletonBlocks)
+			{
+				if (blockSkeleton == null || string.IsNullOrEmpty(blockSkeleton.Type) || blockSkeleton.ContentId <= 0) continue;
+
+				var uniqueId = $"{blockSkeleton.Type}-{blockSkeleton.ContentId}-{Guid.NewGuid().ToString("N").Substring(0, 4)}";
+				BaseLayoutBlockDto newBlock = null;
+
+				switch (blockSkeleton.Type.ToLower())
+				{
+					case "banner":
+						var bannerContent = await _contentService.GetContentByIdAsync<BannerDto>(blockSkeleton.ContentId);
+						if (bannerContent != null)
+						{
+							// 【核心修正點】將骨架中的 linkUrl 寫回 Props DTO
+							bannerContent.LinkUrl = blockSkeleton.LinkUrl;
+
+							hydratedBlocks.Add(new BaseLayoutBlockDto
+							{
+								Id = uniqueId,
+								Type = "Banner",
+								Props = bannerContent
+							});
+						}
+						break;
+					case "accordion":
+						var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
+						if (accordionContent != null) newBlock = new BaseLayoutBlockDto { Id = uniqueId, Type = "Accordion", Props = accordionContent };
+						break;
+					case "article":
+						var articleContent = await _contentService.GetContentByIdAsync<BrandArticleDto>(blockSkeleton.ContentId);
+						if (articleContent != null) newBlock = new BaseLayoutBlockDto { Id = uniqueId, Type = "Article", Props = articleContent };
+						break;
+				}
+
+				if (newBlock != null) hydratedBlocks.Add(newBlock);
+			}
+
+			return hydratedBlocks;
 		}
 
 
@@ -1073,10 +1080,14 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				}
 
 				// 【版本號重複驗證】
-				bool versionExists = await _layoutService.VersionExistsAsync(dto.BrandId, dto.LayoutVersion, dto.ActiveLayoutId);
+				bool versionExists = await _layoutService.VersionExistsAsync(dto.BrandId, dto.LayoutVersion, dto.LayoutId);
 				if (versionExists)
 				{
-					return BadRequest(new { success = false, message = $"版本號 '{dto.LayoutVersion}' 已存在，請使用不同的版本號。" });
+					return BadRequest(new
+					{
+						success = false,
+						message = $"版本號 '{dto.LayoutVersion}' 已存在，請使用不同的版本號。"
+					});
 				}
 
 				// 3. 核心業務邏輯 (Create/Update/Activate)
@@ -1085,13 +1096,21 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				// 啟用邏輯現在可以安全地放在交易之外
 
 				// 4. 成功回傳
+				// 從資料庫取出剛儲存的 Layout，判斷是否為啟用中版本
+				var layout = await _context.SupBrandLayoutConfigs
+					.AsNoTracking()
+					.FirstOrDefaultAsync(x => x.LayoutId == finalLayoutId);
+
+				bool isActive = layout?.IsActive ?? false;
+
 				return Json(new
 				{
 					success = true,
-					//message = "品牌版面配置已成功儲存並啟用為現行版本。",
 					message = "版面配置已儲存成功。",
-					layoutId = finalLayoutId
+					layoutId = finalLayoutId,
+					isActive = isActive // ✅ 新增：讓前端能知道此版本是否啟用
 				});
+
 			}
 			catch (Exception ex)
 			{
@@ -1181,6 +1200,25 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		#endregion
 
+		#region 輔助 API：取得版本列表的 JSON
+		
+		/// <summary>
+		/// 只回傳版本列表的 JSON
+		/// </summary>sionsAsJson/{id}
+		[HttpGet]
+		public async Task<IActionResult> GetLayoutVersionsAsJson(int id)
+		{
+			var layouts = await _layoutService.GetLayoutsByBrandIdAsync(id);
 
+			// 只選擇 ID 和版本號，傳給前端
+			var versionList = layouts.Select(l => new {
+				layoutId = l.LayoutId,
+				layoutVersion = l.LayoutVersion ?? "未命名版本"
+			}).ToList();
+
+			return Ok(versionList);
+		}
+
+		#endregion
 	}
 }
