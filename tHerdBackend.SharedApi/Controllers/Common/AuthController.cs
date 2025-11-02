@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
@@ -21,6 +24,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		private readonly IRefreshTokenService _refreshSvc;
 		private readonly IReferralCodeGenerator _refGen;
 		private readonly IConfiguration _cfg;
+		private readonly IEmailSender _email;
 
 		public AuthController(
 			SignInManager<ApplicationUser> signInMgr,
@@ -28,7 +32,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			IJwtTokenService jwt,
 			IRefreshTokenService refreshSvc,
 			IReferralCodeGenerator refGen,
-			IConfiguration cfg)
+			IConfiguration cfg,
+			IEmailSender email)
 
 		{
 			_signInMgr = signInMgr;
@@ -37,6 +42,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			_refreshSvc = refreshSvc;
 			_refGen = refGen;
 			_cfg = cfg;
+			_email = email;
 		}
 
 		[AllowAnonymous]
@@ -92,6 +98,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 						IsActive = true,         // ★ 對齊 register
 						MemberRankId = "MR001",  // ★ 對齊 register 預設等級
 						ReferralCode = referralCode,   // ★ 對齊 register
+						Gender = "未填"
 					};
 					var createRes = await _userMgr.CreateAsync(user);
 					if (!createRes.Succeeded)
@@ -154,39 +161,76 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			return Redirect(target);
 		}
 		public record RecaptchaVerifyResponse(bool success, decimal score, string action, DateTime challenge_ts, string hostname, string[]? errorCodes);
-		
+
 		[AllowAnonymous]
 		[HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginDto dto, [FromServices] IHttpClientFactory httpClientFactory, IConfiguration cfg)
 		{
 			if (string.IsNullOrWhiteSpace(dto?.Email) || string.IsNullOrWhiteSpace(dto?.Password))
-				return BadRequest(new { error = "請輸入帳號與密碼" });
+				return BadRequest(new { error_code = "missing_fields", message = "請輸入帳號與密碼" });
 
 			var user = await _userMgr.FindByEmailAsync(dto.Email.Trim());
 			if (user == null || !user.IsActive)
-				return Unauthorized(new { error = "帳號不存在或已停用" });
+				return Unauthorized(new { error_code = "not_found_or_inactive", message = "帳號不存在或已停用" });
 
+			// 先做密碼驗證（會自動計數與鎖定）
 			var signIn = await _signInMgr.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
-			if (signIn.IsLockedOut) return Unauthorized(new { error = "帳號已被鎖定" });
-			if (!signIn.Succeeded) return Unauthorized(new { error = "帳號或密碼錯誤" });
 
-			var roles = await _userMgr.GetRolesAsync(user);
-			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
+			if (signIn.IsLockedOut)
+			{
+				var lockoutEnd = await _userMgr.GetLockoutEndDateAsync(user); // UTC
+				Response.Headers["Retry-After"] = TimeSpan.FromMinutes(1).TotalSeconds.ToString("0"); // 你的鎖定時間可動態換算
+				return StatusCode(StatusCodes.Status423Locked, new
+				{
+					error_code = "account_locked",
+					message = "帳號已被鎖定，請稍後再試",
+					unlockAt = lockoutEnd?.UtcDateTime.ToString("o")
+				});
+			}
 
-			var secret = cfg["Recaptcha:Secret"]; // 請從組態讀取
+			if (signIn.IsNotAllowed) // 通常是 RequireConfirmedEmail = true 未驗證
+			{
+				// 這裡提供重寄驗證信的 API，讓前端出一顆「重寄驗證信」按鈕（自行實作 /auth/resend-confirm）
+				var resendUrl = Url.ActionLink(nameof(ResendConfirmEmail), "Auth", new { email = user.Email }, Request.Scheme, Request.Host.ToString());
+				return Unauthorized(new
+				{
+					error_code = "email_unconfirmed",
+					message = "請先完成信箱驗證",
+					resendUrl
+				});
+			}
+
+			if (!signIn.Succeeded)
+			{
+				// 計算剩餘嘗試次數（顯示友善提醒）
+				var max = _signInMgr.Options.Lockout.MaxFailedAccessAttempts; // 你在 Program.cs 設的 5
+																			  // 注意：CheckPasswordSignInAsync 已經「+1」了，所以這裡用 user.AccessFailedCount 直接算剩餘
+				var remaining = Math.Max(0, max - user.AccessFailedCount);
+				return Unauthorized(new
+				{
+					error_code = "bad_credentials",
+					message = "帳號或密碼錯誤",
+					remainingAttempts = remaining // 例：還可以嘗試 N 次（再錯就鎖）
+				});
+			}
+
+			// ---- 到這邊才核 recaptcha（你原邏輯保留）----
+			var secret = cfg["Recaptcha:Secret"];
 			using var http = httpClientFactory.CreateClient();
 			var content = new FormUrlEncodedContent(new Dictionary<string, string>
 			{
 				["secret"] = secret,
 				["response"] = dto.RecaptchaToken
-				// 可加 ["remoteip"] = HttpContext.Connection.RemoteIpAddress?.ToString()
 			});
 			var resp = await http.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
 			var json = await resp.Content.ReadFromJsonAsync<RecaptchaVerifyResponse>();
 
 			if (json is null || !json.success)
-				return BadRequest(new { error = "reCAPTCHA 驗證失敗" });
-			// ⚠ 介面已改：IssueAsync 使用 userId（string），不再傳 ApplicationUser / EF 實體
+				return BadRequest(new { error_code = "recaptcha_failed", message = "reCAPTCHA 驗證失敗", hint = "請重新整理網頁後再嘗試" });
+
+			// ---- 成功發 Token ----
+			var roles = await _userMgr.GetRolesAsync(user);
+			var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
 			var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
 
 			return Ok(new
@@ -204,6 +248,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 				}
 			});
 		}
+
 
 		public class RefreshDto { public string? RefreshToken { get; set; } }
 
@@ -329,8 +374,103 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 			await _userMgr.AddToRoleAsync(user, "Member");
 
+			// 產生 Email 確認 token（URL-safe）
+			var token = await _userMgr.GenerateEmailConfirmationTokenAsync(user);
+			var tokenBytes = Encoding.UTF8.GetBytes(token);
+			var tokenEncoded = WebEncoders.Base64UrlEncode(tokenBytes);
+
+			// 回到 SharedApi 的確認端點（下面會新增 ConfirmEmail）
+			var confirmUrl = Url.ActionLink(
+				action: nameof(ConfirmEmail),
+				controller: "Auth",
+				values: new { userId = user.Id, token = tokenEncoded },
+				protocol: Request.Scheme,
+				host: Request.Host.ToString()
+			);
+
+			// 寄信
+			var subject = "請完成 tHerd 帳號的信箱驗證";
+			var html = $@"
+    <p>親愛的 {user.LastName}{user.FirstName} 您好：</p>
+    <p>請點擊以下連結完成信箱驗證：</p>
+    <p><a href=""{confirmUrl}"">{confirmUrl}</a></p>
+    <p>若不是您本人操作，請忽略本郵件。</p>";
+			await _email.SendEmailAsync(user.Email!, subject, html);
+
 			return Ok(new { ok = true, userId = user.Id, referralCode = user.ReferralCode });
 		}
+
+		[AllowAnonymous]
+		[HttpGet("confirm-email")]
+		public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+		{
+			if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+				return BadRequest("缺少必要參數。");
+
+			var user = await _userMgr.FindByIdAsync(userId);
+			if (user == null) return NotFound("找不到使用者。");
+
+			// 還原 token
+			var decoded = WebEncoders.Base64UrlDecode(token);
+			var realToken = Encoding.UTF8.GetString(decoded);
+
+			var result = await _userMgr.ConfirmEmailAsync(user, realToken);
+
+			string Html(string title, string bodyHtml, string redirect)
+			{
+				// 2 秒後自動導回；同時提供可點選連結（避免 meta 被阻擋時）
+				return $@"<!doctype html>
+<html lang=""zh-Hant"">
+<head>
+  <meta charset=""utf-8"">
+  <meta http-equiv=""X-UA-Compatible"" content=""IE=edge"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
+  <title>{title}</title>
+  <meta http-equiv=""refresh"" content=""2;url={redirect}"">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', 'Helvetica Neue', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif; padding: 40px; color: #333; }}
+    .card {{ max-width: 560px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; padding: 24px; box-shadow: 0 6px 16px rgba(0,0,0,.06); }}
+    h1 {{ font-size: 22px; margin: 0 0 12px; }}
+    p {{ margin: 8px 0; line-height: 1.6; }}
+    a.btn {{ display: inline-block; margin-top: 10px; padding: 8px 14px; border-radius: 6px; text-decoration: none; background: #2e7d32; color: #fff; }}
+  </style>
+</head>
+<body>
+  <div class=""card"">
+    {bodyHtml}
+    <p>2 秒後將自動導向：<br><code>{redirect}</code></p>
+    <p><a class=""btn"" href=""{redirect}"">立即前往</a></p>
+  </div>
+</body>
+</html>";
+			}
+			// 驗證完導回前端（個資頁）
+			var front = _cfg["Auth:EmailConfirmRedirect"] ?? "http://localhost:5173/user/me";
+			var url = $"{front}?emailVerified={(result.Succeeded ? "1" : "0")}";
+			return Redirect(url);
+		}
+
+		[AllowAnonymous]
+		[HttpPost("resend-confirm")]
+		public async Task<IActionResult> ResendConfirmEmail([FromBody] EmailDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto?.Email))
+				return BadRequest(new { error_code = "missing_fields", message = "缺少 Email" });
+
+			var user = await _userMgr.FindByEmailAsync(dto.Email.Trim());
+			if (user == null) return Ok(new { ok = true }); // 為了避免暴露使用者資訊，回 ok
+
+			if (user.EmailConfirmed) return Ok(new { ok = true });
+
+			var token = await _userMgr.GenerateEmailConfirmationTokenAsync(user);
+			var encoded = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+			var confirmUrl = Url.ActionLink(nameof(ConfirmEmail), "Auth", new { userId = user.Id, token = encoded }, Request.Scheme, Request.Host.ToString());
+			await _email.SendEmailAsync(user.Email!, "請完成信箱驗證", $@"請點擊以下連結完成驗證：<a href=""{confirmUrl}"">{confirmUrl}</a>");
+
+			return Ok(new { ok = true });
+		}
+		public record EmailDto(string Email);
 
 		// ★ 極低機率碰撞時的唯一性檢查（最多重試 5 次）
 		//    若你的 DB 有 UNIQUE 索引也可在異常時重試一次。

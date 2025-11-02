@@ -1,6 +1,10 @@
 ﻿using CloudinaryDotNet;
+using Microsoft.AspNetCore.Authentication;           // AuthenticationBuilder 擴充
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;    // AddGoogle 擴充方法所在組件
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -8,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using tHerdBackend.Composition;
 using tHerdBackend.Core.Abstractions;
+using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.DTOs.USER;
@@ -17,15 +22,13 @@ using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
+using tHerdBackend.Services.USER;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
-using tHerdBackend.Core.Abstractions.Referral;
-using tHerdBackend.SharedApi.Infrastructure.Referral;
 using tHerdBackend.SharedApi.Infrastructure.Config;
+using tHerdBackend.SharedApi.Infrastructure.Email.EmailSender.cs;
+using tHerdBackend.SharedApi.Infrastructure.Referral;
 using tHerdBackend.SharedApi.Infrastructure.Services;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication;           // AuthenticationBuilder 擴充
-using Microsoft.AspNetCore.Authentication.Google;    // AddGoogle 擴充方法所在組件
 
 
 namespace tHerdBackend.SharedApi
@@ -50,7 +53,7 @@ namespace tHerdBackend.SharedApi
            );
 
 
-            //�إ߳s�u�r��
+            //取得連線字串
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -64,7 +67,7 @@ namespace tHerdBackend.SharedApi
 	{
 		// 登入前是否必須完成信箱驗證
 		options.SignIn.RequireConfirmedAccount = false;   // 開發/測試可先關掉
-		options.SignIn.RequireConfirmedEmail = false;
+		options.SignIn.RequireConfirmedEmail = true;
 
 		// （可選）密碼規則
 		options.Password.RequireDigit = true;
@@ -84,11 +87,20 @@ namespace tHerdBackend.SharedApi
 	.AddEntityFrameworkStores<ApplicationDbContext>()
 	.AddDefaultTokenProviders();
 
+			// 讀取 SmtpSettings
+			builder.Services.Configure<SmtpSettings>(
+				builder.Configuration.GetSection("SmtpSettings"));
+
+			// 註冊寄信服務
+			builder.Services.AddTransient<IEmailSender, EmailSender>();
+
 			builder.Services.ConfigureExternalCookie(options =>
 			{
 				options.Cookie.Name = ".ExternalAuth.Temp";
 				options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
 				options.SlidingExpiration = false;
+				options.Cookie.SameSite = SameSiteMode.None;
+				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 			});
 			//關閉預設 Claims 映射
 			System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
@@ -148,23 +160,17 @@ namespace tHerdBackend.SharedApi
 				//	}
 				//};
 			})
-			//.AddCookie(IdentityConstants.ExternalScheme, options =>
-			//{// 2) 外部登入暫存 Cookie（**必要**，用來存 Google 回傳的外部票證）
-			// // 這個 Cookie 只作「外部登入流程暫存」，不當站內登入 Cookie，用預設即可
-			//	options.Cookie.Name = ".ExternalAuth.Temp";
-			//	options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
-			//	options.SlidingExpiration = false;
-			//})
 			.AddGoogle("Google", options =>
 			{// 3) Google OAuth（把 SignInScheme 指到外部 Cookie）
 				options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-		options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"]; // 例：/auth/external/google-callback
-		options.SignInScheme = IdentityConstants.ExternalScheme; // ★ 重點：外部 Cookie
+		options.CallbackPath = "/signin-google"; // 例：/auth/external/google-callback
+		//options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
+				options.SignInScheme = IdentityConstants.ExternalScheme; // ★ 重點：外部 Cookie
 		options.SaveTokens = true;
-		// options.Scope.Add("profile"); // 預設已含
-		// options.Scope.Add("email");   // 預設已含
-	});
+				// options.Scope.Add("profile"); // 預設已含
+				// options.Scope.Add("email");   // 預設已含
+			});
 
 			builder.Services.AddAuthorization();
 

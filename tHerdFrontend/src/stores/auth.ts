@@ -31,6 +31,12 @@ export const useAuthStore = defineStore('auth', {
       this.accessExpiresAt = localStorage.getItem('accessExpiresAt') ?? ''
       this.refreshToken = localStorage.getItem('refreshToken') ?? ''
       this._loadedFromStorage = true
+      // ★ 同步 axios 預設標頭（避免第一個請求來得比攔截器還早的邊緣狀況）
+  if (this.accessToken) {
+    http.defaults.headers.common.Authorization = `Bearer ${this.accessToken}`
+  } else {
+    delete http.defaults.headers.common.Authorization
+  }
     },
 
     setTokenPair(accessToken: string, accessExpiresAt: string, refreshToken?: string) {
