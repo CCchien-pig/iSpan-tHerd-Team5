@@ -10,37 +10,28 @@
       目前尚無任何工單。
     </div>
 
-    <table v-else class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>工單編號</th>
-          <th>主旨</th>
-          <th>分類</th>
-          <th>狀態</th>
-          <th>優先順序</th>
-          <th>建立日期</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="t in tickets" :key="t.ticketId">
-          <td>{{ t.ticketId }}</td>
-          <td>{{ t.subject }}</td>
-          <td>{{ t.categoryName }}</td>
-          <td>{{ t.statusText }}</td>
-          <td>{{ t.priorityText }}</td>
-          <td>{{ formatDate(t.createdDate) }}</td>
-          <td>
-            <router-link
-              :to="`/cs/tickets/${t.ticketId}`"
-              class="btn btn-sm btn-outline-success"
-            >
-              查看詳情
-            </router-link>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-else>
+      <div v-for="t in tickets" :key="t.ticketId"
+           class="card mb-3 border-0 shadow-sm hover-card rounded-4 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h5 class="mb-0">{{ t.subject }}</h5>
+          <small class="text-muted">{{ formatDate(t.createdDate) }}</small>
+        </div>
+        <p class="text-muted mb-1">分類：{{ t.categoryName || '未分類' }}</p>
+        <p class="text-muted small">狀態：
+          <span class="badge bg-secondary">{{ t.statusText }}</span>
+        </p>
+
+        <div class="text-end">
+          <router-link
+            class="btn btn-primary btn-sm"
+            :to="`/cs/tickets/${t.ticketId}`"
+          >
+            查看回復
+          </router-link>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -53,7 +44,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await http.get('/cs/CsTickets/my')
+    const res = await http.get('/cs/cstickets/my')
     if (res.data?.success) tickets.value = res.data.data
   } catch (err) {
     console.error('取得工單清單失敗', err)
@@ -63,13 +54,27 @@ onMounted(async () => {
 })
 
 function formatDate(dt) {
-  return new Date(dt).toLocaleString('zh-TW', { hour12: false })
+  return new Date(dt).toLocaleDateString('zh-TW', { hour12: false })
 }
 </script>
 
 <style scoped>
 .center-narrow {
-  max-width: 800px;
-  margin: auto;
+  max-width: 720px; 
+  margin: 0 auto;
+}
+.card {
+  padding: 1rem 1.25rem;
+}
+.hover-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.btn-primary {
+  background-color:rgb(0, 147, 171);
+  border-color: rgb( 77, 180, 193 );
 }
 </style>

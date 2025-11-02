@@ -49,7 +49,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router' 
 import { getCategories, createTicket } from '@/api/modules/cs/cstickets'
-
+import { useAuthStore } from '@/stores/auth' 
+const auth = useAuthStore() //使用 Auth Store
 const router = useRouter() 
 const loading = ref(false)
 const categories = ref([])
@@ -57,7 +58,7 @@ const previewUrl = ref('')
 const file = ref(null)
 
 const form = ref({
-  userId: 1, // 測試階段可固定
+  userId: auth.user?.userNumberId || 0, // ✅ 使用登入會員的 userNumberId
   categoryId: '',
   subject: '',
   priority: 2,

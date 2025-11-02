@@ -32,6 +32,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import http from '@/api/http'
 
+
 const route = useRoute()
 const ticket = ref(null)
 const loading = ref(true)
