@@ -1,10 +1,13 @@
-﻿<!-- ✅ CSS 套件 -->
+﻿@{
+    ViewData["Title"] = "廣告管理";
+}
+
+<!-- ✅ CSS 套件 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
 <style>
-    /* 日曆外框 */
     #calendar {
         background: #fff;
         border-radius: 16px;
@@ -13,14 +16,12 @@
         margin-top: 15px;
     }
 
-    /* 標題 */
     .fc-toolbar-title {
         font-size: 1.5rem;
         font-weight: bold;
         color: #4a148c;
     }
 
-    /* 統一紫色按鈕 */
     .btn, .fc-button {
         background-color: #6a1b9a !important;
         border: none !important;
@@ -33,7 +34,6 @@
             background-color: #8e24aa !important;
         }
 
-    /* 左右箭頭圓形化 */
     .fc-prev-button, .fc-next-button {
         border-radius: 50% !important;
         width: 36px !important;
@@ -41,13 +41,11 @@
         padding: 0 !important;
     }
 
-    /* 今日日期高亮 */
     .fc-day-today {
-        background-color: rgba(156, 39, 176, 0.15) !important;
+        background-color: rgba(156,39,176,0.15) !important;
         border: 2px solid #8e24aa !important;
     }
 
-    /* 事件卡片 */
     .fc-event {
         border-radius: 8px;
         padding: 2px 6px;
@@ -60,7 +58,6 @@
             transform: scale(1.05);
         }
 
-    /* 總數 */
     #adCount {
         font-size: 1.2rem;
         font-weight: bold;
@@ -70,7 +67,6 @@
         background: rgba(106,27,154,0.1);
     }
 
-    /* 浮動回到今天 */
     #goTodayBtn {
         position: fixed;
         bottom: 30px;
@@ -93,31 +89,25 @@
             transform: scale(1.1);
         }
 
-    /* 週六週日底色 */
     .fc-day-sat {
-        background-color: rgba(106, 27, 154, 0.05);
+        background-color: rgba(106,27,154,0.05);
     }
 
     .fc-day-sun {
-        background-color: rgba(106, 27, 154, 0.1);
+        background-color: rgba(106,27,154,0.1);
     }
 </style>
 
-<!-- ✅ HTML 主體 -->
 <div class="container my-4">
     <h2>@ViewData["Title"]</h2>
 
-    <button id="btnCreateAd" class="btn mb-3">
-       新增廣告
-    </button>
-
+    <button id="btnCreateAd" class="btn mb-3">新增廣告</button>
     <span class="ms-2">廣告總數 :</span>
     <span id="adCount" class="text-dark fw-bold">0</span>
 
     <div id="calendar"></div>
 </div>
 
-<!-- 浮動回到今天按鈕 -->
 <button id="goTodayBtn" class="btn shadow">
     <i class="bi bi-calendar-event"></i>
 </button>
@@ -134,26 +124,24 @@
 
 <script>
     $(document).ready(function () {
+
         // ✅ 更新廣告總數
-        function updateAdCount() {
+        window.updateAdCount = function () {
             $.get('/MKT/Ads/GetTotalCount?t=' + new Date().getTime(), function (res) {
                 const $count = $("#adCount");
                 const oldCount = parseInt($count.text()) || 0;
                 const newCount = res.count || 0;
-
                 if (newCount !== oldCount) {
                     $count.fadeOut(150, function () {
                         $(this).text(newCount).fadeIn(150);
                     });
                 }
             }).fail(() => $("#adCount").text(0));
-        }
+        };
 
-        updateAdCount();
-
-        // ✅ FullCalendar 初始化
+        // ✅ 初始化 FullCalendar 為全域變數
         const calendarEl = document.getElementById('calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
+        window.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             locale: 'zh-tw',
             themeSystem: 'bootstrap5',
@@ -161,150 +149,43 @@
             displayEventTime: false,
             events: '/MKT/Ads/GetEvents',
             headerToolbar: {
-                left: 'prev,next',
+                left: 'prev,next today',
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
             },
-            buttonText: {
-                month: '月',
-                week: '週',
-                day: '日'
-            },
-            eventMouseEnter: function (info) {
-                $(info.el).tooltip({
-                    title: info.event.title,
-                    placement: 'top',
-                    trigger: 'hover',
-                    container: 'body'
-                }).tooltip('show');
-            },
-            eventMouseLeave: function (info) {
-                $(info.el).tooltip('dispose');
-            },
+            buttonText: { month: '月', week: '週', day: '日', today: '今天' },
+
+            // 🟣 點擊事件顯示編輯視窗
             eventClick: function (info) {
-            const adId = info.event.id;
-            console.log("🟣 點擊日曆廣告 ID:", adId);
-
-            // 取得後端傳回的 Edit Partial View（會自動帶入該筆廣告資料）
-            $.get('/MKT/Ads/Edit/' + adId, function (html) {
-                // 將回傳的 Edit Modal 插入頁面
-                $('#adModalContainer').html(html);
-
-                // 顯示 Modal
-                $('#adModal').modal('show');
-
-                // 綁定表單送出 / 刪除邏輯
-                bindAdFormSubmit();
-            }).fail(function (xhr) {
-                console.error("❌ 無法載入編輯頁面:", xhr.responseText);
-                Swal.fire('錯誤', '無法載入廣告資料，請稍後再試。', 'error');
-            });
-    },
-
+                const adId = info.event.id;
+                $.get(`/MKT/Ads/Edit/${adId}`, function (html) {
+                    $('#adModalContainer').html(html);
+                    const $modal = $('#editAdModal');
+                    $modal.modal('show');
+                }).fail(function () {
+                    Swal.fire('錯誤', '無法載入廣告資料，請稍後再試。', 'error');
+                });
+            },
         });
 
-        calendar.render();
+        window.calendar.render();
+        updateAdCount();
 
         // ✅ 新增廣告按鈕
-        $('#btnCreateAd').click(function () {
-            $.get('/MKT/Ads/Create', function (html) {
+        $('#btnCreateAd').on('click', async () => {
+            try {
+                const res = await fetch('/MKT/Ads/Create');
+                if (!res.ok) throw new Error(`伺服器回應 ${res.status}`);
+                const html = await res.text();
                 $('#adModalContainer').html(html);
-                $('#adModal').modal('show');
-                bindAdFormSubmit();
-            });
+                const $modal = $('#createAdModal');
+                $modal.modal('show');
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: '載入失敗', text: err.message });
+            }
         });
 
         // ✅ 回到今天按鈕
-        $('#goTodayBtn').click(function () {
-            calendar.today();
-        });
-
-        // ✅ Modal 表單送出
-        function bindAdFormSubmit() {
-            $('#adForm').off('submit').on('submit', function (e) {
-                e.preventDefault();
-                const form = $(this);
-                const hasAdId = form.find('input[name="AdId"]').val();
-                const actionUrl = hasAdId ? '/MKT/Ads/Edit' : '/MKT/Ads/Create';
-
-                $.ajax({
-                    url: actionUrl,
-                    type: 'POST',
-                    data: form.serialize(),
-                    success: function (res) {
-                        if (res.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: hasAdId ? '編輯成功' : '新增成功',
-                                text: '廣告資料已更新！',
-                                showConfirmButton: false,
-                                timer: 1500
-                            });
-
-                            setTimeout(() => {
-                                $('#adModal').modal('hide');
-                                calendar.refetchEvents();
-                                updateAdCount();
-                            }, 1500);
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: '操作失敗',
-                                text: res.message || '請稍後再試。'
-                            });
-                        }
-                    },
-                    error: function () {
-                        Swal.fire('錯誤', '伺服器發生錯誤', 'error');
-                    }
-                });
-            });
-
-            // ✅ 刪除事件
-            $('#btnDeleteAd').off('click').on('click', function () {
-                const adId = $('input[name="AdId"]').val();
-                const token = $('input[name="__RequestVerificationToken"]').val();
-
-                Swal.fire({
-                    title: '確定刪除此廣告？',
-                    text: '刪除後將無法復原！',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: '確定刪除',
-                    cancelButtonText: '取消',
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#6c757d'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/MKT/Ads/Delete',
-                            type: 'POST',
-                            data: { id: adId, __RequestVerificationToken: token },
-                            success: function (res) {
-                                if (res.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: '刪除成功',
-                                        text: '該廣告已被刪除！',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                                    setTimeout(() => {
-                                        $('#adModal').modal('hide');
-                                        calendar.refetchEvents();
-                                        updateAdCount();
-                                    }, 1500);
-                                } else {
-                                    Swal.fire('錯誤', res.message || '刪除失敗', 'error');
-                                }
-                            },
-                            error: function () {
-                                Swal.fire('錯誤', '伺服器錯誤，請稍後再試', 'error');
-                            }
-                        });
-                    }
-                });
-            });
-        }
+        $('#goTodayBtn').click(() => window.calendar.today());
     });
 </script>
