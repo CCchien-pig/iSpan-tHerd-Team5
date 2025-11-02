@@ -157,7 +157,7 @@ namespace tHerdBackend.Infra.Repository.SYS
         /// <summary>
         /// 上傳檔案到 Cloudinary 並寫入資料庫
         /// </summary>
-        public async Task<object> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default)
+        public async Task<dynamic> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default)
         {
             if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
                 return new { success = false, message = "沒有上傳內容" };

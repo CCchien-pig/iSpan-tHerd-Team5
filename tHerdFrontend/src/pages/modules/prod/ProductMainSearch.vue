@@ -1,16 +1,30 @@
+<!--
+  ProducMainSearch.vue - 產品列表查詢
+  功能：展示產品列表，包含標題、查看全部按鈕和產品卡片網格
+  特色：響應式網格布局、事件傳遞、可配置標題
+  用途：用於首頁、產品頁面等需要展示多個產品的區域
+-->
 <template>
   <div class="container py-5">
-    <h2 class="mb-4">商品查詢</h2>
-    <!-- 搜尋欄位 -->
-    <div class="d-flex gap-2 mb-4">
-      <input v-model="keyword" type="text" class="form-control" placeholder="輸入商品關鍵字" />
-      <button class="btn teal-reflect-button text-white" @click="searchProducts(1)">搜尋</button>
+    <!-- 結果統計列 -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+      <div class="text-muted small">
+        共 {{ totalCount }} 項結果中的第 
+        {{ startIndex }}–{{ endIndex }} 項 
+        「<strong>{{ keyword }}</strong>」
+      </div>
+
+      <div class="d-flex align-items-center mt-2 mt-md-0">
+        <label class="me-2 text-muted small">排序方式</label>
+        <select v-model="sortBy" class="form-select form-select-sm" style="width: auto" @change="reloadProducts">
+          <option value="relevance">相關性</option>
+          <option value="price-asc">價格：低 → 高</option>
+          <option value="price-desc">價格：高 → 低</option>
+          <option value="newest">最新上架</option>
+        </select>
+      </div>
     </div>
-
-    <!-- 查詢結果 -->
-  <!-- 商品卡片列表 -->
-
-      <!-- 🧩 商品列表 -->
+      <!-- 🧩 商品列表 : 查詢結果 -->
     <ProductList
       :key="pageIndex + '_' + keyword"
       :title="'搜尋結果'"
@@ -21,17 +35,6 @@
       @page-change="page => searchProducts(page)"
       @add-to-cart="addToCart"
     />
-   <!-- 
-  <div class="row g-4">
-    <div class="col-12 col-sm-6 col-md-3 d-flex justify-content-center" v-for="p in filteredProducts" :key="p.id">
-      <ProductCard class="w-100" :product="p" @add-to-cart="addToCart" />
-         <img :src="p.image" class="card-img-top" :alt="p.name" />
-          <div class="card-body">
-            <h6 class="card-title">{{ p.name }}</h6>
-            <p class="text-muted">NT$ {{ p.price }}</p>
-          </div> 
-      </div>
-    </div>-->
   </div>
 </template>
 
@@ -61,6 +64,16 @@ const products = ref([])
 const totalCount = ref(0)
 const pageIndex = ref(1)
 const pageSize = ref(40) // 每頁40筆
+const sortBy = ref('relevance')
+
+const startIndex = computed(() => {
+  return totalCount.value === 0 ? 0 : (pageIndex.value - 1) * pageSize.value + 1
+})
+
+const endIndex = computed(() => {
+  const end = pageIndex.value * pageSize.value
+  return end > totalCount.value ? totalCount.value : end
+})
 
 // 篩選邏輯
 const filteredProducts = computed(() => {

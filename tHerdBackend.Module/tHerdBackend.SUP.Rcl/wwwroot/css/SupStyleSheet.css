@@ -160,12 +160,23 @@ input[type='radio']:focus {
         }
 
     #brandTable .discount-btn svg {
-        /*        height: 1em;
-        width: 1em;*/
         vertical-align: middle;
         width: 17px;
         height: 17px
     }
+
+/*品牌編輯全視窗按鈕*/
+#brandLayoutModal #toggleFullscreenBtn svg {
+    color: #7f7f7f;
+    vertical-align: middle;
+    width: 17.5px;
+    height: 17.5px
+}
+
+#brandLayoutModal #toggleFullscreenBtn:hover svg {
+    color: #404040;
+}
+
 
 #supplierTable .details-btn:hover svg,
 #brandTable .details-btn:hover svg {
@@ -278,6 +289,7 @@ input[type='radio']:focus {
     color: #ff6b6b;
     font-weight: 600;
 }
+
 #brandTable tr:hover .no-supplier {
     color: #ffc4c4;
 }
@@ -286,20 +298,79 @@ input[type='radio']:focus {
 #brandTable tr:hover .text-success {
     color: #6dff79 !important;
 }
+
 #brandTable tr:hover .text-warning {
     color: #ffd061 !important;
 }
+
 #brandTable tr:hover .text-danger {
     color: #ffc4e1 !important;
 }
+
+#brandTable tr:hover .text-secondary {
+    color: #d5daff !important;
+}
+
 #brandTable .text-warning {
     color: #ff8108 !important;
 }
+
+
+/* 品牌版面管理 */
+/*啟用中的*/
+#brandLayoutModalContent .table-success:hover .edit-layout-btn {
+    border: 1px solid #1b4574;
+    color: #1b4574 !important;
+}
+
+#brandLayoutModalContent .table-success:hover td {
+    color: #1b4574 !important;
+}
+
+/*未啟用的*/
+#brandLayoutModalContent tr:hover .edit-layout-btn {
+    border: 1px solid #97d8ee;
+    color: #97d8ee !important;
+}
+
+#brandLayoutModalContent tr:hover .delete-btn {
+    border: 1px solid #ff4b00f6;
+    color: #ff4b00f6 !important;
+}
+
+#brandLayoutModalContent tr:hover .activate-btn {
+    border: 1px solid #89d1b0 !important;
+    color: #78e579 !important;
+}
+
+#brandLayoutModalContent tr .edit-layout-btn:hover {
+    border: 1px solid #1b4574 !important;
+    color: #1a3b88 !important;
+}
+
+#brandLayoutModalContent tr .delete-btn:hover {
+    border: 1px solid #ff4b00f6 !important;
+    color: #ff0000 !important;
+    background-color: #ffb86fb5 !important;
+}
+
+#brandLayoutModalContent tr .activate-btn:hover {
+    border: 1px solid #1d3d1e !important;
+    background-color: #a1fccc !important;
+    color: #1d3d1e !important;
+}
+
+#brandLayoutModalContent tr .delete-btn {
+    color: #ff7d00 !important;
+}
+
+
 
 /* ====== 庫存表格 庫存量 ====== */
 #stockBatchTable tr:hover .stock-danger svg {
     color: #ff707e !important;
 }
+
 #stockBatchTable tr:hover .stock-danger {
     color: #ffb5bc !important;
 }
@@ -566,3 +637,100 @@ button.dt-paging-button.current:not(:disabled):hover {
         box-shadow: none;
     }
 
+
+
+/* 全螢幕時覆蓋 modal-content 及 container 限制，鋪滿整個 viewport */
+#brandLayoutModal .modal-dialog.custom-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1060;
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    justify-content: center; /* 水平置中 */
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+    #brandLayoutModal .modal-dialog.custom-fullscreen .modal-content.container {
+        /* 寬高用百分比+px限制 */
+        width: calc(100vw - 40px);
+        height: 80vh;
+        max-width: 100vw;
+        max-height: 80vh;
+        border-radius: 10px;
+        background: #fff;
+        box-sizing: border-box;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+#brandLayoutModal .modal-dialog.custom-fullscreen {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+}
+
+
+/*TinyMCE 雙欄佈局 模板*/
+.two-column-container {
+    display: flex;
+    gap: 20px; /* 欄位之間的間距 */
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+    .two-column-container .column {
+        flex: 1; /* 讓兩欄平分寬度 */
+        min-width: 0; /* 防止內容過多時撐開佈局 */
+    }
+
+/* 在手機等小螢幕上，自動變為垂直堆疊 */
+@media (max-width: 768px) {
+    .two-column-container {
+        flex-direction: column;
+    }
+}
+
+/* TinyMCE 的模板選擇視窗 */
+.tox-dialog {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
+}
+
+.tox-dialog__title {
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    color: #007080 !important;
+}
+
+.tox-dialog__body-content {
+    background-color: #fafafa !important;
+    padding: 20px !important;
+}
+
+.tox-dialog__footer {
+    border-top: 1px solid #ddd !important;
+    background: #f5f5f5 !important;
+}
+
+.tox-listboxfield {
+    margin-top: 8px !important;
+    margin-bottom: 10px !important;
+}
+
+.tox-form__group {
+    margin-bottom: 8px !important;
+    padding-left: 8px;
+}
+
+.tox-navobj {
+    margin-top: 5px !important;
+    border-radius: 10px !important;
+    border: 1px solid #000 !important;
+}

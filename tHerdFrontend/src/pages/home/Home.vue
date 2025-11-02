@@ -11,7 +11,7 @@ import { useLoadingStore } from '@/stores/loading'
 import { RouterLink } from 'vue-router'
 
 // 導入產品相關組件
-import ProductList from '@/components/modules/prod/list/ProductList.vue'
+import ProductShowcase from '@/components/modules/prod/list/ProductShowcase.vue'
 
 // 導入頁面區塊組件 - 每個區塊都是獨立的組件
 import HeroSection from '@/components/sections/HeroSection.vue' // 英雄區塊
@@ -109,20 +109,6 @@ const handleQuickView = (product) => {
   <!-- 首頁容器 - 使用組件化設計，每個區塊都是獨立的組件 -->
   <div class="homepage">
     <AdPopup imageUrl="/images/Ad/Ad1099-FreeFee.png" />
-    <!-- 測試商品頁面的快速連結 -->
-    <div class="container py-3">
-      <div class="alert alert-info d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-info-circle me-2"></i>商品頁面測試連結：</span>
-        <div>
-          <RouterLink to="/prod/search" class="btn btn-sm btn-primary me-2">
-            <i class="bi bi-list me-1"></i>商品列表
-          </RouterLink>
-          <RouterLink to="/prod/products/14600" class="btn btn-sm btn-success">
-            <i class="bi bi-box-seam me-1"></i>商品詳情範例
-          </RouterLink>
-        </div>
-      </div>
-    </div>
     <!--
       英雄區塊 - 首頁主要展示區域
       功能：展示網站主要價值主張和行動按鈕
@@ -150,9 +136,9 @@ const handleQuickView = (product) => {
       熱銷產品區塊 - 展示推薦產品
       功能：展示精選的熱銷產品，促進銷售轉換
       事件：支持購物車、收藏、快速查看等操作
-      組件：使用ProductList組件，內部包含多個ProductCard
+      組件：使用ProductShowcase組件，內部包含多個ProductCard
     -->
-    <ProductList
+    <ProductShowcase
       title="熱銷產品"
       :products="featuredProducts"
       view-all-text="查看全部"
