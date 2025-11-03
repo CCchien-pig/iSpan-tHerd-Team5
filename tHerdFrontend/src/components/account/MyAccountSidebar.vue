@@ -20,6 +20,7 @@
           <span v-if="badges.messages>0" class="badge badge-danger badge-small">{{ badges.messages }}</span>
         </li>
         <li><router-link class="accountsettings" :to="safeTo('account')">帳號資訊</router-link></li>
+        <!-- <li><router-link class="accountsettings" :to="{ name: 'account' }">帳號資訊</router-link></li> -->
         <li><router-link class="addressbook" :to="safeTo('addressbook')">地址簿</router-link></li>
         <li><router-link class="payment" :to="safeTo('payments')">付款方式</router-link></li>
         <li><router-link class="lists" :to="safeTo('wishlist')">我的清單</router-link></li>
