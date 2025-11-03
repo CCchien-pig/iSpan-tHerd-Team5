@@ -1,27 +1,89 @@
 ﻿@model tHerdBackend.Core.DTOs.CS.TicketOut
-
-<h2>工單詳情</h2>
-
-<div class="card p-3 mb-4 shadow-sm">
-    <p><strong>編號：</strong>@Model.TicketId</p>
-    <p><strong>主旨：</strong>@Model.Subject</p>
-    <p><strong>分類：</strong>@Model.CategoryName</p>
-    <p><strong>狀態：</strong>@Model.StatusText</p>
-    <p><strong>建立時間：</strong>@Model.CreatedDate.ToString("yyyy/MM/dd HH:mm")</p>
-</div>
-
-@if (TempData["msg"] != null)
-{
-    <div class="alert alert-success">@TempData["msg"]</div>
+@{
+    ViewData["Title"] = "客服工單詳情";
+    var backUrl = Url.Action("Index", "CsTickets", new { area = "CS" });
+    var replyAjaxUrl = Url.Action("ReplyAjax", "CsTickets", new { area = "CS" });
 }
 
-<h4>回覆內容</h4>
-<form asp-action="Reply" method="post">
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
+
+<div class="page-actions sticky-top bg-white pt-3 pb-2 mb-3 border-bottom">
+    <div class="d-flex align-items-center justify-content-between">
+        <h1 class="h4 mb-0">@ViewData["Title"]</h1>
+        <div class="btn-group">
+            <a href="@backUrl" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left"></i> 返回清單
+            </a>
+            <button type="submit" form="replyForm" class="btn btn-primary">
+                <i class="fa-solid fa-paper-plane"></i> 寄出回覆信
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">工單資料</h5>
+        <p><b>主旨：</b>@Model.Subject</p>
+        <p><b>分類：</b>@Model.CategoryName</p>
+        <p><b>狀態：</b>@Model.StatusText</p>
+        <p><b>建立時間：</b>@Model.CreatedDate.ToString("yyyy/MM/dd HH:mm")</p>
+    </div>
+</div>
+
+<form id="replyForm" action="@replyAjaxUrl" method="post">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="ticketId" value="@Model.TicketId" />
-    <textarea name="replyText" class="form-control" rows="4" placeholder="請輸入回覆內容..."></textarea>
-    <button type="submit" class="btn btn-success mt-3">送出回覆</button>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">回覆內容（寄給客戶的信件）</label>
+                <textarea id="replyEditor" name="replyText" class="form-control"></textarea>
+                <div class="form-text">客服回覆後，系統會寄出 Email 給使用者。</div>
+            </div>
+        </div>
+    </div>
 </form>
 
-<div class="mt-3">
-    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
-</div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+
+<script>
+    const $jq = window.jQuery;
+    document.addEventListener('DOMContentLoaded', function () {
+        if ($jq && $jq.fn && $jq.fn.summernote) {
+            $jq('#replyEditor').summernote({
+                placeholder: '輸入要寄給客戶的內容…',
+                height: 250,
+                toolbar: [
+                    ['style', ['bold', 'italic', 'underline', 'clear']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['insert', ['link']],
+                    ['view', ['codeview']]
+                ]
+            });
+        }
+
+        const form = document.getElementById('replyForm');
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            let html = $jq('#replyEditor').summernote('code');
+            document.getElementById('replyEditor').value = html;
+
+            const fd = new FormData(form);
+            try {
+                const resp = await fetch(form.action, { method: 'POST', body: fd });
+                const data = await resp.json().catch(() => ({}));
+                if (resp.ok && data.ok) {
+                    alert('✅ 回覆信件已寄出！');
+                    location.href = data.redirectUrl;
+                } else {
+                    alert(data.message || '寄信失敗，請稍後再試。');
+                }
+            } catch {
+                alert('伺服器錯誤，請稍後再試。');
+            }
+        });
+    });
+</script>
