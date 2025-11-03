@@ -66,15 +66,19 @@
                 >
                   <div class="container-fluid py-4 px-4">
                     <div class="row g-4">
-                      <div class="col-6 col-md-2" v-for="(group, gIdx) in brandGroups" :key="gIdx">
+                      <div
+                        class="col-6 col-md-2"
+                        v-for="(group, gIdx) in brandGroups"
+                        :key="`grp-${gIdx}`"
+                      >
                         <ul class="list-unstyled mb-0">
-                          <li v-for="brand in group" :key="brand" class="mb-2">
+                          <li v-for="b in group" :key="b.brandId" class="mb-2">
                             <router-link
-                              :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                              :to="toBrandPath(b.brandName, b.brandId)"
                               class="text-dark text-decoration-none brand-link"
                               @click="showBrands = false"
                             >
-                              {{ brand }}
+                              {{ b.brandName }}
                             </router-link>
                           </li>
                         </ul>
@@ -165,13 +169,13 @@
                       <!-- ✅ 正確的雙層 v-for 結構 -->
                       <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
                         <router-link
-                          v-for="brand in group"
-                          :key="brand"
-                          :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                          v-for="b in group"
+                          :key="b.brandId"
+                          :to="toBrandPath(b.brandName, b.brandId)"
                           class="brand-item"
                           @click="closeMobileMenu"
                         >
-                          {{ brand }}
+                          {{ b.brandName }}
                         </router-link>
                       </template>
                     </div>
@@ -218,16 +222,40 @@ export default {
       ],
 
       brandGroups: [
-        ['21st Century', 'ACURE', 'ALLMAX', 'Beauty of Joseon'],
-        ["Doctor's Best", 'Eucerin', 'Fairhaven Health', 'Garden of Life'],
-        ['Life Extension', 'MegaFood', 'NOW Foods', "Nature's Bounty"],
-        ['Solgar', 'Thorne', 'Vital Proteins', 'The Vitamin Shoppe'],
+        [
+          { brandId: 1002, brandName: 'Animal' },
+          { brandId: 1005, brandName: 'Bioschwartz' },
+          { brandId: 1008, brandName: 'Codeage' },
+          { brandId: 1010, brandName: 'Dr. Mercola' },
+          { brandId: 1013, brandName: 'Eucerin' },
+        ],
+        [
+          { brandId: 1016, brandName: 'Force Factor' },
+          { brandId: 1019, brandName: 'Garden Of Life' },
+          { brandId: 1022, brandName: 'Healths Harmony' },
+          { brandId: 1024, brandName: 'Irwin Naturals' },
+          { brandId: 1025, brandName: 'Idealove' },
+        ],
+        [
+          { brandId: 1027, brandName: 'Jarrow formulas' },
+          { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
+          { brandId: 1038, brandName: 'Mild By Nature' },
+          { brandId: 1039, brandName: 'Natural Factors' },
+          { brandId: 1042, brandName: 'Optimum Nutrition' },
+        ],
+        [
+          { brandId: 1054, brandName: 'Solaray' },
+          { brandId: 1058, brandName: 'Trace' },
+          { brandId: 1061, brandName: 'Vitamatic' },
+          { brandId: 1064, brandName: "Wiley's Finest" },
+          { brandId: 1072, brandName: 'Zahler' },
+        ],
       ],
 
       recommendedBrands: [
-        { name: "Nature's Bounty", url: '/brands/natures-bounty' },
-        { name: '21st Century', url: '/brands/21st-century' },
-        { name: 'Fairhaven Health', url: '/brands/fairhaven-health' },
+        { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
+        { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
+        { name: 'Life Extension', url: '/brands/life-extension-1033' },
       ],
     }
   },
@@ -250,6 +278,17 @@ export default {
     goBrandsAndClose() {
       this.$router.push('/brands')
       this.closeMobileMenu()
+    },
+    toBrandPath(name, id) {
+      const slug = String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+      return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
     },
   },
   beforeUnmount() {
