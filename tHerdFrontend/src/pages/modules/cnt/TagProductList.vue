@@ -113,9 +113,7 @@ const totalPages = ref(1);    // Math.ceil(total/pageSize)
 
 // 把圖片路徑補成完整 URL
 function fixImageUrl(path) {
-  if (!path) {
-    return "/images/no-image.png";
-  }
+  if (!path) return "/images/no-image.png";
 
   // 已經是完整 URL
   if (/^https?:\/\//i.test(path)) return path;
@@ -125,10 +123,9 @@ function fixImageUrl(path) {
     return `https://localhost:7103${path}`;
   }
 
-  // 舊格式 ../../file?id=xxx
-  if (path.startsWith("../../file?id=")) {
+  if (path.startsWith("././file?id=")) {
     return path.replace(
-      "../../file?id=",
+      "././file?id=",
       "https://localhost:7103/file?id="
     );
   }
@@ -138,19 +135,14 @@ function fixImageUrl(path) {
   return `https://localhost:7103${path}`;
 }
 
+
 // 從後端抓「這個標籤底下的商品」
 // ⭐ 期望後端回傳 { total, items: [...] }
 async function loadProducts() {
   try {
-    const res = await axios.get(
-      `/api/cnt/tags/${props.tagId}/products`,
-      {
-        params: {
-          page: page.value,
-          pageSize: pageSize.value,
-        },
-      }
-    );
+    const res = await axios.get(`/api/cnt/tags/${props.tagId}/products`, {
+  params: { page: page.value, pageSize: pageSize.value },
+});
 
     const rawTotal = res.data?.total ?? 0;
     const rawItems = res.data?.items ?? [];

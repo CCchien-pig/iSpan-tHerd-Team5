@@ -103,14 +103,9 @@ namespace tHerdBackend.Infra.Repository.CNT
 		// 3. 取主圖：依 ProductId，把主圖或排序第一張的 FileUrl 拉出來
 		public async Task<Dictionary<int, string>> GetMainImageMapAsync(IEnumerable<int> productIds)
 		{
-			var pidList = productIds
-				.Distinct()
-				.ToList();
-
+			var pidList = productIds.Distinct().ToList();
 			if (!pidList.Any())
-			{
 				return new Dictionary<int, string>();
-			}
 
 			// 我們有：
 			// ProdProductImage {
@@ -127,24 +122,23 @@ namespace tHerdBackend.Infra.Repository.CNT
 			// 但我們是用 GroupBy+First() 的型式來壓成一筆。
 			//
 			var data = await _db.ProdProductImages
-				.Where(img => pidList.Contains(img.ProductId)
-							&& img.IsMain)             // 🔴 加上 IsMain = 1 條件
-				.OrderBy(img => img.OrderSeq)         // 主圖之間再照排序
-				.Select(img => new {
-					img.ProductId,
-					ImageUrl = img.Img.FileUrl        // SysAssetFile.FileUrl
-				})
-				.ToListAsync();
+					.Where(img => pidList.Contains(img.ProductId))
+					.OrderByDescending(img => img.IsMain)  // 先排 IsMain=1
+					.ThenBy(img => img.OrderSeq)           // 再排你的圖片順序
+					.Select(img => new {
+						img.ProductId,
+						ImageUrl = img.Img.FileUrl
+					})
+					.ToListAsync();
 
 			// 現在 data 可能有同一個 ProductId 多筆，因為同一個商品多張圖。
 			// 我們要取每個 ProductId 的第一張。
 			var dict = new Dictionary<int, string>();
 			foreach (var row in data)
 			{
+				// 每個商品只取遇到的第一張（因為上面已經排好：主圖 → 排序小 → 其他）
 				if (!dict.ContainsKey(row.ProductId))
-				{
 					dict[row.ProductId] = row.ImageUrl ?? string.Empty;
-				}
 			}
 
 			return dict;
