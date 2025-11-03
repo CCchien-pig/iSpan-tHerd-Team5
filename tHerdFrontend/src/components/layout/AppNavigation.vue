@@ -115,7 +115,7 @@
             <div 
               v-if="activeMenuId"
               class="mega-menu shadow-lg bg-white"
-              @mouseenter="openMegaMenu({ id: activeMenuId })"
+              @mouseenter="clearCloseTimer"
               @mouseleave="closeMegaMenu"
             >
               <div v-if="isLoadingMenu" class="p-4 text-center text-muted">載入中...</div>
@@ -306,14 +306,25 @@ function preloadMegaMenus() {
   })
 }
 
+let closeTimer = null
+
 // === 開關 MegaMenu ===
 function openMegaMenu(item) {
+  clearTimeout(closeTimer)
   activeMenuId.value = item.id
   megaMenuData.value = loadedMenus.value[item.id] // ✅ 直接讀快取，不用 loading
 }
 
 function closeMegaMenu() {
-  activeMenuId.value = null
+  clearTimeout(closeTimer)
+  // 延遲一點再關閉，給滑鼠移動時間
+  closeTimer = setTimeout(() => {
+    activeMenuId.value = null
+  }, 200)
+}
+
+function clearCloseTimer() {
+  clearTimeout(closeTimer)
 }
 
 // 品牌清單
@@ -631,6 +642,7 @@ onBeforeUnmount(() => {
   max-height: 80vh;
   overflow-y: auto;
   border-top: 3px solid rgb(77, 180, 193);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .brand-link {
