@@ -9,7 +9,7 @@
   </div>
 
   <div v-else class="text-center py-3 text-muted">
-    目前沒有可領取的優惠券
+    <h4><strong>🚀 登入會員可查看和領取優惠券 🐛</strong></h4>
   </div>
 </template>
 

@@ -5,7 +5,7 @@
       <!-- 開始畫面 -->
       <div v-if="!gameStarted && !showCountdown" class="start-screen">
         <h2 class="main-color-green-text">翻牌記憶遊戲</h2>
-        <p class="main-color-green-text">限時 60 秒，配對越多優惠越大！</p>
+        <p class="main-color-green-text">限時 30 秒，配對越多優惠越大！</p>
         <button @click="prepareStart" class="start-btn">開始遊戲</button>
       </div>
 
@@ -78,7 +78,7 @@ const firstCard = ref(null)
 const secondCard = ref(null)
 const lockBoard = ref(false)
 const score = ref(0)
-const timeLeft = ref(60)
+const timeLeft = ref(30)
 const isGameOver = ref(false)
 const isClear = ref(false)
 const showFlash = ref(false)
@@ -145,7 +145,7 @@ function startGame() {
   gameStarted.value = true
   shuffleCards()
   score.value = 0
-  timeLeft.value = 60
+  timeLeft.value = 30
   isGameOver.value = false
   isClear.value = false
   startTimer()
