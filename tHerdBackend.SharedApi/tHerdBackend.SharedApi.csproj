@@ -1,35 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>aca58b01-0cf3-4cc4-a740-9c78b68ca6a6</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>aca58b01-0cf3-4cc4-a740-9c78b68ca6a6</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-<<<<<<< HEAD
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.19" />
-=======
-    <Compile Remove="Controllers\Module\CS\TicketsController.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.19" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+	</ItemGroup>
 
-  <ItemGroup>
->>>>>>> ff4bf2a757afd4b4acb1596314ab91bb7cd15fc6
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.SUP.Rcl\tHerdBackend.SUP.Rcl.csproj" />
+		<ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Composition\tHerdBackend.Composition.csproj" />
+		<ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Core\tHerdBackend.Core.csproj" />
+		<ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
+		<ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Services\tHerdBackend.Services.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\tHerdBackend.Module\tHerdBackend.SUP.Rcl\tHerdBackend.SUP.Rcl.csproj" />
-    <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Composition\tHerdBackend.Composition.csproj" />
-    <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Core\tHerdBackend.Core.csproj" />
-    <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Infra\tHerdBackend.Infra.csproj" />
-    <ProjectReference Include="..\tHerdBackend.Share\tHerdBackend.Services\tHerdBackend.Services.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\Module\CS\" />
-    <Folder Include="Controllers\Module\SYS\" />
-  </ItemGroup>
+	<ItemGroup>
+		<Folder Include="Controllers\Module\CS\" />
+		<Folder Include="Controllers\Module\SYS\" />
+	</ItemGroup>
 
 </Project>
