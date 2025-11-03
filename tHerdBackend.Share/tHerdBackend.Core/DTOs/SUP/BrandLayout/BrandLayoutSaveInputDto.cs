@@ -8,11 +8,12 @@ namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 	public class BrandLayoutSaveInputDto
 	{
 		public int BrandId { get; set; } // 從隱藏欄位取得
-		public int? ActiveLayoutId { get; set; } // 如果是更新
+		public int? LayoutId { get; set; } // ✅ 這個是版面 ID（編輯時有值）
 		public string? LayoutVersion { get; set; }
 
 		// 將屬性名稱從 LayoutJson 改為 FullLayoutJson，以接收前端傳來的完整 JSON
+		// 將類型從 string 改為 List<BaseLayoutBlockDto>
 		[Required(ErrorMessage = "版面配置內容不能為空。")]
-		public string FullLayoutJson { get; set; } = string.Empty;
+		public List<BaseLayoutBlockDto> FullLayoutJson { get; set; } = new List<BaseLayoutBlockDto>();
 	}
 }

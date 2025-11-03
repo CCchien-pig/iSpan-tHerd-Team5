@@ -9,6 +9,11 @@ export default [
       module: 'ORD'
     }
   },
+  {
+  path: '/orders',
+  name: 'orders',
+  component: () => import('@/pages/modules/ord/Orders.vue')
+  }
 //   {
 //     path: '/checkout',
 //     name: 'Checkout',

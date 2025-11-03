@@ -6,7 +6,12 @@
   <div class="product-image-gallery">
     <!-- 主圖區域 -->
     <div class="main-image-container">
-      <img :src="currentImage.fileUrl" :alt="productName" class="main-image" />
+      <img
+        :src="currentImage.fileUrl"
+        :alt="productName"
+        class="main-image"
+        @click="openImageUrl"
+      />
     </div>
 
     <!-- 縮圖列表 -->
@@ -59,6 +64,15 @@ const currentImage = computed(() => {
   return props.images[currentImageIndex.value]
 })
 
+/*
+  轉跳照片網址
+*/
+const openImageUrl = () => {
+  if (currentImage.value && currentImage.value.fileUrl) {
+    window.open(currentImage.value.fileUrl, '_blank')
+  }
+}
+
 /**
  * 選擇圖片
  */
@@ -75,10 +89,14 @@ const selectImage = (index) => {
 
 /* 主圖容器 */
 .main-image-container {
+  position: relative;
+  width: 100%;
+  height: 500px; /* 外框高度自行調整 */
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 20px;
+  overflow: hidden;
+  padding: 0;
   margin-bottom: 15px;
   display: flex;
   align-items: center;
@@ -87,9 +105,9 @@ const selectImage = (index) => {
 }
 
 .main-image {
-  max-width: 100%;
-  max-height: 400px;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* ✅ 讓圖片鋪滿整個容器 */
   cursor: zoom-in;
 }
 

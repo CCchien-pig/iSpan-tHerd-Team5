@@ -12,7 +12,8 @@
     >
       <div class="align-items-center d-flex gap-2">
         <!-- 左側促銷信息按鈕 -->
-        <AppButton
+         <router-link to="/mkt/game">
+          <AppButton
           :text="leftText"
           variant="light"
           size="sm"
@@ -21,19 +22,13 @@
         >
           <span class="hover-underline">{{ leftText }}</span>
           <!-- 倒計時（如果有） -->
-          <span class="ms-3 hover-none" v-if="countdown">{{ countdown }}</span>
+          <!-- <span class="ms-3 hover-none" v-if="countdown">{{ countdown }}</span> -->
         </AppButton>
-
-        <!-- 右側促銷信息按鈕 -->
-        <AppButton
-          :text="rightText"
-          variant="light"
-          size="sm"
-          :show-border="false"
-          custom-class="main-color-white-text bg-transparent border-0 p-2 rounded-pill"
-        >
-          <span class="hover-underline">{{ rightText }}</span>
-        </AppButton>
+        </router-link>
+        
+        <!-- 右側促銷信息 -->
+          <span class="hover-underline ">{{ rightText }}</span>
+        
       </div>
 
       <div class="d-flex gap-2">
@@ -81,18 +76,18 @@ export default {
     // 左側促銷文字
     leftText: {
       type: String,
-      default: 'tHerd 自主研發品牌 71折',
+      default: '前往遊戲頁面',
     },
     // 右側促銷文字
     rightText: {
       type: String,
-      default: '週年慶特惠',
+      default: '挑戰翻牌遊戲，贏取專屬獎勵！',
     },
     // 倒計時文字
-    countdown: {
-      type: String,
-      default: '還剩: 10小時 53分 36秒',
-    },
+    // countdown: {
+    //   type: String,
+    //   default: '還剩: 10小時 53分 36秒',
+    // },
   },
 };
 </script>

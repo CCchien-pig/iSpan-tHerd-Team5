@@ -1,22 +1,24 @@
 <template>
-  <div v-if="visible" class="popup-overlay">
+  <div v-if="visible && ad" class="popup-overlay">
     <div class="popup-content">
       <button class="close-btn" @click="closePopup">✕</button>
       <!-- 圖片 -->
-      <img :src="imageUrl" alt="廣告" class="ad-image" />
+      <img
+        :src="ad.imageUrl"
+        alt="廣告"
+        class="ad-image"
+        @click="goToLink(ad.link)"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-// 傳入圖片連結
+// ✅ 組件設定（是否自動顯示）
 const props = defineProps({
-  imageUrl: {
-    type: String,
-    required: true
-  },
   autoShow: {
     type: Boolean,
     default: true
@@ -24,16 +26,37 @@ const props = defineProps({
 })
 
 const visible = ref(false)
+const ad = ref(null) // 儲存彈出式廣告資料
 
-onMounted(() => {
-  if (props.autoShow) {
-    visible.value = true
-  }
-})
-
+// === 🧭 關閉廣告 ===
 function closePopup() {
   visible.value = false
 }
+
+// === 🔗 點擊圖片開啟連結 ===
+function goToLink(link) {
+  if (link) window.location.href = link
+}
+
+// === 📡 從後端載入廣告資料 ===
+async function loadPopupAd() {
+  try {
+    const res = await axios.get('/api/mkt/ad/PopupList')
+    const list = res.data || []
+
+    if (list.length > 0) {
+      // ✅ 這裡可以選擇第一筆或隨機一筆
+      ad.value = list[Math.floor(Math.random() * list.length)]
+      if (props.autoShow) visible.value = true
+    }
+  } catch (err) {
+    console.error('載入彈出式廣告失敗：', err)
+  }
+}
+
+onMounted(() => {
+  loadPopupAd()
+})
 </script>
 
 <style scoped>
@@ -56,17 +79,18 @@ function closePopup() {
   border-radius: 0;
   overflow: visible;
   box-shadow: none;
-  max-width: 90vw;   /* ✅ 限制最大寬度為螢幕 90% */
-  max-height: 90vh;  /* ✅ 限制最大高度為螢幕 90% */
+  max-width: 90vw;
+  max-height: 90vh;
 }
 
 .ad-image {
   display: block;
   width: 100%;
   height: auto;
-  max-width: 1300px;  /* ✅ 桌機最大寬度 */
-  max-height: 90vh;   /* ✅ 高度不超過螢幕 */
+  max-width: 1300px;
+  max-height: 90vh;
   object-fit: contain;
+  cursor: pointer;
 }
 
 .close-btn {
@@ -83,7 +107,6 @@ function closePopup() {
   z-index: 10;
   transition: background 0.2s;
 }
-
 .close-btn:hover {
   background: rgba(0, 0, 0, 0.8);
 }
@@ -91,29 +114,26 @@ function closePopup() {
 /* 🪄 RWD 手機調整 */
 @media (max-width: 768px) {
   .ad-image {
-    max-width: 95vw;   /* 手機幾乎全寬 */
-    max-height: 80vh;  /* 保持高度不超出版面 */
+    max-width: 95vw;
+    max-height: 80vh;
   }
-
   .close-btn {
-    font-size: 18px;  /* 手機縮小按鈕 */
+    font-size: 18px;
     top: 6px;
     right: 6px;
     padding: 3px 6px;
   }
 }
 
-/* 📱 超小螢幕（像 iPhone SE）再縮小 */
+/* 📱 超小螢幕 */
 @media (max-width: 480px) {
   .ad-image {
     max-width: 95vw;
     max-height: 70vh;
   }
-
   .close-btn {
     font-size: 16px;
     padding: 2px 5px;
   }
 }
-
 </style>

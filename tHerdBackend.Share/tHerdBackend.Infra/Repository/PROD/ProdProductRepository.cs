@@ -71,6 +71,90 @@ namespace tHerdBackend.Infra.Repository.PROD
         }
 
         /// <summary>
+        /// 前台: 查詢商品清單 (增加效率)
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(
+            ProductFilterQueryDto query, CancellationToken ct = default)
+        {
+
+            // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
+            var sql = new StringBuilder(@"
+                SELECT 
+                    p.ProductId, p.ProductName, 
+                    p.BrandId, s.BrandName, 
+                    p.SeoId, p.Badge, 
+                    p.MainSkuId, 
+                    af.FileUrl AS ImageUrl,
+                    ps.ListPrice, ps.UnitPrice, ps.SalePrice
+                FROM PROD_Product p
+                JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
+                LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId = p.SeoId AND sma.IsPrimary = 1
+                LEFT JOIN SYS_AssetFile af ON af.FileId = sma.FileId
+                WHERE 1 = 1
+            ");
+
+            // === Step 2. 條件過濾 ===
+            ProductQueryBuilder.AppendFilters(sql, query);
+
+            // === Step 3. 排序 ===
+            sql.Append(ProductQueryBuilder.BuildOrderClause(query));
+            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
+
+            // === Step 4. 統計筆數 ===
+            var countSql = new StringBuilder(@"
+                SELECT COUNT(DISTINCT p.ProductId)
+                  FROM PROD_Product p
+                  JOIN SUP_Brand s ON s.BrandId=p.BrandId
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
+                  LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
+                  LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
+                 WHERE 1 = 1 ");
+
+            ProductQueryBuilder.AppendFilters(countSql, query);
+
+            // === Step 5. 查詢執行 ===
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                // 查詢參數
+                var parameters = new
+                {
+                    Skip = (query.PageIndex - 1) * query.PageSize,
+                    Take = query.PageSize,
+                    query.ProductId,
+                    query.Keyword,
+                    query.BrandId,
+                    query.ProductTypeId,
+                    query.MinPrice,
+                    query.MaxPrice,
+                    query.IsPublished
+                };
+
+                // 查詢
+                using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+
+                var list = await multi.ReadAsync<ProdProductSearchDto>();
+                var total = await multi.ReadSingleAsync<int>();
+
+                return (list, total);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
+                return (Enumerable.Empty<ProdProductSearchDto>(), 0);
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+
+        /// <summary>
         /// 查詢商品清單
         /// </summary>
         /// <param name="query"></param>
@@ -112,6 +196,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             // === Step 3. 排序 ===
             sql.Append(ProductQueryBuilder.BuildOrderClause(query));
+            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
 
             // === Step 4. 統計筆數 ===
             var countSql = new StringBuilder(@"
@@ -150,37 +235,36 @@ namespace tHerdBackend.Infra.Repository.PROD
                     query.IsPublished
                 };
 
-                var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
-                    sql.ToString(),
-                    (p, typeName) => {
-                        if (!string.IsNullOrEmpty(typeName))
-                            p.ProductTypeDesc = new() { typeName };
-                        return p;
-                    },
-                    parameters, tx, splitOn: "ProductTypeName"
-                );
+                // 查詢
+                var multiSql = $"{sql}; {countSql};";
+                using var multi = await conn.QueryMultipleAsync(multiSql, parameters, tx);
 
-                var grouped = raw.GroupBy(p => p.ProductId).Select(g =>
+                // 讀清單
+                var raw = await multi.ReadAsync<ProdProductDto>();
+
+                // 讀總數
+                var total = await multi.ReadSingleAsync<int>();
+
+
+                // 整理類別名稱集合
+                var list = raw.GroupBy(p => p.ProductId).Select(g =>
                 {
                     var first = g.First();
-                    first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc ?? new()).Distinct().ToList();
+                    first.ProductTypeDesc = g
+                        .Select(x => x.ProductTypeName ?? string.Empty)
+                        .Where(n => !string.IsNullOrEmpty(n))
+                        .Distinct()
+                        .ToList();
                     return first;
                 }).ToList();
 
-                // 記憶體分頁
-                var list = (query.PageSize > 0)
-                    ? grouped.Skip((query.PageIndex - 1) * query.PageSize)
-                             .Take(query.PageSize)
-                             .ToList()
-                    : grouped.ToList();
-
-                // === Step 6. 計算總筆數 ===
-                var total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, tx);
-
                 // === Step 7. 補 Creator / Reviser 名稱 ===
-                var resolver = new UserNameResolver(_factory, _db);
-                await resolver.LoadAsync(ct);
-                resolver.Apply(list);
+                if (query.IsFrontEnd != true)  // 自訂 flag，前台不載入
+                {
+                    var resolver = new UserNameResolver(_factory, _db);
+                    await resolver.LoadAsync(ct);
+                    resolver.Apply(list);
+                }
 
                 return (list, total);
             }

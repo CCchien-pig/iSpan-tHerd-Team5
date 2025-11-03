@@ -18,7 +18,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.ViewModels
 		public string BrandName { get; set; } = string.Empty;
 
 		[Display(Name = "現行啟用版本Id")]
-		public int? ActiveLayoutId { get; set; } // 現行啟用版面的 LayoutId (若為新增則為 null)
+		public int? CurrentActiveLayoutId { get; set; } // 現行啟用版面的 LayoutId (若為新增則為 null)
 
 		[Display(Name = "版型版本號")]
 		public string? LayoutVersion { get; set; }

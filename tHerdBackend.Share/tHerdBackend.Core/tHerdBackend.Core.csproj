@@ -7,33 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Domain\CS\NewFolder\**" />
-    <Compile Remove="Domain\NewFolder\**" />
     <Compile Remove="Services\**" />
-    <EmbeddedResource Remove="Domain\CS\NewFolder\**" />
-    <EmbeddedResource Remove="Domain\NewFolder\**" />
     <EmbeddedResource Remove="Services\**" />
-    <None Remove="Domain\CS\NewFolder\**" />
-    <None Remove="Domain\NewFolder\**" />
     <None Remove="Services\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="DTOs\CS\Tickets.cs" />
-    <Compile Remove="Interfaces\CS\ITicketService.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Domain\CS\" />
     <Folder Include="Domain\MKT\" />
+    <Folder Include="Domain\CS\" />
     <Folder Include="Domain\CNT\" />
     <Folder Include="Domain\ORD\" />
     <Folder Include="Domain\SYS\" />
     <Folder Include="Domain\SUP\" />
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
-    <Folder Include="DTOs\CNT\" />
-    <Folder Include="Interfaces\CNT\" />
+    <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\ORD\" />
     <Folder Include="Interfaces\USER\" />
     <Folder Include="ValueObjects\CNT\" />
