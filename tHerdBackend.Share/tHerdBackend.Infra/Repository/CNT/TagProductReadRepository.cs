@@ -127,13 +127,12 @@ namespace tHerdBackend.Infra.Repository.CNT
 			// 但我們是用 GroupBy+First() 的型式來壓成一筆。
 			//
 			var data = await _db.ProdProductImages
-				.Where(img => pidList.Contains(img.ProductId))
-				.OrderByDescending(img => img.IsMain)
-				.ThenBy(img => img.OrderSeq)
-				.Select(img => new
-				{
+				.Where(img => pidList.Contains(img.ProductId)
+							&& img.IsMain)             // 🔴 加上 IsMain = 1 條件
+				.OrderBy(img => img.OrderSeq)         // 主圖之間再照排序
+				.Select(img => new {
 					img.ProductId,
-					ImageUrl = img.Img.FileUrl // <- 這是 SysAssetFile.FileUrl
+					ImageUrl = img.Img.FileUrl        // SysAssetFile.FileUrl
 				})
 				.ToListAsync();
 
