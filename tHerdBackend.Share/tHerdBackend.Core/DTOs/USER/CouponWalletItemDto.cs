@@ -6,5 +6,7 @@ public record CouponWalletItemDto(
 	DateTime ClaimedDate,
 	DateTime? UsedDate,
 	string Status,
-	bool Usable
+	//bool Usable,
+	bool IsUsable,
+	tHerdBackend.Core.DTOs.MKT.MktCouponDto coupon // ★ 內嵌券 DTO
 );

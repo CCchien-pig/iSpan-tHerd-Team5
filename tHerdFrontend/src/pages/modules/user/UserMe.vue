@@ -88,22 +88,25 @@
 
         <!-- 功能磚 -->
         <div class="feature-grid">
-          <el-card class="feature" shadow="hover" @click="todoFeature('訂單')">
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('訂單')">
             <div class="title">訂單</div>
-            <div class="desc">跟蹤訂單、申請退貨、重新訂購、撰寫評價。</div>
+            <div class="desc">跟蹤訂單、申請退貨、重新訂購。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('定期自動送貨享優惠')">
-            <div class="title">定期自動送貨享優惠</div>
-            <div class="desc">設定經常性訂購，輕鬆補貨更優惠。</div>
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('健康新知')">
+            <div class="title">健康新知</div>
+            <div class="desc">瞭解最新健康資訊，幫助您更知道該買什麼產品。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('促銷與優惠')">
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('促銷與優惠')">
             <div class="title">促銷與優惠</div>
             <div class="desc">查看全站優惠，領取活動折扣。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
+          <!-- <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
             <div class="title">我的清單</div>
             <div class="desc">保留喜愛商品，補貨即買。</div>
           </el-card>
@@ -116,7 +119,7 @@
           <el-card class="feature" shadow="hover" @click="todoFeature('地址簿')">
             <div class="title">地址簿</div>
             <div class="desc">集中管理你的收貨地址。</div>
-          </el-card>
+          </el-card> -->
         </div>
 
         <!-- 猜你喜歡（容器） -->
@@ -331,8 +334,29 @@ watch(() => me.value, (v) => {
 
 
 // 功能磚暫不導路由：僅提示
+// 功能標籤 → 路由名稱（請依你的實際路由調整）
+const featureToRoute = {
+  '訂單': 'orders',
+  '健康新知': 'cnt-home',
+  '促銷與優惠': 'rewards', // 或 'promotions'（若你有這條路由）
+}
+
+// 保險：避免名稱不存在
+function routeExists(name) {
+  try { return router.hasRoute(name) } catch { return false }
+}
+
+function goByName(name) {
+  router.push(routeExists(name) ? { name } : { name: 'userme' })
+}
+
 function todoFeature(label) {
-  ElMessage?.info?.(`「${label}」尚未開通`)
+  const name = featureToRoute[label]
+  if (name) {
+    goByName(name)
+  } else {
+    ElMessage.info(`「${label}」尚未開通`)
+  }
 }
 
 function goHome() {
@@ -391,4 +415,10 @@ async function doLogout() {
 
 .avatar-actions { display:flex; align-items:center; gap:8px; margin-left:4px; }
 .avatar-hint { margin-top:6px; }
+.feature {
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.feature:focus { outline: 2px solid #409eff; }
+.feature:hover { transform: translateY(-1px); }
 </style>

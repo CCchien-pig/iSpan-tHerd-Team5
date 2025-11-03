@@ -39,5 +39,13 @@ export default [
 },
 { path: '/user/account', 
   name: 'account', 
-  component: () => import('@/pages/modules/user/AccountInfo.vue') },
+  component: () => import('@/pages/modules/user/AccountInfo.vue'),
+  meta: { requiresAuth: true }
+},
+  
+  {path: '/user/rewards',
+    name: 'rewards',
+    component: () => import('@/pages/modules/user/UserRewards.vue'),
+    meta: { requiresAuth: true }
+  }
 ];

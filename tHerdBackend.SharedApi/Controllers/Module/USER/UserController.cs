@@ -534,35 +534,71 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 				page = page <= 0 ? 1 : page;
 				pageSize = pageSize <= 0 ? 20 : pageSize;
 
-				var q = _herdDb.UserCouponWallets.AsNoTracking()
-					.Where(w => w.UserNumberId == numberId);
+				var q = from w in _herdDb.UserCouponWallets.AsNoTracking()
+						join c in _herdDb.MktCoupons.AsNoTracking() on w.CouponId equals c.CouponId
+						where w.UserNumberId == numberId
+						select new { w, c };
 
 				if (!string.IsNullOrWhiteSpace(status))
 				{
 					var s = status.Trim();
-					q = q.Where(w => w.Status == s);
+					q = q.Where(x => x.w.Status == s);
 				}
+
+				var now = DateTime.Now;
+
+				var projected = q.Select(x => new
+				{
+					x.w,
+					x.c,
+					IsUsable =
+						x.w.Status == "unuse" &&
+						x.w.UsedDate == null &&
+						x.c.IsActive &&
+						x.c.Status == "pActive" &&
+						x.c.StartDate <= now &&
+						(x.c.EndDate == null || x.c.EndDate >= now) &&
+						x.c.LeftQty > 0 &&
+						(x.c.ValidHours <= 0 || x.w.ClaimedDate.AddHours(x.c.ValidHours) >= now)
+				});
 
 				if (onlyUsable)
-				{
-					// 「可用」最小定義：狀態 Active 且尚未使用（沒有 UsedDate）
-					q = q.Where(w => w.Status == "Active" && w.UsedDate == null);
-				}
+					projected = projected.Where(z => z.IsUsable);
 
-				var total = await q.CountAsync();
+				var total = await projected.CountAsync();
 
-				var items = await q
-					.OrderByDescending(w => w.ClaimedDate)
+				var items = await projected
+					.OrderByDescending(z => z.w.ClaimedDate)
 					.Skip((page - 1) * pageSize)
 					.Take(pageSize)
-					.Select(w => new CouponWalletItemDto(
-						w.CouponWalletId,
-						w.CouponId,
-						w.ClaimedDate,
-						w.UsedDate,
-						w.Status,
-						// 最小版「可用」判斷（如未來有到期日請在此補上條件）
-						(w.Status == "Active" && w.UsedDate == null)
+					.Select(z => new CouponWalletItemDto(
+						z.w.CouponWalletId,
+						z.w.CouponId,
+						z.w.ClaimedDate,
+						z.w.UsedDate,
+						z.w.Status,
+						z.IsUsable,
+						new tHerdBackend.Core.DTOs.MKT.MktCouponDto
+						{
+							CouponId = z.c.CouponId,
+							CampaignId = z.c.CampaignId,
+							RuleId = z.c.RuleId,
+							CouponName = z.c.CouponName,
+							CouponCode = z.c.CouponCode,
+							Status = z.c.Status,
+							StartDate = z.c.StartDate,
+							EndDate = z.c.EndDate,
+							DiscountAmount = z.c.DiscountAmount,
+							DiscountPercent = z.c.DiscountPercent,
+							TotQty = z.c.TotQty,
+							LeftQty = z.c.LeftQty,
+							UserLimit = z.c.UserLimit,
+							ValidHours = z.c.ValidHours,
+							IsActive = z.c.IsActive,
+							Creator = z.c.Creator,
+							CreatedDate = z.c.CreatedDate,
+							IsReceived = true // ★ 在錢包中＝必定已領取
+						}
 					))
 					.ToListAsync();
 

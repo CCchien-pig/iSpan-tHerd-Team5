@@ -115,15 +115,20 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage,ElMessageBox  } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
 import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const profileForm = ref(null)
 const pwdForm = ref(null)
 const saving = ref(false)
 const changing = ref(false)
 const deleting = ref(false)
+const auth = useAuthStore()
+const router = useRouter()
+
 
 const form = reactive({
   userNumberId: null,
@@ -168,7 +173,7 @@ async function loadDetail() {
     form.gender       = data.gender ?? data.Gender ?? ''
     // 後端回 DateTime? → 取 yyyy-MM-dd
     const birth = data.birthDate ?? data.BirthDate
-    form.birthDate = birth ? new Date(birth).toISOString().slice(0,10) : ''
+    form.birthDate = birth ? (typeof birth === 'string' ? birth.slice(0, 10) : '') : ''
   } catch (err) {
     ElMessage.error(err?.response?.data?.error || '載入失敗')
     console.error('[AccountInfo] load', err)
@@ -234,13 +239,12 @@ async function confirmDeleteAccount() {
 
     deleting.value = true
 
-    // ★ TODO：改成你的實際後端刪除帳戶 API
-    // 建議使用：DELETE /api/user/me  (或 /api/user/account、/api/user/delete 之類)
     await http.delete('/user/me')
 
     ElMessage.success('帳戶已刪除')
-    // 登出並導回首頁
-    if (auth?.logout) await auth.logout()
+    if (auth && typeof auth.logout === 'function') {
+      await auth.logout()
+    }
     router.replace({ name: 'home' })
   } catch (err) {
     // 使用者取消
@@ -248,13 +252,20 @@ async function confirmDeleteAccount() {
       ElMessage.info('已取消刪除')
       return
     }
-    // 其他錯誤
-    const msg = err?.response?.data?.error || err?.message || '刪除失敗'
+
+    // 不用 ?.，改成防禦式取值
+    let msg = '刪除失敗'
+    if (err && err.response && err.response.data && err.response.data.error) {
+      msg = err.response.data.error
+    } else if (err && err.message) {
+      msg = err.message
+    }
     ElMessage.error(msg)
     console.error('[AccountInfo] delete account FAIL', err)
   } finally {
     deleting.value = false
   }
+}
 
 onMounted(loadDetail)
 </script>
