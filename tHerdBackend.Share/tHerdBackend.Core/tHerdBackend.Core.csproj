@@ -21,7 +21,6 @@
     <Folder Include="Domain\SUP\" />
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
-    <Folder Include="Interfaces\CNT\" />
     <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\ORD\" />
     <Folder Include="Interfaces\USER\" />

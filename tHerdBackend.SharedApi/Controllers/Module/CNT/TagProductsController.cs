@@ -1,69 +1,60 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using tHerdBackend.Core.DTOs.CNT;
-using tHerdBackend.Infra.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using tHerdBackend.Core.Interfaces.CNT;   // ITagProductQueryService, PagedResult<T>
+using tHerdBackend.Core.DTOs.PROD;       // ProdProductDto
 
 namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 {
 	// GET /api/cnt/tags/{tagId}/products?page=1&pageSize=24
 	[ApiController]
-	[Route("api/cnt/tags/{tagId:int}/products")]
+	[Route("api/cnt/tags")]
 	public class TagProductsController : ControllerBase
 	{
-		private readonly tHerdDBContext _db;
+		private readonly ITagProductQueryService _tagProductQueryService;
 
-		public TagProductsController(tHerdDBContext db)
+		public TagProductsController(ITagProductQueryService tagProductQueryService)
 		{
-			_db = db;
+			_tagProductQueryService = tagProductQueryService;
 		}
 
-		[HttpGet]
-		public async Task<ActionResult> GetByTagId(
+		/// <summary>
+		/// 取得某個標籤底下的商品清單（分頁、排序，並且包含主圖URL、價格、星等等資訊）
+		/// 前端「標籤導過來的商品列表頁」直接打這支。
+		/// e.g. GET /api/cnt/tags/1002/products?page=1&pageSize=24
+		/// </summary>
+		[HttpGet("{tagId:int}/products")]
+		public async Task<ActionResult<PagedResult<ProdProductDto>>> GetProductsByTag(
 			[FromRoute] int tagId,
 			[FromQuery] int page = 1,
-			[FromQuery] int pageSize = 24
-		)
+			[FromQuery] int pageSize = 24)
 		{
-			// 防呆，避免 page=0 / pageSize=0
-			if (page < 1) page = 1;
-			if (pageSize < 1) pageSize = 24;
-
-			// 先組查詢（注意：這裡的欄位要和你前端需要的東西一致）
-			var baseQuery =
-				from pt in _db.CntProductTags
-				where pt.TagId == tagId
-					  && pt.IsVisible == true
-					  && pt.IsDeleted == false
-					  && pt.Product.IsPublished == true
-				orderby
-					pt.IsPrimary descending,
-					pt.DisplayOrder ascending,
-					(pt.Product.RevisedDate ?? pt.Product.CreatedDate) descending
-				select new ProductBriefDto
-				{
-					ProductId = pt.Product.ProductId,
-					ProductName = pt.Product.ProductName,
-					ShortDesc = pt.Product.ShortDesc,
-					Badge = pt.Product.Badge,
-					MainSkuId = pt.Product.MainSkuId,
-				};
-
-			// 總筆數（這個 tag 總共有幾個可顯示商品）
-			var total = await baseQuery.CountAsync();
-
-			// 這一頁要回的資料
-			var items = await baseQuery
-				.Skip((page - 1) * pageSize)
-				.Take(pageSize)
-				.ToListAsync();
-
-			// 回傳物件，讓前端知道總共有幾筆、這頁有哪些項目
-			return Ok(new
+			if (tagId <= 0)
 			{
-				total,
-				items
-			});
+				return BadRequest("tagId 必須是正整數");
+			}
+
+			// 呼叫 service，而不是直接碰 DbContext
+			var result = await _tagProductQueryService
+				.GetProductsByTagAsync(tagId, page, pageSize);
+
+			// result 內容長這樣：
+			// {
+			//   Total = 42,
+			//   Items = [
+			//     {
+			//       ProductId,
+			//       ProductName,
+			//       Badge,
+			//       ImageUrl,
+			//       SalePrice,
+			//       ListPrice,
+			//       AvgRating,
+			//       ReviewCount,
+			//       ...
+			//     }, ...
+			//   ]
+			// }
+			return Ok(result);
 		}
 	}
 }

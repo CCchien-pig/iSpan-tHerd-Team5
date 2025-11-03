@@ -1,5 +1,6 @@
 <template>
   <div class="site-promo-banner py-2">
+    <!-- ✅ 有資料時跑馬燈 -->
     <div class="marquee" v-if="promoList.length > 0">
       <div
         class="marquee-content"
@@ -10,69 +11,87 @@
         <span class="ms-3">{{ promoList[currentIndex].description }}</span>
       </div>
     </div>
+
+    <!-- 🚀 載入中提示 -->
     <div v-else class="text-center text-white small">
-      🚀 載入促銷資訊中…🐛
+      🚀 載入公告中…🐛
     </div>
   </div>
 </template>
 
 <script>
-import api from '@/components/modules/mkt/api'
 import axios from 'axios'
+
 export default {
   name: 'Marquee',
   data() {
     return {
       promoList: [],
       currentIndex: 0,
-      timer: null,
-      currentColor: '#ffffff' // ✅ 新增一個目前字體顏色
+      timer: null, // 控制輪播
+      fetchTimer: null, // 控制自動更新
+      currentColor: '#ffffff'
     }
   },
   async mounted() {
-    await this.fetchCampaignData()
+    await this.fetchMarqueeData()
     this.startRotation()
+    this.startAutoRefresh()
   },
   beforeUnmount() {
     clearInterval(this.timer)
+    clearInterval(this.fetchTimer)
   },
   methods: {
-    async fetchCampaignData() {
+    // 📡 從後端撈跑馬燈資料
+    async fetchMarqueeData() {
       try {
-        const res = await axios.get('/api/mkt/campaign/active')
-        if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-          this.promoList = res.data.data
-            .filter(item => item.campaignDescription)
-            .map(item => ({
-              title: item.campaignName || '(未命名活動)',
-              description: item.campaignDescription || '(無描述)'
-            }))
+        const res = await axios.get('/api/mkt/ad/MarqueeList')
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          this.promoList = res.data.map(item => ({
+            title: item.title || '(未命名公告)',
+            description: item.description || ''
+          }))
+        } else {
+          this.promoList = []
         }
       } catch (err) {
-        console.error('❌ 無法取得活動資料', err)
+        console.error('❌ 無法取得跑馬燈資料', err)
       }
     },
 
-    // ✅ 產生隨機顏色的方法
+    // 🎨 顏色邏輯：柔和色系搭配白字背景
     getRandomColor() {
-  const palette = [
-    '#FFFFFF', // 亮白
-    ]
-  return palette[Math.floor(Math.random() * palette.length)]
-},
+      const palette = [
+        '#ffffff',
+      ]
+      return palette[Math.floor(Math.random() * palette.length)]
+    },
 
-
-
+    // 🔁 輪播公告
     startRotation() {
       if (this.promoList.length === 0) return
-
-      // 初始化第一次顏色
       this.currentColor = this.getRandomColor()
-
+      clearInterval(this.timer)
       this.timer = setInterval(() => {
         this.currentIndex = (this.currentIndex + 1) % this.promoList.length
-        this.currentColor = this.getRandomColor() // ✅ 每次換文字時換顏色
+        this.currentColor = this.getRandomColor()
       }, 15000)
+    },
+
+    // ⏱ 每 60 秒自動重新抓取資料
+    startAutoRefresh() {
+      clearInterval(this.fetchTimer)
+      this.fetchTimer = setInterval(async () => {
+        const oldData = JSON.stringify(this.promoList)
+        await this.fetchMarqueeData()
+        const newData = JSON.stringify(this.promoList)
+        // 若資料有變動，重新播放輪播
+        if (oldData !== newData) {
+          this.currentIndex = 0
+          this.startRotation()
+        }
+      }, 60000) // ✅ 每 1 分鐘更新
     }
   }
 }
@@ -94,7 +113,7 @@ export default {
   display: inline-block;
   padding-left: 100%;
   animation: marquee 15s linear forwards;
-  transition: color 0.5s ease; /* ✅ 顏色變化更柔順 */
+  transition: color 0.5s ease;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
