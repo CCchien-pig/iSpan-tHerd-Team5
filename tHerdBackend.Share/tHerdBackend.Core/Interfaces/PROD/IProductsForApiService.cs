@@ -1,5 +1,6 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.ord;
 
 namespace tHerdBackend.Core.Interfaces.PROD
 {
@@ -9,5 +10,6 @@ namespace tHerdBackend.Core.Interfaces.PROD
         Task<ProdProductDetailDto?> GetFrontProductListAsync(int productId, CancellationToken ct = default);
 
         Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
+        Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default);
     }
 }

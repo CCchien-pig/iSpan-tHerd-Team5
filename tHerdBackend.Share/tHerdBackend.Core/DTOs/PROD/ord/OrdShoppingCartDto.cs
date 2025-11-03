@@ -1,0 +1,40 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace tHerdBackend.Core.DTOs;
+
+/// <summary>
+/// 購物車（訪客5、會員10 上限；程式設定 + DB 護欄）
+/// </summary>
+public partial class OrdShoppingCartDto
+{
+    /// <summary>
+    /// 購物車編號
+    /// </summary>
+    public int CartId { get; set; }
+
+    /// <summary>
+    /// 會員ID；NULL 代表訪客；非NULL時建議唯一
+    /// </summary>
+    public int? UserNumberId { get; set; }
+
+    /// <summary>
+    /// 訪客識別碼；非NULL時建議唯一
+    /// </summary>
+    public string SessionId { get; set; }
+
+    /// <summary>
+    /// 上限：訪客預設5；綁定會員後程式設為10
+    /// </summary>
+    public int MaxItemsAllowed { get; set; }
+
+    /// <summary>
+    /// 建立時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; }
+
+    /// <summary>
+    /// 異動時間
+    /// </summary>
+    public DateTime? RevisedDate { get; set; }
+}
