@@ -61,10 +61,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import axios from 'axios'
+import http from '@/api/http' // ✅ 改用全域 http（自動附 JWT）
 import GameCard from './GameCard.vue'
 import GameResultModal from './GameResultModal.vue'
-import { useRouter } from 'vue-router'  // ✅ 加在最上方
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth' // ✅ 取得登入資訊
 
 // ✅ 防止重複掛載
 if (window.__MEMORY_GAME_ACTIVE__) {
@@ -89,9 +90,11 @@ const gameStarted = ref(false)
 const showCountdown = ref(false)
 const countdownText = ref('')
 const scoreAnimate = ref(false)
-const router = useRouter()              // ✅ 在 <script setup> 開頭定義
+const router = useRouter()
+const auth = useAuthStore()
 
-const userNumberId = 1001
+const user = auth.user
+const userNumberId = user?.userNumberId || user?.user_number_id // ✅ 從登入資訊取
 
 const images = [
   '/images/Game/game01.png',
@@ -109,13 +112,21 @@ const images = [
 // ✅ 檢查今日是否已玩過
 async function checkTodayPlayed() {
   try {
-    const res = await axios.get(`/api/mkt/MktGameRecord/${userNumberId}`)
-    if (res.data && (res.data.played === true || res.data.playedDate)) {
+    if (!userNumberId) {
+      console.warn('⚠️ 尚未登入，無法檢查遊戲紀錄')
+      return
+    }
+
+    const { data } = await http.get(`/mkt/MktGameRecord/${userNumberId}`)
+    if (data && data.played === true) {
       hasPlayed.value = true
+      console.log('🎮 今日已玩過遊戲')
+    } else {
+      hasPlayed.value = false
+      console.log('🆕 今日尚未遊玩')
     }
   } catch (err) {
     console.error('檢查遊戲狀態失敗', err)
-    alert('⚠️ 無法檢查遊戲狀態')
   }
 }
 
@@ -165,7 +176,6 @@ async function flipCard(index) {
 
   if (firstCard.value === null) {
     firstCard.value = index
-    // 自動翻回未配對的第一張
     const currentIndex = index
     setTimeout(() => {
       if (firstCard.value === currentIndex && !cards.value[currentIndex].matched && !secondCard.value) {
@@ -214,13 +224,16 @@ function endGame(isPerfect) {
     isGameOver.value = true
     isClear.value = isPerfect
     console.log('🎯 結算觸發，isClear=', isPerfect)
-    // 🔧 驗證 Teleport 已被掛載
-    const anchor = document.getElementById('modal-debug-anchor')
-    if (anchor) anchor.style.border = '3px solid lime'
   }, 200)
 }
 
+// ✅ 遊戲結果送出
 async function submitScore() {
+  if (!userNumberId) {
+    alert('⚠️ 尚未登入會員，無法上傳遊戲結果')
+    return
+  }
+
   const dto = {
     userNumberId,
     score: score.value,
@@ -230,16 +243,19 @@ async function submitScore() {
   }
 
   try {
-    const res = await axios.post('/api/mkt/MktGameRecord', dto)
+    const res = await http.post('/mkt/MktGameRecord', dto)
     console.log('🎯 遊戲結果送出成功：', res.data)
 
     hasPlayed.value = true
     isGameOver.value = false
     gameStarted.value = false
 
-    // ✅ 延遲 1 秒再導回首頁（給使用者時間看到結算）
+    // ✅ 暫存分數 + 通知優惠券頁更新
+    localStorage.setItem('gameScore', score.value)
+    localStorage.setItem('refreshCoupons', 'true')
+
     setTimeout(() => {
-      router.push('/') // ← 這裡就是回首頁
+      router.push('/') // ✅ 回首頁
     }, 1000)
   } catch (err) {
     console.error('紀錄失敗', err)
