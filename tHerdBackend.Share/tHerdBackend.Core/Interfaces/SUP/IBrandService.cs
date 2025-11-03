@@ -1,4 +1,5 @@
 ﻿using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Infra.Models.Sup;
 
 public interface IBrandService
 {
@@ -33,6 +34,11 @@ public interface IBrandService
 
 	#endregion
 
+	#region 前台查詳情
+
+	Task<BrandDetailDto?> GetBrandDetailAsync(int brandId, CancellationToken ct);
+
+	#endregion
 
 }
 

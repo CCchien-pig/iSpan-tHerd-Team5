@@ -1,17 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.DTOs.SUP.BrandLayout;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Core.ValueObjects;
+using tHerdBackend.Infra.Models.Sup;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/sup/[controller]")]
+	[Route("api/[folder]/[controller]")]
 	[Authorize]
 	public class BrandsController : ControllerBase
 	{
@@ -19,17 +19,20 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		private readonly IBrandLayoutService _layoutService; // 處理品牌版面配置
 		private readonly IBrandLogoService _brandLogoService;
 		private readonly ICurrentUser _me;
+		private readonly ILogger<BrandsController> _logger;
 
 		public BrandsController(
 			IBrandService service,
 			IBrandLayoutService layoutService,
 			IBrandLogoService brandLogoService,
-			ICurrentUser me)
+			ICurrentUser me,
+			ILogger<BrandsController> logger)
 		{
 			_service = service;
 			_layoutService = layoutService;
 			_brandLogoService = brandLogoService;
 			_me = me;
+			_logger = logger;
 		}
 
 		#region 查品牌
@@ -233,7 +236,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				return StatusCode(500, ApiResponse<object>.Fail($"取得精選品牌時發生錯誤：{ex.Message}"));
 			}
 		}
-
 
 		#endregion
 
@@ -464,5 +466,45 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 		#endregion
+
+		#region 前台查詳情
+
+		/// <summary>
+		/// 取得品牌詳頁（Banner、分類按鈕、Accordion）
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <param name="ct">取消權杖</param>
+		/// <returns>BrandDetailDto</returns>
+		/// <remarks>
+		/// 資料來源：
+		/// - Banner：SUP_Brand.ImgId → SYS_AssetFile.FileUrl
+		/// - Buttons：SUP_BrandProductTypeFilter（依 ButtonOrder 排序，回傳 Text/Order/Id）
+		/// - Accordions：SUP_BrandAccordionContent（以 Content 分組，組內依 OrderSeq 排序）
+		/// </remarks>
+		[HttpGet("{brandId:int}/detail")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandDetailDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetDetail([FromRoute] int brandId, CancellationToken ct)
+		{
+			try
+			{
+				var dto = await _service.GetBrandDetailAsync(brandId, ct);
+				if (dto == null)
+					return Ok(ApiResponse<BrandDetailDto>.Fail("品牌不存在或已停用"));
+
+				return Ok(ApiResponse<BrandDetailDto>.Ok(dto));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetDetail failed. brandId={BrandId}", brandId);
+				return StatusCode(StatusCodes.Status500InternalServerError,
+					ApiResponse<BrandDetailDto>.Fail($"發生錯誤：{ex.Message}"));
+			}
+		}
+
+		#endregion
+
 	}
 }

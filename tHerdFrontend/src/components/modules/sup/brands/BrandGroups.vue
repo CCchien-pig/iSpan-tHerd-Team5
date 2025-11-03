@@ -43,7 +43,9 @@
                 />
               </svg>
             </button>
-            <router-link :to="brandTo(b)" class="brand-text-link">{{ b.brandName }}</router-link>
+            <router-link :to="toBrandSlug(b.brandName, b.brandId)" class="brand-text-link">{{
+              b.brandName
+            }}</router-link>
           </li>
         </ul>
       </div>
@@ -53,6 +55,18 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
+import { toBrandSlug } from '@/utils/supSlugify'
+// const brandTo = () => '/brands'
+// const toBrandSlug = (name, id) => {
+//   const slug = String(name || '')
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, '-')
+//     .replace(/&/g, 'and')
+//     .replace(/[^a-z0-9-]/g, '')
+//     .replace(/-+/g, '-')
+//   return `/brands/${slug}-${id}`
+// }
 
 const props = defineProps({
   groups: { type: Array, default: () => [] },
@@ -60,8 +74,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['mounted-anchors'])
-
-const brandTo = () => '/brands'
 
 /* 收藏邏輯（維持） */
 const favorites = ref(new Set())

@@ -25,7 +25,11 @@
               class="card"
               :style="{ width: cardWidth + 'px' }"
             >
-              <router-link :to="brandTo(b)" class="card-link" :aria-label="b.brandName">
+              <router-link
+                :to="toBrandSlug(b.brandName, b.brandId)"
+                class="card-link"
+                :aria-label="b.brandName"
+              >
                 <div class="thumb">
                   <img
                     :src="b.logoUrl || placeholder"
@@ -49,6 +53,18 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { toBrandSlug } from '@/utils/supSlugify'
+// const brandTo = (b) => `/brands/${b.brandId}`
+// const toBrandSlug = (name, id) => {
+//   const slug = String(name || '')
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, '-')
+//     .replace(/&/g, 'and')
+//     .replace(/[^a-z0-9-]/g, '')
+//     .replace(/-+/g, '-')
+//   return `/brands/${slug}-${id}`
+// }
 
 const props = defineProps({
   brands: { type: Array, default: () => [] },
@@ -143,8 +159,6 @@ watch(
     startAutoPlay()
   },
 )
-
-const brandTo = (b) => `/brands/${b.brandId}`
 </script>
 
 <style scoped>
