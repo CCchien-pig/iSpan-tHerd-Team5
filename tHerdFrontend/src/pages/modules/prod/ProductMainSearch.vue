@@ -111,7 +111,7 @@ const searchProducts = async (page = 1) => {
       return
     }
 
-    // ✅ 更新資料
+    // 更新資料
     products.value = data.items
     totalCount.value = data.totalCount || 0
     pageIndex.value = data.pageIndex || 1

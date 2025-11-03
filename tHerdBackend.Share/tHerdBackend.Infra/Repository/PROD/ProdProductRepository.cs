@@ -82,7 +82,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
-                SELECT 
+                                SELECT 
                     p.ProductId, p.ProductName, 
                     p.BrandId, s.BrandName, 
                     p.SeoId, p.Badge, 
@@ -92,8 +92,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
-                LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId = p.SeoId AND sma.IsPrimary = 1
-                LEFT JOIN SYS_AssetFile af ON af.FileId = sma.FileId
+                LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
+                LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
                 WHERE 1 = 1
             ");
 
@@ -109,9 +109,9 @@ namespace tHerdBackend.Infra.Repository.PROD
                 SELECT COUNT(DISTINCT p.ProductId)
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
-                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
-                  LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
-                  LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
+                    LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
+                    LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
                  WHERE 1 = 1 ");
 
             ProductQueryBuilder.AppendFilters(countSql, query);
