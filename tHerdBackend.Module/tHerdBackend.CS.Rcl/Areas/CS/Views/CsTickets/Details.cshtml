@@ -1,0 +1,27 @@
+﻿@model tHerdBackend.Core.DTOs.CS.TicketOut
+
+<h2>工單詳情</h2>
+
+<div class="card p-3 mb-4 shadow-sm">
+    <p><strong>編號：</strong>@Model.TicketId</p>
+    <p><strong>主旨：</strong>@Model.Subject</p>
+    <p><strong>分類：</strong>@Model.CategoryName</p>
+    <p><strong>狀態：</strong>@Model.StatusText</p>
+    <p><strong>建立時間：</strong>@Model.CreatedDate.ToString("yyyy/MM/dd HH:mm")</p>
+</div>
+
+@if (TempData["msg"] != null)
+{
+    <div class="alert alert-success">@TempData["msg"]</div>
+}
+
+<h4>回覆內容</h4>
+<form asp-action="Reply" method="post">
+    <input type="hidden" name="ticketId" value="@Model.TicketId" />
+    <textarea name="replyText" class="form-control" rows="4" placeholder="請輸入回覆內容..."></textarea>
+    <button type="submit" class="btn btn-success mt-3">送出回覆</button>
+</form>
+
+<div class="mt-3">
+    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+</div>

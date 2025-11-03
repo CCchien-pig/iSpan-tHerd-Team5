@@ -8,7 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.19" />
+=======
+    <Compile Remove="Controllers\Module\CS\TicketsController.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+>>>>>>> ff4bf2a757afd4b4acb1596314ab91bb7cd15fc6
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

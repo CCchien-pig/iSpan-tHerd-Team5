@@ -1,0 +1,30 @@
+﻿@model IEnumerable<tHerdBackend.Core.DTOs.CS.TicketsDto>
+
+<h2>客服工單清單</h2>
+<table class="table table-striped align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>編號</th>
+            <th>主旨</th>
+            <th>分類</th>
+            <th>狀態</th>
+            <th>建立日期</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var t in Model)
+        {
+            <tr>
+                <td>@t.TicketId</td>
+                <td>@t.Subject</td>
+                <td>@t.CategoryName</td>
+                <td>@t.StatusText</td>
+                <td>@t.CreatedDate.ToString("yyyy/MM/dd HH:mm")</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@t.TicketId" class="btn btn-sm btn-outline-primary">查看</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
