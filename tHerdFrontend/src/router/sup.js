@@ -3,6 +3,8 @@ import SupWelcome from '../pages/modules/sup/SupWelcome.vue'
 import LogisticsFee from '../components/modules/sup/logistics/LogisticsFee.vue'
 import LogisticsList from '../components/modules/sup/logistics/LogisticsList.vue'
 import StoreMap from '../components/modules/sup/logistics/StoreMap.vue'
+// 品牌總覽頁
+const BrandsAZ = () => import('../pages/modules/sup/BrandsAZ.vue')
 // 其他...
 
 export default [
@@ -22,11 +24,21 @@ export default [
     ],
     meta: { title: '物流門市運費查詢' },
   },
+
+  // 供應商配送資訊頁
   {
     path: '/sup/logistics-info',
     name: 'SupLogisticsInfo',
     component: () => import('../pages/modules/sup/LogisticsInfo.vue'),
     meta: { title: '配送資訊查詢' },
+  },
+
+  // 品牌 A-Z 總覽頁
+  {
+    path: '/brands',
+    name: 'SupBrandsAZ',
+    component: () => import('../pages/modules/sup/BrandsAZ.vue'),
+    meta: { title: '品牌 A-Z 總覽' },
   },
 ]
 

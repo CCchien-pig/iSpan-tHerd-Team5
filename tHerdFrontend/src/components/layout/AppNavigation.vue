@@ -8,7 +8,7 @@
       <div class="row align-items-center">
         <div class="col-12">
           <!-- 🍔 手機版漢堡按鈕 -->
-          <button 
+          <button
             class="hamburger-btn d-lg-none"
             @click="toggleMobileMenu"
             :class="{ active: showMobileMenu }"
@@ -28,10 +28,10 @@
               <router-link
                 :to="item.path"
                 class="nav-link fw-medium rounded-pill d-flex align-items-center"
-                :class="{ 
+                :class="{
                   active: $route.path.startsWith(item.path),
                   'has-icon': item.icon,
-                  'text-only': !item.icon
+                  'text-only': !item.icon,
                 }"
               >
                 <div v-if="item.icon" class="nav-icon-wrapper">
@@ -47,29 +47,26 @@
               @mouseenter="showBrands = true"
               @mouseleave="showBrands = false"
             >
-              <button
-                type="button"
-                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center text-only"
+              <router-link
+                to="/brands"
+                class="nav-link fw-medium rounded-pill d-flex align-items-center text-only"
                 :class="{ active: showBrands }"
-                @click="toggleBrands"
+                @click="showBrands = false"
               >
                 <span>品牌 A-Z</span>
-              </button>
+              </router-link>
 
+              <!-- hover 展開的 mega menu -->
               <transition name="fade">
-                <div 
-                  v-if="showBrands" 
+                <div
+                  v-if="showBrands"
                   class="mega-menu shadow-lg bg-white"
                   @mouseenter="showBrands = true"
                   @mouseleave="showBrands = false"
                 >
                   <div class="container-fluid py-4 px-4">
                     <div class="row g-4">
-                      <div
-                        class="col-6 col-md-2"
-                        v-for="(group, gIdx) in brandGroups"
-                        :key="gIdx"
-                      >
+                      <div class="col-6 col-md-2" v-for="(group, gIdx) in brandGroups" :key="gIdx">
                         <ul class="list-unstyled mb-0">
                           <li v-for="brand in group" :key="brand" class="mb-2">
                             <router-link
@@ -109,93 +106,84 @@
           </ul>
 
           <!-- 📱 手機版側邊選單 -->
-<transition name="slide">
-  <div v-if="showMobileMenu" class="mobile-menu">
-    <div class="mobile-menu-header">
-      <h5 class="mb-0 fw-bold text-white">選單</h5>
-      <button class="close-btn" @click="closeMobileMenu">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+          <transition name="slide">
+            <div v-if="showMobileMenu" class="mobile-menu">
+              <div class="mobile-menu-header">
+                <h5 class="mb-0 fw-bold text-white">選單</h5>
+                <button class="close-btn" @click="closeMobileMenu">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
 
-    <div class="mobile-menu-body">
-      <!-- 有圖標的分類 -->
-      <div class="menu-section">
-        <h6 class="menu-section-title">產品分類</h6>
-        <router-link
-          v-for="item in navigationItemsWithIcon.filter(i => i.icon)"
-          :key="item.name"
-          :to="item.path"
-          class="mobile-menu-item"
-          :class="{ active: $route.path.startsWith(item.path) }"
-          @click="closeMobileMenu"
-        >
-          <div class="mobile-icon-wrapper">
-            <img :src="item.icon" alt="" />
-          </div>
-          <span>{{ item.name }}</span>
-          <i class="bi bi-chevron-right ms-auto"></i>
-        </router-link>
-      </div>
+              <div class="mobile-menu-body">
+                <!-- 有圖標的分類 -->
+                <div class="menu-section">
+                  <h6 class="menu-section-title">產品分類</h6>
+                  <router-link
+                    v-for="item in navigationItemsWithIcon.filter((i) => i.icon)"
+                    :key="item.name"
+                    :to="item.path"
+                    class="mobile-menu-item"
+                    :class="{ active: $route.path.startsWith(item.path) }"
+                    @click="closeMobileMenu"
+                  >
+                    <div class="mobile-icon-wrapper">
+                      <img :src="item.icon" alt="" />
+                    </div>
+                    <span>{{ item.name }}</span>
+                    <i class="bi bi-chevron-right ms-auto"></i>
+                  </router-link>
+                </div>
 
-      <!-- 無圖標的分類 -->
-      <div class="menu-section">
-        <h6 class="menu-section-title">快速連結</h6>
-        <router-link
-          v-for="item in navigationItemsWithIcon.filter(i => !i.icon)"
-          :key="item.name"
-          :to="item.path"
-          class="mobile-menu-item text-only-item"
-          :class="{ active: $route.path.startsWith(item.path) }"
-          @click="closeMobileMenu"
-        >
-          <i class="bi bi-dot"></i>
-          <span>{{ item.name }}</span>
-          <i class="bi bi-chevron-right ms-auto"></i>
-        </router-link>
-      </div>
+                <!-- 無圖標的分類 -->
+                <div class="menu-section">
+                  <h6 class="menu-section-title">快速連結</h6>
+                  <router-link
+                    v-for="item in navigationItemsWithIcon.filter((i) => !i.icon)"
+                    :key="item.name"
+                    :to="item.path"
+                    class="mobile-menu-item text-only-item"
+                    :class="{ active: $route.path.startsWith(item.path) }"
+                    @click="closeMobileMenu"
+                  >
+                    <i class="bi bi-dot"></i>
+                    <span>{{ item.name }}</span>
+                    <i class="bi bi-chevron-right ms-auto"></i>
+                  </router-link>
+                </div>
 
-      <!-- ✅ 品牌選單（修正版） -->
-      <div class="menu-section">
-        <h6 
-          class="menu-section-title clickable" 
-          @click="toggleBrandsInMobile"
-        >
-          <span>品牌 A-Z</span>
-          <i 
-            class="bi" 
-            :class="showBrandsInMobile ? 'bi-chevron-up' : 'bi-chevron-down'"
-          ></i>
-        </h6>
-        
-        <transition name="expand">
-          <div v-if="showBrandsInMobile" class="brands-list">
-            <!-- ✅ 正確的雙層 v-for 結構 -->
-            <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
-              <router-link
-                v-for="brand in group"
-                :key="brand"
-                :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
-                class="brand-item"
-                @click="closeMobileMenu"
-              >
-                {{ brand }}
-              </router-link>
-            </template>
-          </div>
-        </transition>
-      </div>
-    </div>
-  </div>
-</transition>
+                <!-- ✅ 品牌選單（修正版） -->
+                <div class="menu-section">
+                  <h6 class="menu-section-title clickable" @click="goBrandsAndClose">
+                    <span>品牌 A-Z</span>
+                    <i class="bi bi-chevron-right"></i>
+                  </h6>
+
+                  <!-- 展開清單 -->
+                  <transition name="expand">
+                    <div v-if="showBrandsInMobile" class="brands-list">
+                      <!-- ✅ 正確的雙層 v-for 結構 -->
+                      <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
+                        <router-link
+                          v-for="brand in group"
+                          :key="brand"
+                          :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                          class="brand-item"
+                          @click="closeMobileMenu"
+                        >
+                          {{ brand }}
+                        </router-link>
+                      </template>
+                    </div>
+                  </transition>
+                </div>
+              </div>
+            </div>
+          </transition>
 
           <!-- 🎭 背景遮罩 -->
           <transition name="fade-mask">
-            <div 
-              v-if="showMobileMenu" 
-              class="mobile-menu-overlay"
-              @click="closeMobileMenu"
-            ></div>
+            <div v-if="showMobileMenu" class="mobile-menu-overlay" @click="closeMobileMenu"></div>
           </transition>
         </div>
       </div>
@@ -241,30 +229,34 @@ export default {
         { name: '21st Century', url: '/brands/21st-century' },
         { name: 'Fairhaven Health', url: '/brands/fairhaven-health' },
       ],
-    };
+    }
   },
   methods: {
     toggleMobileMenu() {
-      this.showMobileMenu = !this.showMobileMenu;
+      this.showMobileMenu = !this.showMobileMenu
       // 防止背景滾動
-      document.body.style.overflow = this.showMobileMenu ? 'hidden' : '';
+      document.body.style.overflow = this.showMobileMenu ? 'hidden' : ''
     },
     closeMobileMenu() {
-      this.showMobileMenu = false;
-      document.body.style.overflow = '';
+      this.showMobileMenu = false
+      document.body.style.overflow = ''
     },
     toggleBrands() {
-      this.showBrands = !this.showBrands;
+      this.showBrands = !this.showBrands
     },
     toggleBrandsInMobile() {
-      this.showBrandsInMobile = !this.showBrandsInMobile;
+      this.showBrandsInMobile = !this.showBrandsInMobile
+    },
+    goBrandsAndClose() {
+      this.$router.push('/brands')
+      this.closeMobileMenu()
     },
   },
   beforeUnmount() {
     // 清理
-    document.body.style.overflow = '';
+    document.body.style.overflow = ''
   },
-};
+}
 </script>
 
 <style scoped>
@@ -600,7 +592,9 @@ export default {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from {
@@ -641,7 +635,6 @@ export default {
   margin: 0 auto;
   transition: all 0.3s ease;
 }
-
 
 /* 📱 響應式 */
 @media (min-width: 992px) {

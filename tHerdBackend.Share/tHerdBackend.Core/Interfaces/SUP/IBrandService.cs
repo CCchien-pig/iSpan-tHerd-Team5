@@ -16,7 +16,7 @@ public interface IBrandService
 	/// <summary>
 	/// 依條件取得品牌清單，可篩選啟用、折扣、精選
 	/// </summary>
-	Task<List<BrandDto>> GetFilteredAsync(bool? active = null, bool? discountOnly = null, bool? featuredOnly = null);
+	Task<List<BrandDto>> GetFilteredAsync(bool? isActive = null, bool? isDiscountActive = null, bool? isFeatured = null);
 
 	#endregion
 
