@@ -50,13 +50,6 @@ export const getBrand = (brandId) => {
  *  - Accordions：SUP_BrandAccordionContent（依 Content 分組，組內依 OrderSeq 排序，回傳 title, body, order）
  *  - 後續可加入 orderedBlocks（由 SUP_BrandLayoutConfig 決定順序）
  *
- * 回傳建議結構：
- * {
- *   brandId, brandName, bannerUrl?: string,
- *   buttons: Array<{ id:number, text:string, order:number }>,
- *   accordions: Array<{ contentKey:string, items: Array<{ title:string, body:string, order:number }> }>,
- *   orderedBlocks?: string[] // optional: ['Banner','Buttons','Accordion']
- * }
  */
 export const getBrandDetail = (brandId) => {
   return api.get(`/sup/brands/${brandId}/detail`)
