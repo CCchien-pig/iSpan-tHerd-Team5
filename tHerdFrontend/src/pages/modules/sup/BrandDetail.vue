@@ -1,118 +1,120 @@
-<!-- 依 getBrandDetail API 取回 Banner、Buttons、Accordion，
-先以預設順序渲染；
+<!-- 先以預設順序渲染；
 未來後端若回傳 orderedBlocks，就能依序渲染切換版位而不動骨架。 -->
 
 <!-- src/pages/modules/sup/BrandDetail.vue -->
 <!--
 依 getBrandDetail 取回 Banner、Buttons、Accordions。
 版面：
-1) Banner
-2) 分類按鈕（自動取主色；無資料則不顯示）
-3) 了解更多（展開卡片：同 ContentTitle 一組，內含 li）
+1) BrandBanner：顯示 Banner。
+2) BrandButtons：顯示分類按鈕（背景取主色；hover 反轉）。
+3) BrandMoreCard：了解更多卡片（左文群組、右圖；無圖時左側滿版）。
 -->
 
 <template>
   <section class="container py-3">
-    <!-- 標題 -->
-    <header class="d-flex align-items-center gap-2 mb-3">
-      <h1 class="h4 m-0">{{ detail?.brandName || '品牌' }}</h1>
-    </header>
+    <div class="content-wrap">
+      <header class="d-flex align-items-center gap-2 mb-3">
+        <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
+      </header>
 
-    <!-- Banner -->
-    <div v-if="detail?.bannerUrl" class="mb-4">
-      <img :src="detail.bannerUrl" :alt="detail.brandName" class="img-fluid w-100 rounded" />
-    </div>
+      <!-- Banner -->
+      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-2" />
 
-    <!-- 分類按鈕：有資料才顯示 -->
-    <div
-      v-if="hasButtons"
-      class="brand-buttons-wrap mb-4 py-3 rounded"
-      :style="{ backgroundColor: buttonsBg }"
-    >
-      <nav class="d-flex flex-wrap gap-2 justify-content-center">
-        <button
-          v-for="btn in detail.buttons"
-          :key="btn.id"
-          type="button"
-          class="brand-btn btn-sm fw-semibold"
-          :style="{
-            '--hover-text': hoverTextColor, // 主色字
-            '--btn-text': buttonsTextColor, // 預設字色（白或深）
-          }"
-          @click="onFilter(btn)"
-        >
-          {{ btn.text }}
-        </button>
-      </nav>
-    </div>
+      <!-- 分類按鈕（有資料才顯示） -->
+      <BrandButtons
+        v-if="vm.buttons?.length"
+        class="mb-2"
+        :buttons="vm.buttons"
+        :bg-rgb="vm.mainColor"
+        @tap="onFilter"
+      />
 
-    <!-- 了解更多（展開） -->
-    <div class="mb-3 text-center">
-      <button
-        class="btn btn-sm"
-        :style="{
-          backgroundColor: 'rgb(0,112,131)',
-          color: 'rgb(248,249,250)',
-        }"
-        @click="moreOpen = !moreOpen"
-      >
-        了解更多關於 {{ detail?.brandName || '品牌' }}
-      </button>
-    </div>
-
-    <!-- 展開內容（單一卡片；每組一個標題，組內 li 條列） -->
-    <transition name="fade">
-      <div v-if="moreOpen" class="brand-more mb-4">
-        <div class="card">
-          <div class="card-body">
-            <section v-for="grp in detail?.accordions || []" :key="grp.contentKey" class="mb-3">
-              <h3 class="h6 mb-2">{{ findGroupTitle(grp) }}</h3>
-              <ul class="list-unstyled m-0">
-                <li
-                  v-for="item in grp.items"
-                  :key="`${grp.contentKey}-${item.order}`"
-                  class="d-flex align-items-start gap-2 py-1"
-                >
-                  <!-- 可替換為專案 SVG Icon -->
-                  <span class="check-dot" :style="{ backgroundColor: accentDot }"></span>
-                  <span v-html="item.body"></span>
-                </li>
-              </ul>
-            </section>
-          </div>
+      <!-- 了解更多（有 Accordion 才顯示），按鈕配色固定 -->
+      <!-- 未展開：分隔線 + 中央按鈕 -->
+      <div v-if="vm.accordions?.length && !moreOpen" class="my-4">
+        <div class="split-line">
+          <button
+            class="btn btn-sm"
+            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
+            @click="moreOpen = true"
+          >
+            了解更多關於 {{ vm.brandName || '品牌' }}
+          </button>
         </div>
       </div>
-    </transition>
 
-    <!-- Loading / Empty -->
-    <div v-if="loading" class="text-muted">載入中…</div>
-    <div v-else-if="!loading && !detail" class="text-muted">查無品牌資料</div>
+      <!-- 展開卡片 -->
+      <BrandMoreCard
+        v-if="vm.accordions?.length && moreOpen"
+        class="mb-2 pt-3"
+        :groups="vm.accordions"
+        :images-right="imagesRight"
+        :accent-rgb="vm.mainColor"
+        :alt-text="vm.brandName"
+      />
+
+      <!-- 展開：下方分隔線 + 中央關閉按鈕 -->
+      <div v-if="vm.accordions?.length && moreOpen" class="my-3">
+        <div class="split-line">
+          <button
+            class="btn btn-sm"
+            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
+            @click="moreOpen = false"
+          >
+            關閉
+          </button>
+        </div>
+      </div>
+
+      <!-- 除錯區：直接展示 imagesRight 清單 -->
+      <!-- <div class="small text-muted">
+      <div>Debug imagesRight count: {{ imagesRight.length }}</div>
+      <div v-for="(u, i) in imagesRight" :key="i">{{ u }}</div>
+    </div>
+    <div class="small text-muted">right count: {{ imagesRight?.length }}</div>
+    {{ moreOpen }} -->
+
+      <!-- Loading / Empty -->
+      <div v-if="loading" class="text-muted">載入中…</div>
+      <div v-else-if="!loading && !vm.brandName" class="text-muted">查無品牌資料</div>
+    </div>
   </section>
 </template>
 
 <script setup>
-/* Imports */
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getBrandDetail } from '@/core/api/modules/sup/supBrands'
+import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
 import { Vibrant } from 'node-vibrant/browser'
 
-/* 顏色工具 */
-const DEFAULT_BG = { r: 0, g: 147, b: 171 }
-const toRgb = ({ r, g, b }) => `rgb(${r}, ${g}, ${b})`
-const getLuma = ({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b
-const pickTextColor = (bg, light = '#ffffff', dark = '#0b3a3f') =>
-  getLuma(bg) > 180 ? dark : light
+// 子元件
+import BrandBanner from '@/components/modules/sup/brands/BrandBanner.vue'
+import BrandButtons from '@/components/modules/sup/brands/BrandButtons.vue'
+import BrandMoreCard from '@/components/modules/sup/brands/BrandMoreCard.vue'
 
-// 以 population 最大的色塊近似「最大面積色」，排除過亮/過暗
-async function extractDominantByPopulation(imgUrl, fallback = DEFAULT_BG) {
+// 容器頁狀態
+const route = useRoute()
+const loading = ref(false)
+const moreOpen = ref(false)
+
+const imagesRight = ref([])
+
+const vm = ref({
+  brandId: 0,
+  brandName: '',
+  bannerUrl: '',
+  buttons: [],
+  accordions: [], // 後端已以 Title 分組並排序（依 ContentId 最小值），組內 items 依 Order
+  mainColor: { r: 0, g: 147, b: 171 },
+})
+
+const getLuma = ({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+// 以人口最大色近似「最大面積色」，排除過亮/過暗色
+async function extractDominantByPopulation(imgUrl, fallback = { r: 0, g: 147, b: 171 }) {
   try {
     if (!imgUrl) return fallback
-    const palette = await Vibrant.from(imgUrl)
-      .maxColorCount(128) // 提高色數
-      .quality(3) // 提升品質（1~5，數字越小品質越高耗時越長）
-      .getPalette()
-
+    const palette = await Vibrant.from(imgUrl).getPalette()
     const swatches = Object.values(palette || {}).filter(Boolean)
     if (!swatches.length) return fallback
     swatches.sort((a, b) => (b.population || 0) - (a.population || 0))
@@ -129,50 +131,63 @@ async function extractDominantByPopulation(imgUrl, fallback = DEFAULT_BG) {
   }
 }
 
-/* 狀態 */
-const route = useRoute()
-const detail = ref(null)
-const loading = ref(false)
-const moreOpen = ref(false)
-
-// 主色與按鈕配色（容器背景＝主色；按鈕透明；字色自動；hover 反轉白底＋主色字）
-const mainColor = ref(DEFAULT_BG)
-const buttonsBg = computed(() => toRgb(mainColor.value))
-const buttonsTextColor = computed(() => pickTextColor(mainColor.value))
-const hoverTextColor = computed(() => toRgb(mainColor.value)) // 反轉時用主色字
-const accentDot = computed(() => toRgb(mainColor.value)) // 展開 li 前的小圓點
-
-const hasButtons = computed(
-  () => Array.isArray(detail.value?.buttons) && detail.value.buttons.length > 0,
-)
-
-/* 方法 */
-const setButtonsBgFromBanner = async (url) => {
-  mainColor.value = await extractDominantByPopulation(url, DEFAULT_BG)
-}
-
+// 載入詳頁
 const fetchDetail = async () => {
   loading.value = true
   try {
     const id = Number(route.params.brandId)
-    if (!Number.isInteger(id)) return
-    const res = await getBrandDetail(id)
-    const data = res?.data?.data ?? res?.data ?? null
-
-    // 排序保險
-    if (data?.buttons?.length) data.buttons = [...data.buttons].sort((a, b) => a.order - b.order)
-    if (data?.accordions?.length) {
-      // 後端請以 ContentTitle 分組；若仍為 contentKey，同樣可呈現
-      data.accordions = data.accordions.map((g) => ({
-        ...g,
-        items: [...g.items].sort((a, b) => a.order - b.order),
-      }))
+    // console.log('[BrandDetail] brandId param =', id)
+    if (!Number.isInteger(id)) {
+      //   console.warn('[BrandDetail] invalid brandId param')
+      return
     }
 
-    detail.value = data
-    if (data?.brandName) document.title = `${data.brandName}｜品牌`
+    const resp = await getBrandDetail(id)
+    // console.log('[BrandDetail] detail resp =', resp)
+    const data = resp?.data?.data ?? null
+    // console.log('[BrandDetail] detail data =', data)
+    if (!data) {
+      vm.value.brandId = id
+      //   console.warn('[BrandDetail] empty detail data')
+      return
+    }
 
-    await setButtonsBgFromBanner(data?.bannerUrl)
+    // 安全排序
+    const buttons = Array.isArray(data.buttons)
+      ? [...data.buttons].sort((a, b) => a.order - b.order)
+      : []
+    const acc = Array.isArray(data.accordions)
+      ? data.accordions.map((g) => ({
+          ...g,
+          items: [...g.items].sort((a, b) => a.order - b.order),
+        }))
+      : []
+
+    vm.value = {
+      brandId: data.brandId,
+      brandName: data.brandName,
+      bannerUrl: data.bannerUrl || '',
+      buttons,
+      accordions: acc,
+      mainColor: vm.value.mainColor,
+    }
+    // console.log('[BrandDetail] vm after detail =', vm.value)
+
+    // 主色（從 Banner 取）
+    vm.value.mainColor = await extractDominantByPopulation(vm.value.bannerUrl)
+    // console.log('[BrandDetail] mainColor =', vm.value.mainColor)
+
+    // 右側圖片（不分組；可傳品牌名當 altText，也可略過讓後端預設）
+    const imgsRes = await getBrandContentImages(vm.value.brandId, {
+      folderId: 8,
+      altText: vm.value.brandName,
+    })
+    // console.log('[BrandDetail] images resp =', imgsRes)
+    const urls = imgsRes?.data?.data?.urls
+    imagesRight.value = Array.isArray(urls) ? urls : []
+    // console.log('[BrandDetail] imagesRight =', imagesRight.value)
+  } catch (err) {
+    console.error('[BrandDetail] fetchDetail error =', err)
   } finally {
     loading.value = false
   }
@@ -181,47 +196,45 @@ const fetchDetail = async () => {
 onMounted(fetchDetail)
 watch(() => route.params.brandId, fetchDetail)
 
-// 以第一筆 item.title 作為組標題
-const findGroupTitle = (grp) => grp?.items?.[0]?.title || '更多資訊'
-
-// 點擊分類按鈕（依需求導頁或過濾）
+/* 點擊分類按鈕（依需求導頁或查詢） */
+// TODO:分類導向
 const onFilter = (btn) => {
-  // 例如：router.push({ name:'ProductList', query:{ brandId: detail.value?.brandId, typeId: btn.id } })
+  // e.g. router.push({ name: 'ProductList', query: { brandId: vm.value.brandId, typeId: btn.id } })
+  //   console.log('[BrandDetail] click filter btn =', btn)
 }
 </script>
 
 <style scoped>
-/* Buttons 容器 */
-.brand-buttons-wrap {
-  text-align: center;
+/* 內容寬度與左右留白：大螢幕保留舒適邊距 */
+.content-wrap {
+  max-width: 1200px; /* 可調：1140~1320 */
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 1400px) {
+  .content-wrap {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
-/* Buttons：透明背景；hover 反轉白底＋主色字（透過 CSS 變數 --hover-text） */
-.brand-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--btn-text, #fff);
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+/* 中央分隔線：按鈕置中，左右延伸 */
+.split-line {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
 }
-.brand-btn:hover {
-  background: #fff;
-  color: var(--hover-text, #0793ab);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-/* 展開小圓點（可改成 SVG Icon） */
-.check-dot {
-  width: 8px;
-  height: 8px;
-  display: inline-block;
-  border-radius: 50%;
-  margin-top: 0.45rem; /* 與行高對齊 */
+.split-line::before,
+.split-line::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: #e9ecef;
 }
 
-/* 展開動畫 */
+/* 展開動畫（保留） */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

@@ -20,19 +20,22 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		private readonly IBrandLogoService _brandLogoService;
 		private readonly ICurrentUser _me;
 		private readonly ILogger<BrandsController> _logger;
+		private readonly IBrandAssetsService _assetsService;
 
 		public BrandsController(
 			IBrandService service,
 			IBrandLayoutService layoutService,
 			IBrandLogoService brandLogoService,
 			ICurrentUser me,
-			ILogger<BrandsController> logger)
+			ILogger<BrandsController> logger,
+			IBrandAssetsService assetsService)
 		{
 			_service = service;
 			_layoutService = layoutService;
 			_brandLogoService = brandLogoService;
 			_me = me;
 			_logger = logger;
+			_assetsService = assetsService;
 		}
 
 		#region 查品牌
@@ -90,150 +93,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			catch (Exception ex)
 			{
 				return StatusCode(500, new { success = false, message = ex.Message });
-			}
-		}
-
-		/// <summary>
-		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
-		/// 給 Brands A–Z 頁使用
-		/// </summary>
-		// GET /api/sup/Brands/grouped
-		[HttpGet("grouped")]
-		[AllowAnonymous]
-		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
-			bool? isActive = null,
-			bool? isDiscountActive = null,
-			bool? isFeatured = null,
-			CancellationToken ct = default)
-		{
-			try
-			{
-				var brands = await _service.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
-				if (brands == null || !brands.Any())
-					return Ok(ApiResponse<List<BrandGroupDto>>.Ok(new List<BrandGroupDto>(), "無符合條件的品牌"));
-
-				// 建立 Logo 快取
-				await _brandLogoService.BuildLogoMapAsync(ct);
-
-				string GetGroupKey(string name)
-				{
-					if (string.IsNullOrWhiteSpace(name)) return "0-9";
-					var ch = name.Trim()[0];
-					if (char.IsDigit(ch)) return "0-9";
-					var upper = char.ToUpper(ch);
-					return upper >= 'A' && upper <= 'Z' ? upper.ToString() : "0-9";
-				}
-
-				var dict = brands
-					.GroupBy(b => GetGroupKey(b.BrandName))
-					.ToDictionary(
-						g => g.Key,
-						g => g.OrderBy(b => b.BrandName)
-							.Select(b => new BrandGroupItemDto
-							{
-								BrandId = b.BrandId,
-								BrandName = b.BrandName,
-								BrandCode = b.BrandCode,
-								IsActive = b.IsActive,
-								IsFeatured = b.IsFeatured,
-								DiscountRate = b.DiscountRate,
-								IsDiscountActive = b.IsDiscountActive,
-								LogoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
-							}).ToList()
-					);
-
-				var result = new List<BrandGroupDto>
-		{
-			new() { Letter = "0-9", Brands = dict.ContainsKey("0-9") ? dict["0-9"] : new() }
-		};
-
-				for (char c = 'A'; c <= 'Z'; c++)
-				{
-					var key = c.ToString();
-					result.Add(new BrandGroupDto
-					{
-						Letter = key,
-						Brands = dict.ContainsKey(key) ? dict[key] : new()
-					});
-				}
-
-				return Ok(ApiResponse<List<BrandGroupDto>>.Ok(result, "品牌分組載入成功"));
-			}
-			catch (Exception ex)
-			{
-				return StatusCode(500, ApiResponse<List<BrandGroupDto>>.Fail($"品牌分組載入失敗：{ex.Message}"));
-			}
-		}
-
-		/// <summary>
-		/// 取得啟用中品牌 Logo URL
-		/// 從 SYS_AssetFile 表中找出 FolderId = 56 且 IsActive = 1 的圖片，回傳 { brandName, logoUrl } 清單。
-		/// </summary>
-		// GET /api/sup/Brands/logos
-		[HttpGet("logos")]
-		[AllowAnonymous]
-		public async Task<IActionResult> GetActiveBrandLogos(CancellationToken ct)
-		{
-			try
-			{
-				var logos = await _brandLogoService.BuildLogoMapAsync(ct);
-				if (logos == null || logos.Count == 0)
-					return Ok(ApiResponse<object>.Ok(new List<object>(), "目前沒有啟用中的品牌 Logo"));
-
-				var result = logos.Select(kv => new
-				{
-					BrandName = kv.Key,
-					LogoUrl = kv.Value
-				}).ToList();
-
-				return Ok(ApiResponse<object>.Ok(result, "成功取得啟用中品牌 Logo"));
-			}
-			catch (Exception ex)
-			{
-				return StatusCode(500, ApiResponse<object>.Fail($"取得品牌 Logo 發生錯誤：{ex.Message}"));
-			}
-		}
-
-
-		/// <summary>
-		/// 取得精選品牌清單 (平面列表)，給 Brands A–Z 或首頁 Carousel 使用
-		/// IsActive = true 且 IsFeatured = true 的品牌並透過 _brandLogoService 補上 logoUrl
-		/// </summary>
-		// GET /api/sup/Brands/featured
-		[HttpGet("featured")]
-		[AllowAnonymous]
-		public async Task<IActionResult> GetFeaturedBrands(CancellationToken ct = default)
-		{
-			try
-			{
-				var brands = await _service.GetFilteredAsync(isActive: true, isDiscountActive: null, isFeatured: true);
-				if (brands == null || !brands.Any())
-					return Ok(ApiResponse<List<object>>.Ok(new List<object>(), "目前沒有精選品牌"));
-
-				// 先建立 Logo 快取
-				await _brandLogoService.BuildLogoMapAsync(ct);
-
-				// 將品牌轉為前端使用格式
-				var result = brands
-					.OrderBy(b => b.BrandName)
-					.Select(b => new
-					{
-						brandId = b.BrandId,
-						brandName = b.BrandName,
-						brandCode = b.BrandCode,
-						isActive = b.IsActive,
-						isFeatured = b.IsFeatured,
-						discountRate = b.DiscountRate,
-						isDiscountActive = b.IsDiscountActive,
-						logoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
-					})
-					.ToList();
-
-				return Ok(ApiResponse<object>.Ok(result, "成功取得精選品牌"));
-			}
-			catch (Exception ex)
-			{
-				return StatusCode(500, ApiResponse<object>.Fail($"取得精選品牌時發生錯誤：{ex.Message}"));
 			}
 		}
 
@@ -467,7 +326,152 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 
 		#endregion
 
-		#region 前台查詳情
+		#region 前台查
+
+		/// <summary>
+		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
+		/// 給 Brands A–Z 頁使用
+		/// </summary>
+		// GET /api/sup/Brands/grouped
+		[HttpGet("grouped")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
+			bool? isActive = null,
+			bool? isDiscountActive = null,
+			bool? isFeatured = null,
+			CancellationToken ct = default)
+		{
+			try
+			{
+				var brands = await _service.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
+				if (brands == null || !brands.Any())
+					return Ok(ApiResponse<List<BrandGroupDto>>.Ok(new List<BrandGroupDto>(), "無符合條件的品牌"));
+
+				// 建立 Logo 快取
+				await _brandLogoService.BuildLogoMapAsync(ct);
+
+				string GetGroupKey(string name)
+				{
+					if (string.IsNullOrWhiteSpace(name)) return "0-9";
+					var ch = name.Trim()[0];
+					if (char.IsDigit(ch)) return "0-9";
+					var upper = char.ToUpper(ch);
+					return upper >= 'A' && upper <= 'Z' ? upper.ToString() : "0-9";
+				}
+
+				var dict = brands
+					.GroupBy(b => GetGroupKey(b.BrandName))
+					.ToDictionary(
+						g => g.Key,
+						g => g.OrderBy(b => b.BrandName)
+							.Select(b => new BrandGroupItemDto
+							{
+								BrandId = b.BrandId,
+								BrandName = b.BrandName,
+								BrandCode = b.BrandCode,
+								IsActive = b.IsActive,
+								IsFeatured = b.IsFeatured,
+								DiscountRate = b.DiscountRate,
+								IsDiscountActive = b.IsDiscountActive,
+								LogoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
+							}).ToList()
+					);
+
+				var result = new List<BrandGroupDto>
+		{
+			new() { Letter = "0-9", Brands = dict.ContainsKey("0-9") ? dict["0-9"] : new() }
+		};
+
+				for (char c = 'A'; c <= 'Z'; c++)
+				{
+					var key = c.ToString();
+					result.Add(new BrandGroupDto
+					{
+						Letter = key,
+						Brands = dict.ContainsKey(key) ? dict[key] : new()
+					});
+				}
+
+				return Ok(ApiResponse<List<BrandGroupDto>>.Ok(result, "品牌分組載入成功"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<List<BrandGroupDto>>.Fail($"品牌分組載入失敗：{ex.Message}"));
+			}
+		}
+
+		/// <summary>
+		/// 取得啟用中品牌 Logo URL
+		/// 從 SYS_AssetFile 表中找出 FolderId = 56 且 IsActive = 1 的圖片，回傳 { brandName, logoUrl } 清單。
+		/// </summary>
+		// GET /api/sup/Brands/logos
+		[HttpGet("logos")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetActiveBrandLogos(CancellationToken ct)
+		{
+			try
+			{
+				var logos = await _brandLogoService.BuildLogoMapAsync(ct);
+				if (logos == null || logos.Count == 0)
+					return Ok(ApiResponse<object>.Ok(new List<object>(), "目前沒有啟用中的品牌 Logo"));
+
+				var result = logos.Select(kv => new
+				{
+					BrandName = kv.Key,
+					LogoUrl = kv.Value
+				}).ToList();
+
+				return Ok(ApiResponse<object>.Ok(result, "成功取得啟用中品牌 Logo"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<object>.Fail($"取得品牌 Logo 發生錯誤：{ex.Message}"));
+			}
+		}
+
+
+		/// <summary>
+		/// 取得精選品牌清單 (平面列表)，給 Brands A–Z 或首頁 Carousel 使用
+		/// IsActive = true 且 IsFeatured = true 的品牌並透過 _brandLogoService 補上 logoUrl
+		/// </summary>
+		// GET /api/sup/Brands/featured
+		[HttpGet("featured")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetFeaturedBrands(CancellationToken ct = default)
+		{
+			try
+			{
+				var brands = await _service.GetFilteredAsync(isActive: true, isDiscountActive: null, isFeatured: true);
+				if (brands == null || !brands.Any())
+					return Ok(ApiResponse<List<object>>.Ok(new List<object>(), "目前沒有精選品牌"));
+
+				// 先建立 Logo 快取
+				await _brandLogoService.BuildLogoMapAsync(ct);
+
+				// 將品牌轉為前端使用格式
+				var result = brands
+					.OrderBy(b => b.BrandName)
+					.Select(b => new
+					{
+						brandId = b.BrandId,
+						brandName = b.BrandName,
+						brandCode = b.BrandCode,
+						isActive = b.IsActive,
+						isFeatured = b.IsFeatured,
+						discountRate = b.DiscountRate,
+						isDiscountActive = b.IsDiscountActive,
+						logoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
+					})
+					.ToList();
+
+				return Ok(ApiResponse<object>.Ok(result, "成功取得精選品牌"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<object>.Fail($"取得精選品牌時發生錯誤：{ex.Message}"));
+			}
+		}
+
 
 		/// <summary>
 		/// 取得品牌詳頁（Banner、分類按鈕、Accordion）
@@ -503,6 +507,46 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 					ApiResponse<BrandDetailDto>.Fail($"發生錯誤：{ex.Message}"));
 			}
 		}
+
+
+		/// <summary>
+		/// 取得品牌內容圖片（右側用，不分組）
+		/// 僅取 SYS_AssetFile.IsActive = 1，依 CreatedDate 遞增排序。
+		/// 若 altText 未提供，預設使用品牌名稱。
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <param name="folderId">檔案資料夾 Id，預設 8</param>
+		/// <param name="altText">圖片替代文字過濾（預設為品牌名稱）</param>
+		[HttpGet("{brandId:int}/content-images")]
+		[AllowAnonymous] // 視需求開放或拿掉
+		[ProducesResponseType(typeof(ApiResponse<BrandContentImagesDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetBrandContentImages(
+			[FromRoute] int brandId,
+			[FromQuery] int folderId = 8,
+			[FromQuery] string? altText = null,
+			CancellationToken ct = default)
+		{
+			try
+			{
+				// 1) 驗證品牌是否存在且啟用
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
+				// 2) 取圖片（Service 內會預設 altText=name）
+				var dto = await _assetsService.GetRightImagesAsync(brandId, folderId, altText, ct);
+				return Ok(ApiResponse<BrandContentImagesDto>.Ok(dto, "成功取得內容圖片"));
+
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetBrandContentImages failed. brandId={BrandId}, folderId={FolderId}, altText={AltText}", brandId, folderId, altText);
+				return StatusCode(StatusCodes.Status500InternalServerError,
+					ApiResponse<object>.Fail($"取得內容圖片發生錯誤：{ex.Message}"));
+			}
+		}
+
 
 		#endregion
 

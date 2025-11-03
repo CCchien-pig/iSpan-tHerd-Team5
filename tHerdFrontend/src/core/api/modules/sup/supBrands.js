@@ -42,7 +42,7 @@ export const getBrand = (brandId) => {
 }
 
 /**
- * 品牌詳頁：組裝 Banner、Buttons、Accordion 等（建議後端一次組裝）
+ * 品牌詳頁：組裝 Banner、Buttons、Accordion 等
  * GET /sup/brands/{brandId}/detail
  * 後端對應：
  *  - Banner：SUP_Brand.ImgId -> SYS_AssetFile.FileUrl
@@ -51,8 +51,17 @@ export const getBrand = (brandId) => {
  *  - 後續可加入 orderedBlocks（由 SUP_BrandLayoutConfig 決定順序）
  *
  */
-export const getBrandDetail = (brandId) => {
-  return api.get(`/sup/brands/${brandId}/detail`)
+export const getBrandDetail = (brandId, config = {}) => {
+  //   console.log('[API] getBrandDetail →', brandId)
+  return api.get(`/sup/brands/${brandId}/detail`, { ...config })
+}
+
+// 取得品牌內容圖片（右側用，不分組）
+// params 可帶 { folderId: 8, altText: '品牌名' }
+export const getBrandContentImages = (brandId, params = {}, config = {}) => {
+  // params 可帶 { folderId: 8, altText: 'Allmax' }
+  //   console.log('[API] getBrandContentImages →', brandId, params)
+  return api.get(`/sup/brands/${brandId}/content-images`, { params, ...config, auth: false })
 }
 
 /**
@@ -66,31 +75,4 @@ export const getBrandDetailBySlug = (slug, brandId) => {
 
   // 方案二（/sup/brands/slug/allmax/detail?brandId=1001）
   return api.get(`/sup/brands/slug/${slug}/detail`, { params: { brandId } })
-}
-
-/**
- *（可選）取得品牌對應的資產（若詳頁已組裝可不需要）
- * GET /sup/Brands/{brandId}/assets
- * 例如：LOGO、其他圖檔
- */
-export const getBrandAssets = (brandId) => {
-  return api.get(`/sup/Brands/${brandId}/assets`)
-}
-
-/**
- *（可選）取得品牌的商品類型過濾（若詳頁已組裝可不需要）
- * GET /sup/Brands/{brandId}/product-type-filters
- * 回傳：Array<{ id, text, order }>
- */
-export const getBrandTypeFilters = (brandId) => {
-  return api.get(`/sup/Brands/${brandId}/product-type-filters`)
-}
-
-/**
- *（可選）取得品牌的 Accordion 內容（若詳頁已組裝可不需要）
- * GET /sup/Brands/{brandId}/accordion-contents
- * 回傳：Array<{ contentKey, items:[{ title, body, order }] }>
- */
-export const getBrandAccordionContents = (brandId) => {
-  return api.get(`/sup/Brands/${brandId}/accordion-contents`)
 }

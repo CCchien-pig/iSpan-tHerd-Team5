@@ -230,7 +230,6 @@ ORDER BY bptf.[ButtonOrder] ASC;";
 		var (conn, tx, shouldDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 		try
 		{
-			// 依你的表：ContentId / ContentTitle / Content / OrderSeq / IsActive
 			var sql = @"
 SELECT
     ContentKey = bac.[ContentId],     -- int

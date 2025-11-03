@@ -71,17 +71,30 @@ public class BrandService : IBrandService
 
 		// Accordions：扁平 → 分組
 		var raw = await _repo.GetBrandAccordionRawAsync(brandId, ct);
+		// raw: List<(string contentKey, BrandAccordionItemDto item)>
+		// item 內已含 Title/Body/Order
+
+		// raw: List<(string contentKey /*ContentId字串*/, BrandAccordionItemDto item /*含 Title/Body/Order*/)>
 		var grouped = raw
-			.GroupBy(x => x.contentKey)          // contentKey = ContentId
-			.Select(g => new BrandAccordionGroupDto
+			.GroupBy(x => x.item.Title ?? string.Empty)
+			.Select(g => new
 			{
-				ContentKey = g.Key.ToString(),   // 若希望字串，可 ToString()
-				Items = g.Select(x => x.item)
-						 .OrderBy(x => x.Order)
-						 .ToList()
+				Title = g.Key,
+				// 找出該組中對應的最小 ContentId 作為排序鍵（從 contentKey 來）
+				MinContentId = g.Select(x =>
+				{
+					// contentKey 目前是 ContentId.ToString()
+					return int.TryParse(x.contentKey, out var cid) ? cid : int.MaxValue;
+				}).DefaultIfEmpty(int.MaxValue).Min(),
+				Items = g.Select(x => x.item).OrderBy(x => x.Order).ToList()
+			})
+			.OrderBy(x => x.MinContentId) // 依 ContentId 先後
+			.Select(x => new BrandAccordionGroupDto
+			{
+				ContentKey = x.Title,
+				Items = x.Items
 			})
 			.ToList();
-
 
 		return new BrandDetailDto
 		{
