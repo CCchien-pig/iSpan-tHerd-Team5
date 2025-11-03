@@ -1,241 +1,241 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using tHerdBackend.Core.DTOs;
+using tHerdBackend.Core.DTOs.SYS;
+using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Models;
-using tHerdBackend.MKT.Rcl.Areas.MKT.Utils;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
 
 namespace tHerdBackend.MKT.Rcl.Areas.MKT.Controllers
 {
+    [AllowAnonymous] // ✅ 避免未登入被導向登入頁
     [Area("MKT")]
+    [Route("MKT/[controller]/[action]")]
     public class AdsController : Controller
     {
         private readonly tHerdDBContext _context;
-        private readonly Cloudinary _cloudinary;
+        private readonly ISysAssetFileRepository _fileRepo;
 
-        public AdsController(tHerdDBContext context)
+        public AdsController(tHerdDBContext context, ISysAssetFileRepository fileRepo)
         {
             _context = context;
-
-            // ✅ 初始化 Cloudinary 設定（請替換成你的帳號資訊）
-            var account = new Account(
-                "你的_cloud_name",
-                "你的_api_key",
-                "你的_api_secret"
-            );
-            _cloudinary = new Cloudinary(account);
+            _fileRepo = fileRepo;
         }
 
-        // 🏠 主頁面
         [HttpGet]
         public IActionResult Index() => View();
 
-        // 📊 FullCalendar 資料
-        [HttpGet]
-        public async Task<IActionResult> GetEvents()
+        // ✅ 圖片上傳（上傳至雲端）
+        [HttpPost]
+        public async Task<IActionResult> UploadToCloud(IFormFile file)
         {
-            var ads = await _context.MktAds.AsNoTracking().ToListAsync();
-            var events = ads.Select(a => new
+            if (file == null || file.Length == 0)
+                return Json(new { success = false, message = "請選擇圖片" });
+
+            try
             {
-                id = a.AdId,
-                title = a.Title,
-                start = a.StartDate.ToString("yyyy-MM-ddTHH:mm:ss"),
-                end = a.EndDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
-                adType = a.AdType,
-                color = ColorHelper.RandomColor(),
-                isActive = a.IsActive
-            }).ToList();
-
-            return Json(events);
-        }
-
-        // 📢 取得啟用中的廣告資料（含雲端圖片）
-        [HttpGet]
-        public async Task<IActionResult> GetActiveAds()
-        {
-            var ads = await _context.MktAds
-                .Include(a => a.Img)
-                .AsNoTracking()
-                .Where(a => a.IsActive && a.StartDate <= DateTime.Now && a.EndDate >= DateTime.Now)
-                .Select(a => new
+                var dto = new AssetFileUploadDto
                 {
-                    a.AdId,
-                    a.Title,
-                    a.Content,
-                    a.AdType,
-                    a.ButtonText,
-                    a.ButtonLink,
-                    ImgUrl = a.Img != null ? a.Img.FileUrl : null
-                })
-                .ToListAsync();
+                    ModuleId = "MKT",
+                    ProgId = "Ad",
+                    Meta = new List<AssetFileDetailsDto>
+                    {
+                        new AssetFileDetailsDto
+                        {
+                            File = file,
+                            IsActive = true,
+                            AltText = Path.GetFileNameWithoutExtension(file.FileName),
+                            Caption = "廣告圖片"
+                        }
+                    }
+                };
 
-            return Json(ads);
+                var result = await _fileRepo.AddFilesAsync(dto);
+                var json = JsonSerializer.Serialize(result);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                bool isSuccess = root.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
+                if (!isSuccess)
+                {
+                    var msg = root.TryGetProperty("message", out var msgProp)
+                        ? msgProp.GetString()
+                        : "上傳失敗";
+                    return Json(new { success = false, message = msg });
+                }
+
+                if (!root.TryGetProperty("data", out var dataProp) || dataProp.ValueKind != JsonValueKind.Array)
+                    return Json(new { success = false, message = "上傳失敗：未取得檔案資料" });
+
+                var first = dataProp.EnumerateArray().FirstOrDefault();
+                var fileId = first.TryGetProperty("FileId", out var fid) ? fid.GetInt32() : 0;
+                var fileUrl = first.TryGetProperty("FileUrl", out var furl) ? furl.GetString() : "";
+
+                return Json(new { success = true, message = "圖片上傳成功", fileId, fileUrl });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"上傳失敗：{ex.Message}" });
+            }
         }
 
-        // 📈 取得廣告總數
+        // ✅ 新增廣告畫面
         [HttpGet]
-        public async Task<IActionResult> GetTotalCount()
-        {
-            var count = await _context.MktAds.CountAsync();
-            return Json(new { count });
-        }
+        public IActionResult Create() =>
+            PartialView("~/Areas/MKT/Views/Partial/_CreateAdModal.cshtml");
 
-        // 🆕 新增廣告畫面
-        [HttpGet]
-        public IActionResult Create()
-            => PartialView("~/Areas/MKT/Views/Partial/_CreateAdModal.cshtml");
-
-        // 🆕 新增廣告（已改成使用 ImgId）
+        // ✅ 新增廣告（POST）
         [HttpPost]
         public async Task<IActionResult> Create(MktAd model)
         {
             if (!ModelState.IsValid)
                 return Json(new { success = false, message = "資料驗證失敗" });
 
+            if (model.StartDate == default)
+                return Json(new { success = false, message = "開始日期不得為空" });
+
+            if (model.EndDate == default)
+                model.EndDate = null;
+
             model.Status = "aActive";
             model.CreatedDate = DateTime.Now;
-
-            if (model.ImgId == null)
-                return Json(new { success = false, message = "請上傳圖片後再儲存" });
+            model.IsActive = true;
 
             _context.MktAds.Add(model);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+            return Json(new { success = true, message = "廣告已新增" });
         }
 
-        // ✏️ 編輯廣告畫面
-        [HttpGet]
+        // ✅ FullCalendar 點擊編輯：支援 /MKT/Ads/Edit/1004
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> Edit(int id)
         {
             var ad = await _context.MktAds
                 .Include(a => a.Img)
                 .FirstOrDefaultAsync(a => a.AdId == id);
-            if (ad == null) return NotFound();
+
+            if (ad == null)
+                return NotFound();
+
+            // ✅ 防呆：確保 Img 不為 null
+            ad.Img ??= new SysAssetFile();
+
             return PartialView("~/Areas/MKT/Views/Partial/_EditAdModal.cshtml", ad);
         }
 
-        // ✏️ 編輯廣告
+        // ✅ 編輯廣告（POST）
         [HttpPost]
         public async Task<IActionResult> Edit(MktAd model)
         {
-            var ad = await _context.MktAds.FindAsync(model.AdId);
+            var ad = await _context.MktAds.FirstOrDefaultAsync(a => a.AdId == model.AdId);
             if (ad == null)
                 return Json(new { success = false, message = "找不到廣告" });
+
+            if (model.StartDate == default)
+                return Json(new { success = false, message = "開始日期不得為空" });
 
             ad.Title = model.Title;
             ad.Content = model.Content;
-            ad.StartDate = model.StartDate;
-            ad.EndDate = model.EndDate;
-            ad.Status = string.IsNullOrEmpty(model.Status) ? "aActive" : model.Status;
-            ad.IsActive = model.IsActive;
-            ad.Creator = model.Creator;
-            ad.AdType = model.AdType;
-            ad.RevisedDate = DateTime.Now;
-            ad.Reviser = 1;
             ad.ButtonText = model.ButtonText;
             ad.ButtonLink = model.ButtonLink;
+            ad.StartDate = model.StartDate;
+            ad.EndDate = model.EndDate == default ? null : model.EndDate;
+            ad.RevisedDate = DateTime.Now;
 
-            if (model.ImgId != null)
+            // ✅ 僅當新圖片存在時才更新 ImgId
+            if (model.ImgId.HasValue && model.ImgId > 0)
                 ad.ImgId = model.ImgId;
 
             await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            return Json(new { success = true, message = "更新成功" });
         }
 
-        // 🧩 上傳圖片至雲端 + 寫入 Sys_AssetFile
-        [HttpPost]
-        public async Task<IActionResult> UploadToCloud(IFormFile file)
+        // ✅ 取得單一廣告（JSON 給動態用）
+        [HttpGet]
+        public async Task<IActionResult> GetAdById(int id)
         {
-            if (file == null || file.Length == 0)
-                return Json(new { success = false, message = "未選擇檔案" });
+            var ad = await _context.MktAds
+                .Include(a => a.Img)
+                .FirstOrDefaultAsync(a => a.AdId == id);
 
-            // ✅ 上傳到 Cloudinary
-            var uploadParams = new ImageUploadParams()
+            if (ad == null)
+                return Json(new { success = false, message = "找不到該廣告" });
+
+            return Json(new
             {
-                File = new FileDescription(file.FileName, file.OpenReadStream()),
-                Folder = "tHerd/uploads/ads"
-            };
-            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-
-            // ✅ 儲存進 Sys_AssetFile
-            var asset = new SysAssetFile
-            {
-                FileKey = Guid.NewGuid().ToString(),
-                IsExternal = true,
-                FileUrl = uploadResult.SecureUrl.ToString(),
-                FileExt = Path.GetExtension(file.FileName)?.TrimStart('.'),
-                MimeType = file.ContentType,
-                FileSizeBytes = file.Length,
-                CreatedDate = DateTime.Now,
-                IsActive = true,
-                IsDeleted = false
-            };
-
-            _context.SysAssetFiles.Add(asset);
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true, fileId = asset.FileId, fileUrl = asset.FileUrl });
+                success = true,
+                data = new
+                {
+                    ad.AdId,
+                    ad.Title,
+                    ad.Content,
+                    ad.AdType,
+                    ad.ButtonText,
+                    ad.ButtonLink,
+                    ad.StartDate,
+                    ad.EndDate,
+                    ad.ImgId,
+                    ImgUrl = ad.Img?.FileUrl ?? ""
+                }
+            });
         }
 
-        // ❌ 刪除廣告
+        // ✅ FullCalendar 事件資料
+        [HttpGet]
+        public async Task<IActionResult> GetEvents()
+        {
+            var ads = await _context.MktAds
+                .Where(a => a.IsActive && a.Status == "aActive")
+                .Select(a => new
+                {
+                    id = a.AdId,
+                    title = a.Title,
+                    start = a.StartDate.ToString("yyyy-MM-dd"),
+                    end = a.EndDate.HasValue
+                        ? a.EndDate.Value.AddDays(1).ToString("yyyy-MM-dd")
+                        : a.StartDate.AddDays(1).ToString("yyyy-MM-dd"),
+                    backgroundColor = a.AdType == "Popup" ? "#f57c00"
+                        : a.AdType == "Marquee" ? "#43a047"
+                        : "#6a1b9a",
+                    borderColor = "#ffffff",
+                    textColor = "#ffffff"
+                })
+                .ToListAsync();
+
+            return Json(ads);
+        }
+
+        // ✅ 真實刪除（硬刪除）
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [Route("/MKT/Ads/Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var ad = await _context.MktAds.FindAsync(id);
-            if (ad == null)
-                return Json(new { success = false, message = "找不到廣告" });
-
-            _context.MktAds.Remove(ad);
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true });
-        }
-
-        // 🔄 啟用／停用切換
-        [HttpPost]
-        public async Task<IActionResult> ToggleActive(int id)
-        {
-            var ad = await _context.MktAds.FindAsync(id);
-            if (ad == null)
-                return Json(new { success = false, message = "找不到廣告" });
-
-            ad.IsActive = !ad.IsActive;
-            ad.Status = ad.IsActive ? "aActive" : "aInactive";
-            ad.RevisedDate = DateTime.Now;
-            ad.Reviser = 1;
-
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, isActive = ad.IsActive });
-        }
-
-        // 🧩 根據廣告類型補預設值
-        private void ApplyDefaultValuesByAdType(MktAd model)
-        {
-            switch (model.AdType)
+            try
             {
-                case "Popup":
-                    model.ButtonText = "了解更多";
-                    model.ButtonLink = "#";
-                    model.Content = null;
-                    break;
+                var ad = await _context.MktAds.FirstOrDefaultAsync(a => a.AdId == id);
+                if (ad == null)
+                    return Json(new { success = false, message = "找不到該廣告" });
 
-                case "Marquee":
-                    model.ButtonText = "了解更多";
-                    model.ButtonLink = "#";
-                    model.ImgId = null;
-                    break;
+                _context.MktAds.Remove(ad);
+                await _context.SaveChangesAsync();
 
-                case "Carousel":
-                default:
-                    if (string.IsNullOrWhiteSpace(model.ButtonText))
-                        model.ButtonText = "了解更多";
-                    if (string.IsNullOrWhiteSpace(model.ButtonLink))
-                        model.ButtonLink = "#";
-                    break;
+                return Json(new { success = true, message = "廣告已永久刪除" });
             }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"刪除失敗：{ex.Message}" });
+            }
+        }
+
+        // ✅ 總數查詢（給畫面顯示用）
+        [HttpGet]
+        public async Task<IActionResult> GetTotalCount()
+        {
+            var count = await _context.MktAds.CountAsync(a => a.IsActive && a.Status == "aActive");
+            return Json(new { count });
         }
     }
 }

@@ -1,4 +1,215 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+﻿//圖片模組
+
+// === 🌀 顯示全域 Loading ===
+window.showGlobalLoading = function (message = "處理中，請稍候...") {
+    const loader = document.getElementById("globalLoading");
+    if (!loader) return;
+    const text = loader.querySelector(".loading-text");
+    if (text) text.textContent = message;
+
+    loader.style.display = "flex";
+    loader.style.opacity = "1";
+    loader.style.pointerEvents = "auto";
+    loader.style.transition = "opacity 0.2s ease";
+}
+
+// === 關閉全域 Loading ===
+window.hideGlobalLoading = function () {
+    const loader = document.getElementById("globalLoading");
+    if (!loader) return;
+    loader.style.opacity = "0";
+    loader.style.pointerEvents = "none";
+    setTimeout(() => loader.style.display = "none", 200);
+}
+
+// === ✅ 把這段放在最上面 ===
+window.refreshFileList = async function (message = "正在重新載入資料...") {
+    try {
+        showGlobalLoading(message, "inline");
+
+        const currentProgId = document.querySelector("#ProgId")?.value || "UploadTest";
+        const currentFolderId = document.querySelector("#CurrentFolderId")?.value || "";
+
+        const query = new URLSearchParams({
+            moduleId: "SYS",
+            progId: currentProgId
+        });
+        if (currentFolderId) query.append("folderId", currentFolderId);
+
+        const res = await fetch(`/SYS/UploadTest/GetFilesByProg?${query.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const html = await res.text();
+
+        const listContainer = document.querySelector("#fileListContainer");
+        if (listContainer) {
+            listContainer.innerHTML = html.trim()
+                ? html
+                : `<p class="text-muted">目前沒有圖片。</p>`;
+        }
+    } catch (err) {
+        console.error("❌ 重新抓取檔案清單失敗：", err);
+        Swal.fire("錯誤", "無法重新載入最新資料", "error");
+    } finally {
+        hideGlobalLoading();
+    }
+};
+
+// === ✅ 全域取得單張圖片資訊的函式 ===
+window.fetchFileDetail = async function (fileId) {
+    try {
+        const res = await fetch(`/SYS/Images/GetFileDetail?fileId=${fileId}`, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        const result = await res.json();
+
+        if (!result.success) {
+            console.warn("⚠️ GetFileDetail 回傳失敗:", result.message);
+            return null;
+        }
+
+        return result.data; // ✅ 回傳 SysAssetFileDto
+    } catch (err) {
+        console.error("❌ GetFileDetail 發生錯誤:", err);
+        return null;
+    }
+};
+
+// === ✅ 全域更新已綁定圖片資訊 ===
+window.updateBoundImage = function (fileDto) {
+    if (!fileDto || !fileDto.fileId) return;
+
+    const card = document.querySelector(`.prod-img-item [data-file-id='${fileDto.fileId}']`);
+    if (card) {
+        // 原本更新 UI 的程式...
+        card.src = fileDto.fileUrl;
+        card.dataset.altText = fileDto.altText;
+        card.dataset.caption = fileDto.caption;
+        card.dataset.width = fileDto.width;
+        card.dataset.height = fileDto.height;
+        card.dataset.isActive = fileDto.isActive;
+
+        // ✅ 新增這行：同步 dataset 給 .thumb-clickable 元素
+        const thumb = document.querySelector(`.thumb-clickable[data-file-id='${fileDto.fileId}']`);
+        if (thumb) {
+            thumb.dataset.altText = fileDto.altText;
+            thumb.dataset.caption = fileDto.caption;
+            thumb.dataset.isActive = fileDto.isActive;
+            thumb.dataset.width = fileDto.width;
+            thumb.dataset.height = fileDto.height;
+            thumb.dataset.fileUrl = fileDto.fileUrl;
+            thumb.dataset.mimeType = fileDto.mimeType;
+        }
+    }
+
+    // ✅ 同步更新前端 DTO
+    if (window.productDto && Array.isArray(productDto.Images)) {
+        const target = productDto.Images.find(x => x.imgId == fileDto.fileId);
+        if (target) {
+            target.fileUrl = fileDto.fileUrl;
+            target.altText = fileDto.altText;
+            target.caption = fileDto.caption;
+            target.width = fileDto.width;
+            target.height = fileDto.height;
+            target.isActive = fileDto.isActive;
+        }
+    }
+
+    console.log("✅ 已同步更新圖片資料", fileDto);
+};
+
+// === 用最新 DTO 更新 Modal ===
+window.fillImageModal = function (fileDto) {
+    const modal = document.querySelector("#imgMetaModal");
+    if (!modal || !fileDto) return;
+
+    // 預覽圖更新
+    const img = modal.querySelector(".img-zoomable");
+    if (img) {
+        img.src = fileDto.fileUrl || "/images/No-Image.svg";
+        img.dataset.fileId = fileDto.fileId;
+    }
+
+    // 更新欄位
+    modal.querySelector("#modalFileKey").value = fileDto.fileKey || "";
+    modal.querySelector("#modalWidth").value = fileDto.width || "";
+    modal.querySelector("#modalHeight").value = fileDto.height || "";
+    modal.querySelector("#modalFileSizeBytes").value = (fileDto.fileSizeBytes || 0) + " Bytes";
+    modal.querySelector("#modalMimeType").value = fileDto.mimeType || "";
+    // === 直接在這裡強制格式化 ===
+    const rawCreated = fileDto.formateCreatedDate || fileDto.FormateCreatedDate || fileDto.createdDate || fileDto.CreatedDate || "";
+    modal.querySelector("#modalCreatedDate").value = String(rawCreated)
+        .replace("T", " ")
+        .split(".")[0]
+        .replace(/-/g, "/");
+    modal.querySelector("#modalFileId").value = fileDto.fileId || "";
+    modal.querySelector("#modalAlt").value = fileDto.altText || "";
+    modal.querySelector("#modalCaption").value = fileDto.caption || "";
+    modal.querySelector("#modalIsActive").checked = fileDto.isActive === true || fileDto.isActive === "true";
+
+    // 外部連結 badge
+    const badge = modal.querySelector("#modalIsExternalBadge");
+    if (badge) {
+        const isExternal = fileDto.isExternal === true || fileDto.isExternal === "true";
+        badge.textContent = isExternal ? "外部連結" : "自有檔案";
+        badge.classList.remove("bg-success", "bg-secondary");
+        badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+    }
+};
+
+// 照片清單接資料
+window.openImageEditModal = async function (fileId) {
+    if (!fileId) {
+        console.warn("⚠️ 無效的 fileId");
+        return;
+    }
+
+    const modal = document.getElementById("imgMetaModal");
+    if (!modal) {
+        return Swal.fire("錯誤", "找不到圖片編輯視窗", "error");
+    }
+
+    try {
+        // ✅ 從全域方法抓取詳細 DTO
+        showGlobalLoading("正在讀取圖片資料...");
+        const fileDto = await fetchFileDetail(fileId);
+        if (!fileDto) {
+            Swal.fire("錯誤", "無法取得圖片資料", "error");
+            return;
+        }
+
+        // ✅ 填入 Modal
+        fillImageModal(fileDto);
+
+        // ✅ 顯示預覽
+        const previewImg = modal.querySelector(".img-zoomable");
+        if (previewImg) {
+            previewImg.src = fileDto.fileUrl || "/images/No-Image.svg";
+            previewImg.dataset.fileId = fileDto.fileId;
+        }
+
+        // ✅ 顯示 modal
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    } catch (err) {
+        console.error("❌ 載入圖片資料失敗：", err);
+        Swal.fire("錯誤", "無法載入圖片詳細資料", "error");
+    }
+};
+
+document.addEventListener("DOMContentLoaded", async function () {
+    // 初次載入：顯示全頁遮罩
+    showGlobalLoading("載入中，請稍候...", "global");
+
+    try {
+        await window.refreshFileList();
+    } catch (err) {
+        console.error("初次載入失敗：", err);
+    } finally {
+        hideGlobalLoading(); // 保證無論成功與否都會關閉
+    }
+
     // === DOM 元素 ===
     const resetBtn = document.getElementById("resetBtn");
     const selectBtn = document.getElementById("selectBtn");
@@ -41,7 +252,6 @@
         const item = btn.closest(".img-item");
         const img = item.querySelector("img");
         const fileId = img.dataset.fileId;
-        const updateApiUrl = img.dataset.updateApi || "/SYS/Images/UpdateFile";
 
         const isCurrentlyActive = img.dataset.isActive === "true";
         const newState = !isCurrentlyActive;
@@ -58,7 +268,7 @@
         if (!confirm.isConfirmed) return;
 
         try {
-            const res = await fetch(updateApiUrl, {
+            const res = await fetch("/SYS/Images/UpdateFile", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -95,52 +305,126 @@
         const startIndex = currentCount;
 
         [...files].forEach((file, i) => {
-            if (!file.type.startsWith("image/")) return;
-
             const index = startIndex + i;
             const reader = new FileReader();
+            const wrapper = document.createElement("div");
+            wrapper.className = "img-item border rounded p-3 mb-3 bg-white shadow-sm";
 
-            reader.onload = e => {
-                const wrapper = document.createElement("div");
-                wrapper.className = "img-item";
+            const mime = file.type;
 
-                wrapper.innerHTML = `
-                    <img src="${e.target.result}" alt="" class="preview-img" />
-                    <button type="button" class="btn-close-custom" aria-label="Close">
-                        <i class="bi bi-x-lg"></i>
+            // === 圖片 ===
+            if (mime.startsWith("image/")) {
+                reader.onload = e => {
+                    wrapper.innerHTML = `
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0" style="width:120px;height:120px;overflow:hidden;border-radius:6px;">
+                        <img src="${e.target.result}" class="preview-img" 
+                             style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-1 text-muted small">${file.name}</p>
+                        <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                            placeholder="AltText (可選)" name="Meta[${index}].AltText">
+                        <textarea class="form-control form-control-sm caption-input"
+                            rows="2" placeholder="Caption (可選)" name="Meta[${index}].Caption"></textarea>
+                    </div>
+                    <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                        <i class="bi bi-x-lg text-muted"></i>
                     </button>
-                    <input type="text" class="form-control mt-2 alt-input"
-                        placeholder="AltText (必填)" name="Meta[${index}].AltText" required>
-                    <textarea class="form-control mt-2 caption-input"
-                        placeholder="Caption (必填)" name="Meta[${index}].Caption" required></textarea>
-                `;
+                </div>`;
+                    bindRemove(wrapper);
+                };
+                reader.readAsDataURL(file);
+            }
 
-                wrapper.querySelector(".btn-close-custom").addEventListener("click", () => {
-                    wrapper.remove();
-                    showReset();
-                    if (preview.children.length === 0) togglePreviewArea(false);
-                });
+            // === 影片 ===
+            else if (mime.startsWith("video/")) {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark-play fs-1 text-info"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">${file.name}</p>
+                    <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                        placeholder="影片描述 (可選)" name="Meta[${index}].AltText">
+                    <textarea class="form-control form-control-sm caption-input"
+                        rows="2" placeholder="影片說明 (可選)" name="Meta[${index}].Caption"></textarea>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                preview.appendChild(wrapper);
+            // === PDF ===
+            else if (mime === "application/pdf") {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">${file.name}</p>
+                    <input type="text" class="form-control form-control-sm mb-2 alt-input"
+                        placeholder="文件標題 (可選)" name="Meta[${index}].AltText">
+                    <textarea class="form-control form-control-sm caption-input"
+                        rows="2" placeholder="文件說明 (可選)" name="Meta[${index}].Caption"></textarea>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                // 隱藏 input 存檔案
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
+            // === 其他檔案 ===
+            else {
+                wrapper.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light"
+                     style="width:120px;height:120px;border-radius:6px;">
+                    <i class="bi bi-file-earmark fs-1 text-secondary"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <p class="mb-1 text-muted small">不支援預覽：${file.name}</p>
+                </div>
+                <button type="button" class="btn-close-custom position-absolute top-0 end-0 mt-2 me-2" aria-label="Close">
+                    <i class="bi bi-x-lg text-muted"></i>
+                </button>
+            </div>`;
+                bindRemove(wrapper);
+            }
 
-                const fileInputHidden = document.createElement("input");
-                fileInputHidden.type = "file";
-                fileInputHidden.name = `Meta[${index}].File`;
-                fileInputHidden.files = dataTransfer.files;
-                fileInputHidden.hidden = true;
-                hiddenInputs.appendChild(fileInputHidden);
-            };
+            preview.appendChild(wrapper);
 
-            reader.readAsDataURL(file);
+            // 隱藏 input 存檔案
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            const fileInputHidden = document.createElement("input");
+            fileInputHidden.type = "file";
+            fileInputHidden.name = `Meta[${index}].File`;
+            fileInputHidden.files = dataTransfer.files;
+            fileInputHidden.hidden = true;
+            hiddenInputs.appendChild(fileInputHidden);
         });
 
         if (files.length > 0) {
             togglePreviewArea(true);
             showReset();
+        }
+
+        // 綁定刪除事件
+        function bindRemove(wrapper) {
+            const closeBtn = wrapper.querySelector(".btn-close-custom");
+            if (!closeBtn) return;
+            closeBtn.addEventListener("click", () => {
+                wrapper.remove();
+                if (preview.children.length === 0) togglePreviewArea(false);
+            });
         }
     }
 
@@ -166,17 +450,6 @@
         });
     }
 
-    // === 選擇檔案按鈕 ===
-    if (selectBtn && fileInput) {
-        selectBtn.addEventListener("click", () => fileInput.click());
-        fileInput.addEventListener("change", () => {
-            if (fileInput.files.length > 0) {
-                showPreview(fileInput.files);
-                fileInput.value = "";
-            }
-        });
-    }
-
     // === 等待 Modal 元素確實載入（最多等 1 秒）===
     async function waitForElement(selector, timeout = 1000) {
         const start = Date.now();
@@ -192,6 +465,9 @@
     // === 共用函式：開啟並填入圖片資訊到 Modal ===
     // 支援 dataset (HTML data-*) 或 DTO (JSON 物件)
     async function openImageModal(fileData, modalSelector = "#imgMetaModal") {
+        // 🧩 確保全域 loading 被關掉（防止黑屏）
+        window.hideGlobalLoading?.();
+
         const modal = await waitForElement(modalSelector);
         if (!modal) {
             console.error("❌ 找不到指定的 Modal：", modalSelector);
@@ -201,60 +477,175 @@
         const modalImg = modal.querySelector(".img-zoomable");
         const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
 
-        // === 更新欄位 ===
+        // === 🖼️ 同步圖片與 dataset 屬性 ===
+        if (modalImg) {
+            modalImg.src = fileData.fileUrl || "/images/No-Image.svg";
+
+            // ✅ 關鍵：把所有必要屬性寫回 dataset
+            modalImg.dataset.fileId = fileData.fileId ?? fileData.FileId ?? "";
+            modalImg.dataset.fileKey = fileData.fileKey ?? "";
+            modalImg.dataset.mimeType = fileData.mimeType ?? "";
+            modalImg.dataset.isActive = fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
+            modalImg.dataset.isExternal = fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
+            modalImg.dataset.width = fileData.width ?? "";
+            modalImg.dataset.height = fileData.height ?? "";
+        }
+
+        // === 同步所有欄位（含 checkbox） ===
         for (const [key, selector] of Object.entries(fieldMap)) {
             const input = modal.querySelector(selector);
             if (!input) continue;
 
-            let val = fileData[key] ?? fileData[key.charAt(0).toLowerCase() + key.slice(1)];
+            const val = fileData[key];
+
+            // 這裡加一個例外處理 CreatedDate
             if (key === "createdDate") {
-                val = fileData.formateCreatedDate || fileData.FormateCreatedDate || val;
+                const formatted = String(val || "")
+                    .replace("T", " ")
+                    .split(".")[0]
+                    .replace(/-/g, "/");
+                input.value = formatted;
+                continue;
             }
 
+            // 是否啟用
             if (key === "isActive") {
-                input.checked = val === true || val === "true";
-            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                input.checked = !!val;
+                continue;
+            }
+
+            // 檔案大小格式化
+            if (key === "fileSizeBytes") {
+                input.value = formatFileSize(val);
+                continue;
+            }
+
+            // 其他欄位
+            if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
                 input.value = val ?? "";
             }
         }
 
-        // === 圖片安全載入 + dataset ===
-        const fileUrl =
-            fileData.PublicUrl || fileData.publicUrl ||
-            fileData.FileUrl || fileData.fileUrl ||
-            "/images/No-Image.svg";
-        const fileId = fileData.FileId ?? fileData.fileId ?? "";
+        // === 同步圖片 / 影片預覽 ===
+        const mimeType = fileData.mimeType || fileData.MimeType || "";
+        const previewContainer = modal.querySelector(".preview-container");
+        if (previewContainer) {
+            previewContainer.innerHTML = "";
+            let previewEl;
 
-        if (modalImg) {
-            modalImg.src = fileUrl;
-            modalImg.dataset.fileId = fileId;
-            modalImg.dataset.isExternal = (
-                fileData.IsExternal === true ||
-                fileData.isExternal === true ||
-                fileData.IsExternal === "true" ||
-                fileData.isExternal === "true" ||
-                fileUrl.startsWith("http")
-            ).toString();
+            if (mimeType.startsWith("video/")) {
+                const videoUrl = fileData.fileUrl || fileData.FileUrl || "";
 
-            // 更新 API dataset
-            if (fileData.UpdateApiUrl) modalImg.dataset.updateApi = fileData.UpdateApiUrl;
-            if (fileData.DeleteApiUrl) modalImg.dataset.deleteApi = fileData.DeleteApiUrl;
+                // 包成 <a> 避免 Chrome 黑頻
+                const link = document.createElement("a");
+                link.href = videoUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整影片（另開新分頁）";
+
+                const video = document.createElement("video");
+                video.src = videoUrl;
+                video.controls = true;
+                video.muted = true;
+                video.preload = "metadata";
+                video.className = "dynamic-preview rounded shadow-sm";
+                video.style = `
+                    max-width: 600px;
+                    max-height: 400px;
+                    object-fit: contain;
+                    cursor: pointer;
+                    border-radius: 8px;
+                    border: 1px solid #ccc;
+                `;
+
+                video.dataset.fileId = fileData.fileId || fileData.FileId || "";
+                video.dataset.updateApi = "/SYS/Images/UpdateFile";
+
+                link.appendChild(video);
+                previewEl = link;
+            } else if (mimeType.startsWith("image/")) {
+                const imgUrl = fileData.fileUrl || fileData.FileUrl || "/images/No-Image.svg";
+
+                // 用 <a> 包一層取代 window.open()
+                const link = document.createElement("a");
+                link.href = imgUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整圖片（另開新分頁）";
+
+                const img = document.createElement("img");
+                img.src = imgUrl;
+                img.className = "dynamic-preview rounded shadow-sm img-zoomable";
+                img.dataset.fileId = fileData.fileId || fileData.FileId || "";
+                img.dataset.updateApi = "/SYS/Images/UpdateFile";  // 預設 API
+                img.dataset.isActive = fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
+                img.dataset.isExternal = fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
+                img.style = `
+                    max-width: 600px;
+                    max-height: 400px;
+                    object-fit: contain;
+                    cursor: zoom-in;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                `;
+
+                link.appendChild(img);
+                previewEl = link;
+            } else {
+                previewEl = document.createElement("div");
+                previewEl.className = "text-muted small mt-3";
+                previewEl.textContent = `無法預覽 (${mimeType || "未知"})`;
+            }
+
+            previewContainer.appendChild(previewEl);
         }
 
-        // === ⬇️ 移到這裡：在 src 已更新後再檢查外部連結 ===
-        const badge = modal.querySelector(".badge.fs-6");
-        if (badge && modalImg) {
+        // === ✅ 同步外部連結 Badge ===
+        const badge = modal.querySelector("#modalIsExternalBadge");
+        if (badge) {
             const isExternal =
-                modalImg.dataset.isExternal === "true" ||
-                (modalImg.src?.startsWith("http") && !modalImg.src.includes(window.location.hostname));
+                fileData.isExternal === true ||
+                fileData.IsExternal === true ||
+                fileData.isExternal === "true" ||
+                fileData.IsExternal === "true" ||
+                (fileData.fileUrl || fileData.FileUrl || "").startsWith("http");
 
             badge.textContent = isExternal ? "外部連結" : "自有檔案";
-            badge.classList.toggle("bg-success", isExternal);
-            badge.classList.toggle("bg-secondary", !isExternal);
+            badge.classList.remove("bg-success", "bg-secondary");
+            badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+        }
+
+        // === ✅ 更新圖片 dataset ===
+        if (modalImg) {
+            modalImg.dataset.fileId = fileData.fileId || fileData.FileId || "";
+            modalImg.dataset.isActive =
+                fileData.isActive === true || fileData.isActive === "true" ? "true" : "false";
+            modalImg.dataset.isExternal =
+                fileData.isExternal === true || fileData.isExternal === "true" ? "true" : "false";
+        }
+
+        if (window.table) {
+            table.ajax.reload(null, false); // false = 保留當前頁碼
         }
 
         bsModal.show();
     }
+
+    // 在 modal 關閉前觸發事件，例如 UpdateImageModal.js 裡
+    document.addEventListener("imageUpdated", (e) => {
+        const updated = e.detail; // e.g. { fileId: 123, altText: "...", caption: "...", isActive: true }
+        const row = table.rows().data().toArray().find(r =>
+            (r.fileId || r.FileId) === updated.fileId
+        );
+
+        if (row) {
+            Object.assign(row, updated);
+            table.row((idx, data) => (data.fileId || data.FileId) === updated.fileId)
+                .data(row)
+                .invalidate()
+                .draw(false);
+        }
+    });
 
     // === Modal（支援多個 UpdateImage 元件） ===
     document.querySelectorAll(".modal").forEach(modalElement => {
@@ -266,116 +657,117 @@
         const modalIsActive = modalElement.querySelector("#modalIsActive");
         const confirmBtn = modalElement.querySelector("#confirmMetaBtn");
 
-        // === 點擊 Modal 內的圖片 → 直接開原圖 ===
+        // === 點擊 Modal 內圖片 → 開原圖 ===
         modalImg.addEventListener("click", e => {
             e.preventDefault();
             e.stopPropagation();
-            const imgUrl = modalImg.src;
-            if (imgUrl) window.open(imgUrl, "_blank");
+            if (modalImg.src) window.open(modalImg.src, "_blank");
         });
 
-        // === 點擊縮圖開啟 Modal ===
-        document.querySelectorAll(`.thumb-clickable[data-bs-target="#${modalElement.id}"]`).forEach(img => {
-            img.addEventListener("click", () => {
-                openImageModal(img.dataset, `#${modalElement.id}`);
-            });
-        });
+        // === ✅ 改用事件委派，讓動態新增圖片也能自動抓最新資料 ===
+        document.addEventListener("click", async (e) => {
+            const img = e.target.closest(".thumb-clickable");
+            if (!img || !img.dataset.bsTarget) return;
 
-        // === Modal 確認更新 ===
-        if (confirmBtn) {
-            if (!modalImg.dataset.updateApi) {
-                console.warn("⚠️ 找不到 updateApi，請確認 shown.bs.modal 有正確同步屬性");
-            }
+            const modalId = img.dataset.bsTarget;
+            const fileId = img.dataset.fileId;
+            if (!fileId) return;
 
-            confirmBtn.addEventListener("click", async () => {
-                const modal = document.querySelector("#imgMetaModal");
-                const modalImg = modal.querySelector(".img-zoomable");
-
-                const api = modalImg.dataset.updateApi || "/SYS/UploadTest/UpdateFile";
-                const fileId = modalImg.dataset.fileId;
-
-                const alt = modal.querySelector("#modalAlt").value;
-                const caption = modal.querySelector("#modalCaption").value;
-                const isActive = modal.querySelector("#modalIsActive").checked;
-                const width = modal.querySelector("#modalWidth").value;
-                const height = modal.querySelector("#modalHeight").value;
-
-                if (!api) {
-                    Swal.fire({ icon: "error", title: "找不到更新 API", text: "請檢查 updateApiUrl 是否設定。" });
+            try {
+                showGlobalLoading("正在抓取最新圖片資料...");
+                const latest = await fetchFileDetail(fileId);
+                if (!latest) {
+                    Swal.fire("錯誤", "無法取得圖片最新資訊", "error");
                     return;
                 }
 
+                // ✅ 開啟 Modal 並填入最新資料
+                openImageModal(latest, modalId);
+            } catch (err) {
+                Swal.fire("錯誤", "讀取資料失敗：" + err.message, "error");
+            } finally {
+                hideGlobalLoading();
+            }
+        });
+
+        // === 儲存（更新圖片 Meta）===
+        if (confirmBtn) {
+            confirmBtn.addEventListener("click", async () => {
+                const modalImg = modalElement.querySelector(".img-zoomable");
+                if (!modalImg) {
+                    Swal.fire({ icon: "error", title: "找不到圖片預覽", text: "請重新開啟圖片視窗" });
+                    return;
+                }
+
+                // ✅ 建立 payload：這裡宣告在同一個作用域
+                const payload = {
+                    FileId: modalImg.dataset.fileId,
+                    AltText: modalElement.querySelector("#modalAlt").value,
+                    Caption: modalElement.querySelector("#modalCaption").value,
+                    IsActive: modalElement.querySelector("#modalIsActive").checked,
+                    Width: modalElement.querySelector("#modalWidth").value,
+                    Height: modalElement.querySelector("#modalHeight").value
+                };
+
+                showGlobalLoading("正在儲存中...");
+
                 try {
-                    const res = await fetch(api, {
+                    // 1️⃣ 呼叫 API 更新
+                    const res = await fetch("/SYS/Images/UpdateFile", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            FileId: fileId,
-                            AltText: alt,
-                            Caption: caption,
-                            IsActive: isActive,
-                            Width: width,
-                            Height: height
-                        })
+                        body: JSON.stringify(payload)
                     });
 
-                    const contentType = res.headers.get("content-type") || "";
-                    let result = null;
-
-                    // 檢查回傳型別是不是 JSON
-                    if (!contentType.includes("application/json")) {
-                        // 伺服器沒有回 JSON → 可能是 HTML 錯誤頁或未登入頁
-                        const text = await res.text();
-                        console.error("⚠️ 伺服器回傳非 JSON：", text.slice(0, 150));
-                        throw new Error("伺服器回傳非 JSON（可能路由錯誤或登入過期）");
-                    } else {
-                        result = await res.json();
+                    const result = await res.json();
+                    if (!result.success) {
+                        Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+                        hideGlobalLoading();
+                        return;
                     }
 
-                    if (!res.ok || !result) {
-                        throw new Error(result?.message || `伺服器狀態碼 ${res.status}`);
+                    // 2️⃣ 顯示成功提示
+                    Swal.fire({
+                        icon: "success",
+                        title: "更新成功",
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+
+                    // 3️⃣ 關閉 Modal
+                    const bsModal = bootstrap.Modal.getInstance(modalElement);
+                    if (bsModal?._element) {
+                        bsModal._element.removeEventListener("hidden.bs.modal", refreshFileList, true);
                     }
+                    bsModal?.hide();
 
-                    if (result.success) {
-                        Swal.fire({
-                            icon: "success",
-                            title: "更新成功",
-                            timer: 1000,
-                            showConfirmButton: false
-                        });
-
-                        // 關閉 Modal
-                        const bsModal = bootstrap.Modal.getInstance(modal);
-                        if (bsModal) bsModal.hide();
-
-                        // 同步更新畫面上的縮圖資料
-                        updateImageState(fileId, alt, caption, isActive);
-
-                        // 立即更新圖片的寬高 dataset（否則會顯示舊值）
-                        const img = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
-                        if (img) {
-                            const modalWidth = modal.querySelector("#modalWidth")?.value;
-                            const modalHeight = modal.querySelector("#modalHeight")?.value;
-
-                            img.dataset.width = modalWidth || img.dataset.width;
-                            img.dataset.height = modalHeight || img.dataset.height;
-                        }
+                    // 4️⃣ 用最新資料更新畫面
+                    const freshDto = await fetchFileDetail(payload.FileId);
+                    if (freshDto) {
+                        updateBoundImage(freshDto);  // 更新圖片列表
+                        fillImageModal(freshDto);    // 更新 Modal 內容
                     } else {
-                        Swal.fire({
-                            icon: "error",
-                            title: "更新失敗",
-                            text: result.message || "伺服器未回傳成功"
-                        });
+                        await refreshFileList();
                     }
                 } catch (err) {
-                    console.error("❌ 更新錯誤：", err);
-                    Swal.fire({
-                        icon: "error",
-                        title: "錯誤",
-                        text: err.message || "無法連線至伺服器"
-                    });
+                    Swal.fire({ icon: "error", title: "錯誤", text: err.message });
+                } finally {
+                    hideGlobalLoading();
                 }
             });
+        }
+
+        // === 更新 Razor 隱藏輸入欄位（for MVC ModelBinding） ===
+        function syncImageInput(fileDto) {
+            const idxInput = document.querySelector(`[name^="Images"][value="${fileDto.fileId}"]`);
+            if (!idxInput) return;
+
+            const parentIndex = idxInput.name.match(/\[(\d+)\]/)?.[1];
+            if (parentIndex) {
+                document.querySelector(`[name="Images[${parentIndex}].AltText"]`).value = fileDto.altText;
+                document.querySelector(`[name="Images[${parentIndex}].Caption"]`).value = fileDto.caption;
+                document.querySelector(`[name="Images[${parentIndex}].IsActive"]`).checked = fileDto.isActive;
+            }
         }
     });
 
@@ -412,83 +804,427 @@
         if (toggleBtn) toggleBtn.textContent = isActive ? "停用" : "啟用";
     }
 
-    // === 刪除圖片 ===
-    window.deleteFile = async function (fileId, btn) {
-        // ✅ 從按鈕或圖片讀取 delete API（或預設）
-        const deleteApi = btn?.dataset.deleteApi || "/SYS/UploadTest/DeleteFile";
-
-        const confirm = await Swal.fire({
-            title: "確定刪除？",
-            text: "此圖片將從雲端與資料庫永久移除",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "刪除",
-            cancelButtonText: "取消"
-        });
-        if (!confirm.isConfirmed) return;
-
-        const res = await fetch(deleteApi, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ fileId })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            Swal.fire({
-                title: "✅ 刪除成功",
-                icon: "success",
-                showConfirmButton: false,
-                timer: 1000
-            });
-            const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
-            if (targetImg) {
-                const parent = targetImg.closest(".img-item");
-                if (parent) parent.remove();
-            }
-
-            const grid = document.querySelector("form > div.img-grid");
-            if (grid && grid.children.length === 0) {
-                grid.innerHTML = `<p class="text-muted">目前沒有圖片。</p>`;
-            }
-        } else {
-            Swal.fire("❌ 刪除失敗", data.message || "", "error");
-        }
-    };
-
     // === 修正版本：正確更新 Modal 內容 ===
-    document.addEventListener("shown.bs.modal", function (event) {
+    document.addEventListener("shown.bs.modal", async function (event) {
         const modal = event.target;
+        if (!modal.id.startsWith("imgMetaModal")) return;
+
         const triggerImg = event.relatedTarget;
         if (!triggerImg) return;
 
-        const modalImg = modal.querySelector(".img-zoomable");
-        modalImg.src = triggerImg.src;
-
-        // 逐一更新欄位
-        for (const [key, selector] of Object.entries(fieldMap)) {
-            const input = modal.querySelector(selector);
-            if (!input) continue;
-
-            let val = triggerImg.dataset[key];
-            if (key === "isActive") {
-                input.checked = val === "true";
-            } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
-                input.value = val || "";
-            }
+        // ✅ 只抓 fileId，不使用 dataset 內容
+        const fileId = triggerImg.getAttribute("data-file-id");
+        if (!fileId) {
+            console.warn("⚠️ 缺少 fileId，無法載入檔案資料");
+            return;
         }
 
-        // 把縮圖的 API 屬性同步進 dataset 圖片
-        modalImg.dataset.fileId = triggerImg.dataset.fileId;
-        modalImg.dataset.updateApi = triggerImg.dataset.updateApi;
-        modalImg.dataset.deleteApi = triggerImg.dataset.deleteApi;
+        const previewContainer = modal.querySelector(".preview-container");
+        if (!previewContainer) return;
+
+        // 🔹 顯示 Loading 畫面
+        previewContainer.innerHTML = `
+        <div class="text-center text-muted p-4">
+            <div class="spinner-border spinner-border-sm"></div>
+            <div>載入中...</div>
+        </div>`;
+
+        try {
+            // === 🧩 呼叫全域 API 方法 ===
+            const fileData = await window.fetchFileDetail(fileId);
+            if (!fileData) {
+                previewContainer.innerHTML = `
+            <div class="text-danger p-3">
+                <i class="bi bi-exclamation-triangle"></i> 無法載入檔案資料，請稍後再試。
+            </div>`;
+                return;
+            }
+
+            // === 🔹 清空舊內容（避免殘影或多重預覽） ===
+            previewContainer.innerHTML = "";
+
+            // === 🎞️ 預覽區塊生成 ===
+            let previewEl;
+            const mimeType = fileData.mimeType || "";
+
+            if (mimeType.startsWith("video/")) {
+                const link = document.createElement("a");
+                link.href = fileData.fileUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整影片";
+
+                const video = document.createElement("video");
+                video.src = fileData.fileUrl;
+                video.controls = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.className = "dynamic-preview mb-3 rounded shadow-sm";
+                video.style = `
+                max-width:600px;
+                max-height:400px;
+                object-fit:contain;
+                border-radius:8px;
+                border:1px solid #ccc;`;
+
+                link.appendChild(video);
+                previewEl = link;
+            } else if (mimeType.startsWith("image/")) {
+                const link = document.createElement("a");
+                link.href = fileData.fileUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "點擊開啟完整圖片（另開新分頁）";
+
+                const img = document.createElement("img");
+                img.src = fileData.fileUrl || "/images/No-Image.svg";
+                img.className = "dynamic-preview rounded shadow-sm img-zoomable";
+                img.style = `
+            max-width:600px;
+            max-height:400px;
+            object-fit:contain;
+            cursor:zoom-in;
+            border:1px solid #ccc;
+            border-radius:8px;`;
+
+                img.dataset.fileId = fileData.fileId || fileData.FileId || "";
+
+                link.appendChild(img);
+                previewEl = link;
+
+            } else {
+                previewEl = document.createElement("div");
+                previewEl.className = "dynamic-preview text-muted small mt-3";
+                previewEl.innerText = `無法預覽此類型 (${mimeType || "未知"})`;
+            }
+
+            previewContainer.appendChild(previewEl);
+
+            // === 🧾 更新欄位內容 ===
+            for (const [key, selector] of Object.entries(fieldMap)) {
+                const input = modal.querySelector(selector);
+                if (!input) continue;
+
+                const val = fileData[key];
+
+                // ✅ 格式化建檔時間
+                if (key === "createdDate") {
+                    input.value = String(val || "")
+                        .replace("T", " ")
+                        .split(".")[0]
+                        .replace(/-/g, "/");
+                    continue;
+                }
+
+                // ✅ 是否啟用
+                if (key === "isActive") {
+                    input.checked = !!val;
+                    continue;
+                }
+
+                // ✅ 檔案大小格式化
+                if (key === "fileSizeBytes") {
+                    input.value = formatFileSize(val);
+                    continue;
+                }
+
+                // ✅ 其他欄位
+                if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+                    input.value = val ?? "";
+                }
+            }
+
+            // === ✅ 是否啟用開關 ===
+            const activeSwitch = modal.querySelector("#modalIsActive");
+            if (activeSwitch) activeSwitch.checked = !!fileData.isActive;
+
+            // === ✅ 是否外部連結 Badge ===
+            const badge = modal.querySelector("#modalIsExternalBadge");
+            if (badge) {
+                const isExternal = !!fileData.isExternal;
+                badge.textContent = isExternal ? "外部連結" : "自有檔案";
+                badge.classList.remove("bg-success", "bg-secondary");
+                badge.classList.add(isExternal ? "bg-success" : "bg-secondary");
+            }
+        } catch (err) {
+            console.error("❌ 載入檔案資料失敗：", err);
+            previewContainer.innerHTML = `
+            <div class="text-danger p-3">
+                <i class="bi bi-exclamation-triangle"></i> 無法載入檔案資料，請稍後再試。
+            </div>`;
+        }
+    });
+
+    // 輔助函式：格式化檔案大小
+    function formatFileSize(bytes) {
+        if (!bytes || isNaN(bytes)) return "--";
+        if (bytes < 1024) return `${bytes} Bytes`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    // === 關閉時自動暫停影片並清除預覽 ===
+    document.addEventListener("hidden.bs.modal", function (event) {
+        if (!event.target.id.startsWith("imgMetaModal")) return;
+
+        const previewContainer = event.target.querySelector(".preview-container");
+        if (!previewContainer) return;
+
+        const video = previewContainer.querySelector("video");
+        if (video) video.pause();
+
+        previewContainer.innerHTML = "";
     });
 
     document.addEventListener("hidden.bs.modal", () => {
         if (document.activeElement && document.activeElement.classList.contains("btn-close")) {
             document.activeElement.blur();
         }
+        document.querySelectorAll("video").forEach(v => v.pause());
     });
 
     window.openImageModal = openImageModal;
+
+    // === 刪除圖片 ===
+    window.deleteFile = async function (fileId, btn) {
+        try {
+            // 🟢 顯示 Loading
+            showGlobalLoading?.("正在從綁定中移除...");
+
+            // 🔹 找到圖片容器
+            const parent = btn.closest(".img-item, .prod-img-item");
+            if (parent) parent.remove();
+
+            const list = document.getElementById("boundImages");
+            if (!list) return;
+
+            // 🔹 若全刪光，顯示提示文字
+            if (!list.querySelector(".img-item, .prod-img-item")) {
+                list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';
+            }
+
+            // 🔹 更新隱藏欄位索引，避免 MVC 模型綁定出錯
+            list.querySelectorAll(".prod-img-item").forEach((item, idx) => {
+                item.querySelectorAll("input[name^='Images']").forEach(input => {
+                    input.name = input.name.replace(/Images\[\d+\]/, `Images[${idx}]`);
+                });
+            });
+        } catch (err) {
+            console.error("❌ 移除錯誤：", err);
+            Swal.fire("錯誤", err.message || "移除過程中發生錯誤", "error");
+        } finally {
+            hideGlobalLoading?.();
+        }
+    };
+    // === 刪除圖片 ===
+    //window.deleteFile = async function (fileId, btn) {
+    //    // 從按鈕或圖片讀取 delete API（或預設）
+    //    const deleteApi = btn?.dataset.deleteApi || "/SYS/Images/DeleteFile";
+
+    //    const confirm = await Swal.fire({
+    //        title: "確定刪除？",
+    //        text: "此圖片將從雲端與資料庫永久移除",
+    //        icon: "warning",
+    //        showCancelButton: true,
+    //        confirmButtonText: "刪除",
+    //        cancelButtonText: "取消"
+    //    });
+    //    if (!confirm.isConfirmed) return;
+
+    //    try {
+    //        // 🌀 顯示 Loading
+    //        showGlobalLoading("正在刪除檔案...");
+
+    //        const res = await fetch(deleteApi, {
+    //            method: "POST",
+    //            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    //            body: new URLSearchParams({ fileId })
+    //        });
+
+    //        const data = await res.json();
+
+    //        if (data.success) {
+    //            Swal.fire({
+    //                title: "✅ 刪除成功",
+    //                icon: "success",
+    //                showConfirmButton: false,
+    //                timer: 1000
+    //            });
+
+    //            // 🔄 更新畫面（移除對應項）
+    //            const targetImg = document.querySelector(`.thumb-clickable[data-file-id="${fileId}"]`);
+    //            if (targetImg) {
+    //                const parent = targetImg.closest(".img-item");
+    //                if (parent) parent.remove();
+    //            }
+
+    //            const grid = document.querySelector("form > div.img-grid");
+    //            if (grid && grid.children.length === 0) {
+    //                grid.innerHTML = `<p class="text-muted">目前沒有圖片。</p>`;
+    //            }
+
+    //            // ✅ 可選：同步刷新列表（若有多使用者同時上傳時建議保留）
+    //            await refreshFileList();
+
+    //        } else {
+    //            Swal.fire("❌ 刪除失敗", data.message || "", "error");
+    //        }
+    //    } catch (err) {
+    //        console.error("❌ 刪除錯誤：", err);
+    //        Swal.fire("錯誤", err.message || "伺服器連線失敗", "error");
+    //    } finally {
+    //        // 🟢 確保不論成功或失敗都關閉 Loading
+    //        hideGlobalLoading();
+    //    }
+    //};
+
+    document.addEventListener("click", async (e) => {
+        if (e.target && e.target.id === "confirmMetaBtn") {
+            e.preventDefault();
+            e.stopPropagation();  // ✅ 關鍵
+
+            const modalElement = e.target.closest(".modal");
+            const modalImg = modalElement.querySelector(".img-zoomable");
+            if (!modalImg) {
+                Swal.fire({ icon: "error", title: "找不到圖片預覽" });
+                return;
+            }
+
+            const payload = {
+                FileId: modalImg.dataset.fileId || modalElement.querySelector("#modalFileId")?.value,
+                AltText: modalElement.querySelector("#modalAlt").value,
+                Caption: modalElement.querySelector("#modalCaption").value,
+                IsActive: modalElement.querySelector("#modalIsActive").checked,
+                Width: modalElement.querySelector("#modalWidth").value,
+                Height: modalElement.querySelector("#modalHeight").value
+            };
+
+            showGlobalLoading("正在儲存中...");
+
+            try {
+                const res = await fetch("/SYS/Images/UpdateFile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+                if (!result.success) {
+                    Swal.fire({ icon: "error", title: "更新失敗", text: result.message });
+                    hideGlobalLoading();
+                    return;
+                }
+
+                Swal.fire({
+                    icon: "success",
+                    title: "更新成功",
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+
+                bootstrap.Modal.getInstance(modalElement)?.hide();
+
+                // 🔁 重新查詢最新資料
+                const freshDto = await fetchFileDetail(payload.FileId);
+                if (freshDto) {
+                    updateBoundImage(freshDto);  // 更新外部清單
+                    fillImageModal(freshDto);    // ⬅️ 再同步更新 Modal 內欄位
+                }
+
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "錯誤", text: err.message });
+            } finally {
+                hideGlobalLoading();
+            }
+        }
+    });
 });
+
+// === 針對圖片選擇器的事件統一註冊 ===
+document.addEventListener("click", e => {
+    const item = e.target.closest(".img-item");
+    if (!item) return;
+
+    // 若是直接點 checkbox，就不做多餘處理
+    if (e.target.classList.contains("select-file")) return;
+
+    const chk = item.querySelector(".select-file");
+    if (chk) chk.click(); // 觸發 change 事件
+});
+
+// ✅ change 時切換高亮
+document.addEventListener("change", e => {
+    if (e.target.classList.contains("select-file")) {
+        const item = e.target.closest(".img-item");
+        if (item) {
+            item.classList.toggle("selected", e.target.checked);
+        }
+    }
+});
+
+// === 🔹 Modal 打開時載入最新圖片清單 ===
+document.addEventListener("show.bs.modal", async (e) => {
+    const modal = e.target;
+
+    // ✅ 僅針對 fileSelectModal 執行
+    if (modal.id !== "fileSelectModal") return;
+
+    // 防止重複載入（例如使用者連點按鈕）
+    if (modal.dataset.loading === "true") return;
+    modal.dataset.loading = "true";
+
+    showGlobalLoading("正在載入圖片清單...");
+
+    try {
+        // === 1️ 取得目前模組與程式代號 ===
+        // 可以從 Razor 頁面注入，也可以從隱藏欄位或 data 屬性取值
+        const moduleId = modal.dataset.moduleId || "@moduleId" || "SYS";
+        const progId = modal.dataset.progId || "@progId" || "Products";
+
+        // === 2️ 呼叫後端取得 Partial HTML ===
+        // 統一改為使用 UploadTest/GetFilesByProg（含模組與程式代號）
+        const url = `/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const html = await res.text();
+
+        // === 3️ 置換 Modal 內部清單區塊 ===
+        const container = modal.querySelector("#fileListContainer");
+        if (container) {
+            container.innerHTML = html.trim() || `<p class="text-muted">目前沒有圖片。</p>`;
+        }
+
+    } catch (err) {
+        console.error("❌ 無法載入最新檔案：", err);
+        Swal.fire("錯誤", "無法載入圖片清單", "error");
+    } finally {
+        hideGlobalLoading();
+        modal.dataset.loading = "false";
+    }
+});
+
+// 🧩 載入模組圖片
+async function loadModuleImages(moduleId, progId) {
+    const grid = document.getElementById("imageGrid");
+    grid.innerHTML = `<div class="spinner-border text-primary"></div><div>載入中...</div>`;
+
+    try {
+        const ts = new Date().getTime(); // 🔹 防止快取
+        const res = await fetch(`/SYS/UploadTest/GetFilesByProg?moduleId=${moduleId}&progId=${progId}&json=true&_=${ts}`);
+        const data = await res.json();
+
+        _allData = data.map(f => ({
+            fileId: f.fileId ?? f.FileId,
+            fileUrl: f.fileUrl ?? f.FileUrl,
+            altText: f.altText ?? f.AltText,
+            caption: f.caption ?? f.Caption,
+            fileKey: f.fileKey ?? f.FileKey,
+            isFolder: false,
+            name: f.altText ?? f.AltText ?? f.fileKey
+        }));
+        renderFileGrid(_allData);
+    } catch (err) {
+        grid.innerHTML = `<p class="text-danger">載入失敗，請稍後再試。</p>`;
+    }
+}

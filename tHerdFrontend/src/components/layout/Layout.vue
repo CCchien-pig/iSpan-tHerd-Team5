@@ -23,8 +23,7 @@
     <!-- 促銷橫幅 - 特殊促銷活動展示 -->
     <!-- <SitePromoBanner /> -->
      <!-- ✅ 跑馬燈區塊 -->
-      <Marquee />
-
+     <Marquee v-if="$route.path === '/'" />
     <!-- 麵包屑導航 - 頁面路徑導航 -->
     <!-- <BreadcrumbNav /> -->
 

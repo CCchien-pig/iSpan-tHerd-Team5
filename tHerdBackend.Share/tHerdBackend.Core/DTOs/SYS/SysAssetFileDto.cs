@@ -61,12 +61,12 @@ public partial class SysAssetFileDto
     /// <summary>
     /// Alt 替代文字
     /// </summary>
-    public string AltText { get; set; }
+    public string? AltText { get; set; } = "";
 
     /// <summary>
     /// 文字說明 / 附註文字
     /// </summary>
-    public string Caption { get; set; }
+    public string? Caption { get; set; } = "";
 
     /// <summary>
     /// 建檔時間
@@ -118,6 +118,7 @@ public class AssetFileUploadDto
     public string ModuleId { get; set; } // 模組代號
     public string ProgId { get; set; } // 程式代號
     public int? FolderId { get; set; }
+    public bool IsExternal { get; set; } = true; // T: 雲端; F: 本地
     public List<AssetFileDetailsDto> Meta { get; set; } = new();
 }
 
@@ -131,4 +132,17 @@ public class AssetFileDetailsDto
     public string? Caption { get; set; }
     public bool IsActive { get; set; } = true;
     public string? FileUrl { get; set; }
+}
+
+/// <summary>
+/// 專供前端傳入 _FileListPartial 使用的輕量版 DTO
+/// </summary>
+public class SimpleAssetFileDto
+{
+    public int FileId { get; set; }
+    public string FileUrl { get; set; }
+    public string MimeType { get; set; }
+    public string AltText { get; set; }
+    public string Caption { get; set; }
+    public bool IsActive { get; set; }
 }

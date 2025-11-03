@@ -216,7 +216,8 @@ namespace tHerdBackend.Services.SUP
 			try
 			{
 				// 2. 反序列化前端傳來的、包含完整內容的 JSON
-				var fullBlocks = DeserializeLayout(dto.FullLayoutJson);
+				// 【核心修正點】直接使用 DTO 傳來的列表，不再需要 DeserializeLayout
+				var fullBlocks = dto.FullLayoutJson;
 				var cleanLayoutItems = new List<object>(); // 用於儲存乾淨的 JSON 骨架
 
 				// 3. 使用 for 迴圈代替 foreach，以獲取索引作為 OrderSeq
@@ -245,7 +246,6 @@ namespace tHerdBackend.Services.SUP
 								accordionDto.BrandId = dto.BrandId; // 賦予 BrandId
 								accordionDto.OrderSeq = orderSeq;   // 賦予 OrderSeq
 								accordionDto.Creator = reviserId;   // 賦予 Creator/Reviser ID
-																	// 追蹤欄位 (Reviser, OrderSeq) 應該在 Service 的 UpsertAsync 函式內部，只使用傳入的參數 (reviserId 和 orderSeq) 來設定 DTO，而不是在呼叫前就設定
 
 								// 呼叫 Service
 								var contentId = await _contentService.UpsertContentAsync(accordionDto, dto.BrandId, reviserId, orderSeq);
@@ -281,7 +281,13 @@ namespace tHerdBackend.Services.SUP
 								// 4. 只有 FileId > 0 (成功儲存) 才將其加入骨架
 								if (fileId > 0)
 								{
-									cleanLayoutItems.Add(new { type = "Banner", contentId = fileId });
+									// 【核心修正點】在 cleanLayoutItems 中，同時儲存 contentId 和 linkUrl
+									cleanLayoutItems.Add(new
+									{
+										type = "Banner",
+										contentId = fileId,
+										linkUrl = bannerDto.LinkUrl // 將 linkUrl 寫入 JSON 骨架
+									});
 								}
 								break;
 
@@ -307,7 +313,7 @@ namespace tHerdBackend.Services.SUP
 								break;
 						}
 					}
-					catch (System.Text.Json.JsonException ex)
+					catch (JsonException ex)
 					{
 						// 捕獲 JSON 轉換錯誤，記錄到 Console，並跳過此區塊
 						Console.Error.WriteLine($"[JSON CONFLICT] 無法解析區塊 {block.Type} (ID: {block.Id}) 的內容。錯誤: {ex.Message}");
@@ -326,11 +332,11 @@ namespace tHerdBackend.Services.SUP
 				int finalLayoutId;
 
 				// 5. 將 JSON 骨架儲存到 SUP_BrandLayoutConfig
-				if (dto.ActiveLayoutId.HasValue && dto.ActiveLayoutId.Value > 0)
+				if (dto.LayoutId.HasValue && dto.LayoutId.Value > 0)
 				{
 					// 更新現有的 Layout 紀錄
-					await _repo.UpdateLayoutJsonAsync(dto.ActiveLayoutId.Value, cleanLayoutJson, dto.LayoutVersion, reviserId);
-					finalLayoutId = dto.ActiveLayoutId.Value;
+					await _repo.UpdateLayoutJsonAsync(dto.LayoutId.Value, cleanLayoutJson, dto.LayoutVersion, reviserId);
+					finalLayoutId = dto.LayoutId.Value;
 				}
 				else
 				{

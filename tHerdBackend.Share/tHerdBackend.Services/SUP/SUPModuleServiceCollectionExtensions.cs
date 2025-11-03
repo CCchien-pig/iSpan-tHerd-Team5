@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
+using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Infra.Repository.SUP;
+using tHerdBackend.Services.Common.SYS;
 
 namespace tHerdBackend.Services.SUP
 {
@@ -46,6 +48,9 @@ namespace tHerdBackend.Services.SUP
 			services.AddScoped<IGenericContentRepository<BannerDto>, BrandBannerRepository>();
 			services.AddScoped<IGenericContentRepository<BrandArticleDto>, BrandArticleRepository>();
 
+			services.AddScoped<ISysAssetFileService, SysAssetFileService>();
+
+			services.AddHttpClient();
 
 			return services;
         }

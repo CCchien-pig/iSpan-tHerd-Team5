@@ -7,6 +7,7 @@ namespace tHerdBackend.Core.Interfaces.Products
     public interface IProdProductRepository
     {
         Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(ProductFilterQueryDto query, CancellationToken ct = default);
+        Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(ProductFilterQueryDto query, CancellationToken ct = default);
         Task<ProdProductDetailDto?> GetByIdAsync(int id, CancellationToken ct = default);
         Task<int> AddAsync(ProdProductDetailDto product, CancellationToken ct = default);
         Task<bool> UpdateAsync(ProdProductDetailDto product, CancellationToken ct = default);

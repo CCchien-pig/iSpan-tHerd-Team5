@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.Interfaces.PROD;
@@ -21,16 +22,8 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		// GET: Products/Index
 		public async Task<IActionResult> Index()
         {
-            var query = new ProductFilterQueryDto
-            {
-                PageIndex = 1,
-                PageSize = 100 // 一次載入 100 筆（自行調整）
-            };
-            var (list, total) = await _repo.GetAllAsync(query);
-
-            //var products = await _qrepo.GetAllProductQueryListAsync(1000);
             await GetData();
-            return View(list);
+            return View();
         }
 
         // 取得品牌選項
@@ -151,7 +144,24 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 				return View("Upsert", dto);
 			}
 
-			if (!ModelState.IsValid)
+            // 🔹 Step 1. 清除錯誤
+            var keysToRemove = ModelState.Keys
+                .Where(k => k.Contains("Images[") && (k.EndsWith(".AltText") || k.EndsWith(".Caption")))
+                .ToList();
+
+            foreach (var key in keysToRemove)
+                ModelState[key].Errors.Clear();
+
+            // 🔹 Step 2. 清除狀態
+            ModelState.ClearValidationState("Images");
+
+            // 🔹 Step 3. 強制設定為 Valid ✅
+            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Images[")))
+            {
+                ModelState[key].ValidationState = ModelValidationState.Valid;
+            }
+
+            if (!ModelState.IsValid)
             {
                 var errors = ModelState
                     .Where(x => x.Value.Errors.Count > 0)
@@ -173,5 +183,53 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 
             return RedirectToAction("Index");
         }
-    }
+
+		[HttpGet]
+		public async Task<IActionResult> GetProducts(
+	        int? brandId,
+	        int? productTypeId,
+	        bool? isPublished,
+	        string? keyword = null,
+			int? productId = null,
+			int pageIndex = 1,
+	        int pageSize = 20,
+	        string? sortBy = null,
+	        bool sortDesc = false)
+		{
+			try
+			{
+				var query = new ProductFilterQueryDto
+				{
+					PageIndex = pageIndex,
+					PageSize = pageSize,
+					BrandId = brandId,
+					ProductTypeId = productTypeId,
+					Keyword = keyword,
+					SortBy = sortBy,
+					SortDesc = sortDesc,
+					ProductId = productId,
+                    IsPublished = isPublished
+                };
+
+				var (list, totalCount) = await _repo.GetAllAsync(query);
+
+                // === 回傳 DataTables 標準格式 ===
+                return Json(new
+                {
+                    draw = Request.Query["draw"].FirstOrDefault(), // DataTables 自動帶
+                    recordsTotal = totalCount,                     // 總筆數（未篩選）
+                    recordsFiltered = totalCount,                  // 篩選後筆數
+                    data = list                                    // 當頁資料
+                });
+            }
+			catch (Exception ex)
+			{
+                return StatusCode(500, new
+                {
+                    error = "伺服器錯誤",
+                    message = ex.Message
+                });
+            }
+		}
+	}
 }

@@ -10,9 +10,12 @@ using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace tHerdBackend.Infra.Repository.SYS
 {
+    //圖片模組完整邏輯
     public class SysAssetFileRepository : ISysAssetFileRepository
     {
         private readonly Cloudinary _cloudinary;
@@ -41,24 +44,131 @@ namespace tHerdBackend.Infra.Repository.SYS
             AltText = f.AltText,
             Caption = f.Caption,
             CreatedDate = f.CreatedDate,
+            IsExternal = f.IsExternal,
             IsActive = f.IsActive,
             FolderId = f.FolderId
         };
 
+        #region === 本地上傳（自動建立 Folder 結構） ===
+        public async Task AddLocalFileAsync(
+            AssetFileUploadDto uploadDto,
+            AssetFileDetailsDto meta,
+            string fileUrl,
+            CancellationToken ct = default)
+        {
+            var now = DateTime.Now;
+            var fileName = Path.GetFileName(fileUrl);
+            var fileExt = Path.GetExtension(fileName)?.TrimStart('.');
+
+            // === 1️ 自動建立資料夾結構 ===
+            var folderId = await EnsureFolderHierarchy(uploadDto.ModuleId, uploadDto.ProgId, ct);
+            uploadDto.FolderId = folderId;
+
+            // === 2️ 建立實體路徑 ===
+            var folderPath = Path.Combine("wwwroot", "Uploads", uploadDto.ModuleId, uploadDto.ProgId);
+            Directory.CreateDirectory(folderPath);
+
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), folderPath, fileName);
+
+            // === 3️ 自動偵測圖片尺寸（僅限 image/*） ===
+            int width = 0, height = 0;
+            try
+            {
+                if (meta.File != null && meta.File.ContentType.StartsWith("image/") && File.Exists(fullPath))
+                {
+                    using var image = await Image.LoadAsync<Rgba32>(fullPath, ct);
+                    width = image.Width;
+                    height = image.Height;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ 無法讀取圖片尺寸：{fileUrl}，原因：{ex.Message}");
+            }
+
+            // === 4️ 寫入資料庫 ===
+            var entity = new SysAssetFile
+            {
+                FileKey = $"{uploadDto.ModuleId}/{uploadDto.ProgId}/{fileName}",
+                IsExternal = false,
+                FileUrl = $"/uploads/{uploadDto.ModuleId}/{uploadDto.ProgId}/{fileName}",
+                FileExt = fileExt,
+                MimeType = meta.File?.ContentType ?? "image/*",
+                Width = width,
+                Height = height,
+                FileSizeBytes = meta.File?.Length ?? 0,
+                AltText = string.IsNullOrWhiteSpace(meta.AltText)
+                    ? Path.GetFileNameWithoutExtension(fileName)
+                    : meta.AltText,
+                Caption = string.IsNullOrWhiteSpace(meta.Caption)
+                    ? $"上傳於 {now:yyyy-MM-dd HH:mm}"
+                    : meta.Caption,
+                CreatedDate = now,
+                IsActive = meta.IsActive,
+                FolderId = uploadDto.FolderId,
+            };
+
+            await _db.SysAssetFiles.AddAsync(entity, ct);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        /// <summary>
+        /// 自動檢查並建立 Folder 階層（例如 PROD / ProductEdit）
+        /// </summary>
+        private async Task<int?> EnsureFolderHierarchy(string moduleId, string progId, CancellationToken ct)
+        {
+            // === 找或建第一層 (ModuleId) ===
+            var moduleFolder = await _db.SysFolders
+                .FirstOrDefaultAsync(f => f.ParentId == null && f.FolderName == moduleId, ct);
+
+            if (moduleFolder == null)
+            {
+                moduleFolder = new SysFolder
+                {
+                    FolderName = moduleId,
+                    ParentId = null,
+                    IsActive = true
+                };
+                _db.SysFolders.Add(moduleFolder);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            // === 找或建第二層 (ProgId) ===
+            var progFolder = await _db.SysFolders
+                .FirstOrDefaultAsync(f => f.ParentId == moduleFolder.FolderId && f.FolderName == progId, ct);
+
+            if (progFolder == null)
+            {
+                progFolder = new SysFolder
+                {
+                    FolderName = progId,
+                    ParentId = moduleFolder.FolderId,
+                    IsActive = true
+                };
+                _db.SysFolders.Add(progFolder);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            return progFolder.FolderId;
+        }
+        #endregion
+
         #region === Cloudinary 上傳 ===
         /// <summary>
-        /// 上傳圖片到 Cloudinary 並寫入 DB
+        /// 上傳檔案到 Cloudinary 並寫入資料庫
         /// </summary>
-        public async Task<object> AddImages(AssetFileUploadDto uploadDto, CancellationToken ct = default)
+        public async Task<dynamic> AddFilesAsync(AssetFileUploadDto uploadDto, CancellationToken ct = default)
         {
             if (uploadDto.Meta == null || uploadDto.Meta.Count == 0)
-            {
-                return new
-                {
-                    success = false,
-                    message = "沒有上傳內容"
-                };
-            }
+                return new { success = false, message = "沒有上傳內容" };
+
+            // === 常數設定 ===
+            const long CHUNK_THRESHOLD = 30 * 1024 * 1024; // 超過 100MB 啟用分段
+            const int CHUNK_SIZE = 20 * 1024 * 1024;        // 每段 20MB
+
+            // === 建立資料夾階層（例如 PROD/ProductEdit） ===
+            var folderId = await EnsureFolderHierarchy(uploadDto.ModuleId, uploadDto.ProgId, ct);
+            uploadDto.FolderId = folderId;
 
             var now = DateTime.Now;
             var entities = new List<SysAssetFile>();
@@ -66,7 +176,10 @@ namespace tHerdBackend.Infra.Repository.SYS
             foreach (var meta in uploadDto.Meta)
             {
                 var file = meta.File;
-                if (file == null || file.Length == 0) continue;
+                if (file == null || file.Length == 0)
+                    continue;
+
+                Console.WriteLine($"➡️ 開始上傳: {file.FileName} ({file.Length / 1024 / 1024:F2} MB)");
 
                 await using var ms = new MemoryStream();
                 await file.CopyToAsync(ms, ct);
@@ -77,35 +190,129 @@ namespace tHerdBackend.Infra.Repository.SYS
                 var publicId = Path.GetFileNameWithoutExtension(unique);
                 var folderPath = $"{uploadDto.ModuleId}/{uploadDto.ProgId}/";
 
-                var uploadParams = new ImageUploadParams
-                {
-                    File = new FileDescription(file.FileName, ms),
-                    Folder = folderPath,
-                    PublicId = publicId,
-                    UseFilename = false,
-                    UniqueFilename = false,
-                    Overwrite = false
-                };
+                var resourceType = GetCloudinaryResourceType(file.ContentType);
+                string? resultUrl = null;
+                int width = 0, height = 0;
 
-                var result = await _cloudinary.UploadAsync(uploadParams, ct);
-                if (result.StatusCode != System.Net.HttpStatusCode.OK)
+                try
                 {
-                    return new
+                    UploadResult? result = null;
+
+                    switch (resourceType)
                     {
-                        success = false,
-                        message = $"Cloudinary 上傳失敗: {file.FileName}"
-                    };
+                        // 🖼️ 圖片上傳
+                        case ResourceType.Image:
+                            if (file.Length > CHUNK_THRESHOLD)
+                            {
+                                Console.WriteLine($"[Chunked] 圖片分段上傳: {file.FileName}");
+                                var imgParams = new ImageUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    Folder = folderPath,
+                                    PublicId = publicId
+                                };
+                                result = await _cloudinary.UploadLargeAsync(imgParams, CHUNK_SIZE, null);
+                            }
+                            else
+                            {
+                                var imgParams = new ImageUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    Folder = folderPath,
+                                    PublicId = publicId
+                                };
+                                result = await _cloudinary.UploadAsync(imgParams, null);
+                            }
+
+                            if (result is ImageUploadResult imgResult)
+                            {
+                                resultUrl = imgResult.SecureUrl?.ToString();
+                                width = imgResult.Width;
+                                height = imgResult.Height;
+                            }
+                            break;
+
+                        // 🎬 影片上傳
+                        case ResourceType.Video:
+                            if (file.Length > CHUNK_THRESHOLD)
+                            {
+                                Console.WriteLine($"[Chunked] 影片分段上傳: {file.FileName}");
+                                var videoParams = new VideoUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    Folder = folderPath,
+                                    PublicId = publicId
+                                };
+                                result = await _cloudinary.UploadLargeAsync(videoParams, CHUNK_SIZE, null);
+                            }
+                            else
+                            {
+                                var videoParams = new VideoUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    Folder = folderPath,
+                                    PublicId = publicId
+                                };
+                                result = await _cloudinary.UploadAsync(videoParams, null);
+                            }
+
+                            if (result is VideoUploadResult videoResult)
+                            {
+                                resultUrl = videoResult.SecureUrl?.ToString();
+                                width = videoResult.Width;
+                                height = videoResult.Height;
+                            }
+                            break;
+
+                        // 📦 其他 (raw / zip / pdf / log)
+                        default:
+                            if (file.Length > CHUNK_THRESHOLD)
+                            {
+                                Console.WriteLine($"[Chunked] RAW 分段上傳: {file.FileName}");
+                                ms.Position = 0;
+
+                                // 注意：BasicRawUploadParams 沒有 Folder，用 PublicId 模擬階層
+                                var rawParams = new BasicRawUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    PublicId = $"{folderPath}{publicId}" // ← 把 folderPath 直接放進來
+                                };
+
+                                var rawLarge = await _cloudinary.UploadLargeRawAsync(rawParams, CHUNK_SIZE, null);
+                                resultUrl = rawLarge.SecureUrl?.ToString();
+                            }
+                            else
+                            {
+                                var rawParams = new RawUploadParams
+                                {
+                                    File = new FileDescription(file.FileName, ms),
+                                    Folder = folderPath,
+                                    PublicId = publicId
+                                };
+                                var rawResult = await _cloudinary.UploadAsync(rawParams, type: "raw", cancellationToken: null);
+                                resultUrl = rawResult.SecureUrl?.ToString();
+                            }
+                            width = 0;
+                            height = 0;
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Cloudinary 上傳失敗: {file.FileName}, {ex.Message}");
+                    continue; // 跳過這筆檔案，不寫入 DB
                 }
 
+                // === 寫入 DB 實體 ===
                 var entity = new SysAssetFile
                 {
-                    FileKey = result.PublicId,
+                    FileKey = publicId,
                     IsExternal = true,
-                    FileUrl = result.SecureUrl.ToString(),
+                    FileUrl = resultUrl ?? "",
                     FileExt = ext.TrimStart('.'),
                     MimeType = file.ContentType,
-                    Width = result.Width,
-                    Height = result.Height,
+                    Width = width,
+                    Height = height,
                     FileSizeBytes = file.Length,
                     AltText = string.IsNullOrWhiteSpace(meta.AltText)
                         ? Path.GetFileNameWithoutExtension(unique)
@@ -115,38 +322,50 @@ namespace tHerdBackend.Infra.Repository.SYS
                         : meta.Caption,
                     CreatedDate = now,
                     IsActive = meta.IsActive,
-                    FolderId = uploadDto.FolderId  // 如果你有指定要放哪個資料夾
+                    FolderId = uploadDto.FolderId
                 };
 
                 entities.Add(entity);
-
-                // 回填給前端，好即時顯示預覽
-                meta.FileUrl = result.SecureUrl.ToString();
+                Console.WriteLine($"✅ 上傳完成: {file.FileName}");
             }
 
-            await _db.SysAssetFiles.AddRangeAsync(entities, ct);
-            await _db.SaveChangesAsync(ct);
+            if (entities.Any())
+            {
+                await _db.SysAssetFiles.AddRangeAsync(entities, ct);
+                await _db.SaveChangesAsync(ct);
+            }
 
             return new
             {
                 success = true,
-                message = "上傳成功",
-                data = new
+                message = $"成功上傳 {entities.Count} 筆檔案",
+                data = entities.Select(e => new
                 {
-                    files = entities.Select(e => new
-                    {
-                        e.FileId,
-                        e.FileUrl,
-                        e.FileKey,
-                        e.AltText,
-                        e.Caption,
-                        e.Width,
-                        e.Height,
-                        e.IsActive,
-                        e.FolderId
-                    })
-                }
+                    e.FileId,
+                    e.FileUrl,
+                    e.MimeType,
+                    e.FileKey,
+                    e.AltText,
+                    e.Caption,
+                    e.Width,
+                    e.Height,
+                    e.FileSizeBytes,
+                    e.FolderId
+                })
             };
+        }
+
+
+        /// <summary>
+        /// 根據 MIME 類型回傳 Cloudinary ResourceType
+        /// </summary>
+        private static ResourceType GetCloudinaryResourceType(string mimeType)
+        {
+            if (mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                return ResourceType.Image;
+            if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                return ResourceType.Video;
+            return ResourceType.Raw; // 其他都歸類為一般檔案（包含 PDF）
         }
         #endregion
 
@@ -154,25 +373,22 @@ namespace tHerdBackend.Infra.Repository.SYS
         /// <summary>
         /// 真正呼叫 Cloudinary API 刪除檔案的小工具
         /// </summary>
-        private async Task<bool> DeleteCloudinaryAsync(string fileKey)
+        private async Task<bool> DeleteCloudinaryAsync(string fileKey, ResourceType type = ResourceType.Image)
         {
             if (string.IsNullOrWhiteSpace(fileKey))
                 return false;
 
             try
             {
-                var del = await _cloudinary.DestroyAsync(
-                    new DeletionParams(fileKey)
-                    {
-                        ResourceType = ResourceType.Image
-                    });
+                var del = await _cloudinary.DestroyAsync(new DeletionParams(fileKey)
+                {
+                    ResourceType = type
+                });
 
-                // Cloudinary 回 "ok" 或 "not found" 都視為清掉了
                 return del.Result == "ok" || del.Result == "not found";
             }
             catch (Exception ex)
             {
-                // 不中斷流程，回 false
                 Console.WriteLine($"Cloudinary 刪除失敗：{fileKey}，原因：{ex.Message}");
                 return false;
             }
@@ -586,6 +802,19 @@ namespace tHerdBackend.Infra.Repository.SYS
                     if (await DeleteCloudinaryAsync(f.FileKey))
                         cloudDeleted++;
                 }
+                else
+                {
+                    // ✅ 同步刪除本地檔案
+                    var localPath = Path.Combine("wwwroot", f.FileKey.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (File.Exists(localPath))
+                    {
+                        try { File.Delete(localPath); }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"⚠️ 無法刪除本地檔案：{localPath}，原因：{ex.Message}");
+                        }
+                    }
+                }
             }
 
             _db.SysAssetFiles.RemoveRange(deletedFiles);
@@ -635,23 +864,45 @@ namespace tHerdBackend.Infra.Repository.SYS
 
         #region === 其他查詢功能 ===
         /// <summary>
-        /// 取得同一模組/畫面上使用的所有檔案
-        /// 例如 moduleId="PROD", progId="ProductEdit"
+        /// 依模組與程式代號取得該資料夾底下的所有檔案
+        /// 例如：moduleId = "PROD", progId = "ProductEdit"
         /// </summary>
         public async Task<List<SysAssetFileDto>> GetFilesByProg(string moduleId, string progId, CancellationToken ct = default)
         {
-            return await _db.SysAssetFiles
-                .Where(f => !f.IsDeleted)
-                .Where(f => f.FileKey.StartsWith($"{moduleId}/{progId}"))
+            // === 1️ 找到對應的模組資料夾 ===
+            var moduleFolder = await _db.SysFolders
+                .FirstOrDefaultAsync(f => f.ParentId == null && f.FolderName == moduleId, ct);
+
+            if (moduleFolder == null)
+            {
+                // 模組不存在，直接回傳空集合
+                return new List<SysAssetFileDto>();
+            }
+
+            // === 2️ 找到對應的程式資料夾（模組底下） ===
+            var progFolder = await _db.SysFolders
+                .FirstOrDefaultAsync(f => f.ParentId == moduleFolder.FolderId && f.FolderName == progId, ct);
+
+            if (progFolder == null)
+            {
+                // 程式資料夾不存在
+                return new List<SysAssetFileDto>();
+            }
+
+            // === 3️ 取得該資料夾底下的檔案 ===
+            var files = await _db.SysAssetFiles
+                .Where(f => f.FolderId == progFolder.FolderId && !f.IsDeleted)
                 .OrderByDescending(f => f.CreatedDate)
                 .Select(ToDto)
                 .ToListAsync(ct);
+
+            return files;
         }
 
         /// <summary>
         /// 依 FileId 取得單一檔案資訊
         /// </summary>
-        public async Task<SysAssetFileDto?> GetFilesById(int id, CancellationToken ct = default)
+        public async Task<SysAssetFileDto?> GetFileById(int id, CancellationToken ct = default)
         {
             return await _db.SysAssetFiles
                 .Where(f => !f.IsDeleted)
@@ -836,7 +1087,18 @@ namespace tHerdBackend.Infra.Repository.SYS
                     Name = Path.GetFileName(f.FileKey) ?? f.FileKey,
                     Url = f.IsExternal
                         ? f.FileUrl
-                        : $"/Uploads/{f.FolderId}/{Path.GetFileName(f.FileKey)}",
+                        : Path.Combine(
+                            "/uploads",
+                            // === 動態取得對應模組 / 程式資料夾 ===
+                            _db.SysFolders
+                                .Where(p2 => p2.FolderId == f.FolderId)
+                                .Select(p2 => _db.SysFolders
+                                    .Where(p1 => p1.FolderId == p2.ParentId)
+                                    .Select(p1 => p1.FolderName + "/" + p2.FolderName)
+                                    .FirstOrDefault())
+                                .FirstOrDefault() ?? "",
+                            Path.GetFileName(f.FileKey)
+                          ).Replace("\\", "/"),
                     MimeType = f.MimeType,
                     IsFolder = false,
                     AltText = f.AltText,

@@ -24,7 +24,7 @@ namespace tHerdBackend.Services.PROD.API
         /// <param name="query">查詢條件</param>
         /// <param name="ct">連線</param>
         /// <returns></returns>
-        public async Task<PagedResult<ProdProductDto>> GetFrontProductListAsync(
+        public async Task<PagedResult<ProdProductSearchDto>> GetFrontProductListAsync(
             ProductFilterQueryDto query, CancellationToken ct = default)
         {
             try
@@ -34,10 +34,10 @@ namespace tHerdBackend.Services.PROD.API
                 var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
 
                 // 查詢商品基本資料
-                var (list, total) = await _repo.GetAllAsync(query, ct);
+                var (list, total) = await _repo.GetAllFrontAsync(query, ct);
 
                 // 回傳分頁結果
-                return new PagedResult<ProdProductDto>
+                return new PagedResult<ProdProductSearchDto>
                 {
                     TotalCount = total,
                     PageIndex = query.PageIndex,

@@ -14,6 +14,10 @@ namespace tHerdBackend.Services.CNT
 			services.AddScoped<ICntQueryRepository, CntQueryRepository>();
 			services.AddScoped<INutritionService, NutritionService>();
 			services.AddScoped<INutritionRepository, NutritionRepository>();
+			services.AddScoped<IProductTagRepository, ProductBriefRepository>();
+			services.AddScoped<IContentProductService, ContentProductService>();
+			services.AddScoped<ITagProductReadRepository, TagProductReadRepository>();
+			services.AddScoped<ITagProductQueryService, TagProductQueryService>();
 
 			return services;
 		}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Text.RegularExpressions;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Infra.Models;
 
@@ -23,9 +24,13 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
 		public async Task<IActionResult> Index_ex_datatable(CancellationToken ct)
 		{
-            // await SeedSkuDataAsync();
+			// await SeedSkuDataAsync();
 
-            // await LoadImgsFromCSV(); // 匯入圖片測試
+		    // await LoadImgsFromCSV(); // 匯入圖片測試
+
+			// await LoadTypeFromCSV(); // 匯入圖片產品類別
+
+			// await LoadIngredientFromCSV();
 
             var products = await _db.ProdProducts.ToListAsync(ct);
 
@@ -44,9 +49,201 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 			return View(dtos); // 型別跟 View 宣告一致
 		}
 
-        public async Task LoadImgsFromCSV()
+        public async Task LoadIngredientFromCSV()
         {
-            string csvPath = @"D:\iSpanProj\專題文件\PROD_imgs-20251019T145911Z-1-001\PROD_imgs\PROD_imgs_35-2.csv";
+			var index = "36";
+
+			int numStart = 15060 - 1000; // 商品ID起始偏移量
+
+            string ingredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_Ingredient\{index}PROD_Ingredient.csv";
+
+            string productIngredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductIngredient\{index}PROD_ProductIngredient.csv";
+
+            if (!System.IO.File.Exists(productIngredientPath) || !System.IO.File.Exists(ingredientPath))
+            {
+                Console.WriteLine("❌ 找不到 CSV 檔案。");
+                return;
+            }
+
+            // 1 先讀商品成分關聯
+            using (var fs2 = new FileStream(productIngredientPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader2 = new StreamReader(fs2))
+            {
+                reader2.ReadLine(); // 跳過標題
+                while (!reader2.EndOfStream)
+                {
+                    var line = reader2.ReadLine();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var parts = line.Split(',', StringSplitOptions.TrimEntries);
+                    if (parts.Length < 2) continue;
+
+                    if (!int.TryParse(parts[0], out int productId)) continue;
+
+                    productId = productId + numStart;
+
+                    string ingredientFullName = parts[1];
+                    if (string.IsNullOrWhiteSpace(ingredientFullName))
+                        continue;
+
+                    // 🔹 1. 拆解或新增成分主檔名稱與描述
+                    var (existing, ingredientId) = await ProcessIngredientAsync(ingredientFullName);
+
+                    // 🔹 2 拆「9 克」「90 毫克」為數值與單位
+                    string percentageAndUnit = parts.Length > 2 ? parts[2].Trim() : string.Empty;
+
+                    decimal? percentage = null;
+
+                    if (!string.IsNullOrWhiteSpace(percentageAndUnit))
+                    {
+                        // 用正則擷取數字與單位，例如 "90 毫克"、"1.5 公克"
+                        var match = Regex.Match(percentageAndUnit, @"([0-9]+(?:\.[0-9]+)?)\s*([^\d\s]+)?");
+                        if (match.Success)
+                        {
+                            if (decimal.TryParse(match.Groups[1].Value, out decimal value))
+                                percentage = value;
+                        }
+                    }
+
+                    // 查詢順序
+                    // 🔹 4️ 查詢當前最大排序（避免 null）
+                    var maxIndex = await _db.ProdProductIngredients
+                        .Where(pi => pi.ProductId == productId)
+                        .Select(x => (int?)x.OrderSeq)
+                        .MaxAsync() ?? 0;
+
+					var existProdIngredient = _db.ProdProductIngredients.Where(a => a.ProductId == productId && a.IngredientId == ingredientId);
+
+					if (existProdIngredient == null) {
+                        // 取得
+                        var newProdIngredient = new ProdProductIngredient
+                        {
+                            ProductId = productId,
+                            IngredientId = ingredientId,
+                            Percentage = percentage,
+                            PercentageText = percentageAndUnit,
+                            Note = parts.Length > 3 ? parts[3] : null,
+                            IngredientType = 1,
+                            OrderSeq = maxIndex + 1
+                        };
+
+                        _db.ProdProductIngredients.Add(newProdIngredient);
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                Console.WriteLine("✅ 商品成分匯入完成");
+            }
+
+            try
+            {
+                // 2 再讀取成分主檔
+                using (var fs1 = new FileStream(ingredientPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader1 = new StreamReader(fs1))
+                {
+                    reader1.ReadLine(); // 跳過標題
+                    while (!reader1.EndOfStream)
+                    {
+                        var line = reader1.ReadLine();
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var parts = line.Split(',', StringSplitOptions.TrimEntries);
+                        if (parts.Length < 1) continue;
+
+                        if (!int.TryParse(parts[0], out int productId)) continue;
+
+                        productId = productId + numStart;
+
+                        string ingredientFullName = parts[1];
+                        if (string.IsNullOrWhiteSpace(ingredientFullName))
+                            continue;
+
+                        // 查詢順序
+                        // 🔹 4️ 查詢當前最大排序（避免 null）
+                        var maxIndex = await _db.ProdProductIngredients
+                            .Where(pi => pi.ProductId == productId)
+                            .Select(x => (int?)x.OrderSeq)
+                            .MaxAsync() ?? 0;
+
+                        // 🔹 1. 拆解或新增成分主檔名稱與描述
+                        var (existing, ingredientId) = await ProcessIngredientAsync(ingredientFullName);
+
+                        if (existing==false)
+                        {
+                            var newProdIngredient = new ProdProductIngredient
+                            {
+                                ProductId = productId,
+                                IngredientId = ingredientId,
+                                Percentage = null,
+                                PercentageText = null,
+                                Note = null,
+                                IngredientType = 2,
+                                OrderSeq = maxIndex + 1
+                            };
+
+                            _db.ProdProductIngredients.Add(newProdIngredient);
+                        }
+                    }
+                    await _db.SaveChangesAsync();
+                    Console.WriteLine("✅ 成分主檔匯入完成");
+                }
+
+                Console.WriteLine("🎉 兩個 CSV 匯入完成。");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 匯入失敗：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 成分主檔處理
+        /// </summary>
+        private async Task<(bool existing, int ingredientId)> ProcessIngredientAsync(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                throw new ArgumentException("fullName 不可為空白。", nameof(fullName));
+
+            // 🔸 Step 1：拆括號名稱與描述
+            string ingredientName = fullName.Trim();
+            string? description = null;
+
+            var nameMatch = Regex.Match(fullName, @"^(?<name>[^()（）]+)[(（](?<desc>[^()（）]+)[)）]?$");
+            if (nameMatch.Success)
+            {
+                ingredientName = nameMatch.Groups["name"].Value.Trim();
+                description = nameMatch.Groups["desc"].Value.Trim();
+            }
+
+            // 🔸 Step 3：查或建成分
+            var existing = await _db.ProdIngredients
+                .FirstOrDefaultAsync(x => x.IngredientName == ingredientName && x.Description == description);
+
+            int ingredientId;
+            if (existing != null)
+            {
+                ingredientId = existing.IngredientId;
+            }
+            else
+            {
+                var newIngredient = new ProdIngredient
+                {
+                    IngredientName = ingredientName,
+                    Description = description,
+                    Alias = null
+                };
+                var entry = _db.ProdIngredients.Add(newIngredient);
+                await _db.SaveChangesAsync();
+                ingredientId = entry.Entity.IngredientId;
+            }
+
+            // 🔸 Step 4：回傳所有結果
+            return (existing != null, ingredientId);
+        }
+
+        public async Task LoadTypeFromCSV()
+		{
+            string csvPath = @"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductTypeConfig\36PROD_ProductTypeConfig.csv";
 
             if (!System.IO.File.Exists(csvPath))
             {
@@ -80,7 +277,124 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                             continue;
                         }
 
-                        productId = productId - 1000 + 14882;
+                        productId = productId - 1000 + 15060;
+
+                        // 1️ 檢查產品是否存在
+                        var prod = await _db.ProdProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+                        if (prod == null)
+                        {
+                            Console.WriteLine($"⚠️ 找不到 ProductId={productId}，略過。");
+                            continue;
+                        }
+
+                        string productType = parts[1].Trim();
+                        if (string.IsNullOrEmpty(productType))
+                            continue;
+
+						var typeConfig = await _db.ProdProductTypeConfigs.Where(t => t.ProductTypeName == productType).FirstOrDefaultAsync();
+
+                        int productTypeId;
+
+                        if (typeConfig != null) {
+                            productTypeId = typeConfig.ProductTypeId;
+                        } else {
+                            // 產生 5 碼大寫英文字母亂碼
+                            string randomCode = GenerateRandomCode(5);
+
+                            // 轉型並預設 0（避免格式錯誤例外）
+                            int orderSeq = 0;
+                            if (parts.Length > 2 && int.TryParse(parts[2].Trim(), out int parsed))
+                                orderSeq = parsed;
+
+                            typeConfig = new ProdProductTypeConfig
+							{
+                                ProductTypeCode = randomCode,
+                                ProductTypeName = productType,
+                                OrderSeq = orderSeq,
+                                IsActive = true
+                            };
+							_db.ProdProductTypeConfigs.Add(typeConfig);
+							await _db.SaveChangesAsync(); // 產生 ProductTypeId
+
+                            productTypeId = typeConfig.ProductTypeId;
+                        }
+
+                        // 2️ 建立關聯表 Mapping
+						var mapping = await _db.ProdProductTypes
+							.FirstOrDefaultAsync(m => m.ProductId == productId && m.ProductTypeId == productTypeId);
+
+						if (mapping == null) {
+							mapping = new ProdProductType
+							{
+								ProductId = productId,
+								ProductTypeId = productTypeId,
+								IsPrimary = false
+							};
+							_db.ProdProductTypes.Add(mapping);
+							await _db.SaveChangesAsync();
+						}
+                    }
+                }
+
+                Console.WriteLine($"🎉 匯入完成。");
+            }
+            catch (IOException ioEx)
+            {
+                Console.WriteLine($"⚠️ 無法開啟 CSV（可能被佔用）：{ioEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 發生未預期錯誤：{ex.Message}");
+            }
+        }
+
+        // === 🔹 產生指定長度的大寫亂碼 ===
+        private static string GenerateRandomCode(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var random = new Random();
+            return new string(Enumerable.Range(0, length)
+                .Select(_ => chars[random.Next(chars.Length)])
+                .ToArray());
+        }
+
+        public async Task LoadImgsFromCSV()
+        {
+            string csvPath = @"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_imgs\36PROD_imgs.csv";
+
+            if (!System.IO.File.Exists(csvPath))
+            {
+                Console.WriteLine($"❌ 找不到檔案：{csvPath}");
+                return;
+            }
+
+            try
+            {
+                // 用 FileStream + FileShare.ReadWrite 允許共用讀取
+                using (var fs = new FileStream(csvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(fs))
+                {
+                    // 跳過標題列
+                    reader.ReadLine();
+
+                    while (!reader.EndOfStream)
+                    {
+                        string? line = reader.ReadLine();
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        // 分割第一個逗號（避免 URL 內含逗號被切錯）
+                        var parts = line.Split(',', 2);
+                        if (parts.Length < 2)
+                            continue;
+
+                        if (!int.TryParse(parts[0].Trim(), out int productId))
+                        {
+                            Console.WriteLine($"⚠️ 無法解析 ProductId：{parts[0]}");
+                            continue;
+                        }
+
+                        productId = productId - 1000 + 15060;
 
                         string imgUrl = parts[1].Trim().Trim('"').Trim('\\');
                         if (string.IsNullOrEmpty(imgUrl))

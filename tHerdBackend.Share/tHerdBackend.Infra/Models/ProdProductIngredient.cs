@@ -30,6 +30,21 @@ public partial class ProdProductIngredient
     /// </summary>
     public string Note { get; set; }
 
+    /// <summary>
+    /// 成分類型：1=主成分、2=其他成分、3=過敏原、4=製程附註
+    /// </summary>
+    public byte IngredientType { get; set; }
+
+    /// <summary>
+    /// 顯示順序
+    /// </summary>
+    public int OrderSeq { get; set; }
+
+    /// <summary>
+    /// 原始百分比或文字（如 &quot;50%&quot;, &quot;含少許&quot; 等）
+    /// </summary>
+    public string PercentageText { get; set; }
+
     public virtual ProdIngredient Ingredient { get; set; }
 
     public virtual ProdProduct Product { get; set; }

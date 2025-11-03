@@ -1,86 +1,190 @@
-﻿@using tHerdBackend.Core.DTOs.PROD
-@* 可以傳入舊有圖片清單來顯示 *@
+﻿@using tHerdBackend.Core.DTOs
 @using tHerdBackend.Core.DTOs.PROD
 @model IEnumerable<ProductImageDto>
 
+@* 圖片模組 *@
+
+@{
+    var moduleId = ViewContext.RouteData.Values["area"]?.ToString() ?? "SYS";
+    var progId = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Images";
+    var modalId = "uploadImageModal_" + moduleId + "_" + progId; // ✅ 防止 ID 衝突
+}
+
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用 1 / 4 *@
+<button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnBindProductImage">
+    <i class="bi bi-images"></i> 選擇圖片
+</button>
+
 <div class="mb-3">
-    <label class="form-label fw-bold">產品圖片</label>
-
-    <!-- 新增圖片 -->
-    <input type="file" class="form-control" id="productImages" name="productImages" multiple />
-    <small class="text-muted">支援多張圖片（jpg, png, gif），單張上限 5MB</small>
-
-    <!-- 舊有圖片區 -->
+    <!-- 🔹 已綁定圖片清單 -->
     <div class="mt-3">
-        <h6 class="fw-bold">已上傳圖片</h6>
-        <div id="existingImages" class="d-flex flex-wrap gap-3">
+        <div id="boundImages">
             @if (Model != null && Model.Any())
             {
-                foreach (var img in Model)
+                // 將 ProductImageDto 轉成 SysAssetFileDto，方便套用 FileListPartial
+                var fileList = Model.Select(x => new SysAssetFileDto
                 {
-                    <div class="position-relative" style="width:120px; height:120px;">
-                        <img src="@img.FileUrl"
-                             alt="@img.AltText"
-                             class="img-thumbnail w-100 h-100"
-                             style="object-fit:cover;" />
+                    FileId = x.ImgId,
+                    FileKey = x.FileKey,
 
-                        <!-- 刪除按鈕 -->
-                        <button type="button"
-                                class="btn btn-sm btn-danger position-absolute top-0 end-0"
-                                data-img-id="@img.ImageId"
-                                onclick="removeExistingImage(this)">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                }
+                    IsExternal = x.IsExternal,
+                    FileUrl = x.FileUrl,
+                    FileExt = x.FileExt,
+                    MimeType = x.MimeType,
+                    Width = x.Width,
+                    Height = x.Height,
+                    FileSizeBytes = x.FileSizeBytes,
+                    AltText = x.AltText,
+                    Caption = x.Caption,
+                    CreatedDate = x.CreatedDate,
+                    IsActive = true
+                }).ToList();
+
+                <!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用 2 / 4 *@
+                @await Html.PartialAsync("_FileListPartial", fileList)
             }
             else
             {
-                <span class="text-muted">尚未上傳圖片</span>
+                <span class="text-muted">尚未綁定圖片</span>
             }
         </div>
     </div>
-
-    <!-- 新增圖片預覽區 -->
-    <div class="mt-3">
-        <h6 class="fw-bold">新增圖片預覽</h6>
-        <div id="preview" class="d-flex flex-wrap gap-2"></div>
-    </div>
 </div>
 
-@section Scripts {
-    <script>
-        // 新增圖片預覽
-        document.getElementById("productImages")?.addEventListener("change", function (e) {
-            const preview = document.getElementById("preview");
-            preview.innerHTML = "";
-            for (const file of e.target.files) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = document.createElement("img");
-                    img.src = ev.target.result;
-                    img.style.width = "120px";
-                    img.style.height = "120px";
-                    img.classList.add("rounded", "border");
-                    preview.appendChild(img);
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用 3 / 4 *@
+@await Html.PartialAsync("_FileSelectPartial", new List<SysAssetFileDto>())
 
-        // 刪除舊有圖片（這裡先加 hidden input，後端再判斷要刪）
-        function removeExistingImage(btn) {
-            const imgId = btn.getAttribute("data-img-id");
+<!-- 🔹 圖片選擇器 Modal（含上傳功能） --> @* 圖片模組 引用 4 / 4 : 要改成自己的 *@
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const btnSelect = document.getElementById("btnBindProductImage");
 
-            // 加 hidden input，傳到後端判斷要刪除
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "DeletedImageIds";
-            input.value = imgId;
-            document.forms[0].appendChild(input);
+        // === 綁定圖片選擇器 ===
+        if (btnSelect) {
+            btnSelect.addEventListener("click", async e => {
+                e.preventDefault();
 
-            // 從畫面移除
-            btn.parentElement.remove();
+                if (typeof showGlobalLoading === "function") {
+                    showGlobalLoading("載入圖片選擇器中，請稍候...");
+                }
+
+                try {
+                    if (typeof openImageSelector === "function") {
+                        // 等待 openImageSelector 完成載入（它內部有 async fetch）
+                        await openImageSelector(selectedFiles => {
+                            appendSelectedImages(selectedFiles);
+                        }, "@moduleId", "@progId");
+                    } else {
+                        Swal.fire("錯誤", "找不到圖片選擇器模組 openImageSelector", "error");
+                    }
+                } catch (err) {
+                    console.error("❌ 開啟圖片選擇器錯誤：", err);
+                    Swal.fire("錯誤", err.message || "載入圖片選擇器時發生錯誤", "error");
+                } finally {
+                    if (typeof hideGlobalLoading === "function") {
+                        hideGlobalLoading();
+                    }
+                }
+            });
         }
-    </script>
-}
+    });
+
+    // === 新增圖片後重新載入部分檢視 ===
+    async function appendSelectedImages(selectedFiles) {
+        const list = document.getElementById("boundImages");
+        if (!selectedFiles?.length) return;
+
+        if (list.querySelector("span.text-muted")) list.innerHTML = "";
+
+        // 🔹 統一格式化資料，強制轉型
+        const normalizedFiles = selectedFiles.map(f => ({
+            FileId: Number(f.fileId),
+            FileUrl: String(f.fileUrl || ""),
+            MimeType: String(f.mimeType || "image/jpeg"),
+            AltText: String(f.altText || ""),     // ✅ 強制字串
+            Caption: String(f.caption || ""),
+            IsActive: Boolean(f.isActive ?? true) // ✅ null/undefined 都變 true
+        }));
+
+        try {
+            const res = await fetch('/SYS/Images/RenderFileListPartial', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ Files: normalizedFiles })  // ✅ 外層包 Files
+            });
+
+            if (!res.ok) throw new Error(`HTTP 錯誤：${res.status}`);
+
+            const html = await res.text();
+
+            // 要改成在同一個DIV
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html.trim();
+            const newItems = tempDiv.querySelectorAll(".img-item");
+            newItems.forEach(item => list.appendChild(item));
+
+            reindexImageInputs();
+        } catch (err) {
+            console.error("❌ 載入部分檢視失敗：", err);
+            Swal.fire("錯誤", "載入圖片列表時發生錯誤", "error");
+        }
+
+        reindexImageInputs();
+    }
+
+    // === 強制重新編號 Hidden Inputs ===
+    function reindexImageInputs() {
+        const list = document.getElementById("boundImages");
+        const items = list.querySelectorAll(".prod-img-item, .img-item");
+        items.forEach((item, index) => {
+            item.querySelectorAll("input[name^='Images']").forEach(input => {
+                input.name = input.name.replace(/Images\[\d+\]/, `Images[${index}]`);
+            });
+        });
+    }
+
+    // === 編輯圖片資訊 ===
+    function editBoundImage(btn) {
+        const container = btn.closest(".prod-img-item");
+        const img = container?.querySelector("img, video");
+        if (!img) return Swal.fire("錯誤", "找不到圖片元素", "error");
+
+        const fileData = {
+            fileId: img.dataset.fileId || 0,
+            fileUrl: img.dataset.fileUrl || img.src,
+            altText: img.dataset.altText || "",
+            caption: img.dataset.caption || "",
+            mimeType: img.dataset.mimeType || "image/jpeg",
+            isActive: img.dataset.isActive === "true"
+        };
+
+        if (typeof openImageModal === "function") {
+            openImageModal(fileData, "#imgMetaModal");
+        } else {
+            Swal.fire("錯誤", "找不到圖片編輯模組", "error");
+        }
+    }
+
+    // === 移除圖片 ===
+    function removeBoundImage(btn) {
+        const container = btn.closest(".prod-img-item");
+        if (!container) return;
+
+        container.remove();
+
+        const list = document.getElementById("boundImages");
+        if (!list.querySelector(".prod-img-item")) {
+            list.innerHTML = '<span class="text-muted">尚未綁定圖片</span>';
+        }
+
+        // 🔹 重新編號 Hidden Input（避免跳號造成模型綁定錯誤）
+        list.querySelectorAll(".prod-img-item").forEach((item, idx) => {
+            item.querySelectorAll("input[name^='Images']").forEach(input => {
+                input.name = input.name.replace(/Images\[\d+\]/, `Images[${idx}]`);
+            });
+        });
+    }
+</script>

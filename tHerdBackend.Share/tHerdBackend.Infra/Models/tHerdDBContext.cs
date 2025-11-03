@@ -49,6 +49,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<CntPageType> CntPageTypes { get; set; }
 
+    public virtual DbSet<CntProductTag> CntProductTags { get; set; }
+
     public virtual DbSet<CntPurchase> CntPurchases { get; set; }
 
     public virtual DbSet<CntSample> CntSamples { get; set; }
@@ -170,6 +172,8 @@ public partial class tHerdDBContext : DbContext
     public virtual DbSet<SupBrandFavorite> SupBrandFavorites { get; set; }
 
     public virtual DbSet<SupBrandLayoutConfig> SupBrandLayoutConfigs { get; set; }
+
+    public virtual DbSet<SupBrandProductTypeFilter> SupBrandProductTypeFilters { get; set; }
 
     public virtual DbSet<SupLogistic> SupLogistics { get; set; }
 
@@ -738,6 +742,47 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("分類名稱");
         });
 
+        modelBuilder.Entity<CntProductTag>(entity =>
+        {
+            entity.HasKey(e => e.ProductTagId).HasName("PK__CNT_Prod__88A7F34A9D85D0A1");
+
+            entity.ToTable("CNT_ProductTag", tb => tb.HasComment("商品與標籤關聯表"));
+
+            entity.HasIndex(e => e.ProductId, "IX_CNT_ProductTag_ProductId");
+
+            entity.HasIndex(e => new { e.ProductId, e.IsPrimary, e.DisplayOrder, e.TagId }, "IX_CNT_ProductTag_ProductVisible").HasFilter("([IsVisible]=(1) AND [IsDeleted]=(0))");
+
+            entity.HasIndex(e => e.TagId, "IX_CNT_ProductTag_TagId");
+
+            entity.HasIndex(e => new { e.TagId, e.IsPrimary, e.DisplayOrder, e.ProductId }, "IX_CNT_ProductTag_TagPage").HasFilter("([IsVisible]=(1) AND [IsDeleted]=(0))");
+
+            entity.HasIndex(e => new { e.ProductId, e.TagId }, "UQ_CNT_ProductTag_Product_Tag").IsUnique();
+
+            entity.Property(e => e.ProductTagId).HasComment("關聯記錄ID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.DisplayOrder).HasComment("顯示順序");
+            entity.Property(e => e.IsDeleted).HasComment("軟刪除旗標");
+            entity.Property(e => e.IsPrimary).HasComment("是否主要標籤");
+            entity.Property(e => e.IsVisible)
+                .HasDefaultValue(true)
+                .HasComment("是否前台顯示");
+            entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+            entity.Property(e => e.TagId).HasComment("標籤ID");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.CntProductTags)
+                .HasForeignKey(d => d.ProductId)
+                .HasConstraintName("FK_CNT_ProductTag_Product");
+
+            entity.HasOne(d => d.Tag).WithMany(p => p.CntProductTags)
+                .HasForeignKey(d => d.TagId)
+                .HasConstraintName("FK_CNT_ProductTag_Tag");
+        });
+
         modelBuilder.Entity<CntPurchase>(entity =>
         {
             entity.HasKey(e => e.PurchaseId).HasName("PK__CNT_Purc__6B0A6BBED3721F64");
@@ -1148,6 +1193,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建檔時間");
+            entity.Property(e => e.ImgId).HasComment("圖片 ID");
             entity.Property(e => e.Priority)
                 .HasDefaultValue(2)
                 .HasComment("優先序，數字越小越急");
@@ -1162,6 +1208,10 @@ public partial class tHerdDBContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.CsTickets)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK_Ticket_CategoryId");
+
+            entity.HasOne(d => d.Img).WithMany(p => p.CsTickets)
+                .HasForeignKey(d => d.ImgId)
+                .HasConstraintName("FK_CS_Ticket_Img");
         });
 
         modelBuilder.Entity<CsTicketHistory>(entity =>
@@ -2547,12 +2597,20 @@ public partial class tHerdDBContext : DbContext
 
             entity.Property(e => e.ProductId).HasComment("商品ID（外鍵）");
             entity.Property(e => e.IngredientId).HasComment("成分ID（外鍵）");
+            entity.Property(e => e.IngredientType)
+                .HasDefaultValue((byte)1)
+                .HasComment("成分類型：1=主成分、2=其他成分、3=過敏原、4=製程附註");
             entity.Property(e => e.Note)
                 .HasMaxLength(300)
                 .HasComment("劑量、產地或其他備註");
+            entity.Property(e => e.OrderSeq).HasComment("顯示順序");
             entity.Property(e => e.Percentage)
                 .HasComment("百分比或含量（單位可於前台說明）")
                 .HasColumnType("decimal(6, 3)");
+            entity.Property(e => e.PercentageText)
+                .HasMaxLength(100)
+                .HasDefaultValueSql("(NULL)")
+                .HasComment("原始百分比或文字（如 \"50%\", \"含少許\" 等）");
 
             entity.HasOne(d => d.Ingredient).WithMany(p => p.ProdProductIngredients)
                 .HasForeignKey(d => d.IngredientId)
@@ -3078,6 +3136,46 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.BrandId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_SUP_BrandLayoutConfig_BrandId");
+        });
+
+        modelBuilder.Entity<SupBrandProductTypeFilter>(entity =>
+        {
+            entity.HasKey(e => e.BrandProductTypeFilterId).HasName("PK__SUP_Bran__14140078F3F9C784");
+
+            entity.ToTable("SUP_BrandProductTypeFilter", tb => tb.HasComment("品牌與商品分類關聯表，用於設定品牌專頁篩選按鈕顯示內容"));
+
+            entity.HasIndex(e => e.BrandId, "IX_SUP_BrandProductTypeFilter_BrandId");
+
+            entity.HasIndex(e => e.ProductTypeId, "IX_SUP_BrandProductTypeFilter_ProductTypeId");
+
+            entity.HasIndex(e => new { e.BrandId, e.ProductTypeId }, "UQ_SUP_BrandProductTypeFilter_Brand_ProductType").IsUnique();
+
+            entity.Property(e => e.BrandProductTypeFilterId).HasComment("關聯記錄ID");
+            entity.Property(e => e.BrandId).HasComment("品牌ID (FK)");
+            entity.Property(e => e.ButtonOrder).HasComment("按鈕顯示順序（數字越小越前面）");
+            entity.Property(e => e.ButtonText)
+                .IsRequired()
+                .HasComment("按鈕顯示文字（如運動補充劑）");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建檔人員");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasComment("是否啟用（1=啟用, 0=停用）");
+            entity.Property(e => e.ProductTypeId).HasComment("商品分類ID (FK)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
+            entity.Property(e => e.Reviser).HasComment("異動人員");
+
+            entity.HasOne(d => d.Brand).WithMany(p => p.SupBrandProductTypeFilters)
+                .HasForeignKey(d => d.BrandId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandProductTypeFilter_Brand");
+
+            entity.HasOne(d => d.ProductType).WithMany(p => p.SupBrandProductTypeFilters)
+                .HasForeignKey(d => d.ProductTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SUP_BrandProductTypeFilter_ProductType");
         });
 
         modelBuilder.Entity<SupLogistic>(entity =>

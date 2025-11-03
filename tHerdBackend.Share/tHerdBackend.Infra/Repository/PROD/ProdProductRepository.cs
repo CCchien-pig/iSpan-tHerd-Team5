@@ -70,11 +70,99 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
+        /// <summary>
+        /// 前台: 查詢商品清單 (增加效率)
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(
+            ProductFilterQueryDto query, CancellationToken ct = default)
+        {
+
+            // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
+            var sql = new StringBuilder(@"
+                SELECT 
+                    p.ProductId, p.ProductName, 
+                    p.BrandId, s.BrandName, 
+                    p.SeoId, p.Badge, 
+                    p.MainSkuId, 
+                    af.FileUrl AS ImageUrl,
+                    ps.ListPrice, ps.UnitPrice, ps.SalePrice
+                FROM PROD_Product p
+                JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
+                LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId = p.SeoId AND sma.IsPrimary = 1
+                LEFT JOIN SYS_AssetFile af ON af.FileId = sma.FileId
+                WHERE 1 = 1
+            ");
+
+            // === Step 2. 條件過濾 ===
+            ProductQueryBuilder.AppendFilters(sql, query);
+
+            // === Step 3. 排序 ===
+            sql.Append(ProductQueryBuilder.BuildOrderClause(query));
+            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
+
+            // === Step 4. 統計筆數 ===
+            var countSql = new StringBuilder(@"
+                SELECT COUNT(DISTINCT p.ProductId)
+                  FROM PROD_Product p
+                  JOIN SUP_Brand s ON s.BrandId=p.BrandId
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
+                  LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
+                  LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
+                 WHERE 1 = 1 ");
+
+            ProductQueryBuilder.AppendFilters(countSql, query);
+
+            // === Step 5. 查詢執行 ===
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                // 查詢參數
+                var parameters = new
+                {
+                    Skip = (query.PageIndex - 1) * query.PageSize,
+                    Take = query.PageSize,
+                    query.ProductId,
+                    query.Keyword,
+                    query.BrandId,
+                    query.ProductTypeId,
+                    query.MinPrice,
+                    query.MaxPrice,
+                    query.IsPublished
+                };
+
+                // 查詢
+                using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+
+                var list = await multi.ReadAsync<ProdProductSearchDto>();
+                var total = await multi.ReadSingleAsync<int>();
+
+                return (list, total);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
+                return (Enumerable.Empty<ProdProductSearchDto>(), 0);
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+
+        /// <summary>
+        /// 查詢商品清單
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
         public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
             ProductFilterQueryDto query, CancellationToken ct = default)
         {
-            //int skip = (query.PageIndex - 1) * query.PageSize;
-            //int take = query.PageSize;
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
@@ -101,14 +189,14 @@ namespace tHerdBackend.Infra.Repository.PROD
                   ) sp ON sp.ProductId = p.ProductId
                   LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
                   LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
-                 WHERE p.IsPublished=1 ");
+                 WHERE 1 = 1 ");
 
             // === Step 2. 條件過濾 ===
             ProductQueryBuilder.AppendFilters(sql, query);
 
-            // === Step 3. 排序 + 分頁 ===
+            // === Step 3. 排序 ===
             sql.Append(ProductQueryBuilder.BuildOrderClause(query));
-            sql.Append(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
+            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
 
             // === Step 4. 統計筆數 ===
             var countSql = new StringBuilder(@"
@@ -126,7 +214,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                        WHERE IsActive = 1
                        GROUP BY ProductId
                   ) sp ON sp.ProductId = p.ProductId
-                 WHERE p.IsPublished=1");
+                 WHERE 1=1 ");
 
             ProductQueryBuilder.AppendFilters(countSql, query);
 
@@ -137,41 +225,55 @@ namespace tHerdBackend.Infra.Repository.PROD
                 // 查詢參數
                 var parameters = new { 
                     Skip = (query.PageIndex - 1) * query.PageSize, 
-                    Take = query.PageSize, 
-                    query.Keyword, 
+                    Take = query.PageSize,
+					query.ProductId,
+					query.Keyword, 
                     query.BrandId, 
                     query.ProductTypeId, 
                     query.MinPrice, 
-                    query.MaxPrice };
+                    query.MaxPrice,
+                    query.IsPublished
+                };
 
-                var raw = await conn.QueryAsync<ProdProductDto, string, ProdProductDto>(
-                        sql.ToString(), 
-                        (p, typeName) => { 
-                            if (!string.IsNullOrEmpty(typeName)) p.ProductTypeDesc = new() { typeName }; return p; 
-                        }, 
-                        parameters, 
-                        tx, 
-                        splitOn: "ProductTypeName"
-                    );
+                // 查詢
+                var multiSql = $"{sql}; {countSql};";
+                using var multi = await conn.QueryMultipleAsync(multiSql, parameters, tx);
 
+                // 讀清單
+                var raw = await multi.ReadAsync<ProdProductDto>();
+
+                // 讀總數
+                var total = await multi.ReadSingleAsync<int>();
+
+
+                // 整理類別名稱集合
                 var list = raw.GroupBy(p => p.ProductId).Select(g =>
                 {
                     var first = g.First();
-                    first.ProductTypeDesc = g.SelectMany(x => x.ProductTypeDesc ?? new()).Distinct().ToList();
+                    first.ProductTypeDesc = g
+                        .Select(x => x.ProductTypeName ?? string.Empty)
+                        .Where(n => !string.IsNullOrEmpty(n))
+                        .Distinct()
+                        .ToList();
                     return first;
                 }).ToList();
 
-                // === Step 6. 計算總筆數 ===
-                var total = await conn.ExecuteScalarAsync<int>(countSql.ToString(), parameters, tx);
-
                 // === Step 7. 補 Creator / Reviser 名稱 ===
-                var resolver = new UserNameResolver(_factory, _db);
-                await resolver.LoadAsync(ct);
-                resolver.Apply(list);
+                if (query.IsFrontEnd != true)  // 自訂 flag，前台不載入
+                {
+                    var resolver = new UserNameResolver(_factory, _db);
+                    await resolver.LoadAsync(ct);
+                    resolver.Apply(list);
+                }
 
                 return (list, total);
             }
-            finally
+			catch (Exception ex)
+			{
+                Console.WriteLine("❌ [GetAllAsync] " + ex);
+                return (Enumerable.Empty<ProdProductDto>(), 0);
+            }
+			finally
             {
                 if (needDispose) conn.Dispose();
             }
@@ -354,6 +456,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                 // === 共用處理 ===
                 await UpsertRelationsAsync(conn, tran, dto);
 
+                await UpsertImagesAsync(conn, tran, dto);
+
                 tran.Commit();
                 return true;
             }
@@ -361,6 +465,66 @@ namespace tHerdBackend.Infra.Repository.PROD
             {
                 tran.Rollback();
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// 圖片處理
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="tran"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        private async Task UpsertImagesAsync(IDbConnection conn, IDbTransaction tran, ProdProductDetailDto dto)
+        {
+            var images = dto.Images.Select(i => i.ImgId).ToList();
+
+            // === Step 1: 刪除舊的圖片關聯 ===
+            await conn.ExecuteAsync(
+                "DELETE FROM PROD_ProductImage WHERE ProductId = @ProductId AND ImgId NOT IN @ImgIds;",
+                new { dto.ProductId, ImgIds = images }, tran);
+
+            foreach (var img in dto.Images ?? new())
+            {
+                // 判斷是否存過
+                var isSaved = await conn.ExecuteScalarAsync<bool>(
+                    "SELECT COUNT(1) FROM PROD_ProductImage WHERE ProductId = @ProductId AND ImgId = @ImgId;",
+                new { dto.ProductId, img.ImgId }, tran);
+                // === 需要新建 圖片 ===
+                if (isSaved == false)
+                {
+
+                    await conn.ExecuteScalarAsync<int>(
+                        @" INSERT INTO PROD_ProductImage
+                           (ProductId, SkuId, ImgId, IsMain, OrderSeq)
+                          VALUES
+                          (@ProductId, @SkuId, @ImgId, @IsMain, @OrderSeq); ",
+                        new
+                        {
+                            dto.ProductId,
+                            img.SkuId,
+                            img.ImgId,
+                            img.IsMain,
+                            img.OrderSeq
+                        }, tran);
+                }
+                else
+                {
+                    // === 更新圖片關聯資料 ===
+                    await conn.ExecuteAsync(
+                        @" UPDATE PROD_ProductImage
+                           SET SkuId   = @SkuId,
+                               IsMain  = @IsMain,
+                               OrderSeq= @OrderSeq
+                         WHERE ImageId = @ImageId; ",
+                        new
+                        {
+                            img.SkuId,
+                            img.IsMain,
+                            img.OrderSeq,
+                            img.ImageId
+                        }, tran);
+                }
             }
         }
 

@@ -1,247 +1,235 @@
-﻿<!-- ✅ SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+﻿@model tHerdBackend.Infra.Models.MktAd
 
-<div class="modal fade" id="adModal" tabindex="-1" aria-hidden="true">
+<!-- ✅ Edit Ad Modal -->
+<div class="modal fade" id="editAdModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="adForm" enctype="multipart/form-data" novalidate>
-                <input type="hidden" name="AdId" value="@Model.AdId" />
-                <input type="hidden" name="Status" value="aActive" />
+            <div class="modal-header bg-teal text-white">
+                <h5 class="modal-title">編輯廣告</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-                <div class="modal-header">
-                    <h5 class="modal-title">編輯廣告</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+            <div class="modal-body">
+                <form id="editAdForm">
+                    @Html.AntiForgeryToken()
 
-                <div class="modal-body">
-                    <!-- 🟢 廣告種類 -->
+                    <input type="hidden" name="AdId" value="@Model.AdId" />
+                    <input type="hidden" name="ImgId" value="@Model.ImgId" />
+
+                    <!-- 廣告種類（不可修改） -->
                     <div class="mb-3">
-                        <label class="form-label">廣告種類</label>
-                        <select name="AdType" class="form-select" id="adTypeSelect">
-                            <option value="Carousel" @(Model.AdType == "Carousel" ? "selected" : "")>輪播圖</option>
-                            <option value="Popup" @(Model.AdType == "Popup" ? "selected" : "")>彈出式廣告</option>
-                            <option value="Marquee" @(Model.AdType == "Marquee" ? "selected" : "")>跑馬燈</option>
-                        </select>
+                        <label class="form-label fw-bold">廣告種類</label>
+                        <input type="text" class="form-control" value="@Model.AdType" readonly disabled />
+                        <input type="hidden" name="AdType" value="@Model.AdType" />
                     </div>
 
-                    <!-- 📝 標題 -->
+                    <!-- 標題 -->
                     <div class="mb-3">
-                        <label class="form-label">標題</label>
-                        <input type="text" name="Title" value="@Model.Title" class="form-control" />
+                        <label class="form-label fw-bold">標題</label>
+                        <input type="text" class="form-control" name="Title" value="@Model.Title" required />
                     </div>
 
-                    <!-- 📝 內容 -->
-                    <div class="mb-3" id="contentField">
-                        <label class="form-label">內容</label>
-                        <textarea name="Content" class="form-control">@Model.Content</textarea>
+                    <!-- 內容 -->
+                    <div class="mb-3" id="editContentField">
+                        <label class="form-label fw-bold">內容</label>
+                        <textarea class="form-control" name="Content" rows="3">@Model.Content</textarea>
                     </div>
 
-                    <!-- 🖼 圖片 -->
-                    <div class="mb-3" id="imageField">
-                        <label class="form-label">廣告圖片</label>
-                        <!-- ⚠️ 關鍵修改：name 改為 imageFile -->
-                        <input type="file" name="imageFile" class="form-control" id="imageInput" accept="image/*" />
-                        <div class="mt-2">
-                            <img id="imagePreview"
-                                 src="@(!string.IsNullOrEmpty(Model.ImgPath) ? Model.ImgPath : "")"
-                                 class="img-fluid border rounded @(string.IsNullOrEmpty(Model.ImgPath) ? "d-none" : "")"
-                                 style="max-height: 200px;" />
-                        </div>
-                    </div>
-
-                    <!-- ⏰ 日期 -->
+                    <!-- 日期 -->
                     <div class="mb-3">
-                        <label class="form-label">開始日期</label>
-                        <input type="date" name="StartDate" id="StartDate"
-                               value="@Model.StartDate.ToString("yyyy-MM-dd")"
-                               class="form-control" />
+                        <label class="form-label fw-bold">開始日期</label>
+                        <input type="date" class="form-control" name="StartDate"
+                               value="@Model.StartDate.ToString("yyyy-MM-dd")" required />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">結束日期</label>
-                        <input type="date" name="EndDate" id="EndDate"
-                               value="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
-                               class="form-control" />
+                        <label class="form-label fw-bold">結束日期</label>
+                        <input type="date" class="form-control" name="EndDate"
+                               value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
                     </div>
 
-                    <!-- ✅ 是否啟用 -->
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="IsActive" value="true" @(Model.IsActive ? "checked" : "") />
-                        <label class="form-check-label">啟用</label>
+                    <!-- 按鈕 -->
+                    <div class="mb-3" id="editButtonTextField">
+                        <label class="form-label fw-bold">按鈕文字</label>
+                        <input type="text" class="form-control" name="ButtonText" value="@Model.ButtonText" />
                     </div>
 
-                    <!-- 👩 建檔人員 -->
-                    <div class="mb-3">
-                        <label class="form-label">建檔人員</label>
-                        <input type="text" name="Creator" value="@Model.Creator" class="form-control" />
+                    <div class="mb-3" id="editButtonLinkField">
+                        <label class="form-label fw-bold">按鈕連結</label>
+                        <input type="text" class="form-control" name="ButtonLink" value="@Model.ButtonLink" />
                     </div>
 
-                    <!-- 🆕 按鈕 -->
-                    <div class="mb-3" id="buttonTextField">
-                        <label class="form-label">按鈕文字</label>
-                        <input type="text" name="ButtonText" value="@Model.ButtonText" class="form-control" />
+                    <!-- 圖片 -->
+                    <div class="mb-3" id="editImageField">
+                        <label class="form-label fw-bold">廣告圖片</label>
+                        <input type="file" id="editImageUpload" accept="image/*" class="form-control form-control-sm" />
+                        <button type="button" id="btnEditUpload" class="btn btn-outline-success mt-2">重新上傳</button>
+                        <img id="editPreview"
+                             class="img-fluid mt-2 border rounded @(Model.Img == null ? "d-none" : "")"
+                             src="@(Model.Img?.FileUrl ?? "")"
+                             style="max-height:200px;" />
                     </div>
 
-                    <div class="mb-3" id="buttonLinkField">
-                        <label class="form-label">按鈕連結</label>
-                        <input type="text" name="ButtonLink" value="@Model.ButtonLink" class="form-control" />
+                    <!-- ✅ 儲存 + 刪除按鈕 -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" id="btnDeleteAd" class="btn btn-outline-danger">
+                            <i class="bi bi-trash"></i> 刪除廣告
+                        </button>
+                        <button type="submit" class="btn btn-teal">儲存修改</button>
                     </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">儲存</button>
-                    <button type="button" id="btnDeleteAd" class="btn btn-danger">刪除</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">返回</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-
 <script>
-    $(document).ready(function () {
-      const today = new Date().toISOString().split('T')[0];
-      $('#StartDate').attr('min', today);
-      $('#EndDate').attr('min', today);
-
-      // 🖼 圖片預覽
-      $('#imageInput').on('change', function (e) {
-        const file = e.target.files[0];
-        const preview = $('#imagePreview');
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = ev => preview.attr('src', ev.target.result).removeClass('d-none');
-          reader.readAsDataURL(file);
-        } else {
-          preview.addClass('d-none').attr('src', '');
-        }
-      });
-
-      // 🧭 廣告種類控制
-      function updateAdFields() {
-        const type = $('#adTypeSelect').val();
-        $('#adForm input, #adForm textarea, #adForm select')
-          .prop('disabled', false)
-          .css({ 'pointer-events': 'auto', 'opacity': '1' });
-
-        $('#Status').val('aActive');
-        $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
+    // === 顯示對應欄位 ===
+    function updateEditAdFields(type) {
+        $('#editContentField, #editButtonTextField, #editButtonLinkField, #editImageField').show();
 
         if (type === 'Popup') {
-          disableExcept(['AdId', 'Title', 'imageFile', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
-          $('#contentField, #buttonTextField, #buttonLinkField').hide();
-          setDefaultValues({ Content: '', ButtonText: '了解更多', ButtonLink: '/shop' });
+            $('#editContentField, #editButtonTextField, #editButtonLinkField').hide();
+        } else if (type === 'Marquee') {
+            $('#editImageField, #editButtonTextField, #editButtonLinkField').hide();
         }
+    }
 
-        if (type === 'Marquee') {
-          disableExcept(['AdId', 'Title', 'Content', 'StartDate', 'EndDate', 'IsActive', 'Creator', 'AdType']);
-          $('#imageField, #buttonTextField, #buttonLinkField').hide();
-          setDefaultValues({ imageFile: '', ButtonText: '', ButtonLink: '' });
-        }
+    // === 頁面載入時根據 AdType 顯示正確欄位 ===
+    $(document).ready(function () {
+        const type = '@Model.AdType';
+        updateEditAdFields(type);
+    });
 
-        if (type === 'Carousel') {
-          $('#contentField, #imageField, #buttonTextField, #buttonLinkField').show();
-          $('#adForm input, #adForm textarea').prop('disabled', false).css({ 'opacity': '1' });
-        }
-      }
+    // === ☁️ 圖片上傳 ===
+    $('#btnEditUpload').on('click', async () => {
+        const fileInput = $('#editImageUpload')[0];
+        if (!fileInput.files.length)
+            return Swal.fire('請選擇圖片！');
 
-      function disableExcept(enabledNames) {
-        $('#adForm input, #adForm textarea, #adForm select').each(function () {
-          const name = $(this).attr('name');
-          if (!enabledNames.includes(name) && name !== 'Status' && name !== 'AdId') {
-            $(this).prop('disabled', true).css({ 'pointer-events': 'none', 'opacity': '0.6' });
-          }
-        });
-      }
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
 
-      function setDefaultValues(values) {
-        for (const key in values) {
-          $(`[name="${key}"]`).val(values[key]);
-        }
-      }
+        Swal.fire({ title: '上傳中...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
 
-      $('#adTypeSelect').on('change', updateAdFields);
-      updateAdFields();
+        try {
+            const res = await fetch('/MKT/Ads/UploadToCloud', { method: 'POST', body: formData });
+            const result = await res.json();
+            Swal.close();
 
-      // 🗓 日期檢查
-      $('#StartDate, #EndDate').on('change', function () {
-        const start = $('#StartDate').val();
-        const end = $('#EndDate').val();
-        if (start && end && end < start) {
-          Swal.fire({
-            icon: 'warning',
-            title: '日期錯誤',
-            text: '結束日期不能早於開始日期！',
-            confirmButtonColor: '#007083'
-          });
-          $('#EndDate').val('');
-        }
-      });
-
-      // 🧾 表單送出
-      $('#adForm').on('submit', function (e) {
-        e.preventDefault();
-
-        const adId = $('[name="AdId"]').val();
-        const title = $('[name="Title"]').val();
-        const start = $('#StartDate').val();
-
-        if (!title || !start) {
-          Swal.fire({
-            icon: 'warning',
-            title: '缺少必填欄位',
-            text: '請確認標題與日期已填寫！',
-            confirmButtonColor: '#007083'
-          });
-          return;
-        }
-
-        const formData = new FormData(this);
-
-        $.ajax({
-          url: '/MKT/Ads/Edit',
-          type: 'POST',
-          data: formData,
-          processData: false,
-          contentType: false,
-          success: function (res) {
-            if (res.success) {
-              Swal.fire({
-                icon: 'success',
-                title: '修改成功',
-                showConfirmButton: false,
-                timer: 1200
-              });
-              setTimeout(() => {
-                $('#adModal').modal('hide');
-              }, 1200);
+            if (result.success) {
+                $('input[name="ImgId"]').val(result.fileId);
+                $('#editPreview').attr('src', result.fileUrl).removeClass('d-none');
+                Swal.fire({ icon: 'success', title: '上傳成功', timer: 1000, showConfirmButton: false });
             } else {
-              Swal.fire({
-                icon: 'error',
-                title: '更新失敗',
-                text: res.message || '請稍後再試。',
-                confirmButtonColor: '#007083'
-              });
+                Swal.fire({ icon: 'error', title: '上傳失敗', text: result.message || '未知錯誤' });
             }
-          },
-          error: function () {
+        } catch (err) {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: '伺服器錯誤', text: err.message });
+        }
+    });
+
+    // === 💾 儲存修改 ===
+    $('#editAdForm').on('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+
+        const startDateStr = $('input[name="StartDate"]').val();
+        const endDateStr = $('input[name="EndDate"]').val();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 🧩 開始日期驗證
+        if (!startDateStr) {
+            Swal.fire('警告', '請輸入開始日期！', 'warning');
+            return;
+        }
+
+        const startDate = new Date(startDateStr);
+        const endDate = endDateStr ? new Date(endDateStr) : null;
+
+        if (startDate < today) {
             Swal.fire({
-              icon: 'error',
-              title: '伺服器錯誤',
-              text: '請稍後再試。',
-              confirmButtonColor: '#007083'
+                icon: 'warning',
+                title: '開始日期無效',
+                text: '開始日期不得早於今天！'
             });
-          }
+            return;
+        }
+
+        // 🧩 結束日期驗證
+        if (endDate && endDate < startDate) {
+            Swal.fire({
+                icon: 'warning',
+                title: '結束日期無效',
+                text: '結束日期不可早於開始日期！'
+            });
+            return;
+        }
+
+        if (!endDate) formData.delete('EndDate');
+
+        try {
+            const res = await fetch('/MKT/Ads/Edit', { method: 'POST', body: formData });
+            const result = await res.json();
+
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: '更新成功', timer: 1200, showConfirmButton: false });
+                $('#editAdModal').modal('hide');
+                if (window.calendar && typeof window.calendar.refetchEvents === 'function') {
+                    window.calendar.refetchEvents();
+                }
+                if (typeof updateAdCount === 'function') {
+                    updateAdCount();
+                }
+            } else {
+                Swal.fire('錯誤', result.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('伺服器錯誤', err.message, 'error');
+        }
+    });
+
+    // === 🗑️ 刪除廣告 ===
+    $('#btnDeleteAd').on('click', async () => {
+        const adId = $('input[name="AdId"]').val();
+        if (!adId) return;
+
+        const confirm = await Swal.fire({
+            icon: 'warning',
+            title: '確定永久刪除此廣告？',
+            text: '此操作將永久刪除資料，無法復原！',
+            showCancelButton: true,
+            confirmButtonText: '是，永久刪除',
+            cancelButtonText: '取消',
+            confirmButtonColor: '#d33'
         });
-      });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            const res = await fetch(`/MKT/Ads/Delete/${adId}`, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token }
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: '已永久刪除', timer: 1200, showConfirmButton: false });
+                $('#editAdModal').modal('hide');
+                if (window.calendar && typeof window.calendar.refetchEvents === 'function') {
+                    window.calendar.refetchEvents();
+                }
+                if (typeof updateAdCount === 'function') {
+                    updateAdCount();
+                }
+            } else {
+                Swal.fire('錯誤', result.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('伺服器錯誤', err.message, 'error');
+        }
     });
 </script>
-
-<style>
-    input:disabled, textarea:disabled {
-        background-color: #f5f5f5 !important;
-        color: #999 !important;
-        cursor: not-allowed;
-    }
-</style>
