@@ -28,11 +28,11 @@
 
     <!-- 獎勵和節省 -->
     <div class="category">
-      <div class="category-title"><span class="b">獎勵和節省</span></div>
+      <div class="category-title"><span class="b">獎勵</span></div>
       <ul class="category-links">
-        <li><router-link class="overview" :to="safeTo('rewards')">我的獎勵金</router-link></li>
-        <li><router-link class="storecredits" :to="safeTo('credits')">帳戶餘額</router-link></li>
-        <li><router-link class="salesoffers" :to="safeTo('promotions')">優惠促銷</router-link></li>
+        <li><router-link class="overview" :to="safeTo('rewards')">我的優惠券</router-link></li>
+        <!-- <li><router-link class="storecredits" :to="safeTo('credits')">帳戶餘額</router-link></li> -->
+        <!-- <li><router-link class="salesoffers" :to="safeTo('promotions')">優惠促銷</router-link></li> -->
       </ul>
     </div>
 

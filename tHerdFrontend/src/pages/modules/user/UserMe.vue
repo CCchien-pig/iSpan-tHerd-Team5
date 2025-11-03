@@ -50,21 +50,21 @@
           <div class="referral-card__header">
             <div class="title">會員等級</div>
             <div class="desc">
-              <span class="rank-name">{{ memberRank?.RankName || '—' }}</span>
-              <span v-if="memberRank" class="rebate">（回饋 {{ memberRank.RebateRate }}%）</span>
+              <span class="rank-name">{{ memberRank?.rankName || '—' }}</span>
+              <span v-if="memberRank" class="rebate">（回饋 {{ memberRank.rebateRate }}%）</span>
             </div>
           </div>
 
           <div class="referral-card__body">
             <div class="code-box">
               <div class="label">已使用的推薦碼</div>
-              <div class="code">{{ profile?.UsedReferralCode || '—' }}</div>
+              <div class="code">{{ profile?.usedReferralCode || '—' }}</div>
             </div>
 
             <div class="claim">
               <el-button
                 type="primary"
-                :disabled="!profile?.UsedReferralCode || claiming"
+                :disabled="!profile?.usedReferralCode || claiming"
                 :loading="claiming"
                 @click="claimReferralCoupon"
               >
@@ -75,7 +75,7 @@
           </div>
         </el-card>
 
-        <!-- 功能磚（尚未建路由 → 僅視覺可點、彈提示，不跳轉） -->
+        <!-- 功能磚 -->
         <div class="feature-grid">
           <el-card class="feature" shadow="hover" @click="todoFeature('訂單')">
             <div class="title">訂單</div>
@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
@@ -138,7 +138,7 @@ const claiming = ref(false)
 const avatarUrl = ref(null)
 
 const joinedAtText = computed(() => {
-  const dt = profile.value && profile.value.CreatedDate
+  const dt = profile.value && profile.value.createdDate
   if (!dt) return '—'
   try {
     const d = new Date(dt)
@@ -150,49 +150,86 @@ const joinedAtText = computed(() => {
   }
 })
 
-onMounted(async () => {
-  if (!me.value) return
-  await loadProfile()
-  await loadMemberRank()
-})
+watch(
+  () => me.value,
+  async (v) => {
+    if (!v) {
+      profile.value = null
+      memberRank.value = null
+      return
+    }
+    await loadProfile()
+    await loadMemberRank()
+  },
+  { immediate: true }
+)
 
 async function loadProfile() {
   try {
-    // 建議：GET /api/user/me/detail 回傳 AspNetUsers 主要欄位
+    // 後端可能回 PascalCase，這裡做最小映射 → camelCase
     const { data } = await http.get('/user/me/detail')
-    profile.value = {
+
+    const patched = {
+      // 從 me 帶入既有 camelCase
       id: me.value.id,
       email: me.value.email,
       name: me.value.name,
       userNumberId: me.value.userNumberId,
       roles: me.value.roles || [],
-      ...data
+      // 從 API 轉成 camelCase（最小必要欄位）
+      createdDate: data.CreatedDate ?? data.createdDate,
+      memberRankId: data.MemberRankId ?? data.memberRankId,
+      usedReferralCode: data.UsedReferralCode ?? data.usedReferralCode,
+      // 如還有其他欄位要用，再逐一加對應即可
+      phoneNumber: data.PhoneNumber ?? data.phoneNumber,
+      twoFactorEnabled: data.TwoFactorEnabled ?? data.twoFactorEnabled,
+      imgId: data.ImgId ?? data.imgId,
+      gender: data.Gender ?? data.gender,
+      address: data.Address ?? data.address,
+      lastLoginDate: data.LastLoginDate ?? data.lastLoginDate,
+      emailConfirmed: data.EmailConfirmed ?? data.emailConfirmed,
+      isActive: data.IsActive ?? data.isActive
     }
-  } catch {
-    // 沒有此 API 時，先用登入基本資訊
+
+    profile.value = patched
+    console.debug('[UserMe] profile', profile.value)
+  } catch (e) {
     profile.value = me.value
+    console.error('[UserMe] profile FAIL', e?.response?.status, e?.response?.data || e)
   }
 }
 
 async function loadMemberRank() {
   try {
-    const rankId = profile.value && profile.value.MemberRankId
+    const rankId = profile.value?.memberRankId ?? me.value?.memberRankId
     if (!rankId) return
+
     const { data } = await http.get(`/user/member-ranks/${encodeURIComponent(rankId)}`)
-    memberRank.value = data
-  } catch {
+
+    // 後端 MemberRankDto 也可能是 PascalCase → 映射成 camelCase
+    memberRank.value = {
+      memberRankId: data.MemberRankId ?? data.memberRankId,
+      rankName: data.RankName ?? data.rankName,
+      totalSpentForUpgrade: data.TotalSpentForUpgrade ?? data.totalSpentForUpgrade,
+      orderCountForUpgrade: data.OrderCountForUpgrade ?? data.orderCountForUpgrade,
+      rebateRate: data.RebateRate ?? data.rebateRate,
+      rankDescription: data.RankDescription ?? data.rankDescription,
+      isActive: data.IsActive ?? data.isActive
+    }
+  } catch (e) {
     memberRank.value = null
+    console.warn('[UserMe] memberRank FAIL', e?.response?.status, e?.response?.data || e)
   }
 }
 
 async function claimReferralCoupon() {
-  if (!profile.value || !profile.value.UsedReferralCode) return
+  if (!profile.value || !profile.value.usedReferralCode) return
   claiming.value = true
   try {
-    await http.post('/mkt/referral/claim', { code: profile.value.UsedReferralCode })
-    ElMessage.success('已成功領取推薦碼優惠券！')
+    const { data } = await http.post('/mkt/referral/claim', { code: profile.value.usedReferralCode })
+    ElMessage.success(`已領取推薦優惠券（#${data.couponId} / ${data.couponName}），可至錢包/結帳使用`)
   } catch (err) {
-    const msg = err && err.response && err.response.data && err.response.data.error
+    const msg = err?.response?.data?.error || err?.response?.data?.message
     ElMessage.error(msg || '領取失敗，請稍後再試')
   } finally {
     claiming.value = false
@@ -201,7 +238,7 @@ async function claimReferralCoupon() {
 
 // 功能磚暫不導路由：僅提示
 function todoFeature(label) {
-  ElMessage && ElMessage.info && ElMessage.info(`「${label}」尚未開通`)
+  ElMessage?.info?.(`「${label}」尚未開通`)
 }
 
 function goHome() {
@@ -258,4 +295,3 @@ async function doLogout() {
   .content { order:1; }
 }
 </style>
-

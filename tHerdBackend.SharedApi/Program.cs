@@ -275,7 +275,10 @@ namespace tHerdBackend.SharedApi
             {
                 // ➜ 設定 JSON 序列化規則，例如忽略屬性大小寫
                 o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-            });
+				//確認轉換成的 JSON 屬性名稱和 DTO 類別的屬性名稱完全相同（大小寫皆相同）:PascalCase
+				//o.JsonSerializerOptions.PropertyNamingPolicy = null;        // ★ 這行很關鍵
+				//o.JsonSerializerOptions.DictionaryKeyPolicy = null;         // ★ 建議一起設
+			});
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
