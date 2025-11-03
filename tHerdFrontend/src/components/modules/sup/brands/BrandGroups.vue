@@ -20,27 +20,28 @@
           <li v-for="b in g.brands" :key="b.brandId" class="brand-row">
             <button
               class="fav-btn"
-              :aria-pressed="favorites.has(b.brandId)"
-              @click="toggleFav(b)"
+              :aria-pressed="isFav(b.brandId)"
               @click.stop="toggleFav(b)"
-              :title="favorites.has(b.brandId) ? '已收藏' : '加入收藏'"
+              :title="isFav(b.brandId) ? '已收藏' : '加入收藏'"
             >
-              <span v-if="favorites.has(b.brandId)"
-                ><!-- 實心（收藏狀態） -->
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path
-                    fill="currentColor"
-                    d="M12.1 21.55 12 21.65l-.1-.1C7.14 17.24 4 14.39 4 11.5 4 9.5 5.5 8 7.5 8c1.54 0 3.04.99 3.57 2.36h1.87C13.46 8.99 14.96 8 16.5 8 18.5 8 20 9.5 20 11.5c0 2.89-3.14 5.74-7.9 10.05Z"
-                  /></svg
-              ></span>
-              <span v-else
-                ><!-- 空心 -->
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path
-                    fill="currentColor"
-                    d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5 18.5 5 20 6.5 20 8.5c0 2.89-3.14 5.74-7.9 10.05Z"
-                  /></svg
-              ></span>
+              <svg
+                v-if="isFav(b.brandId)"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                <path
+                  fill="currentColor"
+                  d="M12.1 21.55 12 21.65l-.1-.1C7.14 17.24 4 14.39 4 11.5 4 9.5 5.5 8 7.5 8c1.54 0 3.04.99 3.57 2.36h1.87C13.46 8.99 14.96 8 16.5 8 18.5 8 20 9.5 20 11.5c0 2.89-3.14 5.74-7.9 10.05Z"
+                />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5 18.5 5 20 6.5 20 8.5c0 2.89-3.14 5.74-7.9 10.05Z"
+                />
+              </svg>
             </button>
             <router-link :to="brandTo(b)" class="brand-text-link">{{ b.brandName }}</router-link>
           </li>
@@ -51,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 
 const props = defineProps({
   groups: { type: Array, default: () => [] },
@@ -60,38 +61,45 @@ const props = defineProps({
 
 const emit = defineEmits(['mounted-anchors'])
 
-const anchorRefs = ref([])
-
 const brandTo = () => '/brands'
 
+/* 收藏邏輯（維持） */
 const favorites = ref(new Set())
-
-// TODO:呼叫收藏 API，成功後再更新 favorites
+const isFav = (id) => favorites.value.has(id)
 const toggleFav = (b) => {
-  const set = new Set(favorites.value)
-  if (set.has(b.brandId)) set.delete(b.brandId)
-  else set.add(b.brandId)
-  favorites.value = set
-
-  // 迷你提示
-  const msg = set.has(b.brandId) ? '已加入收藏' : '已移除收藏'
+  const s = new Set(favorites.value)
+  s.has(b.brandId) ? s.delete(b.brandId) : s.add(b.brandId)
+  favorites.value = s
+  toast(s.has(b.brandId) ? '已加入收藏' : '已移除收藏')
+}
+const toast = (msg) => {
   const el = document.createElement('div')
   el.className = 'toast-mini'
-  el.innerText = msg
+  el.textContent = msg
   document.body.appendChild(el)
   setTimeout(() => el.remove(), 1200)
 }
 
-onMounted(async () => {
+/* A–Z 固定順序，確保 Map 順序一致 */
+const lettersOrder = ['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))]
+
+/* 由 template v-for 綁定的參考 */
+const anchorRefs = ref([])
+
+/* 建立錨點 Map（按固定順序插入）並 emit 給父層 */
+const buildMapAndEmit = async () => {
   await nextTick()
   const map = new Map()
-  anchorRefs.value.forEach((el) => {
-    if (el && el.id) map.set(el.id, el)
-  })
+  // 以 id 直接查找元素較穩定，避免 anchorRefs 順序受 DOM 影響
+  for (const L of lettersOrder) {
+    const el = document.getElementById(L)
+    if (el) map.set(L, el)
+  }
   emit('mounted-anchors', map)
-})
+}
 
-// watch(() => props.groups, (v) => console.log('[Groups] incoming', v?.[0]), { immediate: true })
+onMounted(buildMapAndEmit)
+watch(() => props.groups, buildMapAndEmit)
 </script>
 
 <style scoped>
@@ -105,7 +113,7 @@ onMounted(async () => {
   padding: 6px 0;
   border-bottom: 1px solid #e6eaed;
   position: sticky;
-  top: 56px;
+  top: 80px; /* 和 onJumpTo 的 80 對齊 */
   background: #fff;
   z-index: 1;
 }
@@ -139,17 +147,17 @@ onMounted(async () => {
   gap: 8px;
   padding: 6px 0;
 }
-
 .fav-btn {
   width: 28px;
   height: 28px;
-  border: 1px solid #e5e7eb;
   border-radius: 9999px;
+  border: 1px solid #e5e7eb;
   background: #fff;
   color: #ef4444;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -164,17 +172,14 @@ onMounted(async () => {
   border-color: #fca5a5;
   color: #dc2626;
 }
-/* 收藏按鈕：關閉任何縮放/位移 */
-.fav-btn,
-.fav-btn:active,
-.fav-btn:focus {
-  transform: none !important;
-}
+.fav-btn:active {
+  transform: none;
+} /* 不縮小 */
 
 .toast-mini {
   position: fixed;
-  bottom: 80px;
   left: 50%;
+  bottom: 80px;
   transform: translateX(-50%);
   background: rgba(17, 24, 39, 0.92);
   color: #fff;

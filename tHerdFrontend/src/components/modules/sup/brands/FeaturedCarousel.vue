@@ -135,6 +135,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', recalc)
   stopAutoPlay()
 })
+
 watch(
   () => props.brands,
   () => {
@@ -152,6 +153,9 @@ const brandTo = (b) => `/brands/${b.brandId}`
   display: flex;
   flex-direction: column;
   align-items: center; /* ✅ 整體置中 */
+  position: relative;
+  /* 保留一些基本間距 */
+  padding: 1.5rem 0;
 }
 
 .carousel-wrapper {
@@ -165,16 +169,22 @@ const brandTo = (b) => `/brands/${b.brandId}`
   margin: 0 auto;
 }
 
+/* [調整] 將 overflow: hidden 上移到此層，並增加 padding 作為 hover 效果的緩衝區 */
 .carousel {
   flex: 1;
+  display: grid;
+  place-items: center; /* 完全置中 */
   overflow: hidden;
-  display: flex;
-  justify-content: center;
+  padding: 20px 0; /* ✅ 增加垂直 padding */
 }
 
+/* [調整] 移除 overflow: hidden，讓 hover 效果可見 */
 .viewport {
-  overflow: hidden;
-  width: 100%;
+  overflow: visible; /* ✅ 改為 visible */
+  width: calc(var(--vis) * (var(--card) + var(--gap)) - var(--gap));
+  max-width: 100%;
+  /* [新增] 負 margin 用於抵銷父層的 padding，維持視覺對齊 */
+  margin: -15px 0;
 }
 
 .track {
@@ -182,6 +192,9 @@ const brandTo = (b) => `/brands/${b.brandId}`
   gap: 12px;
   transition: transform 0.45s ease;
   will-change: transform;
+  overflow: visible; /* ✅ 確保 hover 陰影可見 */
+  /* 增加一點垂直空間給陰影 */
+  padding: 8px 0;
 }
 .track.no-transition {
   transition: none;
@@ -193,15 +206,28 @@ const brandTo = (b) => `/brands/${b.brandId}`
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  min-height: 160px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.25s ease-out; /* [新增] 讓 hover 效果更平滑 */
 }
-
 .card-link {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 14px 12px;
+  padding: 12px;
   text-decoration: none;
   color: inherit;
+}
+/* hover 時提高 z-index，確保卡片在最上層 */
+.card:hover {
+  border-color: #c9ebdc;
+  box-shadow:
+    inset 0 0 0 2px rgba(22, 121, 76, 0.18),
+    0 6px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px) scale(1.06);
+  z-index: 10; /* ✅ 提高層級，蓋過相鄰卡片 */
 }
 
 .thumb {
@@ -209,9 +235,10 @@ const brandTo = (b) => `/brands/${b.brandId}`
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #fff;
+  border-radius: 8px;
   overflow: hidden;
 }
-
 .thumb img {
   width: 100%;
   height: 100%;
@@ -219,24 +246,29 @@ const brandTo = (b) => `/brands/${b.brandId}`
 }
 
 .name {
-  margin-top: 10px;
+  margin-top: 8px;
   font-weight: 700;
   font-size: 15px;
+  line-height: 1.2;
   text-align: center;
   color: #1f2937;
-  min-height: 40px;
+
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
+  box-orient: vertical;
   overflow: hidden;
+
+  height: 2.4em;
+  min-height: 2.4em;
 }
 
-/* ✅ 左右按鈕樣式改進 */
 .nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 5;
+  z-index: 15; /* ✅ 確保按鈕在 hover 的卡片之上 */
   border: none;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
@@ -261,7 +293,7 @@ const brandTo = (b) => `/brands/${b.brandId}`
   transform: translateY(-50%) scale(0.95);
 }
 .nav.prev {
-  left: -60px; /* ✅ 往外拉開 */
+  left: -60px;
 }
 .nav.next {
   right: -60px;

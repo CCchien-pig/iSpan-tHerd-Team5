@@ -6,13 +6,27 @@
     <div class="container py-3">
       <div class="brands-layout">
         <div class="brands-main">
-          <AlphaIndex class="mb-4" :chars="chars" @jump="onJumpTo" />
-          <FeaturedCarousel class="mt-3" :brands="featuredBrands" :loading="loadingFeatured" />
-          <BrandGroups class="mt-4" :groups="brandGroups" :loading="loadingGroups" @mounted-anchors="onAnchorsReady" />
+          <AlphaIndex class="mb-4" :chars="chars" @jump="onJumpFromTop" />
+
+          <div class="carousel-section">
+            <FeaturedCarousel class="mt-3" :brands="featuredBrands" :loading="loadingFeatured" />
+          </div>
+
+          <BrandGroups
+            class="mt-4"
+            :groups="brandGroups"
+            :loading="loadingGroups"
+            @mounted-anchors="onAnchorsReady"
+          />
         </div>
 
         <div class="brands-aside">
-          <RightAlphaNav v-if="showRightNav" :chars="chars" :active="activeLetter" @jump="onJumpTo" />
+          <RightAlphaNav
+            v-if="showRightNav"
+            :chars="chars"
+            :active="activeLetter"
+            @jump="onJumpFromRight"
+          />
         </div>
       </div>
     </div>
@@ -29,6 +43,7 @@ import RightAlphaNav from '@/components/modules/sup/brands/RightAlphaNav.vue'
 import { getFeaturedBrands, getGroupedBrands } from '@/core/api/modules/sup/supBrands'
 
 const chars = ref(['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))])
+const lettersOrder = ['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))]
 
 // 儲存 API 回傳的資料與載入狀態
 const featuredBrands = ref([])
@@ -99,26 +114,58 @@ const normalizeGroups = (groups) => {
   return result
 }
 
-const onJumpTo = (letter) => {
-  const el = anchorMap.get(letter)
-  if (el) {
-    window.scrollTo({
-      top: el.getBoundingClientRect().top + window.scrollY - 80,
-      behavior: 'smooth',
-    })
+const stickyOffset = 80 // 與 group-title sticky top 對齊
+
+const resolveTargetEl = (letter) => {
+  // 允許 fallback：回傳實際著陸的元素與字母
+  let el = anchorMap.get(letter)
+  if (el) return { el, actual: letter }
+  let idx = lettersOrder.indexOf(letter)
+  while (!el && idx < lettersOrder.length - 1) {
+    idx += 1
+    const nextLetter = lettersOrder[idx]
+    el = anchorMap.get(nextLetter)
+    if (el) return { el, actual: nextLetter }
   }
-}
-const onAnchorsReady = (map) => {
-  anchorMap = map
+  return { el: null, actual: null }
 }
 
+const scrollToEl = (el) => {
+  const y = el.getBoundingClientRect().top + window.scrollY - stickyOffset
+  window.scrollTo({ top: y, behavior: 'smooth' })
+}
+const onJumpFromTop = (letter) => {
+  const { el, actual } = resolveTargetEl(letter)
+  if (!el) return
+  activeLetter.value = actual // 右側立即亮起實際著陸字母
+  scrollToEl(el)
+}
+const onJumpFromRight = (letter) => onJumpFromTop(letter)
+
+// 由 BrandGroups 傳回 anchorMap（只記錄有 DOM 的字母，且順序正確）
+const onAnchorsReady = (map) => {
+  const ordered = new Map()
+  for (const L of lettersOrder) {
+    const el = map.get(L)
+    if (el) ordered.set(L, el)
+  }
+  anchorMap = ordered
+}
+
+// 捲動時自動判斷目前位於哪個字母區
 const onScroll = () => {
   showRightNav.value = window.scrollY > 300
   let current = null
-  const viewportTop = window.scrollY + 100
-  for (const [letter, el] of anchorMap.entries()) {
-    if (el.offsetTop <= viewportTop) current = letter
-    else break
+  for (let i = lettersOrder.length - 1; i >= 0; i--) {
+    const L = lettersOrder[i]
+    const el = anchorMap.get(L)
+    if (!el) continue
+    // el 到視窗頂的距離（扣掉 sticky）
+    const top = el.getBoundingClientRect().top - stickyOffset
+    if (top <= 1) {
+      current = L
+      break
+    }
   }
   activeLetter.value = current
 }
@@ -149,5 +196,12 @@ onBeforeUnmount(() => {
 .brands-aside {
   /* 讓索引 sticky 生效 */
   position: relative;
+}
+.carousel-section {
+  /* padding-top: 2rem; */
+  /* padding-bottom: 1.2rem; */
+
+  /* 確保容器本身不會裁切掉內容 */
+  overflow: visible;
 }
 </style>
