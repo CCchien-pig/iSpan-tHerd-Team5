@@ -50,13 +50,18 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
         /// POST /api/mkt/coupon/receive
         /// </summary>
 
-        [Authorize] // ✅ 確保只能登入會員呼叫
+        [Authorize]
         [HttpPost("receive")]
         public IActionResult Receive([FromBody] ReceiveCouponRequest request)
         {
+            if (!_me.IsAuthenticated || _me.UserNumberId <= 0)
+            {
+                return Unauthorized(new { message = "請先登入會員再領取優惠券" });
+            }
+
             try
             {
-                int memberId = _me.UserNumberId; // 🔥 從登入者 Token 抓 UserNumberId（int）
+                int memberId = _me.UserNumberId;
 
                 var success = _couponService.ReceiveCoupon(request.CouponId, memberId);
                 if (!success)
@@ -73,6 +78,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
                 });
             }
         }
+
 
 
         public class ReceiveCouponRequest

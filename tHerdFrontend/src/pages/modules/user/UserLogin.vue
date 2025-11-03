@@ -1,63 +1,4 @@
-<!-- /src/pages/auth/Login.vue -->
-
-<!-- <template>
-  <div class="container py-4">
-    <h2 class="mb-3">登入</h2>
-    <div class="card p-3">
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input v-model="email" type="email" class="form-control" placeholder="you@example.com" />
-      </div>
-      <div class="mb-3">
-        <label class="form-label">密碼</label>
-        <input v-model="password" type="password" class="form-control" placeholder="••••••••" />
-      </div>
-      <div v-if="errMsg" class="alert alert-danger py-2">{{ errMsg }}</div>
-      <button class="btn btn-success" :disabled="busy" @click="doLogin">
-        {{ busy ? '登入中…' : '登入' }}
-      </button>
-
-      <router-link class="btn btn-link" :to="{ name: 'userregister' }">沒有帳號？去註冊</router-link>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
-const route = useRoute()
-const router = useRouter()
-
-const email = ref('')
-const password = ref('')
-const busy = ref(false)
-const errMsg = ref('')
-
-async function doLogin() {
-  errMsg.value = ''
-  busy.value = true
-  try {
-    await auth.login(email.value.trim(), password.value)
-    const back = (route.query.redirect && String(route.query.redirect)) || '/'
-    router.replace(back)
-  } catch (e) {
-    // e 可能是 AxiosError，也可能是一般錯誤；先盡量取回後端訊息
-    const msg =
-      (e && e.response && e.response.data && (e.response.data.error || e.response.data.message)) ||
-      (e && e.message) ||
-      '登入失敗，請確認帳號或密碼'
-    errMsg.value = msg
-  } finally {
-    busy.value = false
-  }
-}
-</script>
- -->
-<!--模仿iherb架構--> 
-<!-- /src/pages/auth/Login.vue -->
+<!-- /src/pages/modules/user/Login.vue -->
 <template>
   <div class="container py-4">
     <!-- 標題與副標題（iHerb 風格） -->
@@ -146,7 +87,19 @@ async function doLogin() {
       </div>
 
       <!-- 錯誤訊息 -->
-      <div v-if="errMsg" class="alert alert-danger py-2">{{ errMsg }}</div>
+      <div v-if="errMsg" class="alert alert-danger py-2">
+  {{ errMsg }}
+  <div v-if="unlockAtText" class="small text-muted mt-1">{{ unlockAtText }}</div>
+</div>
+
+<!-- ✅ 未驗證信箱時的重寄提示 -->
+<div v-if="canResend" class="alert alert-info py-2">
+  尚未收到驗證信？您可以
+  <button class="btn btn-sm btn-outline-secondary ms-1" :disabled="resendBusy" @click="resendConfirmEmail">
+    {{ resendBusy ? '重寄中…' : '重新寄送驗證信' }}
+  </button>
+  <div v-if="resendMsg" class="small text-muted mt-1">{{ resendMsg }}</div>
+</div>
 
       <!-- 登入按鈕 -->
       <div class="d-grid gap-2">
@@ -163,6 +116,27 @@ async function doLogin() {
           沒有帳號？去註冊
         </router-link>
       </div>
+
+      <!-- 2FA 驗證碼區塊（僅在 requiresTwoFactor 時顯示） -->
+<div v-if="show2fa" class="card p-3 mt-3 border-warning">
+  <h5 class="mb-2">需要兩步驗證</h5>
+  <div class="d-flex gap-2 align-items-center">
+    <input
+      class="form-control"
+      v-model.trim="twoFactorCode"
+      maxlength="6"
+      placeholder="輸入 6 位數驗證碼"
+      style="max-width:180px"
+      :disabled="busy2fa"
+    />
+    <button class="btn btn-warning" :disabled="busy2fa || twoFactorCode.length!==6" @click="doLogin2FA">
+      {{ busy2fa ? '驗證中…' : '送出驗證碼' }}
+    </button>
+    <button class="btn btn-link ms-auto" type="button" @click="cancel2fa" :disabled="busy2fa">返回重新輸入</button>
+  </div>
+  <div class="form-text mt-1">請打開你的驗證器 App（Google Authenticator / 1Password / Microsoft Authenticator）。</div>
+</div>
+
 
       <!-- 需要幫助？ -->
       <div class="text-center my-3">
@@ -185,25 +159,9 @@ async function doLogin() {
         <div class="col-12">
           <a
             class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Google&rememberMe=${rememberMe}`"
+            :href="`https://localhost:7103/api/auth/ExternalLogin?provider=Google&rememberMe=${rememberMe}&redirect=/user/me`"
           >
-            <i class="bi bi-google me-2"></i> 用谷歌帳號登入
-          </a>
-        </div>
-        <div class="col-12">
-          <a
-            class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Facebook&rememberMe=${rememberMe}`"
-          >
-            <i class="bi bi-facebook me-2"></i> 用臉書帳號登入
-          </a>
-        </div>
-        <div class="col-12">
-          <a
-            class="btn w-100 btn-outline-secondary d-flex align-items-center justify-content-center"
-            :href="`/auth/Account/ExternalLogin?provider=Apple&rememberMe=${rememberMe}`"
-          >
-            <i class="bi bi-apple me-2"></i> Apple 帳號登錄
+            <i class="bi bi-google me-2"></i> 用google帳號登入
           </a>
         </div>
       </div>
@@ -227,18 +185,14 @@ async function doLogin() {
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { http } from '@/api/http' 
 
-/**
- * 🔐 reCAPTCHA v2 Checkbox 設定
- * - 請在 .env 設定 VITE_RECAPTCHA_V2_SITE_KEY=你的_site_key
- * - 這裡採「顯式渲染」（explicit），用 grecaptcha.render 顯示核取方塊。
- */
-const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_V2_SITE_KEY
-const RECAPTCHA_SRC =
-  'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
+const RECAPTCHA_SITE_KEY = document.querySelector('meta[name="recaptcha-site-key"]')?.getAttribute('content') ?? ''
+const RECAPTCHA_SRC = 'https://www.recaptcha.net/recaptcha/api.js?onload=onRecaptchaApiLoaded&render=explicit'
+const KEEP_SIGNED_IN_TIP = '保持登錄狀態以加快操作。若為共用裝置，請勿勾選此選項。'
 
-const KEEP_SIGNED_IN_TIP =
-  '保持登錄狀態以加快操作。若為共用裝置，請勿勾選此選項。'
+const FRONT_CALLBACK = '/user/login/callback'  // ★ 沿用你外登/信箱驗證成功時用的 callback
+const DEFAULT_REDIRECT = '/'                   // ★ 成功後預設轉回首頁（或從 query.redirect 來）
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -249,39 +203,50 @@ const password = ref('')
 const rememberMe = ref(true)
 const showPassword = ref(false)
 const busy = ref(false)
+
 const errMsg = ref('')
 const recaptchaErr = ref('')
 
+// ✅ 針對 email 未驗證與鎖定情境的 UI 控制
+const canResend = ref(false)
+const resendBusy = ref(false)
+const resendMsg = ref('')
+const unlockAtText = ref('') // 顯示鎖定解除時間（本地）
+
+
+
+// reCAPTCHA v2
 const recaptchaBox = ref(null)
 let recaptchaWidgetId = null
-const recaptchaToken = ref('') // 由 v2 核取方塊回傳
+const recaptchaToken = ref('')
+
+// ✅ 2FA 相關狀態
+const show2fa = ref(false)
+const busy2fa = ref(false)
+const twoFactorCode = ref('')
+let twoFactorSession = ''  // 從 /auth/login 回來的暫時 session token
 
 const canSubmit = computed(() => {
   return (
     email.value.length > 3 &&
     password.value.length >= 8 &&
-    !!recaptchaToken.value && // 必須已通過人機驗證
-    !busy.value
+    !!recaptchaToken.value &&
+    !busy.value&&
+    !show2fa.value // ← 若已進入 2FA，就不允許再按第一階段「登入」
   )
 })
 
-/** 動態載入 v2 api.js（只載一次） */
 function loadRecaptchaV2() {
   return new Promise((resolve, reject) => {
     if (window.grecaptcha && window.grecaptcha.render) return resolve(true)
-    if (!RECAPTCHA_SITE_KEY) {
-      return reject(new Error('reCAPTCHA v2 site key 未設定（VITE_RECAPTCHA_V2_SITE_KEY）'))
-    }
+    if (!RECAPTCHA_SITE_KEY) return reject(new Error('reCAPTCHA v2 site key 未設定'))
 
-    // 若已存在同 src 的 script，掛上事件即可
     const existed = document.querySelector(`script[src^="${RECAPTCHA_SRC}"]`)
     if (existed) {
       existed.addEventListener('load', () => resolve(true))
       existed.addEventListener('error', reject)
     } else {
-      // 先把全域 onload callback 掛上
       window.onRecaptchaApiLoaded = () => resolve(true)
-
       const s = document.createElement('script')
       s.src = RECAPTCHA_SRC
       s.async = true
@@ -292,13 +257,12 @@ function loadRecaptchaV2() {
   })
 }
 
-/** 建立 v2 Checkbox 小工具 */
 function renderRecaptcha() {
   if (!window.grecaptcha || !recaptchaBox.value || recaptchaWidgetId !== null) return
   recaptchaWidgetId = window.grecaptcha.render(recaptchaBox.value, {
     sitekey: RECAPTCHA_SITE_KEY,
     theme: 'light',
-    size: 'normal', // 可改 'compact'
+    size: 'normal',
     callback: (token) => {
       recaptchaToken.value = token
       recaptchaErr.value = ''
@@ -314,21 +278,91 @@ function renderRecaptcha() {
   })
 }
 
-/** 失敗或想重來時重置 Checkbox */
 function resetRecaptcha() {
-  if (window.grecaptcha && recaptchaWidgetId !== null) {
-    window.grecaptcha.reset(recaptchaWidgetId)
-  }
+  if (window.grecaptcha && recaptchaWidgetId !== null) window.grecaptcha.reset(recaptchaWidgetId)
   recaptchaToken.value = ''
 }
 
-function toast(msg) {
-  alert(msg)
+function toast(msg) { alert(msg) }
+
+// ✅ 重寄驗證信
+async function resendConfirmEmail() {
+  if (!email.value) return
+  resendBusy.value = true
+  resendMsg.value = ''
+  try {
+    // 對應後端 /api/auth/resend-confirm
+    await fetch('/api/auth/resend-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value })
+    })
+    resendMsg.value = '已重新寄出驗證信，請稍候並再次查看收件匣／垃圾信件匣。'
+  } catch (e) {
+    resendMsg.value = '重寄失敗，請稍後再試'
+  } finally {
+    resendBusy.value = false
+  }
 }
 
+function setFriendlyError(e) {
+  const payload = e?.response?.data || {}
+  const code = payload.error_code
+  const message = payload.message || payload.error
+
+  // 預設訊息
+  errMsg.value = message || '登入失敗，請確認帳號或密碼'
+  canResend.value = false
+  unlockAtText.value = ''
+
+  switch (code) {
+    case 'email_unconfirmed':
+      errMsg.value = '請先完成信箱驗證。'
+      canResend.value = true
+      break
+    case 'account_locked':
+      errMsg.value = '帳號已被鎖定，請稍後再試。'
+      if (payload.unlockAt) {
+        // 轉成本地時間顯示
+        const t = new Date(payload.unlockAt)
+        unlockAtText.value = `預計解除時間：${t.toLocaleString()}`
+      }
+      break
+    case 'bad_credentials':
+      if (typeof payload.remainingAttempts === 'number') {
+        errMsg.value = `帳號或密碼錯誤（剩餘嘗試 ${payload.remainingAttempts} 次）。`
+      } else {
+        errMsg.value = '帳號或密碼錯誤'
+      }
+      break
+    case 'recaptcha_failed':
+      errMsg.value = 'reCAPTCHA 驗證失敗，請重試。'
+      break
+    default:
+      // 沒帶 error_code，保留後端訊息或預設
+      break
+  }
+}
+
+function gotoCallbackAndFinish(tokenBundle) {
+  const back = (route.query.redirect && String(route.query.redirect)) || DEFAULT_REDIRECT
+  const url =
+    `${FRONT_CALLBACK}` +
+    `?token=${encodeURIComponent(tokenBundle.accessToken)}` +
+    `&refresh=${encodeURIComponent(tokenBundle.refreshToken)}` +
+    `&exp=${encodeURIComponent(tokenBundle.accessExpiresAt || tokenBundle.accessExpiresUtc || '')}` +
+    `&rememberMe=${rememberMe.value ? '1' : '0'}` +
+    `&redirect=${encodeURIComponent(back)}`
+  window.location.href = url
+}
+
+// ✅ 第一步：帳密登入 → 可能收到 requiresTwoFactor
 async function doLogin() {
   errMsg.value = ''
   recaptchaErr.value = ''
+  canResend.value = false
+  resendMsg.value = ''
+  unlockAtText.value = ''
 
   if (!recaptchaToken.value) {
     recaptchaErr.value = '請先勾選「我不是機器人」。'
@@ -337,30 +371,81 @@ async function doLogin() {
 
   busy.value = true
   try {
-    // 將 recaptchaToken 一併送到後端驗證（v2 驗證端點）
-    await auth.login(email.value, password.value, {
+    // ★ 改為直接打 API，因為需要分支處理 requiresTwoFactor
+    const { data } = await http.post('/auth/login', {
+      email: email.value,
+      password: password.value,
       rememberMe: rememberMe.value,
       recaptchaToken: recaptchaToken.value,
       recaptchaVersion: 'v2'
     })
 
-    const back = (route.query.redirect && String(route.query.redirect)) || '/'
-    router.replace(back)
-  } catch (e) {
-    const msg =
-      (e && e.response && e.response.data && (e.response.data.error || e.response.data.message)) ||
-      (e && e.message) ||
-      '登入失敗，請確認帳號或密碼'
-    errMsg.value = msg
+    // 分支一：需要 2FA
+    if (data?.requiresTwoFactor) {
+      show2fa.value = true
+      twoFactorSession = data.twoFactorSession || ''
+      twoFactorCode.value = ''
+      // 進入 2FA 後，建議立即重置 reCAPTCHA（避免 user 回上一階段時 token 過期）
+      resetRecaptcha()
+      return
+    }
 
-    // 失敗時重置 reCAPTCHA，避免舊 token 重用
+    // 分支二：直接回 token → 用既有 callback 寫 localStorage，保持一致
+    if (data?.accessToken && data?.refreshToken) {
+      gotoCallbackAndFinish(data)
+      return
+    }
+
+    // 其他情況（防呆）
+    errMsg.value = data?.error || '登入回應格式不正確'
+  } catch (e) {
+    setFriendlyError(e)  // 你的友善錯誤處理
     resetRecaptcha()
   } finally {
     busy.value = false
   }
 }
 
+// ✅ 第二步：提交 6 碼 → 取得 token 後導向 callback
+async function doLogin2FA() {
+  if (!twoFactorSession || twoFactorCode.value.length !== 6) return
+  busy2fa.value = true
+  errMsg.value = ''
+  try {
+    const { data } = await http.post('/auth/login-2fa', {
+      code: twoFactorCode.value,
+      twoFactorSession
+    })
+    if (data?.accessToken && data?.refreshToken) {
+      gotoCallbackAndFinish(data)
+      return
+    }
+    errMsg.value = data?.error || '兩步驗證回應格式不正確'
+  } catch (e) {
+    // 2FA 常見錯誤：代碼錯誤/過期
+    const msg =
+      e?.response?.data?.error ||
+      e?.response?.data?.message ||
+      '兩步驗證失敗，請確認驗證碼'
+    errMsg.value = msg
+  } finally {
+    busy2fa.value = false
+  }
+}
+
+// ✅ 取消 2FA，回到第一階段（讓使用者能重打帳密或改信箱）
+function cancel2fa() {
+  show2fa.value = false
+  busy2fa.value = false
+  twoFactorCode.value = ''
+  twoFactorSession = ''
+  // 回到第一階段 → 重新要一次 reCAPTCHA
+  resetRecaptcha()
+}
+
 onMounted(async () => {
+  const preset = route.query.email && String(route.query.email)
+  if (preset) email.value = preset
   try {
     await loadRecaptchaV2()
     renderRecaptcha()
@@ -370,12 +455,13 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  // 清掉全域 onload（避免多次掛上）
   if (window.onRecaptchaApiLoaded) {
     try { delete window.onRecaptchaApiLoaded } catch {}
   }
 })
 </script>
+
+
 
 <style scoped>
 .container {

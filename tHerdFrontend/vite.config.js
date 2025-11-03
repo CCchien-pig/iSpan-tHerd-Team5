@@ -23,6 +23,5 @@ export default defineConfig({
         changeOrigin: true,
         secure: false, // 本機自簽憑證用 false；若後端是 http 就可移除
       },
-    },
-  },
-})
+  },}
+});
