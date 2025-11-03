@@ -81,7 +81,7 @@ namespace tHerdBackend.Services.PROD.API
         /// 用於前台 MegaMenu 或分類篩選
         /// </summary>
         /// <returns></returns>
-        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
         {
             try
             {

@@ -71,10 +71,16 @@ class productsApi {
    * @example
    * const result = await productsApi.getProductCategories({ includeSub: true })
    */
-async getProductCategories() {
-  // ✅ 注意：不需要 params
-  return await baseApi.get(`${this.path}/Products/ProductTypetree`)
-}
+  async getProductCategories() {
+    try {
+      // 直接呼叫後端
+      const res = await baseApi.get(`${this.path}/Products/ProductTypetree`)
+      return res  // ✅ 保留完整結構給前端自己解析
+    } catch (error) {
+      console.error('❌ 取得商品分類失敗:', error)
+      throw error  // ✅ 讓上層 catch
+    }
+  }
   /**
    * 查詢商品詳細資訊
    * @param {number} productId - 商品 ID

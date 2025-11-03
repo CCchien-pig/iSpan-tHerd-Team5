@@ -23,15 +23,15 @@
             <li
               v-for="item in productMenus"
               :key="item.id"
-              class="nav-item position-relative"
+              class="nav-item position-relative mega-menu-container"
               @mouseenter="openMegaMenu(item)"
               @mouseleave="closeMegaMenu"
             >
-              <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill d-flex align-items-center"
+              <button
+                type="button"
+                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center"
                 :class="{ 
-                  active: $route.path.startsWith(item.path),
+                  active: activeMenuId === item.id,
                   'has-icon': item.icon,
                   'text-only': !item.icon
                 }"
@@ -40,8 +40,11 @@
                   <img :src="item.icon" alt="" class="nav-icon" />
                 </div>
                 <span>{{ item.name }}</span>
-              </router-link>
+              </button>
             </li>
+
+
+            <li class="nav-divider mx-3"></li>
 
             <!-- 品牌 A-Z -->
             <li
@@ -107,6 +110,17 @@
                   </div>
                 </div>
               </transition>
+            </li>
+
+              <!-- ✅ 固定項目（品牌A-Z後面） -->
+            <li v-for="item in staticMenus" :key="item.path" class="nav-item">
+              <router-link
+                :to="item.path"
+                class="nav-link fw-medium rounded-pill text-only"
+                :class="{ active: $route.path.startsWith(item.path) }"
+              >
+                {{ item.name }}
+              </router-link>
             </li>
           </ul>
 
@@ -241,6 +255,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount  } from 'vue'
+import ProductsApi from '@/api/modules/prod/ProductsApi' 
 
 // ==================== 狀態變數 ====================
 const showMobileMenu = ref(false)
@@ -261,13 +276,17 @@ const navigationItemsWithIcon = [
         { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
         { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
         { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
-        { name: '健康主題', path: '/health-topics' },
-        { name: '特惠', path: '/specials' },
-        { name: '暢銷', path: '/bestsellers' },
-        { name: '試用', path: '/trials' },
-        { name: '新產品', path: '/new-products' },
-        { name: '健康中心', path: '/cnt' },
       ]
+
+// 品牌A-Z後的固定連結
+const staticMenus = [
+  { name: '健康主題', path: '/health-topics' },
+  { name: '特惠', path: '/specials' },
+  { name: '暢銷', path: '/bestsellers' },
+  { name: '試用', path: '/trials' },
+  { name: '新產品', path: '/new-products' },
+  { name: '健康中心', path: '/cnt' },
+]
 
 // === 初始化 ===
 onMounted(() => {
@@ -279,31 +298,59 @@ onMounted(() => {
 })
 
 // === 預先載入所有分類資料 ===
-function preloadMegaMenus() {
-  const sampleData = {
-    columns: [
-      {
-        title: '熱門分類',
-        items: [
-          { id: 1, name: '維生素', url: '/category/vitamins' },
-          { id: 2, name: '魚油', url: '/category/fishoil' },
-          { id: 3, name: '益生菌', url: '/category/probiotics' },
-        ],
-      },
-      {
-        title: '品牌推薦',
-        items: [
-          { id: 4, name: "Nature’s Bounty", url: '/brands/natures-bounty' },
-          { id: 5, name: 'NOW Foods', url: '/brands/now-foods' },
-          { id: 6, name: 'Solgar', url: '/brands/solgar' },
-        ],
-      },
-    ],
+async function preloadMegaMenus() {
+  try {
+    isLoadingMenu.value = true
+
+    const res = await ProductsApi.getProductCategories()
+    console.log('🐞 API 回傳結果：', res.data)
+
+    const apiResult = res.data || {}
+    if (Array.isArray(apiResult)) {
+      buildMegaMenu(apiResult)
+    } else if (apiResult.success && Array.isArray(apiResult.data)) {
+      buildMegaMenu(apiResult.data)
+    } else {
+      throw new Error(apiResult.message || '查詢分類失敗')
+    }
+  } catch (err) {
+    console.error('❌ 無法載入 MegaMenu 資料：', err)
+  } finally {
+    isLoadingMenu.value = false
+  }
+}
+
+function buildMegaMenu(treeData) {
+  // 建立層級 URL
+  function buildUrl(item, parentCode = '', prefix = '') {
+    const path = parentCode
+      ? `${parentCode}/${item.productTypeCode?.toLowerCase()}`
+      : item.productTypeCode?.toLowerCase()
+
+    item.url = `/products/${prefix}${path}`
+    if (item.children?.length) {
+      item.children.forEach(c => buildUrl(c, path, prefix))
+    }
   }
 
+  // 🔹依主分類（補充劑、運動營養...）分別產出
   productMenus.value.forEach(menu => {
-    loadedMenus.value[menu.id] = JSON.parse(JSON.stringify(sampleData))
+    const prefix = menu.path.replace('/', '') + '/'  // e.g. supplements/
+    const columns = treeData.map(parent => {
+      buildUrl(parent, '', prefix)
+      return {
+        title: parent.productTypeName,
+        items: (parent.children || []).map(child => ({
+          id: child.productTypeId,
+          name: child.productTypeName,
+          url: child.url,
+        })),
+      }
+    })
+    loadedMenus.value[menu.id] = { columns }
   })
+
+  console.log(' MegaMenu 已載入:', loadedMenus.value)
 }
 
 let closeTimer = null
@@ -312,7 +359,7 @@ let closeTimer = null
 function openMegaMenu(item) {
   clearTimeout(closeTimer)
   activeMenuId.value = item.id
-  megaMenuData.value = loadedMenus.value[item.id] // ✅ 直接讀快取，不用 loading
+  megaMenuData.value = loadedMenus.value[item.id]
 }
 
 function closeMegaMenu() {
@@ -369,6 +416,31 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
+
+/* 🌗 淡黑色分隔線（桌面版用） */
+.nav-divider {
+  width: 1px;
+  height: 30px;
+  background-color: rgba(0, 0, 0, 0.3);
+  align-self: center;
+  opacity: 1;
+  transform: scaleY(1);
+  transition: all 0.4s ease; /* ✨ 動畫關鍵 */
+}
+
+/* 📱 小於: 分隔線變成換行 + 淡出 */
+@media (max-width: 2000px) {
+  .nav-divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background-color: transparent;
+    margin: 10px 0;
+    opacity: 0;          /* 漸淡出 */
+    transform: scaleY(0.2); /* 線條縮小 */
+    transition: all 0.4s ease;
+  }
+}
 
 .main-navigation {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

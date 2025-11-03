@@ -5,10 +5,24 @@
       <div v-else-if="error" class="text-danger p-4">{{ error }}</div>
       <div v-else class="menu-columns">
         <div v-for="col in columns" :key="col.title" class="menu-column">
-          <h4>{{ col.title }}</h4>
+          <h4>
+            <router-link 
+              :to="`/products/${col.items?.[0]?.productTypeCode?.toLowerCase() || ''}`"
+              class="brand-link fw-bold"
+              @click="closeMenu"
+            >
+              {{ col.title }}
+            </router-link>
+          </h4>
           <ul>
             <li v-for="item in col.items" :key="item.id">
-              <a :href="item.url">{{ item.name }}</a>
+              <router-link
+                :to="item.url"
+                class="brand-link"
+                @click="closeMenu"
+              >
+                {{ item.name }}
+              </router-link>
             </li>
           </ul>
         </div>
@@ -29,7 +43,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
@@ -43,18 +56,21 @@ const columns = ref([])
 const brands = ref([])
 const loading = ref(false)
 const error = ref(null)
+const loaded = ref(false) // ✅ 防止重複打 API
+
 
 // ✅ 初次載入就取資料（這個 API 不需要 categoryId）
 onMounted(fetchData)
 
 async function fetchData() {
+  if (loaded.value) return
+
   try {
     loading.value = true
     error.value = null
     columns.value = []
     brands.value = []
 
-    // ✅ 呼叫後端 /api/prod/Products/ProductTypetree
     const res = await ProductsApi.getProductCategories()
     const result = res.data
 
@@ -64,15 +80,31 @@ async function fetchData() {
 
     const treeData = result.data || []
 
-    // ✅ 將樹狀結構轉成 MegaMenu 欄位資料格式
-    columns.value = treeData.map((parent) => ({
+    // ✅ 先遞迴建立 url（用 productTypeCode 小寫）
+    function buildUrl(item, parentCode = '') {
+      const path = parentCode
+        ? `${parentCode}/${item.productTypeCode?.toLowerCase()}`
+        : item.productTypeCode?.toLowerCase()
+
+      item.url = `/products/${path}`
+      if (item.children?.length) {
+        item.children.forEach(c => buildUrl(c, path))
+      }
+    }
+    treeData.forEach(i => buildUrl(i))
+
+    // ✅ 把轉好的 url 帶入 columns 結構
+    columns.value = treeData.map(parent => ({
       title: parent.productTypeName,
-      items: (parent.children || []).map((child) => ({
+      items: (parent.children || []).map(child => ({
         id: child.productTypeId,
         name: child.productTypeName,
-        url: `/products?type=${child.productTypeId}`
-      }))
+        url: child.url, // ✅ 已經是 /products/vitamins/b12
+        productTypeCode: child.productTypeCode, // ✅ 給 h4 用
+      })),
     }))
+
+    loaded.value = true
   } catch (err) {
     console.error('❌ [MegaMenu] 載入分類發生錯誤：', err)
     error.value = '載入失敗，請稍後再試'
@@ -81,14 +113,61 @@ async function fetchData() {
   }
 }
 
-function keepOpen() {}
+// === 事件 ===
+function keepOpen() {
+  if (!loaded.value) fetchData() // ✅ 第一次 hover 才打 API
+}
+
 function closeMenu() {
-  // 若希望滑開後保留資料可註解掉
-  // columns.value = []
+  setTimeout(() => {
+    columns.value = []
+  }, 100)
 }
 </script>
 
 <style scoped>
+/* === MegaMenu 內部連結樣式（品牌 A-Z 同風格）=== */
+.brand-link {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.95rem;
+  color: #004d40; /* 深綠字體 */
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.brand-link:hover {
+  color: rgb(0, 112, 131); /* hover 藍綠色 */
+  background-color: rgba(0, 112, 131, 0.05); /* 淺底色 */
+  text-decoration: underline; /* 底線效果 */
+  padding-left: 0.75rem; /* 輕微滑動感 */
+}
+
+/* 標題風格（與品牌 A-Z 一致） */
+.mega-menu h6 {
+  color: rgb(0, 112, 131);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.menu-link,
+.menu-title-link {
+  text-decoration: none;
+  color: #333;
+  transition: all 0.2s ease;
+  display: inline-block;
+  padding: 3px 0;
+}
+
+.menu-link:hover,
+.menu-title-link:hover {
+  color: rgb(77, 180, 193);
+  transform: translateX(4px);
+}
+
 /* 這層要負責整個導航置中 */
 .mega-menu-wrapper {
   position: absolute;

@@ -8,7 +8,8 @@ using tHerdBackend.Core.ValueObjects;
 namespace tHerdBackend.SharedApi.Controllers.Module.PROD
 {
 	[ApiController]
-    [Route("api/[folder]/[controller]")]   // 統一為 /api/prod/Products
+    [Area("PROD")]
+    [Route("api/[area]/[controller]")]   // 統一為 /api/prod/Products
     public class ProductsController : ControllerBase
 	{
 		private readonly IProductsForApiService _service;  // 服務注入
@@ -45,20 +46,18 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         }
 
         /// <summary>
-        /// 前台：查詢產品清單 (支援關鍵字、分類、價格區間、分頁)
+        /// 前台：查詢產品分類
         /// </summary>
-        /// <param name="query">查詢條件</param>
-        /// <param name="ct">連線</param>
         /// <returns></returns>
-        [AllowAnonymous]  // 不用 JWT，前台也能看
         [HttpGet("ProductTypetree")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProductTypeTree(
             CancellationToken ct = default)
         {
             try
             {
                 var data = await _service.GetProductTypeTreeAsync(ct);
-                return Ok(ApiResponse<List<ProductTypeTreeDto>>.Ok(data));
+                return Ok(ApiResponse<IEnumerable<ProductTypeTreeDto>>.Ok(data));
             }
             catch (Exception ex)
             {
