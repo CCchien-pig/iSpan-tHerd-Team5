@@ -18,7 +18,8 @@ namespace tHerdBackend.Core.Interfaces.CNT
 		Task<PagedResult<ProdProductDto>> GetProductsByTagAsync(
 			int tagId,
 			int page,
-			int pageSize
+			int pageSize,
+			string sort   // ⭐ 新增
 		);
 	}
 }
