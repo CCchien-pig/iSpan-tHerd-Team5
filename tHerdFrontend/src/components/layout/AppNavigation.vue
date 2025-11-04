@@ -284,7 +284,7 @@ onMounted(() => {
     .filter(i => i.type === 'pr')
     .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
 
-  //preloadMegaMenus() // 一次預載所有資料
+  preloadMegaMenus() // 一次預載所有資料
 })
 
 // === 預先載入所有分類資料 ===
@@ -713,13 +713,27 @@ onBeforeUnmount(() => {
 .mega-menu {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(0px);
   z-index: 9999;
-  width: 100vw;
-  max-height: 80vh;
+  
+  background: #fff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 1200px;
+  max-height: 400px;
   overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-top: 3px solid rgb(77, 180, 193);
+  pointer-events: auto;
+  transition: opacity 0.35s ease, transform 0.35s ease; /* 只針對透明與位移做動畫 */
+}
+
+/* 當顯示時 */
+.mega-menu.show,
+.mega-menu[style*="display: block"] {
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
 
 .brand-link {
@@ -783,14 +797,16 @@ onBeforeUnmount(() => {
     transform 0.3s ease;
 }
 
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
+.fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translate(-50%, 10px); /* 固定X方向居中，僅在Y軸移動 */
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translate(-50%, 0); /* 確保X方向不變 */
 }
 
 .fade-mask-enter-active,

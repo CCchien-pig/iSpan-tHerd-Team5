@@ -20,10 +20,12 @@ namespace tHerdBackend.Core.Interfaces.Products
 		Task<List<ProdProductTypeConfigDto>> GetAllProductTypesAsync(CancellationToken ct = default);
 		Task<bool> GetByProductNameAsync(string name, int id, CancellationToken ct = default); // 檢查產品名稱是否重複
 
-        Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
+        // Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
 
-        //Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
-    }
+        Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
+
+		//Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
+	}
 
 	// 簡化的查詢模型與分頁結果
 	public sealed class ProductQuery
