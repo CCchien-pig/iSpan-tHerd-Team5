@@ -16,7 +16,9 @@ namespace tHerdBackend.MKT.Rcl.Areas.MKT.Controllers
     public class AdsController : Controller
     {
         private readonly tHerdDBContext _context;
-        private readonly ISysAssetFileRepository _fileRepo;
+        private readonly ISysAssetFileRepository 
+            
+            ;
 
         public AdsController(tHerdDBContext context, ISysAssetFileRepository fileRepo)
         {
