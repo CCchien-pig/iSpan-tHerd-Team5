@@ -200,9 +200,12 @@ export default {
     this.$router.push('/cart'); 
   },
   async onLogout() {
-      await this.authStore.logout()          // ★ 透過 this.authStore
-      this.$router.replace({ name: 'home' }) // ★ 用 this.$router
-      alert('你已成功登出')
+      const ok = window.confirm('確定要登出嗎？');
+  if (!ok) return; // 使用者按了取消
+
+  await this.authStore.logout();
+  this.$router.replace({ name: 'home' });
+      
     },
 },
 };

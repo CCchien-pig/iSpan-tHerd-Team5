@@ -16,6 +16,7 @@ using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Services.USER;
 
 namespace tHerdBackend.SharedApi.Controllers.Common
 {
@@ -293,6 +294,96 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 					roles
 				}
 			});
+		}
+
+		//Forgot password
+		public record ForgotDto(string Email);
+		public record ForgotVerifyDto(string Email, string Code);
+
+		private static string ForgotOtpKey(string email) => $"forgot:otp:{email.ToLower()}";
+		private static string ForgotThrottleKey(string email) => $"forgot:otp:throttle:{email.ToLower()}";
+
+		[AllowAnonymous]
+		[HttpPost("forgot")]
+		public async Task<IActionResult> Forgot([FromBody] ForgotDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto?.Email))
+				return BadRequest(new { error = "缺少 Email" });
+
+			var email = dto.Email.Trim();
+			var user = await _userMgr.FindByEmailAsync(email);
+			// 為避免洩漏存在與否，一律回 200，但若存在才真的寄
+			if (user is not null && user.IsActive)
+			{
+				// 節流：60 秒內只允許重寄一次
+				var throttleKey = ForgotThrottleKey(email);
+				var throttle = await _cache.GetStringAsync(throttleKey);
+				if (!string.IsNullOrEmpty(throttle))
+					return Ok(new { ok = true }); // 靜默略過
+
+				var code = GenerateMailPassword.GenerateNumericCode(6);
+				var options = new DistributedCacheEntryOptions
+				{
+					AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+				};
+				await _cache.SetStringAsync(ForgotOtpKey(email), code, options);
+
+				// 節流 key，存活 60 秒
+				await _cache.SetStringAsync(throttleKey, "1",
+					new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) });
+
+				var html = $@"
+<p>您正在重設 tHerd 帳號的密碼。</p>
+<p>請在 10 分鐘內輸入以下 6 位數驗證碼：</p>
+<h2 style=""letter-spacing:2px;"">{code}</h2>
+<p>若非您本人操作，請忽略本郵件。</p>";
+				try { await _email.SendEmailAsync(email, "tHerd 密碼重設驗證碼", html); } catch { /* 忽略寄信異常以免洩漏 */ }
+			}
+			return Ok(new { ok = true });
+		}
+
+		[AllowAnonymous]
+		[HttpPost("forgot/verify")]
+		public async Task<IActionResult> ForgotVerify([FromBody] ForgotVerifyDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto?.Email) || string.IsNullOrWhiteSpace(dto?.Code))
+				return BadRequest(new { error = "缺少 Email 或 驗證碼" });
+
+			var email = dto.Email.Trim();
+			var user = await _userMgr.FindByEmailAsync(email);
+			if (user is null || !user.IsActive)
+				return Unauthorized(new { error = "帳號不存在或已停用" });
+
+			var cached = await _cache.GetStringAsync(ForgotOtpKey(email));
+			if (string.IsNullOrEmpty(cached) || !string.Equals(cached, dto.Code.Trim(), StringComparison.Ordinal))
+				return BadRequest(new { error = "驗證碼錯誤或已過期" });
+
+			// 產生臨時密碼 & 重設
+			var tempPwd = GenerateMailPassword.GenerateTempPassword(12);
+			var resetToken = await _userMgr.GeneratePasswordResetTokenAsync(user);
+			var reset = await _userMgr.ResetPasswordAsync(user, resetToken, tempPwd);
+			if (!reset.Succeeded)
+			{
+				var msg = string.Join("; ", reset.Errors.Select(e => e.Description));
+				return StatusCode(500, new { error = "重設密碼失敗：" + msg });
+			}
+
+			// 成功後可清除失敗次數與 Lockout
+			await _userMgr.ResetAccessFailedCountAsync(user);
+			await _userMgr.SetLockoutEndDateAsync(user, null);
+
+			// 刪除 OTP（避免重放）
+			await _cache.RemoveAsync(ForgotOtpKey(email));
+
+			// 寄送臨時密碼
+			var html = $@"
+<p>您的密碼已重設成功。</p>
+<p>臨時密碼如下（請妥善保管，並於登入後立刻修改）：</p>
+<pre style=""font-size:16px"">{tempPwd}</pre>
+<p>登入位置：<a href=""http://localhost:5173/user/login"">http://localhost:5173/user/login</a></p>";
+			try { await _email.SendEmailAsync(email, "tHerd 臨時密碼", html); } catch { /* 可記 log */ }
+
+			return Ok(new { ok = true });
 		}
 
 		public record Login2FaDto(string TwoFactorSession, string Code);
@@ -687,43 +778,7 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 
 		public record TwoFaVerifyDto(string userIdOrEmail, string code, bool rememberMe);
 
-		//[AllowAnonymous]
-		//[HttpPost("2fa/verify")]
-		//public async Task<IActionResult> TwoFaVerify([FromBody] TwoFaVerifyDto dto)
-		//{
-		//	if (string.IsNullOrWhiteSpace(dto?.userIdOrEmail) || string.IsNullOrWhiteSpace(dto.code))
-		//		return BadRequest(new { error = "缺少必要參數" });
-
-		//	ApplicationUser? user =
-		//		(await _userMgr.FindByIdAsync(dto.userIdOrEmail)) ??
-		//		(await _userMgr.FindByEmailAsync(dto.userIdOrEmail));
-
-		//	if (user == null || !user.IsActive)
-		//		return Unauthorized(new { error = "帳號不存在或已停用" });
-
-		//	var code = dto.code.Replace(" ", "").Replace("-", "");
-		//	var valid = await _userMgr.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, code);
-		//	if (!valid) return Unauthorized(new { error = "驗證碼錯誤" });
-
-		//	var roles = await _userMgr.GetRolesAsync(user);
-		//	var (accessToken, accessExpiresUtc, jti) = _jwt.Generate(user, roles);
-		//	var (refreshPlain, _) = await _refreshSvc.IssueAsync(user.Id, jti);
-
-		//	return Ok(new
-		//	{
-		//		accessToken,
-		//		accessExpiresAt = accessExpiresUtc,
-		//		refreshToken = refreshPlain,
-		//		user = new
-		//		{
-		//			id = user.Id,
-		//			email = user.Email,
-		//			name = $"{user.LastName}{user.FirstName}",
-		//			userNumberId = user.UserNumberId,
-		//			roles
-		//		}
-		//	});
-		//}
+		
 
 		// ★ 極低機率碰撞時的唯一性檢查（最多重試 5 次）
 		//    若你的 DB 有 UNIQUE 索引也可在異常時重試一次。

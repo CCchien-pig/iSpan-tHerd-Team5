@@ -86,7 +86,7 @@ namespace tHerdBackend.Admin
 				options.Cookie.HttpOnly = true;
 				options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 				options.Cookie.SameSite = SameSiteMode.Lax;
-				options.ExpireTimeSpan = TimeSpan.FromMinutes(14);
+				options.ExpireTimeSpan = TimeSpan.FromDays(14);
 				options.LoginPath = "/Identity/Account/AdminLogin";
 				options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 				options.SlidingExpiration = true;
