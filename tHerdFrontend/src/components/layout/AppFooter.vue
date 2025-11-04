@@ -33,7 +33,7 @@
           <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
             <li>
-              <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
+              <RouterLink to="/cs/ticket" class="text-light text-decoration-none">聯絡我們</RouterLink>
             </li>
             <li>
               <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
