@@ -101,11 +101,14 @@
       </nav>
     </div>
   </section>
+
+  <ScrollToTop />
 </template>
 
 <script>
 // 導入產品卡片組件
 import ProductCard from '@/components/modules/prod/card/ProductCard.vue'
+import ScrollToTop from '@/components/common/ScrollToTop.vue'
 
 /**
  * ProductList.vue 組件配置
@@ -120,6 +123,7 @@ export default {
    */
   components: {
     ProductCard,
+    ScrollToTop,
   },
 
   /**

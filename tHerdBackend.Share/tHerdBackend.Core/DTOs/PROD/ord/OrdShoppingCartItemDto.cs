@@ -1,0 +1,42 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace tHerdBackend.Core.DTOs;
+
+/// <summary>
+/// 購物車明細（同一 Cart 相同商品不可重複；數量限制參照購物車上限）
+/// </summary>
+public partial class OrdShoppingCartItemDto
+{
+    /// <summary>
+    /// 明細編號
+    /// </summary>
+    public int CartItemId { get; set; }
+
+    /// <summary>
+    /// 購物車ID（FK）
+    /// </summary>
+    public int CartId { get; set; }
+
+    /// <summary>
+    /// 商品ID（對照表後補）
+    /// </summary>
+    public int ProductId { get; set; }
+
+    /// <summary>
+    /// 數量；CHECK：&gt; 0
+    /// </summary>
+    public int Qty { get; set; }
+
+    /// <summary>
+    /// 當下商品單價
+    /// </summary>
+    public decimal UnitPrice { get; set; }
+
+    /// <summary>
+    /// 加入時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; }
+
+    public int? SkuId { get; set; }
+}

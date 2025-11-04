@@ -121,7 +121,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                             ProductId = productId,
                             IngredientId = ingredientId,
                             Percentage = percentage,
-                            PercentageText = percentageAndUnit,
+                            //PercentageText = percentageAndUnit,
                             Note = parts.Length > 3 ? parts[3] : null,
                             IngredientType = 1,
                             OrderSeq = maxIndex + 1
@@ -175,7 +175,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                                 ProductId = productId,
                                 IngredientId = ingredientId,
                                 Percentage = null,
-                                PercentageText = null,
+                                //PercentageText = null,
                                 Note = null,
                                 IngredientType = 2,
                                 OrderSeq = maxIndex + 1
