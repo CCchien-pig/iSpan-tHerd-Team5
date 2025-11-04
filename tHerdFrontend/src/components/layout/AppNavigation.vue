@@ -24,8 +24,6 @@
               v-for="item in productMenus"
               :key="item.id"
               class="nav-item position-relative mega-menu-container"
-              @mouseenter="openMegaMenu(item)"
-              @mouseleave="closeMegaMenu"
             >
               <button
                 type="button"
@@ -35,6 +33,7 @@
                   'has-icon': item.icon,
                   'text-only': !item.icon
                 }"
+                @click="toggleMegaMenu(item)"
               >
                 <div v-if="item.icon" class="nav-icon-wrapper">
                   <img :src="item.icon" alt="" class="nav-icon" />
@@ -352,7 +351,21 @@ function openMegaMenu(item) {
   megaMenuData.value = loadedMenus.value[item.id]
 }
 
+function toggleMegaMenu(item) {
+  if (activeMenuId.value === item.id) {
+    // 如果再次點擊相同選單 → 收合
+    activeMenuId.value = null
+    megaMenuData.value = null
+  } else {
+    // 點擊其他選單 → 開啟新選單
+    activeMenuId.value = item.id
+    megaMenuData.value = loadedMenus.value[item.id]
+  }
+}
+
 function closeMegaMenu() {
+  activeMenuId.value = null
+  megaMenuData.value = null
   clearTimeout(closeTimer)
   // 延遲一點再關閉，給滑鼠移動時間
   closeTimer = setTimeout(() => {
