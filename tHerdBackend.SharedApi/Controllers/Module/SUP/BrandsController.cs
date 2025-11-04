@@ -3,47 +3,42 @@ using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.DTOs.SUP.BrandLayout;
+using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Core.Services.SUP;
 using tHerdBackend.Core.ValueObjects;
+using tHerdBackend.Infra.Models.Sup;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
-	[Route("api/sup/[controller]")]
+	[Route("api/[folder]/[controller]")]
+	[Authorize]
 	public class BrandsController : ControllerBase
 	{
 		private readonly IBrandService _service;// 處理品牌基本資料
 		private readonly IBrandLayoutService _layoutService; // 處理品牌版面配置
+		private readonly IBrandLogoService _brandLogoService;
 		private readonly ICurrentUser _me;
+		private readonly ILogger<BrandsController> _logger;
+		private readonly IBrandAssetsService _assetsService;
 
 		public BrandsController(
 			IBrandService service,
 			IBrandLayoutService layoutService,
-			ICurrentUser me)
+			IBrandLogoService brandLogoService,
+			ICurrentUser me,
+			ILogger<BrandsController> logger,
+			IBrandAssetsService assetsService)
 		{
 			_service = service;
 			_layoutService = layoutService;
+			_brandLogoService = brandLogoService;
 			_me = me;
+			_logger = logger;
+			_assetsService = assetsService;
 		}
 
 		#region 查品牌
-		/// <summary>
-		/// 取得所有品牌清單（包含未啟用者）。
-		/// </summary>
-		// GET /api/sup/Brands
-		//[HttpGet]
-		//public async Task<IActionResult> GetAllBrands()
-		//{
-		//	try
-		//	{
-		//		var list = await _service.GetAllAsync();
-		//		return Ok(list);
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		return StatusCode(500, new { success = false, message = ex.Message });
-		//	}
-		//}
 
 		/// <summary>
 		/// 取得品牌清單，可依條件篩選：
@@ -52,15 +47,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// - isFeatured=true/false → 篩選精選或非精選品牌
 		/// 未傳入 (null) 則不篩選該條件
 		/// </summary>
-		/// <param name="isActive">品牌啟用狀態</param>
-		/// <param name="isDiscountActive">品牌折扣狀態</param>
-		/// <param name="isFeatured">品牌精選狀態</param>		
-		// GET /api/sup/Brands?isActive=true&isDiscountActive=false&isFeatured=true
+		// GET /api/sup/Brands
 		[HttpGet]
+		[AllowAnonymous] // 此查詢功能通常前後台都會用到，可允許匿名存取
 		public async Task<IActionResult> GetBrands(
-		bool? isActive = null,
-		bool? isDiscountActive = null,
-		bool? isFeatured = null)
+			bool? isActive = null,
+			bool? isDiscountActive = null,
+			bool? isFeatured = null)
 		{
 			try
 			{
@@ -68,33 +61,26 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 
 				if (brands == null || !brands.Any())
 				{
-					var messages = new List<string>();
-					if (isActive.HasValue) messages.Add(isActive.Value ? "品牌啟用中" : "品牌未啟用");
-					if (isDiscountActive.HasValue) messages.Add(isDiscountActive.Value ? "折扣活動中" : "無折扣活動");
-					if (isFeatured.HasValue) messages.Add(isFeatured.Value ? "品牌精選中" : "品牌非精選");
-
-					string message = messages.Any()
-						? $"沒有符合條件的品牌（{string.Join("、", messages)}）"
-						: "沒有品牌資料";
-
-					return NotFound(new { success = false, message });
+					// 為了前端處理方便，即使找不到資料也回傳 HTTP 200 與空陣列
+					return Ok(new List<BrandDto>());
 				}
 
 				return Ok(brands);
 			}
 			catch (Exception ex)
 			{
+				// 記錄日誌 (Log) 的好地方
 				return StatusCode(500, new { success = false, message = ex.Message });
 			}
 		}
-
 
 		/// <summary>
 		/// 查單一品牌
 		/// </summary>
 		/// <param name="id">品牌編號</param>
-		// GET /api/sup/Brands/5  
+		// GET /api/sup/Brands/{id}
 		[HttpGet("{id}")]
+		[AllowAnonymous] // 同樣，查詢單一品牌也可能用於前台
 		public async Task<IActionResult> GetByBrandId(int id)
 		{
 			try
@@ -110,49 +96,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
-		/// <summary>
-		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
-		/// </summary>
-		// GET /api/sup/Brands/grouped
-		[HttpGet("grouped")]
-		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
-			bool? isActive = null,
-			bool? isDiscountActive = null,
-			bool? isFeatured = null)
-		{
-			try
-			{
-				var brands = await _service.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
-				if (brands == null || !brands.Any())
-					return NotFound(new { success = false, message = "沒有符合條件的品牌資料" });
-
-				// 按品牌名稱首字母分組
-				var grouped = brands
-					.GroupBy(b => char.ToUpper(b.BrandName[0]))
-					.OrderBy(g => g.Key)
-					.Select(g => new
-					{
-						Letter = g.Key.ToString(),
-						Brands = g.OrderBy(b => b.BrandName).Select(b => new {
-							b.BrandId,
-							b.BrandName,
-							b.BrandCode,
-							b.IsActive,
-							b.IsFeatured,
-							b.DiscountRate,
-							b.IsDiscountActive
-						}).ToList()
-					}).ToList();
-
-				return Ok(grouped);
-			}
-			catch (Exception ex)
-			{
-				return StatusCode(500, new { success = false, message = ex.Message });
-			}
-		}
-
-
 		#endregion
 
 		#region 查品牌折扣
@@ -160,8 +103,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 查詢所有品牌的折扣資料
 		/// </summary>
-		/// <returns>所有品牌折扣資訊及期間</returns>
 		[HttpGet("discounts")]
+		[AllowAnonymous]
 		public async Task<ActionResult<ApiResponse<List<BrandDiscountDto>>>> GetAllBrandDiscounts()
 		{
 			try
@@ -176,17 +119,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 		/// <summary>
-		/// 依品牌ID查詢該品牌的折扣資料（可匿名）
+		/// 依品牌ID查詢該品牌的折扣資料
 		/// </summary>
-		/// <param name="brandId">品牌ID</param>
-		/// <returns>ApiResponse: 品牌折扣資訊</returns>
 		[HttpGet("discount/bybrand/{brandId}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> GetDiscountByBrandId(int brandId)
 		{
 			try
 			{
-				// 檢查資料庫中是否存在該品牌ID
 				var brandExists = await _service.CheckBrandExistsAsync(brandId);
 				if (!brandExists)
 				{
@@ -194,8 +134,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				}
 
 				var discount = await _service.GetDiscountByBrandIdAsync(brandId);
-
-				// 若查不到資料（品牌存在但沒折扣）
 				if (discount == null || discount.DiscountRate is null)
 				{
 					return Ok(ApiResponse<BrandDiscountDto>.Fail("沒有找到該品牌的折扣資料"));
@@ -205,7 +143,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 			catch (Exception ex)
 			{
-				// 統一回傳失敗格式
 				return Ok(ApiResponse<BrandDiscountDto>.Fail("系統錯誤：" + ex.Message));
 			}
 		}
@@ -217,9 +154,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得指定品牌的按讚數。
 		/// </summary>
-		/// <param name="id">品牌編號</param>
-		/// GET /api/sup/Brands/LikeCount/5
 		[HttpGet("LikeCount/{id}")]
+		[AllowAnonymous]
 		public async Task<IActionResult> GetBrandLikeCount(int id)
 		{
 			try
@@ -238,6 +174,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		#endregion
 
 		#region 品牌版面 layouts API
+
 		//查詢所有版面	GET		/api/brands/{brandId}/layouts	取得特定品牌的所有歷史版面設定（含版本與啟用狀態）
 		//取得啟用版型	GET		/api/brands/{brandId}/layout/active	取得目前啟用中的 Layout（IsActive = 1）
 		//新增版型		POST	/api/brands/{brandId}/layout	建立新的 JSON 版型設定
@@ -248,20 +185,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得特定品牌的所有歷史版面設定（含版本與啟用狀態）
 		/// </summary>
-		/// GET /api/sup/brands/{brandId}/layouts
 		[HttpGet("{brandId}/layouts")]
 		public async Task<IActionResult> GetBrandLayouts(int brandId)
 		{
 			try
 			{
-				var brand = await _service.GetByIdAsync(brandId);
-				if (brand == null)
-					// 找不到品牌
-					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
-
 				var layouts = await _layoutService.GetLayoutsByBrandIdAsync(brandId);
 				if (layouts == null || !layouts.Any())
-					// 找不到版面紀錄
 					return NotFound(new { success = false, message = "該品牌尚未建立任何版面設定紀錄。" });
 
 				return Ok(layouts);
@@ -275,20 +205,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得目前啟用中的品牌 Layout（IsActive = 1）
 		/// </summary>
-		/// GET /api/sup/brands/{brandId}/layout/active
 		[HttpGet("{brandId}/layout/active")]
+		[AllowAnonymous] // 前台顯示頁面需要，允許匿名
 		public async Task<IActionResult> GetActiveLayout(int brandId)
 		{
 			try
 			{
-				var brand = await _service.GetByIdAsync(brandId);
-				if (brand == null)
-					// 找不到品牌
-					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄。" });
-
 				var layout = await _layoutService.GetActiveLayoutAsync(brandId);
 				if (layout == null)
-					// 找不到啟用中的版面
 					return NotFound(new { success = false, message = "該品牌目前沒有任何啟用中的版面設定。" });
 
 				return Ok(layout);
@@ -302,30 +226,23 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 建立新的品牌 Layout JSON 設定
 		/// </summary>
-		/// POST /api/sup/brands/{brandId}/layout
 		[HttpPost("{brandId}/layout")]
 		public async Task<IActionResult> CreateBrandLayout(int brandId, [FromBody] BrandLayoutCreateDto dto)
 		{
 			if (!ModelState.IsValid)
-				return BadRequest(new { success = false, message = "輸入格式不正確，請檢查所有欄位。" }); // 稍微優化BadRequest
+				return BadRequest(new { success = false, message = "輸入格式不正確，請檢查所有欄位。" });
 
-			if (!_me.IsAuthenticated)
-				return Unauthorized(new { success = false, message = "使用者尚未登入，無法執行建立操作。" }); // 稍微優化Unauthorized
-
-			// TODO:登入ID
-			var creatorId = _me.IsAuthenticated ? _me.UserNumberId : 1004;
-			dto.Creator = creatorId;
+			// 2. 直接使用 _me.UserNumberId，不再需要判斷或使用硬編碼
+			dto.Creator = _me.UserNumberId;
 
 			try
 			{
 				var brand = await _service.GetByIdAsync(brandId);
 				if (brand == null)
-					// 找不到品牌
 					return NotFound(new { success = false, message = $"找不到 ID 為 {brandId} 的品牌紀錄，無法新增版面。" });
 
 				var newId = await _layoutService.CreateLayoutAsync(brandId, dto);
 
-				// 成功後應回傳 201 Created，並導向取得該資源的 API
 				return CreatedAtAction(nameof(GetActiveLayout), new { brandId = brandId },
 					new { success = true, layoutId = newId, message = "品牌版面設定已成功建立。" });
 			}
@@ -338,25 +255,19 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 修改品牌版面設定（整體覆寫 LayoutJson）
 		/// </summary>
-		/// PUT /api/sup/brands/layouts/{layoutId}
 		[HttpPut("layouts/{layoutId}")]
 		public async Task<IActionResult> UpdateBrandLayout(int layoutId, [FromBody] BrandLayoutUpdateDto dto)
 		{
 			if (!ModelState.IsValid)
 				return BadRequest(new { success = false, message = "輸入資料錯誤，請檢查所有欄位。" });
 
-			if (!_me.IsAuthenticated)
-				return Unauthorized(new { success = false, message = "使用者尚未登入，無法執行更新操作。" });
-
-			// TODO:登入ID
-			var reviserId = _me.IsAuthenticated ? _me.UserNumberId : 1004;
-			dto.Reviser = reviserId;
+			// 2. 直接使用 _me.UserNumberId
+			dto.Reviser = _me.UserNumberId;
 
 			try
 			{
 				var updated = await _layoutService.UpdateLayoutAsync(layoutId, dto);
 				if (!updated)
-					// 找不到 Layout
 					return NotFound(new { success = false, message = $"找不到 ID 為 {layoutId} 的品牌版面配置，更新失敗。" });
 
 				return Ok(new { success = true, message = "品牌版面設定已成功更新。" });
@@ -370,24 +281,16 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 啟用指定版型（同品牌僅允許一個 Layout 為啟用狀態）
 		/// </summary>
-		/// PATCH /api/sup/brands/layouts/{layoutId}/activate
 		[HttpPatch("layouts/{layoutId}/activate")]
-		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
 		public async Task<IActionResult> ActivateBrandLayout(int layoutId)
 		{
-			Console.WriteLine($"[PATCH] ActivateBrandLayout 被呼叫 layoutId={layoutId}");
-
-			//if (!_me.IsAuthenticated)
-			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
-
-			// TODO:暫時用登入ID
-			var reviserId = 1004;
+			// 2. 直接使用 _me.UserNumberId
+			var reviserId = _me.UserNumberId;
 
 			try
 			{
 				var result = await _layoutService.ActivateLayoutAsync(layoutId, reviserId);
 				if (!result)
-					// 找不到 Layout
 					return NotFound(new { success = false, message = $"找不到指定的版面配置 (Layout ID: {layoutId})。" });
 
 				return Ok(new { success = true, message = "品牌版面設定已成功啟用為現行版本。" });
@@ -401,22 +304,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 軟刪除（停用）品牌 Layout
 		/// </summary>
-		/// DELETE /api/sup/brands/layouts/{layoutId}
 		[HttpDelete("layouts/{layoutId}")]
-		[AllowAnonymous] // ← TODO:暫時允許匿名訪問
 		public async Task<IActionResult> DeleteBrandLayout(int layoutId)
 		{
-			Console.WriteLine($"[DELETE] DeleteBrandLayout 被呼叫 layoutId={layoutId}");
-
-			//if (!_me.IsAuthenticated)
-			//	return Unauthorized(new { success = false, message = "使用者尚未登入" });
-
-			// TODO:暫時用登入ID
-			var reviserId = 1004;
+			// 2. 直接使用 _me.UserNumberId
+			var reviserId = _me.UserNumberId;
 
 			try
 			{
-				//var result = await _service.SoftDeleteLayoutAsync(layoutId, _me.UserNumberId);
 				var result = await _layoutService.SoftDeleteLayoutAsync(layoutId, reviserId);
 				if (!result)
 					return NotFound(new { success = false, message = "找不到指定的品牌版面配置 (Layout ID: " + layoutId + ")" });
@@ -430,5 +325,230 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 		#endregion
+
+		#region 前台查
+
+		/// <summary>
+		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
+		/// 給 Brands A–Z 頁使用
+		/// </summary>
+		// GET /api/sup/Brands/grouped
+		[HttpGet("grouped")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
+			bool? isActive = null,
+			bool? isDiscountActive = null,
+			bool? isFeatured = null,
+			CancellationToken ct = default)
+		{
+			try
+			{
+				var brands = await _service.GetFilteredAsync(isActive, isDiscountActive, isFeatured);
+				if (brands == null || !brands.Any())
+					return Ok(ApiResponse<List<BrandGroupDto>>.Ok(new List<BrandGroupDto>(), "無符合條件的品牌"));
+
+				// 建立 Logo 快取
+				await _brandLogoService.BuildLogoMapAsync(ct);
+
+				string GetGroupKey(string name)
+				{
+					if (string.IsNullOrWhiteSpace(name)) return "0-9";
+					var ch = name.Trim()[0];
+					if (char.IsDigit(ch)) return "0-9";
+					var upper = char.ToUpper(ch);
+					return upper >= 'A' && upper <= 'Z' ? upper.ToString() : "0-9";
+				}
+
+				var dict = brands
+					.GroupBy(b => GetGroupKey(b.BrandName))
+					.ToDictionary(
+						g => g.Key,
+						g => g.OrderBy(b => b.BrandName)
+							.Select(b => new BrandGroupItemDto
+							{
+								BrandId = b.BrandId,
+								BrandName = b.BrandName,
+								BrandCode = b.BrandCode,
+								IsActive = b.IsActive,
+								IsFeatured = b.IsFeatured,
+								DiscountRate = b.DiscountRate,
+								IsDiscountActive = b.IsDiscountActive,
+								LogoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
+							}).ToList()
+					);
+
+				var result = new List<BrandGroupDto>
+		{
+			new() { Letter = "0-9", Brands = dict.ContainsKey("0-9") ? dict["0-9"] : new() }
+		};
+
+				for (char c = 'A'; c <= 'Z'; c++)
+				{
+					var key = c.ToString();
+					result.Add(new BrandGroupDto
+					{
+						Letter = key,
+						Brands = dict.ContainsKey(key) ? dict[key] : new()
+					});
+				}
+
+				return Ok(ApiResponse<List<BrandGroupDto>>.Ok(result, "品牌分組載入成功"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<List<BrandGroupDto>>.Fail($"品牌分組載入失敗：{ex.Message}"));
+			}
+		}
+
+		/// <summary>
+		/// 取得啟用中品牌 Logo URL
+		/// 從 SYS_AssetFile 表中找出 FolderId = 56 且 IsActive = 1 的圖片，回傳 { brandName, logoUrl } 清單。
+		/// </summary>
+		// GET /api/sup/Brands/logos
+		[HttpGet("logos")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetActiveBrandLogos(CancellationToken ct)
+		{
+			try
+			{
+				var logos = await _brandLogoService.BuildLogoMapAsync(ct);
+				if (logos == null || logos.Count == 0)
+					return Ok(ApiResponse<object>.Ok(new List<object>(), "目前沒有啟用中的品牌 Logo"));
+
+				var result = logos.Select(kv => new
+				{
+					BrandName = kv.Key,
+					LogoUrl = kv.Value
+				}).ToList();
+
+				return Ok(ApiResponse<object>.Ok(result, "成功取得啟用中品牌 Logo"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<object>.Fail($"取得品牌 Logo 發生錯誤：{ex.Message}"));
+			}
+		}
+
+
+		/// <summary>
+		/// 取得精選品牌清單 (平面列表)，給 Brands A–Z 或首頁 Carousel 使用
+		/// IsActive = true 且 IsFeatured = true 的品牌並透過 _brandLogoService 補上 logoUrl
+		/// </summary>
+		// GET /api/sup/Brands/featured
+		[HttpGet("featured")]
+		[AllowAnonymous]
+		public async Task<IActionResult> GetFeaturedBrands(CancellationToken ct = default)
+		{
+			try
+			{
+				var brands = await _service.GetFilteredAsync(isActive: true, isDiscountActive: null, isFeatured: true);
+				if (brands == null || !brands.Any())
+					return Ok(ApiResponse<List<object>>.Ok(new List<object>(), "目前沒有精選品牌"));
+
+				// 先建立 Logo 快取
+				await _brandLogoService.BuildLogoMapAsync(ct);
+
+				// 將品牌轉為前端使用格式
+				var result = brands
+					.OrderBy(b => b.BrandName)
+					.Select(b => new
+					{
+						brandId = b.BrandId,
+						brandName = b.BrandName,
+						brandCode = b.BrandCode,
+						isActive = b.IsActive,
+						isFeatured = b.IsFeatured,
+						discountRate = b.DiscountRate,
+						isDiscountActive = b.IsDiscountActive,
+						logoUrl = _brandLogoService.TryResolve(b.BrandName, b.BrandCode)
+					})
+					.ToList();
+
+				return Ok(ApiResponse<object>.Ok(result, "成功取得精選品牌"));
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, ApiResponse<object>.Fail($"取得精選品牌時發生錯誤：{ex.Message}"));
+			}
+		}
+
+
+		/// <summary>
+		/// 取得品牌詳頁（Banner、分類按鈕、Accordion）
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <param name="ct">取消權杖</param>
+		/// <returns>BrandDetailDto</returns>
+		/// <remarks>
+		/// 資料來源：
+		/// - Banner：SUP_Brand.ImgId → SYS_AssetFile.FileUrl
+		/// - Buttons：SUP_BrandProductTypeFilter（依 ButtonOrder 排序，回傳 Text/Order/Id）
+		/// - Accordions：SUP_BrandAccordionContent（以 Content 分組，組內依 OrderSeq 排序）
+		/// </remarks>
+		[HttpGet("{brandId:int}/detail")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandDetailDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetDetail([FromRoute] int brandId, CancellationToken ct)
+		{
+			try
+			{
+				var dto = await _service.GetBrandDetailAsync(brandId, ct);
+				if (dto == null)
+					return Ok(ApiResponse<BrandDetailDto>.Fail("品牌不存在或已停用"));
+
+				return Ok(ApiResponse<BrandDetailDto>.Ok(dto));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetDetail failed. brandId={BrandId}", brandId);
+				return StatusCode(StatusCodes.Status500InternalServerError,
+					ApiResponse<BrandDetailDto>.Fail($"發生錯誤：{ex.Message}"));
+			}
+		}
+
+
+		/// <summary>
+		/// 取得品牌內容圖片（右側用，不分組）
+		/// 僅取 SYS_AssetFile.IsActive = 1，依 CreatedDate 遞增排序。
+		/// 若 altText 未提供，預設使用品牌名稱。
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <param name="folderId">檔案資料夾 Id，預設 8</param>
+		/// <param name="altText">圖片替代文字過濾（預設為品牌名稱）</param>
+		[HttpGet("{brandId:int}/content-images")]
+		[AllowAnonymous] // 視需求開放或拿掉
+		[ProducesResponseType(typeof(ApiResponse<BrandContentImagesDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetBrandContentImages(
+			[FromRoute] int brandId,
+			[FromQuery] int folderId = 8,
+			[FromQuery] string? altText = null,
+			CancellationToken ct = default)
+		{
+			try
+			{
+				// 1) 驗證品牌是否存在且啟用
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
+				// 2) 取圖片（Service 內會預設 altText=name）
+				var dto = await _assetsService.GetRightImagesAsync(brandId, folderId, altText, ct);
+				return Ok(ApiResponse<BrandContentImagesDto>.Ok(dto, "成功取得內容圖片"));
+
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetBrandContentImages failed. brandId={BrandId}, folderId={FolderId}, altText={AltText}", brandId, folderId, altText);
+				return StatusCode(StatusCodes.Status500InternalServerError,
+					ApiResponse<object>.Fail($"取得內容圖片發生錯誤：{ex.Message}"));
+			}
+		}
+
+
+		#endregion
+
 	}
 }

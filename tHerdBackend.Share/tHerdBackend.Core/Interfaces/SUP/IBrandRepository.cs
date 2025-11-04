@@ -1,4 +1,5 @@
 ﻿using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Infra.Models.Sup;
 
 namespace tHerdBackend.Core.Interfaces.SUP
 {
@@ -26,6 +27,14 @@ namespace tHerdBackend.Core.Interfaces.SUP
 
 		#endregion
 
+		#region 前台查詳情
+
+		Task<(int brandId, string brandName, int? imgId)> GetBrandAsync(int brandId, CancellationToken ct);
+		Task<string?> GetAssetFileUrlByFileIdAsync(int fileId, CancellationToken ct);
+		Task<List<BrandButtonDto>> GetBrandButtonsAsync(int brandId, CancellationToken ct);
+		Task<List<(string contentKey, BrandAccordionItemDto item)>> GetBrandAccordionRawAsync(int brandId, CancellationToken ct);
+
+		#endregion
 
 	}
 

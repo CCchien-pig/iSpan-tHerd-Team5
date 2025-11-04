@@ -60,6 +60,11 @@ public partial class CsTicket
     /// </summary>
     public int? ImgId { get; set; }
 
+    /// <summary>
+    /// 電子郵件
+    /// </summary>
+    public string Email { get; set; }
+
     public virtual CsFaqCategory Category { get; set; }
 
     public virtual ICollection<CsTicketHistory> CsTicketHistories { get; set; } = new List<CsTicketHistory>();

@@ -50,7 +50,7 @@ export default {
   components: { AppButton },
   props: {
     leftText: { type: String, default: '前往遊戲頁面' },
-    rightText: { type: String, default: '挑戰翻牌遊戲，贏取專屬獎勵！' }
+    rightText: { type: String, default: '挑戰翻牌遊戲，贏取專屬獎勵！( 全站之商品資料部分參考自 iHerb，僅供學術研究使用，無任何商業行為。 )' }
   },
   setup() {
     const router = useRouter()

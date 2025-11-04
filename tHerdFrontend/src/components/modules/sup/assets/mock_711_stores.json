@@ -2,7 +2,7 @@
   {
     "StoreID": "001234",
     "StoreName": "台北信安門市",
-    "Address": "台北市信義區信安街123號",
+    "Address": "台北市大安區大安路一段218號",
     "Latitude": 25.03411,
     "Longitude": 121.564472,
     "Type": "7-11",
@@ -11,7 +11,7 @@
   {
     "StoreID": "005678",
     "StoreName": "新北中和門市",
-    "Address": "新北市中和區中和路456號",
+    "Address": "新北市中和區橋和路9號1樓",
     "Latitude": 24.996255,
     "Longitude": 121.514971,
     "Type": "7-11",
@@ -19,10 +19,10 @@
   },
   {
     "StoreID": "009012",
-    "StoreName": "桃園中壢門市",
-    "Address": "桃園市中壢區復興路789號",
-    "Latitude": 24.9536,
-    "Longitude": 121.2255,
+    "StoreName": "桃園世紀廣場門市",
+    "Address": "桃園市中壢區興南里新生路182號",
+    "Latitude": 24.9612,
+    "Longitude": 121.2231,
     "Type": "7-11",
     "Phone": "03-12345678"
   },

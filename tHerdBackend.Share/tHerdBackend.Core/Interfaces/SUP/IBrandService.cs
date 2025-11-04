@@ -1,4 +1,5 @@
 ﻿using tHerdBackend.Core.DTOs.SUP.Brand;
+using tHerdBackend.Infra.Models.Sup;
 
 public interface IBrandService
 {
@@ -16,7 +17,7 @@ public interface IBrandService
 	/// <summary>
 	/// 依條件取得品牌清單，可篩選啟用、折扣、精選
 	/// </summary>
-	Task<List<BrandDto>> GetFilteredAsync(bool? active = null, bool? discountOnly = null, bool? featuredOnly = null);
+	Task<List<BrandDto>> GetFilteredAsync(bool? isActive = null, bool? isDiscountActive = null, bool? isFeatured = null);
 
 	#endregion
 
@@ -33,6 +34,11 @@ public interface IBrandService
 
 	#endregion
 
+	#region 前台查詳情
+
+	Task<BrandDetailDto?> GetBrandDetailAsync(int brandId, CancellationToken ct);
+
+	#endregion
 
 }
 

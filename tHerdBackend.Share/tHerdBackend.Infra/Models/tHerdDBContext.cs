@@ -1193,6 +1193,9 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建檔時間");
+            entity.Property(e => e.Email)
+                .HasMaxLength(256)
+                .HasComment("電子郵件");
             entity.Property(e => e.ImgId).HasComment("圖片 ID");
             entity.Property(e => e.Priority)
                 .HasDefaultValue(2)
@@ -2371,8 +2374,6 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.Alias, "IX_PROD_Ingredient_Alias");
 
-            entity.HasIndex(e => e.IngredientName, "UQ_PROD_Ingredient_IngredientName").IsUnique();
-
             entity.Property(e => e.IngredientId).HasComment("成分ID（主鍵）");
             entity.Property(e => e.Alias)
                 .HasMaxLength(200)
@@ -2382,7 +2383,6 @@ public partial class tHerdDBContext : DbContext
                 .HasComment("成分說明或注意事項");
             entity.Property(e => e.IngredientName)
                 .IsRequired()
-                .HasMaxLength(200)
                 .HasComment("成分名稱");
         });
 
@@ -2404,8 +2404,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Badge)
                 .HasMaxLength(10)
                 .IsUnicode(false)
-                .HasComment("商品標籤")
-                .HasColumnName("badge");
+                .HasComment("商品標籤");
             entity.Property(e => e.BrandId).HasComment("品牌ID");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
@@ -2607,10 +2606,10 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.Percentage)
                 .HasComment("百分比或含量（單位可於前台說明）")
                 .HasColumnType("decimal(6, 3)");
-            entity.Property(e => e.PercentageText)
-                .HasMaxLength(100)
-                .HasDefaultValueSql("(NULL)")
-                .HasComment("原始百分比或文字（如 \"50%\", \"含少許\" 等）");
+            entity.Property(e => e.Unit)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("單位（如 mg, IU, %, ml）");
 
             entity.HasOne(d => d.Ingredient).WithMany(p => p.ProdProductIngredients)
                 .HasForeignKey(d => d.IngredientId)
