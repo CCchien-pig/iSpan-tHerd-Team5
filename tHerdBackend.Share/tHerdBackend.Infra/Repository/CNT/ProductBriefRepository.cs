@@ -8,11 +8,11 @@ using tHerdBackend.Infra.Models;
 
 namespace tHerdBackend.Infra.Repository.CNT
 {
-	public class ProductTagRepository : IProductTagRepository
+	public class ProductBriefRepository : IProductTagRepository
 	{
 		private readonly tHerdDBContext _db;
 
-		public ProductTagRepository(tHerdDBContext db)
+		public ProductBriefRepository(tHerdDBContext db)
 		{
 			_db = db;
 		}

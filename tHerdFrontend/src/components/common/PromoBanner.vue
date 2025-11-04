@@ -1,15 +1,7 @@
-<!--
-  PromoBanner.vue - 促銷橫幅組件
-  功能：展示促銷活動信息，包含左側文字、右側文字和倒計時
-  特色：漸層背景、響應式布局、可配置內容
-  用途：用於首頁頂部、特殊促銷活動展示
--->
 <template>
   <!-- 促銷橫幅容器 -->
   <div class="promo-banner main-color-green py-2">
-    <div
-      class="container-fluid d-flex justify-content-between align-items-center"
-    >
+    <div class="container-fluid d-flex justify-content-between align-items-center">
       <div class="align-items-center d-flex gap-2">
         <!-- 左側促銷信息按鈕 -->
         <AppButton
@@ -18,26 +10,19 @@
           size="sm"
           :show-border="false"
           custom-class="main-color-green-text main-color-white border-0 p-2 rounded-pill"
+          @click="goToGame"
         >
           <span class="hover-underline">{{ leftText }}</span>
-          <!-- 倒計時（如果有） -->
-          <span class="ms-3 hover-none" v-if="countdown">{{ countdown }}</span>
         </AppButton>
 
-        <!-- 右側促銷信息按鈕 -->
-        <AppButton
-          :text="rightText"
-          variant="light"
-          size="sm"
-          :show-border="false"
-          custom-class="main-color-white-text bg-transparent border-0 p-2 rounded-pill"
-        >
-          <span class="hover-underline">{{ rightText }}</span>
-        </AppButton>
+        <!-- 右側促銷信息 -->
+        <span class="hover-underline">
+          <strong class="main-color-lightgreen-text">|會員福利|</strong>
+          {{ rightText }}
+        </span>
       </div>
 
       <div class="d-flex gap-2">
-        
         <!-- 分享按鈕 -->
         <AppButton
           variant="outline-light"
@@ -56,65 +41,71 @@
 </template>
 
 <script>
-// 導入可重用按鈕組件
-import AppButton from '@/components/ui/AppButton.vue';
+import AppButton from '@/components/ui/AppButton.vue'
+import { useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
 
-/**
- * PromoBanner.vue 組件配置
- * 功能：可重用的促銷橫幅組件
- * 特色：支持自定義文字、倒計時顯示、響應式布局、統一按鈕樣式
- */
 export default {
-  name: 'PromoBanner', // 組件名稱
-
-  /**
-   * 子組件註冊
-   */
-  components: {
-    AppButton,
-  },
-
-  /**
-   * Props定義 - 組件的可配置屬性
-   */
+  name: 'PromoBanner',
+  components: { AppButton },
   props: {
-    // 左側促銷文字
-    leftText: {
-      type: String,
-      default: 'tHerd 自主研發品牌 71折',
-    },
-    // 右側促銷文字
-    rightText: {
-      type: String,
-      default: '週年慶特惠',
-    },
-    // 倒計時文字
-    countdown: {
-      type: String,
-      default: '還剩: 10小時 53分 36秒',
-    },
+    leftText: { type: String, default: '前往遊戲頁面' },
+    rightText: { type: String, default: '挑戰翻牌遊戲，贏取專屬獎勵！' }
   },
-};
+  setup() {
+    const router = useRouter()
+
+    async function goToGame() {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        await Swal.fire({
+          icon: 'warning',
+          title: '請先登入會員',
+          text: '登入後才能參加遊戲活動並獲取專屬獎勵！',
+          confirmButtonText: '前往登入',
+          confirmButtonColor: 'rgb(0, 112, 131)',
+          showCancelButton: true,
+          cancelButtonText: '稍後再說',
+          backdrop: `
+            rgba(0,0,0,0.4)
+            left top
+            no-repeat
+          `,
+          customClass: {
+            popup: 'rounded-4 shadow-lg',
+            confirmButton: 'px-4 py-2 fw-bold',
+            cancelButton: 'px-4 py-2'
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // ✅ 導向 UserLogin 頁面（可用 name 或 path）
+            router.push({ name: 'userlogin' })
+          }
+        })
+        return
+      }
+
+      // ✅ 已登入 → 前往遊戲頁面
+      router.push('/mkt/game')
+    }
+
+    return { goToGame }
+  }
+}
 </script>
 
 <style scoped>
-/* .promo-banner {
-  background: linear-gradient(135deg, #6f42c1, #8e44ad) !important;
-} */
- /* 🖥️ 桌面置中對齊設定 */
 .promo-banner .container-fluid {
-  max-width: 1200px; /* 與 Header、Navigation 保持一致 */
+  max-width: 1200px;
   margin: 0 auto;
   transition: all 0.3s ease;
 }
 
-/* 📱 小螢幕滿版設定 */
 @media (max-width: 900px) {
   .promo-banner .container-fluid {
     max-width: 100%;
-    padding-left: 15px;  /* ✅ 避免文字緊貼邊界 */
+    padding-left: 15px;
     padding-right: 15px;
   }
 }
-
 </style>

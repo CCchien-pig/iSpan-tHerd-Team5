@@ -114,76 +114,86 @@ const totalPages = ref(1);    // Math.ceil(total/pageSize)
 // 把圖片路徑補成完整 URL
 function fixImageUrl(path) {
   if (!path) {
-    // 你現在 console 有 via.placeholder.com DNS fail
-    // 如果內網沒網路，可以改成本機預設圖
     return "/images/no-image.png";
   }
+
+  // 已經是完整 URL
   if (/^https?:\/\//i.test(path)) return path;
+
+  // 典型靜態上傳路徑
   if (path.startsWith("/uploads/")) {
     return `https://localhost:7103${path}`;
   }
+
+  // 舊格式 ../../file?id=xxx
   if (path.startsWith("../../file?id=")) {
     return path.replace(
       "../../file?id=",
       "https://localhost:7103/file?id="
     );
   }
-  return path;
+
+  // 新版後端很可能直接給像 "/file?id=123" 或 "/assets/img/xxx.webp"
+  // => 把它當作「後端 baseUrl + 相對路徑」
+  return `https://localhost:7103${path}`;
 }
 
 // 從後端抓「這個標籤底下的商品」
 // ⭐ 期望後端回傳 { total, items: [...] }
 async function loadProducts() {
-  const res = await axios.get(
-    `/api/cnt/tags/${props.tagId}/products`,
-    {
-      params: {
-        page: page.value,
-        pageSize: pageSize.value,
-      },
-    }
-  );
+  try {
+    const res = await axios.get(
+      `/api/cnt/tags/${props.tagId}/products`,
+      {
+        params: {
+          page: page.value,
+          pageSize: pageSize.value,
+        },
+      }
+    );
 
-  // 後端建議長這樣：
-  // {
-  //   "total": 57,
-  //   "items": [ {...}, {...} ]
-  // }
-  // 但如果你後端目前還是直接回陣列，就做 fallback
-  const rawTotal = res.data?.total ?? 0;
-  const rawItems = res.data?.items ?? [];
+    const rawTotal = res.data?.total ?? 0;
+    const rawItems = res.data?.items ?? [];
 
-  total.value = rawTotal;
-  totalPages.value = Math.max(
-    1,
-    Math.ceil(total.value / pageSize.value)
-  );
+    total.value = rawTotal;
+    totalPages.value = Math.max(
+      1,
+      Math.ceil(total.value / pageSize.value)
+    );
 
-  items.value = rawItems.map((p) => {
-    const imgCandidate =
-      p.imageUrl ||
-      p.mainImageUrl ||
-      p.coverImage ||
-      p.image ||
-      "";
+    items.value = rawItems.map((p) => {
+      const imgCandidate =
+        p.imageUrl ||
+        p.mainImageUrl ||
+        p.coverImage ||
+        p.image ||
+        "";
 
-    return {
-      productId: p.productId,
-      productName: p.productName,
-      shortDesc: p.shortDesc || "",
-      brandName: p.brandName || "",
-      badge: p.badge || "",
+      return {
+        productId: p.productId,
+        productName: p.productName,
+        shortDesc: p.shortDesc || "",
+        brandName: p.brandName || "",
+        badge: p.badge || "",
 
-      avgRating: p.avgRating ?? 0,
-      reviewCount: p.reviewCount ?? 0,
+        avgRating: p.avgRating ?? 0,
+        reviewCount: p.reviewCount ?? 0,
 
-      salePrice: p.salePrice ?? p.price ?? 0,
-      listPrice: p.listPrice ?? p.originalPrice ?? 0,
+        salePrice: p.salePrice ?? p.price ?? 0,
+        listPrice: p.listPrice ?? p.originalPrice ?? 0,
 
-      imageUrl: fixImageUrl(imgCandidate),
-    };
-  });
+        imageUrl: fixImageUrl(imgCandidate),
+      };
+    });
+  } catch (err) {
+    console.error("載入商品失敗", err);
+    // 失敗時你還是要清畫面，避免殘留舊資料
+    total.value = 0;
+    totalPages.value = 1;
+    items.value = [];
+  }
 }
+
 
 // 換頁
 function goPage(newPage) {
