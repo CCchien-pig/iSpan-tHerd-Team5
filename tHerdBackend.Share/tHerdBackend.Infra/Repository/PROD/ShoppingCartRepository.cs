@@ -110,10 +110,10 @@ namespace tHerdBackend.Infra.Repository.PROD
                         new
                         {
                             CartId = cartId,
-                            ProductId = dto.ProductId,
-                            SkuId = dto.SkuId,
-                            Qty = dto.Qty,
-                            UnitPrice = dto.UnitPrice
+                            dto.ProductId,
+                            dto.SkuId,
+                            dto.Qty,
+                            dto.UnitPrice
                         }, tran);
                 }
 
