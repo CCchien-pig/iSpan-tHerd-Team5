@@ -73,6 +73,7 @@ const file = ref(null)
 
 const form = ref({
   userId: auth.user?.userNumberId || 0, // ✅ 使用登入會員的 userNumberId
+   email: '',  
   categoryId: '',
   subject: '',
   priority: 2,
@@ -100,6 +101,7 @@ async function submitTicket() {
     // 使用 FormData 封裝文字 + 檔案
     const formData = new FormData()
     formData.append('userId', form.value.userId)
+    formData.append('email', form.value.email) // ✅ 新增這行
     formData.append('categoryId', form.value.categoryId)
     formData.append('subject', form.value.subject)
     formData.append('priority', form.value.priority)
@@ -125,12 +127,14 @@ router.push('/cs/ticket/success') // ✅ 跳轉到成功頁面
 // 重置表單
 function resetForm() {
   form.value = {
-    userId: 1,
+    userId: auth.user?.userNumberId || 0,
+    email: '',                   // ✅ 清空 email
     categoryId: '',
     subject: '',
     priority: 2,
     messageText: ''
   }
+
   file.value = null
   previewUrl.value = ''
 }

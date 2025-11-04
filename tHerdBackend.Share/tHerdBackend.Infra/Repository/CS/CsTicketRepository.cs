@@ -83,7 +83,8 @@ namespace tHerdBackend.Infra.Repositories.CS
 				UserId = dto.UserId,
 					CategoryId = dto.CategoryId > 0 ? dto.CategoryId : null,
 					Subject = dto.Subject,
-				Status = 1, // 待處理
+					Email = dto.Email,
+					Status = 1, // 待處理
 				Priority = dto.Priority,
 				CreatedDate = DateTime.Now
 			};
