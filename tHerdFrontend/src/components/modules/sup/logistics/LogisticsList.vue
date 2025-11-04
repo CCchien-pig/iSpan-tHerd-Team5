@@ -1,3 +1,28 @@
+<template>
+  <div class="wrap">
+    <h3>配送資訊</h3>
+    <div class="status" v-if="loading">載入中...</div>
+    <div class="status" v-if="error">{{ error }}</div>
+
+    <table v-if="!loading && logisticsList.length > 0">
+      <thead>
+        <tr>
+          <th>物流商名稱</th>
+          <th>運送方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="item in logisticsList" :key="item.logisticsId">
+          <td>{{ item.logisticsName }}</td>
+          <td>{{ item.shippingMethod }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="status" v-if="!loading && logisticsList.length === 0">目前無物流商資料</div>
+  </div>
+</template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
@@ -22,57 +47,46 @@ onMounted(async () => {
 })
 </script>
 
-<template>
-  <div>
-    <h2>配送資訊</h2>
-    <div v-if="loading">載入中...</div>
-    <div v-if="error">{{ error }}</div>
-    <table v-if="!loading && logisticsList.length > 0">
-      <thead>
-        <tr>
-          <!-- <th>物流商 ID</th> -->
-          <th>物流商名稱</th>
-          <th>運送方式</th>
-          <!-- <th>狀態</th> -->
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in logisticsList" :key="item.logisticsId">
-          <!-- <td>{{ item.logisticsId }}</td> -->
-          <td>{{ item.logisticsName }}</td>
-          <td>{{ item.shippingMethod }}</td>
-          <!-- <td>{{ item.isActive ? '啟用' : '停用' }}</td> -->
-        </tr>
-      </tbody>
-    </table>
-    <div v-if="!loading && logisticsList.length === 0">目前無物流商資料</div>
-  </div>
-</template>
-
 <style scoped>
-div {
+/* div {
   height: 80vh;
   margin-top: 50px;
+} */
+.wrap {
+  margin-top: 6px;
 }
-h2 {
+.status {
+  margin: 8px 0;
+  color: #4a5568;
+}
+/* h2 {
   margin-top: 30px;
-  margin-left: 20px;
-}
+  margin-left: 13px;
+} */
 table {
-  border-collapse: collapse;
-  width: 90%;
-  margin-top: 20px;
-  margin-left: auto;
-  margin-right: auto;
-}
-th,
-td {
+  width: 100%;
+  border-collapse: separate; /* 關鍵 */
+  border-spacing: 0; /* 關鍵 */
   border: 1px solid rgb(77, 180, 193);
-  padding: 0.5rem;
-  text-align: center;
+  border-radius: 8px; /* 直接套在 table 本身 */
+  overflow: hidden; /* 防止內容溢出圓角 */
 }
+
+/* 表頭配色維持一致 */
 thead {
   background: rgb(0, 112, 131);
   color: rgb(248, 249, 250);
+}
+th,
+td {
+  padding: 0.5rem;
+  text-align: center;
+  /* 避免內部格線把圓角切齊，改用列底線的視覺 */
+  border: none;
+  border-bottom: 1px solid rgba(77, 180, 193, 0.651);
+}
+/* 最後一列不畫底線，避免和外框重疊 */
+tbody tr:last-child td {
+  border-bottom: none;
 }
 </style>

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.Interfaces.SUP;
 
@@ -6,6 +7,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 {
 	[ApiController]
 	[Route("api/[folder]/[controller]")]
+	[Authorize]
 	public class SuppliersController : ControllerBase
 	{
 		private readonly ISupplierService _service;

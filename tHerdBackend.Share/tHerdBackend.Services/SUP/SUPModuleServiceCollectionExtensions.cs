@@ -10,8 +10,8 @@ namespace tHerdBackend.Services.SUP
 {
     public static class SUPModuleServiceCollectionExtensions
     {
-        public static IServiceCollection AddSUPModule(this IServiceCollection services)
-        {
+		public static IServiceCollection AddSUPModule(this IServiceCollection services)
+		{
 			services.AddAntiforgery();
 
 			// 註冊 Service
@@ -25,6 +25,8 @@ namespace tHerdBackend.Services.SUP
 
 			services.AddScoped<IBrandService, BrandService>();
 			services.AddScoped<IBrandLayoutService, BrandLayoutService>();
+			services.AddScoped<IBrandLogoService, BrandLogoService>();
+			services.AddScoped<IBrandAssetsService, BrandAssetsService>();
 
 
 			// 註冊 Repository
@@ -34,12 +36,13 @@ namespace tHerdBackend.Services.SUP
 			services.AddScoped<ILogisticsRateRepository, LogisticsRateRepository>();
 
 			services.AddScoped<IShippingFeeRepository, ShippingFeeRepository>();
-			
+
 			services.AddScoped<IBrandRepository, BrandRepository>();
 			services.AddScoped<IBrandLayoutRepository, BrandLayoutRepository>();
+			services.AddScoped<IBrandAssetFileRepository, BrandAssetFileRepository>();
+			services.AddScoped<IBrandAssetsRepository, BrandAssetsRepository>(); 
 
-
-
+		
 			// 1. 註冊通用的內容服務 (用於 Controller 內部的協調)
 			services.AddScoped<IContentService, ContentService>();
 
