@@ -250,27 +250,29 @@ namespace tHerdBackend.Infra.Repositories.CS
 		/// </summary>
 		/// <param name="ticketId"></param>
 		/// <returns></returns>
-        public async Task<TicketsDto?> GetByIdAsync(int ticketId)
-        {
-            return await (
-                from t in _db.CsTickets
-                join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
-                from c in cat.DefaultIfEmpty()
-                where t.TicketId == ticketId
-                select new TicketsDto
-                {
-                    TicketId = t.TicketId,
-                    Subject = t.Subject,
-                    CategoryName = c.CategoryName ?? "未分類",
-                    StatusText = t.Status == 0 ? "未處理" :
-                                 t.Status == 1 ? "處理中" :
-                                 t.Status == 2 ? "已回覆" : "已結案",
-                    PriorityText = t.Priority.ToString(),
-                    CreatedDate = t.CreatedDate
-                }
-            ).FirstOrDefaultAsync();
-        }
-        public async Task AddMessageAsync(int ticketId, string messageText, int senderType)
+		public async Task<TicketOut?> GetByIdAsync(int ticketId)
+		{
+			return await (
+				from t in _db.CsTickets
+				join c in _db.CsFaqCategories on t.CategoryId equals c.CategoryId into cat
+				from c in cat.DefaultIfEmpty()
+				where t.TicketId == ticketId
+				select new TicketOut
+				{
+					TicketId = t.TicketId,
+					Subject = t.Subject,
+					CategoryName = c.CategoryName ?? "未分類",
+					StatusText = t.Status == 0 ? "未處理" :
+								 t.Status == 1 ? "處理中" :
+								 t.Status == 2 ? "已回覆" : "已結案",
+					PriorityText = t.Priority.ToString(),
+					CreatedDate = t.CreatedDate,
+					Email = t.Email // ✅ 用於寄信
+				}
+			).FirstOrDefaultAsync();
+		}
+
+		public async Task AddMessageAsync(int ticketId, string messageText, int senderType)
         {
             var msg = new CsTicketMessage
             {
@@ -292,9 +294,23 @@ namespace tHerdBackend.Infra.Repositories.CS
                 await _db.SaveChangesAsync();
             }
         }
+		public async Task<IEnumerable<TicketMessageDto>> GetMessagesAsync(int ticketId)
+		{
+			return await (
+				from m in _db.CsTicketMessages
+				where m.TicketId == ticketId
+				orderby m.CreatedDate
+				select new TicketMessageDto
+				{
+					MessageId = m.MessageId,
+					SenderType = m.SenderType,
+					MessageText = m.MessageText,
+					CreatedDate = m.CreatedDate
+				}
+			).ToListAsync();
+		}
 
 
-
-    }
+	}
 }
 
