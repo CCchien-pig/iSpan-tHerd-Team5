@@ -256,7 +256,7 @@ watch(selectedCity, updateStoreOptions)
 </script>
 
 <template>
-  <h2>門市地圖</h2>
+  <!-- <h2>門市地圖</h2> -->
   <div class="map-container">
     <div class="section">
       <h3 class="section-title">依物流門市篩選</h3>
