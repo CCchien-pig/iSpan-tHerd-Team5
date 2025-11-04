@@ -97,8 +97,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                         new
                         {
                             CartItemId = existItemId,
-                            Qty = dto.Qty,
-                            UnitPrice = dto.UnitPrice
+                            dto.Qty,
+                            dto.UnitPrice
                         }, tran);
                 }
                 else
