@@ -25,6 +25,7 @@
               :key="item.id"
               class="nav-item position-relative mega-menu-container"
             >
+              <!-- 🔸 改成 button，不用 router-link -->
               <button
                 type="button"
                 class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center"
@@ -33,7 +34,7 @@
                   'has-icon': item.icon,
                   'text-only': !item.icon
                 }"
-                @click="toggleMegaMenu(item)"
+                @click="goCategory(item)"
               >
                 <div v-if="item.icon" class="nav-icon-wrapper">
                   <img :src="item.icon" alt="" class="nav-icon" />
@@ -243,7 +244,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount  } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import ProductsApi from '@/api/modules/prod/ProductsApi' 
 
 // ==================== 狀態變數 ====================
@@ -254,17 +256,18 @@ const productMenus = ref([])
 const activeMenuId = ref(null)
 const megaMenuData = ref(null)
 const isLoadingMenu = ref(false)
-const loadedMenus = ref({}) // ✅ 預載快取資料
+const loadedMenus = ref({})
+const router = useRouter()
 
 const navigationItemsWithIcon = [
-        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png' },
-        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
-        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png' },
-        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png' },
-        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png' },
-        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
-        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
-        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
+        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png', productTypeId: 2052 },
+        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png', productTypeId: 2052 },
+        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png', productTypeId: 2052 },
+        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png', productTypeId: 2052 },
+        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png', productTypeId: 2052 },
+        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png', productTypeId: 2052 },
+        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png', productTypeId: 2052 },
+        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png', productTypeId: 2052 },
       ]
 
 // 品牌A-Z後的固定連結
@@ -276,6 +279,25 @@ const staticMenus = [
   { name: '新產品', path: '/new-products' },
   { name: '健康中心', path: '/cnt' },
 ]
+
+let clickTimeout = null
+let lastClickTime = 0
+let lastClickedId = null
+
+function goCategory(item) {
+  // 如果點擊不同的分類 → 開啟新的 MegaMenu
+  if (activeMenuId.value !== item.id) {
+    activeMenuId.value = item.id
+    megaMenuData.value = loadedMenus.value[item.id]
+    return
+  }
+
+  // 如果點擊相同的分類 → 關閉 MegaMenu（切換開關效果）
+  if (activeMenuId.value === item.id) {
+    activeMenuId.value = null
+    megaMenuData.value = null
+  }
+}
 
 // === 初始化 ===
 onMounted(() => {
@@ -290,18 +312,20 @@ onMounted(() => {
 async function preloadMegaMenus() {
   try {
     isLoadingMenu.value = true
-
     const res = await ProductsApi.getProductCategories()
-    console.log('🐞 API 回傳結果：', res.data)
 
-    const apiResult = res.data || {}
-    if (Array.isArray(apiResult)) {
-      buildMegaMenu(apiResult)
-    } else if (apiResult.success && Array.isArray(apiResult.data)) {
-      buildMegaMenu(apiResult.data)
-    } else {
-      throw new Error(apiResult.message || '查詢分類失敗')
-    }
+    // 🧠 根據 API 結構自動判斷
+    const apiData = res.data
+    const treeData = Array.isArray(apiData?.data)
+      ? apiData.data
+      : Array.isArray(apiData)
+      ? apiData
+      : []
+
+    if (!treeData.length) throw new Error('沒有分類資料')
+
+    // ✅ 把後端的分類樹轉成前端可用結構
+    buildMegaMenu(treeData)
   } catch (err) {
     console.error('❌ 無法載入 MegaMenu 資料：', err)
   } finally {
@@ -310,7 +334,7 @@ async function preloadMegaMenus() {
 }
 
 function buildMegaMenu(treeData) {
-  // 建立層級 URL
+  // 建立 URL
   function buildUrl(item, parentCode = '', prefix = '') {
     const path = parentCode
       ? `${parentCode}/${item.productTypeCode?.toLowerCase()}`
@@ -322,9 +346,9 @@ function buildMegaMenu(treeData) {
     }
   }
 
-  // 🔹依主分類（補充劑、運動營養...）分別產出
+  // 🔹 為每個主選單（補充劑、運動營養…）建立各自的 columns
   productMenus.value.forEach(menu => {
-    const prefix = menu.path.replace('/', '') + '/'  // e.g. supplements/
+    const prefix = menu.path.replace('/', '') + '/'
     const columns = treeData.map(parent => {
       buildUrl(parent, '', prefix)
       return {
@@ -336,10 +360,12 @@ function buildMegaMenu(treeData) {
         })),
       }
     })
+
+    // 存入快取
     loadedMenus.value[menu.id] = { columns }
   })
 
-  console.log(' MegaMenu 已載入:', loadedMenus.value)
+  console.log('✅ MegaMenu 已整合 API 資料：', loadedMenus.value)
 }
 
 let closeTimer = null
@@ -353,11 +379,9 @@ function openMegaMenu(item) {
 
 function toggleMegaMenu(item) {
   if (activeMenuId.value === item.id) {
-    // 如果再次點擊相同選單 → 收合
     activeMenuId.value = null
     megaMenuData.value = null
   } else {
-    // 點擊其他選單 → 開啟新選單
     activeMenuId.value = item.id
     megaMenuData.value = loadedMenus.value[item.id]
   }

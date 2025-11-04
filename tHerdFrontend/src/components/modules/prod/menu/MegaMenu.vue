@@ -1,17 +1,15 @@
-<template>
-  <div class="mega-menu-wrapper">
+<template>  <div class="mega-menu-wrapper">
     <div class="mega-menu" @mouseenter="keepOpen" @mouseleave="closeMenu">
       <div v-if="loading" class="text-center p-4">載入中...</div>
       <div v-else-if="error" class="text-danger p-4">{{ error }}</div>
       <div v-else class="menu-columns">
         <div v-for="col in columns" :key="col.title" class="menu-column">
           <h4>
-            <router-link 
+             <router-link 
               :to="`/products/${col.items?.[0]?.productTypeCode?.toLowerCase() || ''}`"
               class="brand-link fw-bold"
               @click="closeMenu"
-            >
-              {{ col.title }}
+            >              {{ col.title }}
             </router-link>
           </h4>
           <ul>
@@ -240,5 +238,10 @@ function closeMenu() {
 .brand-list img:hover {
   filter: none;
   transform: scale(1.05);
+-width: 1200px;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-top: 3px solid rgb(77, 180, 193);
 }
 </style>
