@@ -1,13 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿										  
+using Microsoft.AspNetCore.Authentication.JwtBearer; // JwtBearerDefaults
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.DTOs;
 using tHerdBackend.Core.DTOs.Common;
+using tHerdBackend.Core.DTOs.USER;
+using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.Models;          // ApplicationDbContext, ApplicationUser (Identity)
-										  
-using Microsoft.AspNetCore.Authentication.JwtBearer; // JwtBearerDefaults
+using tHerdBackend.Services.Common;
+
 
 namespace tHerdBackend.SharedApi.Controllers.Module.USER
 {
@@ -19,15 +23,19 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 		private readonly UserManager<ApplicationUser> _userMgr;
 		private readonly ApplicationDbContext _appDb;  // Identity 專用
 		private readonly tHerdDBContext _herdDb;       // 業務資料專用
+		private readonly ISysAssetFileRepository _fileRepo;
+
 
 		public UserController(
 			UserManager<ApplicationUser> userMgr,
 			ApplicationDbContext appDb,
-			tHerdDBContext herdDb)
+			tHerdDBContext herdDb,
+			ISysAssetFileRepository fileRepo)
 		{
 			_userMgr = userMgr;
 			_appDb = appDb;
 			_herdDb = herdDb;
+			_fileRepo = fileRepo;
 		}
 
 		// ======== 共用小工具：取目前使用者的 UserNumberId ========
@@ -46,6 +54,20 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 				throw new KeyNotFoundException("找不到使用者或 UserNumberId 無效");
 
 			return numberId;
+		}
+
+		// ======== 只給 Avatar 等需要完整使用者資料的地方使用 ========
+		private async Task<ApplicationUser> GetCurrentUserAsync()
+		{
+			var userId = _userMgr.GetUserId(User);
+			if (string.IsNullOrEmpty(userId))
+				throw new UnauthorizedAccessException("未登入");
+
+			var user = await _appDb.Users.FirstOrDefaultAsync(u => u.Id == userId);
+			if (user == null)
+				throw new UnauthorizedAccessException("未登入");
+
+			return user;
 		}
 
 		/// <summary>
@@ -91,6 +113,177 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 				return NotFound(new { error = "找不到使用者" });
 
 			return Ok(u);
+		}
+
+		public class UpdateProfileDto
+		{
+			public string LastName { get; set; } = "";
+			public string FirstName { get; set; } = "";
+			public string? PhoneNumber { get; set; }
+			public string? Address { get; set; }
+			public string? Gender { get; set; }
+			public DateTime? BirthDate { get; set; } // 前端傳 yyyy-MM-dd → model binder 會吃
+		}
+
+		[HttpPatch("me")]
+		public async Task<IActionResult> UpdateMe([FromBody] UpdateProfileDto dto)
+		{
+			var user = await GetCurrentUserAsync();
+
+			user.LastName = dto.LastName?.Trim() ?? user.LastName;
+			user.FirstName = dto.FirstName?.Trim() ?? user.FirstName;
+			user.PhoneNumber = dto.PhoneNumber?.Trim();
+			user.Address = dto.Address?.Trim();
+			user.Gender = dto.Gender?.Trim();
+			user.BirthDate = dto.BirthDate;
+
+			user.RevisedDate = DateTime.UtcNow;
+			await _appDb.SaveChangesAsync();
+
+			return Ok(new { ok = true });
+		}
+
+		// =====================
+		// =      Avatar       =
+		// =====================
+
+		/// <summary>
+		/// GET /api/user/avatar 取得目前頭像（沒有則空）
+		/// </summary>
+		[HttpGet("avatar")]
+		public async Task<IActionResult> GetAvatar()
+		{
+			try
+			{
+				var user = await GetCurrentUserAsync();
+				if (!(user.ImgId is int fileId) || fileId <= 0)
+					return Ok(new { fileId = (int?)null, fileUrl = "" });
+
+				var dto = await _fileRepo.GetFileById(fileId);
+				return Ok(new
+				{
+					fileId = dto?.FileId,
+					fileUrl = dto?.FileUrl ?? ""
+				});
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+		}
+
+		//密碼變更
+		public class ChangePasswordDto
+		{
+			public string OldPassword { get; set; } = "";
+			public string NewPassword { get; set; } = "";
+		}
+
+		[HttpPost("change-password")]
+		public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto.OldPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+				return BadRequest(new { error = "密碼不可為空" });
+
+			var user = await GetCurrentUserAsync();
+
+			var result = await _userMgr.ChangePasswordAsync(user, dto.OldPassword, dto.NewPassword);
+			if (!result.Succeeded)
+				return BadRequest(new { error = string.Join("; ", result.Errors.Select(e => e.Description)) });
+
+			user.RevisedDate = DateTime.UtcNow;
+			await _appDb.SaveChangesAsync();
+
+			return Ok(new { ok = true });
+		}
+
+		/// <summary>
+		/// POST /api/user/avatar (multipart/form-data) 上傳/更換
+		/// 檔案大小上限 5MB（雖設置 RequestSizeLimit 10MB，但邏輯上仍以 5MB 限制）
+		/// </summary>
+		[HttpPost("avatar")]
+		[Consumes("multipart/form-data")]
+		[RequestSizeLimit(10 * 1024 * 1024)]
+		public async Task<IActionResult> UploadAvatar([FromForm] UploadAvatarForm form)
+		{
+			var file = form.File;
+
+			if (file == null || file.Length == 0)
+				return BadRequest(new { error = "請選擇圖片檔案" });
+			if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+				return BadRequest(new { error = "僅接受圖片檔案" });
+			if (file.Length > 5 * 1024 * 1024)
+				return BadRequest(new { error = "檔案過大，請小於 5MB" });
+
+			try
+			{
+				var user = await GetCurrentUserAsync();
+
+				// 1) 透過共用 Repo 上傳到 Cloudinary 並寫 DB
+				//    moduleId/progId 用固定路徑：USER/Avatar
+				var upload = new AssetFileUploadDto
+				{
+					ModuleId = "USER",
+					ProgId = "Avatar",
+					Meta = new List<AssetFileDetailsDto>
+					{
+						new AssetFileDetailsDto
+						{
+							File = file,
+							AltText = $"{user.LastName}{user.FirstName} avatar",
+							Caption = "user avatar",
+							IsActive = true
+						}
+					}
+				};
+
+				var result = await _fileRepo.AddFilesAsync(upload);
+
+				if (!AssetFileResultHelper.TryPickFirstFile(result, out var newFileId, out var newUrl))
+					return StatusCode(500, new { error = "上傳失敗（無法解析回傳值）" });
+
+				// 2) 若原本有頭像 → 軟刪舊檔（統一透過 Repo）
+				if (user.ImgId is int oldId && oldId > 0)
+				{
+					await _fileRepo.DeleteImage(oldId);
+				}
+
+				// 3) 綁定到使用者
+				user.ImgId = newFileId;
+				await _appDb.SaveChangesAsync();
+
+				return Ok(new { fileId = newFileId, fileUrl = newUrl });
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+		}
+
+		/// <summary>
+		/// DELETE /api/user/avatar 移除目前頭像
+		/// </summary>
+		[HttpDelete("avatar")]
+		public async Task<IActionResult> DeleteAvatar()
+		{
+			try
+			{
+				var user = await GetCurrentUserAsync();
+				if (!(user.ImgId is int fileId) || fileId <= 0)
+					return Ok(new { ok = true }); // 本來就沒有
+
+				// 軟刪檔案（你的 Repo 預設軟刪）
+				await _fileRepo.DeleteImage(fileId);
+
+				user.ImgId = null;
+				await _appDb.SaveChangesAsync();
+
+				return Ok(new { ok = true });
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
 		}
 
 		/// <summary>
@@ -341,35 +534,71 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 				page = page <= 0 ? 1 : page;
 				pageSize = pageSize <= 0 ? 20 : pageSize;
 
-				var q = _herdDb.UserCouponWallets.AsNoTracking()
-					.Where(w => w.UserNumberId == numberId);
+				var q = from w in _herdDb.UserCouponWallets.AsNoTracking()
+						join c in _herdDb.MktCoupons.AsNoTracking() on w.CouponId equals c.CouponId
+						where w.UserNumberId == numberId
+						select new { w, c };
 
 				if (!string.IsNullOrWhiteSpace(status))
 				{
 					var s = status.Trim();
-					q = q.Where(w => w.Status == s);
+					q = q.Where(x => x.w.Status == s);
 				}
+
+				var now = DateTime.Now;
+
+				var projected = q.Select(x => new
+				{
+					x.w,
+					x.c,
+					IsUsable =
+						x.w.Status == "unuse" &&
+						x.w.UsedDate == null &&
+						x.c.IsActive &&
+						x.c.Status == "pActive" &&
+						x.c.StartDate <= now &&
+						(x.c.EndDate == null || x.c.EndDate >= now) &&
+						x.c.LeftQty > 0 &&
+						(x.c.ValidHours <= 0 || x.w.ClaimedDate.AddHours(x.c.ValidHours) >= now)
+				});
 
 				if (onlyUsable)
-				{
-					// 「可用」最小定義：狀態 Active 且尚未使用（沒有 UsedDate）
-					q = q.Where(w => w.Status == "Active" && w.UsedDate == null);
-				}
+					projected = projected.Where(z => z.IsUsable);
 
-				var total = await q.CountAsync();
+				var total = await projected.CountAsync();
 
-				var items = await q
-					.OrderByDescending(w => w.ClaimedDate)
+				var items = await projected
+					.OrderByDescending(z => z.w.ClaimedDate)
 					.Skip((page - 1) * pageSize)
 					.Take(pageSize)
-					.Select(w => new CouponWalletItemDto(
-						w.CouponWalletId,
-						w.CouponId,
-						w.ClaimedDate,
-						w.UsedDate,
-						w.Status,
-						// 最小版「可用」判斷（如未來有到期日請在此補上條件）
-						(w.Status == "Active" && w.UsedDate == null)
+					.Select(z => new CouponWalletItemDto(
+						z.w.CouponWalletId,
+						z.w.CouponId,
+						z.w.ClaimedDate,
+						z.w.UsedDate,
+						z.w.Status,
+						z.IsUsable,
+						new tHerdBackend.Core.DTOs.MKT.MktCouponDto
+						{
+							CouponId = z.c.CouponId,
+							CampaignId = z.c.CampaignId,
+							RuleId = z.c.RuleId,
+							CouponName = z.c.CouponName,
+							CouponCode = z.c.CouponCode,
+							Status = z.c.Status,
+							StartDate = z.c.StartDate,
+							EndDate = z.c.EndDate,
+							DiscountAmount = z.c.DiscountAmount,
+							DiscountPercent = z.c.DiscountPercent,
+							TotQty = z.c.TotQty,
+							LeftQty = z.c.LeftQty,
+							UserLimit = z.c.UserLimit,
+							ValidHours = z.c.ValidHours,
+							IsActive = z.c.IsActive,
+							Creator = z.c.Creator,
+							CreatedDate = z.c.CreatedDate,
+							IsReceived = true // ★ 在錢包中＝必定已領取
+						}
 					))
 					.ToListAsync();
 

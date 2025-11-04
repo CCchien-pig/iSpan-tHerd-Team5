@@ -14,15 +14,16 @@
       <ul class="category-links">
         <li><router-link class="profile" :to="safeTo('userme')">儀表板</router-link></li>
         <li><router-link class="orders" :to="safeTo('orders')">訂單</router-link></li>
-        <li><router-link class="myaccount-subscription" :to="safeTo('subscriptions')">定期自動送貨享優惠</router-link></li>
+        <!-- <li><router-link class="myaccount-subscription" :to="safeTo('subscriptions')">定期自動送貨享優惠</router-link></li>
         <li>
           <router-link class="messagecenter" :to="safeTo('messages')">訊息</router-link>
           <span v-if="badges.messages>0" class="badge badge-danger badge-small">{{ badges.messages }}</span>
-        </li>
+        </li> -->
         <li><router-link class="accountsettings" :to="safeTo('account')">帳號資訊</router-link></li>
-        <li><router-link class="addressbook" :to="safeTo('addressbook')">地址簿</router-link></li>
+        <!-- <li><router-link class="accountsettings" :to="{ name: 'account' }">帳號資訊</router-link></li> -->
+        <!-- <li><router-link class="addressbook" :to="safeTo('addressbook')">地址簿</router-link></li>
         <li><router-link class="payment" :to="safeTo('payments')">付款方式</router-link></li>
-        <li><router-link class="lists" :to="safeTo('wishlist')">我的清單</router-link></li>
+        <li><router-link class="lists" :to="safeTo('wishlist')">我的清單</router-link></li> -->
       </ul>
     </div>
 
@@ -38,10 +39,11 @@
 
     <!-- 我的活動 -->
     <div class="category">
-      <div class="category-title"><span class="b">我的活動</span></div>
+      <div class="category-title"><span class="b">客服服務</span></div>
       <ul class="category-links">
-        <li><router-link class="publicprofile" :to="safeTo('publicprofile')">我的地盤</router-link></li>
-        <li><router-link class="reviews" :to="safeTo('myreviews')">我的產品評論</router-link></li>
+        <!-- <li><router-link class="publicprofile" :to="safeTo('publicprofile')">我的地盤</router-link></li> -->
+        <li><router-link class="publicprofile" :to="safeTo('FaqSearch')">聯絡我們</router-link></li>
+        <!-- <li><router-link class="reviews" :to="safeTo('myreviews')">我的產品評論</router-link></li>
         <li>
           <router-link class="questions" :to="safeTo('myquestions')">我的問題</router-link>
           <span v-if="badges.questions>0" class="badge badge-danger badge-small">{{ badges.questions }}</span>
@@ -49,7 +51,7 @@
         <li>
           <router-link class="answers" :to="safeTo('myanswers')">我的答案</router-link>
           <span v-if="badges.answers>0" class="badge badge-danger badge-small">{{ badges.answers }}</span>
-        </li>
+        </li> -->
       </ul>
     </div>
 
@@ -57,15 +59,15 @@
     <div class="category">
       <div class="category-title"><span class="b">設置</span></div>
       <ul class="category-links">
-        <li><router-link class="commpreferences" :to="safeTo('notifications')">通知設定</router-link></li>
+        <!-- <li><router-link class="commpreferences" :to="safeTo('notifications')">通知設定</router-link></li> -->
         <li>
           <router-link class="two-step" :to="safeTo('twostep')">兩步驗證</router-link>
           <span class="badge-unread" v-if="badges.twostep"></span>
         </li>
-        <li>
+        <!-- <li>
           <router-link class="passkey" :to="safeTo('passkeys')">通行碼</router-link>
           <span class="badge-unread" v-if="badges.passkeys"></span>
-        </li>
+        </li> -->
       </ul>
     </div>
   </section>

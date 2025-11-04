@@ -36,5 +36,16 @@ export default [
   name: 'twostep',
   component: () => import('@/pages/modules/user/UserTwoStep.vue'),
   meta: { requiresAuth: true }
-}
+},
+{ path: '/user/account', 
+  name: 'account', 
+  component: () => import('@/pages/modules/user/AccountInfo.vue'),
+  meta: { requiresAuth: true }
+},
+  
+  {path: '/user/rewards',
+    name: 'rewards',
+    component: () => import('@/pages/modules/user/UserRewards.vue'),
+    meta: { requiresAuth: true }
+  }
 ];

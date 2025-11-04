@@ -19,9 +19,11 @@ using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
+using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
+using tHerdBackend.Infra.Repository.SYS;
 using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.Services.USER;
@@ -232,6 +234,9 @@ namespace tHerdBackend.SharedApi
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
 			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+			//前台圖片上傳註冊
+			builder.Services.AddScoped<ISysAssetFileRepository, SysAssetFileRepository>();
+
 			// Auth Service
 			//builder.Services.AddScoped<AuthService>();
 
@@ -276,8 +281,8 @@ namespace tHerdBackend.SharedApi
                 // ➜ 設定 JSON 序列化規則，例如忽略屬性大小寫
                 o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 				//確認轉換成的 JSON 屬性名稱和 DTO 類別的屬性名稱完全相同（大小寫皆相同）:PascalCase
-				//o.JsonSerializerOptions.PropertyNamingPolicy = null;        // ★ 這行很關鍵
-				//o.JsonSerializerOptions.DictionaryKeyPolicy = null;         // ★ 建議一起設
+				//o.JsonSerializerOptions.PropertyNamingPolicy = null;       
+				//o.JsonSerializerOptions.DictionaryKeyPolicy = null;         
 			});
 
             builder.Services.AddEndpointsApiExplorer();

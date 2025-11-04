@@ -21,13 +21,24 @@
         <el-card class="base-card" shadow="never">
           <div class="base-card__left">
             <div class="avatar">
-              <svg v-if="!avatarUrl" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="28" fill="#FFF"></circle>
-                <path fill="#D8D8D8"
-                  d="M28 0c15.464 0 28 12.536 28 28S43.464 56 28 56 0 43.464 0 28 12.536 0 28 0zm-.039 29.647c-13.896 0-21.864 7.56-17.5 12.666 4.365 5.105 10.278 8.443 17.5 8.443 7.223 0 13.136-3.338 17.5-8.443 4.365-5.105-3.603-12.666-17.5-12.666zM27.96 5.56c-4.64 0-8.4 3.898-8.4 8.707 0 4.808 3.76 9.588 8.4 9.588 4.639 0 8.4-4.78 8.4-9.588 0-4.809-3.761-8.707-8.4-8.707z" />
-              </svg>
-              <img v-else :src="avatarUrl" alt="profile" />
-            </div>
+  <svg v-if="!avatarUrl" viewBox="0 0 56 56">
+    <circle cx="28" cy="28" r="28" fill="#FFF"></circle>
+    <path fill="#D8D8D8"
+      d="M28 0c15.464 0 28 12.536 28 28S43.464 56 28 56 0 43.464 0 28 12.536 0 28 0zm-.039 29.647c-13.896 0-21.864 7.56-17.5 12.666 4.365 5.105 10.278 8.443 17.5 8.443 7.223 0 13.136-3.338 17.5-8.443 4.365-5.105-3.603-12.666-17.5-12.666zM27.96 5.56c-4.64 0-8.4 3.898-8.4 8.707 0 4.808 3.76 9.588 8.4 9.588 4.639 0 8.4-4.78 8.4-9.588 0-4.809-3.761-8.707-8.4-8.707z" />
+  </svg>
+  <img v-else :src="avatarUrl" alt="profile" />
+</div>
+
+<div class="avatar-actions">
+  <el-button size="small" type="primary" @click="openFileDialog" :loading="uploading" :disabled="uploading">
+    {{ uploading ? '上傳中…' : '上傳/更換大頭貼' }}
+  </el-button>
+  <el-button size="small" type="danger" plain @click="removeAvatar" :disabled="!avatarUrl || removing" :loading="removing">
+    移除
+  </el-button>
+  <input ref="fileInput" class="d-none" type="file" accept="image/*" @change="onFileChange" />
+  <div class="avatar-hint text-muted small">支援圖片檔，最大 5MB。</div>
+</div>
             <div class="base-info">
               <div class="hello">嗨，{{ me.email }}！</div>
               <div class="joined">用戶加入時間 {{ joinedAtText }}</div>
@@ -77,22 +88,25 @@
 
         <!-- 功能磚 -->
         <div class="feature-grid">
-          <el-card class="feature" shadow="hover" @click="todoFeature('訂單')">
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('訂單')">
             <div class="title">訂單</div>
-            <div class="desc">跟蹤訂單、申請退貨、重新訂購、撰寫評價。</div>
+            <div class="desc">跟蹤訂單、申請退貨、重新訂購。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('定期自動送貨享優惠')">
-            <div class="title">定期自動送貨享優惠</div>
-            <div class="desc">設定經常性訂購，輕鬆補貨更優惠。</div>
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('健康新知')">
+            <div class="title">健康新知</div>
+            <div class="desc">瞭解最新健康資訊，幫助您更知道該買什麼產品。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('促銷與優惠')">
+          <el-card class="feature" shadow="hover"
+         role="button" tabindex="0" @click="todoFeature('促銷與優惠')">
             <div class="title">促銷與優惠</div>
             <div class="desc">查看全站優惠，領取活動折扣。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
+          <!-- <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
             <div class="title">我的清單</div>
             <div class="desc">保留喜愛商品，補貨即買。</div>
           </el-card>
@@ -105,7 +119,7 @@
           <el-card class="feature" shadow="hover" @click="todoFeature('地址簿')">
             <div class="title">地址簿</div>
             <div class="desc">集中管理你的收貨地址。</div>
-          </el-card>
+          </el-card> -->
         </div>
 
         <!-- 猜你喜歡（容器） -->
@@ -121,7 +135,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch,onMounted } from 'vue'
+
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
@@ -135,7 +150,10 @@ const me = computed(() => auth.user || null)
 const profile = ref(null)
 const memberRank = ref(null)
 const claiming = ref(false)
-const avatarUrl = ref(null)
+const avatarUrl = ref('')
+const uploading = ref(false)
+const removing  = ref(false)
+const fileInput = ref(null)
 
 const joinedAtText = computed(() => {
   const dt = profile.value && profile.value.createdDate
@@ -236,9 +254,109 @@ async function claimReferralCoupon() {
   }
 }
 
+function openFileDialog() {
+  if (fileInput.value) fileInput.value.click()
+}
+
+async function loadAvatar() {
+  try {
+    const { data } = await http.get('/user/avatar')
+    // 後端回 { fileId, fileUrl }；沒圖時 fileUrl = ""
+    avatarUrl.value = data && data.fileUrl ? `${data.fileUrl}?v=${Date.now()}` : ''
+  } catch (err) {
+    if (err?.response?.status === 401) {
+      console.warn('[UserMe] avatar 401 未登入')
+    } else {
+      console.error('[UserMe] loadAvatar FAIL', err)
+    }
+  }
+}
+
+async function onFileChange(e) {
+  const input = e.target
+  const file = input?.files?.[0]
+  if (!file) return
+
+  // 前端基本檢核（與後端一致）
+  if (!file.type?.startsWith('image/')) {
+    ElMessage.error('僅接受圖片檔案')
+    input.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('檔案過大，請小於 5MB')
+    input.value = ''
+    return
+  }
+
+  const form = new FormData()
+  form.append('file', file) // 後端 [FromForm] IFormFile file
+
+  uploading.value = true
+  try {
+    // 切記：不要手動設 Content-Type，讓瀏覽器自己帶 boundary
+    const { data } = await http.post('/user/avatar', form)
+    avatarUrl.value = data && data.fileUrl ? `${data.fileUrl}?v=${Date.now()}` : ''
+    ElMessage.success('大頭貼已更新')
+  } catch (err) {
+    const msg = err?.response?.data?.error || '上傳失敗'
+    ElMessage.error(msg)
+    console.error('[UserMe] upload avatar FAIL', err)
+  } finally {
+    uploading.value = false
+    if (input) input.value = '' // 允許同檔重選
+  }
+}
+
+async function removeAvatar() {
+  if (!avatarUrl.value) return
+  try {
+    removing.value = true
+    await http.delete('/user/avatar')
+    avatarUrl.value = ''
+    ElMessage.success('已移除大頭貼')
+  } catch (err) {
+    const msg = err?.response?.data?.error || '移除失敗'
+    ElMessage.error(msg)
+    console.error('[UserMe] remove avatar FAIL', err)
+  } finally {
+    removing.value = false
+  }
+}
+
+// 初次與 me 變動時皆嘗試載入頭像
+onMounted(() => {
+  if (me.value) loadAvatar()
+})
+watch(() => me.value, (v) => {
+  if (v) loadAvatar()
+})
+
+
 // 功能磚暫不導路由：僅提示
+// 功能標籤 → 路由名稱（請依你的實際路由調整）
+const featureToRoute = {
+  '訂單': 'orders',
+  '健康新知': 'cnt-home',
+  '促銷與優惠': 'rewards', // 或 'promotions'（若你有這條路由）
+}
+
+// 保險：避免名稱不存在
+function routeExists(name) {
+  try { return router.hasRoute(name) } catch { return false }
+}
+
+function goByName(name) {
+  router.push(routeExists(name) ? { name } : { name: 'userme' })
+}
+
 function todoFeature(label) {
-  ElMessage?.info?.(`「${label}」尚未開通`)
+  const name = featureToRoute[label]
+  if (name) {
+    goByName(name)
+  } else {
+    ElMessage.info(`「${label}」尚未開通`)
+  }
 }
 
 function goHome() {
@@ -294,4 +412,13 @@ async function doLogout() {
   .sidebar { order:2; }
   .content { order:1; }
 }
+
+.avatar-actions { display:flex; align-items:center; gap:8px; margin-left:4px; }
+.avatar-hint { margin-top:6px; }
+.feature {
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.feature:focus { outline: 2px solid #409eff; }
+.feature:hover { transform: translateY(-1px); }
 </style>

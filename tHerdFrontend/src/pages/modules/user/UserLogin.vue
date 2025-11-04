@@ -3,7 +3,7 @@
   <div class="container py-4">
     <!-- 標題與副標題（iHerb 風格） -->
     <div class="mb-3 text-center">
-      <h2 class="mb-1">登入或建立帳戶</h2>
+      <h2 class="mb-1">登入tHerd</h2>
       <p class="text-muted mb-0">
         請輸入您的電子郵件以開始使用。如果您已有帳戶，我們將為您找到。
       </p>
