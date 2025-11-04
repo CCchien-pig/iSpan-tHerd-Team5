@@ -14,6 +14,20 @@
         </select>
       </div>
 
+      <!-- 聯絡信箱 -->
+<div class="mb-3">
+  <label class="form-label">聯絡信箱 <span class="text-danger">*</span></label>
+  <input
+    v-model="form.email"
+    type="email"
+    class="form-control"
+    placeholder="請輸入您的電子郵件"
+    required
+  />
+  <div class="form-text">客服回覆將寄送至此信箱。</div>
+</div>
+
+
       <!-- 主旨 -->
       <div class="mb-3">
         <label class="form-label">主旨</label>
