@@ -1,11 +1,12 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.PROD.ord;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.PROD;
-using tHerdBackend.Core.Models;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
@@ -44,56 +45,41 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             try
             {
-                // 1️ 取得使用者資訊
-                int? userNumberId = null;
-
-                if (_userMgr != null)
-                {
-                    var user = await _userMgr.Users.AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.Id == _currentUser.Id, ct);
-                    userNumberId = user?.UserNumberId;
-                }
-                else
-                {
-                    // 若無 Identity，改以 JWT Id 或匿名 0
-                    userNumberId = int.TryParse(_currentUser.Id, out var parsed) ? parsed : 0;
-                }
-
                 // 若無 SessionId，建立新的 Guid
-                var sessionId = Guid.NewGuid().ToString(); // 暫時強制生成新的 SessionId
+                var sessionId = Guid.NewGuid().ToString();
 
-                // 2️ 嘗試取得現有購物車
+                // 嘗試取得現有購物車
                 var cartId = await conn.ExecuteScalarAsync<int?>(
                     @"SELECT CartId FROM ORD_ShoppingCart 
-                      WHERE (UserNumberId = @UserNumberId OR SessionId = @SessionId)
-                      ORDER BY CreatedDate DESC",
-                    new { UserNumberId = userNumberId, SessionId = sessionId }, tran);
+              WHERE (UserNumberId = @UserNumberId OR SessionId = @SessionId)
+              ORDER BY CreatedDate DESC",
+                    new { dto.UserNumberId, SessionId = sessionId }, tran);
 
-                // 3️ 若沒有購物車則建立
+                // 若沒有購物車則建立
                 if (cartId == null)
                 {
                     cartId = await conn.ExecuteScalarAsync<int>(
                         @"INSERT INTO ORD_ShoppingCart (UserNumberId, SessionId, MaxItemsAllowed, CreatedDate)
-                          OUTPUT INSERTED.CartId
-                          VALUES (@UserNumberId, @SessionId, 20, SYSDATETIME())",
-                        new { UserNumberId = userNumberId, SessionId = sessionId }, tran);
+                  OUTPUT INSERTED.CartId
+                  VALUES (@UserNumberId, @SessionId, 20, SYSDATETIME())",
+                        new { dto.UserNumberId, SessionId = sessionId }, tran);
                 }
 
-                // 4️ 檢查是否已有相同 SKU
+                // 檢查是否已有相同 SKU
                 var existItemId = await conn.ExecuteScalarAsync<int?>(
                     @"SELECT CartItemId FROM ORD_ShoppingCartItem 
-                      WHERE CartId = @CartId AND SkuId = @SkuId",
-                    new { CartId = cartId, SkuId = dto.SkuId }, tran);
+              WHERE CartId = @CartId AND SkuId = @SkuId",
+                    new { CartId = cartId, dto.SkuId }, tran);
 
                 if (existItemId != null)
                 {
                     // 更新數量
                     await conn.ExecuteAsync(
                         @"UPDATE ORD_ShoppingCartItem
-                          SET Qty = Qty + @Qty,
-                              UnitPrice = @UnitPrice,
-                              CreatedDate = SYSDATETIME()
-                          WHERE CartItemId = @CartItemId",
+                  SET Qty = Qty + @Qty,
+                      UnitPrice = @UnitPrice,
+                      CreatedDate = SYSDATETIME()
+                  WHERE CartItemId = @CartItemId",
                         new
                         {
                             CartItemId = existItemId,
@@ -103,38 +89,51 @@ namespace tHerdBackend.Infra.Repository.PROD
                 }
                 else
                 {
+                    // ✅ 用 Dapper 查出 ProductId（取代 _db）
+                    var productId = await conn.ExecuteScalarAsync<int>(
+                        @"SELECT TOP 1 ProductId 
+                  FROM PROD_ProductSku 
+                  WHERE SkuId = @SkuId",
+                        new { dto.SkuId }, tran);
+
+                    if (productId <= 0)
+                        throw new Exception($"找不到對應的 ProductId (SkuId: {dto.SkuId})");
+
                     // 新增新項目
                     await conn.ExecuteAsync(
                         @"INSERT INTO ORD_ShoppingCartItem (CartId, ProductId, SkuId, Qty, UnitPrice, CreatedDate)
-                          VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, SYSDATETIME())",
+                  VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, SYSDATETIME())",
                         new
                         {
                             CartId = cartId,
-                            dto.ProductId,
+                            ProductId = productId,
                             dto.SkuId,
                             dto.Qty,
                             dto.UnitPrice
                         }, tran);
                 }
 
-                // 5️ 更新購物車修改時間
+                // 更新購物車修改時間
                 await conn.ExecuteAsync(
                     @"UPDATE ORD_ShoppingCart 
-                      SET RevisedDate = SYSDATETIME()
-                      WHERE CartId = @CartId",
+              SET RevisedDate = SYSDATETIME()
+              WHERE CartId = @CartId",
                     new { CartId = cartId }, tran);
 
-                tran.Commit();
+                if (tran != null)
+                    tran.Commit();
                 return cartId.Value;
             }
-            catch
+            catch (Exception ex)
             {
-                tran.Rollback();
-                throw;
+                if (tran != null)
+                    tran.Rollback();
+                throw new Exception($"加入購物車時發生錯誤：{ex.Message}", ex);
             }
             finally
             {
-                if (needDispose) conn.Dispose();
+                if (needDispose && conn != null)
+                    conn.Dispose();
             }
         }
     }
