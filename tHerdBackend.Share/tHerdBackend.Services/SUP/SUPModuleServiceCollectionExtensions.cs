@@ -27,8 +27,9 @@ namespace tHerdBackend.Services.SUP
 			services.AddScoped<IBrandLayoutService, BrandLayoutService>();
 			services.AddScoped<IBrandLogoService, BrandLogoService>();
 			services.AddScoped<IBrandAssetsService, BrandAssetsService>();
+			services.AddScoped<IBrandFavoriteService, BrandFavoriteService>();
 
-
+	
 			// 註冊 Repository
 			services.AddScoped<ISupplierRepository, SupplierRepository>();
 
@@ -40,9 +41,10 @@ namespace tHerdBackend.Services.SUP
 			services.AddScoped<IBrandRepository, BrandRepository>();
 			services.AddScoped<IBrandLayoutRepository, BrandLayoutRepository>();
 			services.AddScoped<IBrandAssetFileRepository, BrandAssetFileRepository>();
-			services.AddScoped<IBrandAssetsRepository, BrandAssetsRepository>(); 
+			services.AddScoped<IBrandAssetsRepository, BrandAssetsRepository>();
+			services.AddScoped<IBrandFavoriteRepository, BrandFavoriteRepository>();
 
-		
+
 			// 1. 註冊通用的內容服務 (用於 Controller 內部的協調)
 			services.AddScoped<IContentService, ContentService>();
 
