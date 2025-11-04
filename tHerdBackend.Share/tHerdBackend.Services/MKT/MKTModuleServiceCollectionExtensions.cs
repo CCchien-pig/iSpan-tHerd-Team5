@@ -19,6 +19,7 @@ namespace tHerdBackend.Services.MKT
             services.AddScoped<IMktCouponService, MktCouponService>();
             services.AddScoped<MktGameRecordRepository>();
             services.AddScoped<IMktGameRecordService, MktGameRecordService>();
+            services.AddScoped<IMktPromotionService, MktPromotionService>();
             return services;
         }
 
