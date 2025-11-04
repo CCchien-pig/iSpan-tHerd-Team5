@@ -1,39 +1,35 @@
 <template>
   <div class="center-narrow py-5">
-    <h3 class="text-center mb-4 main-color-green-text">我的工單</h3>
+    <h3 class="text-center mb-4 main-color-green-text">我的客服紀錄</h3>
 
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border text-success"></div>
     </div>
 
     <div v-else-if="tickets.length === 0" class="text-center text-muted">
-      目前尚無任何工單。
+      您尚未建立任何客服工單。
     </div>
 
     <div v-else>
-      <div v-for="t in tickets" :key="t.ticketId"
-           class="card mb-3 border-0 shadow-sm hover-card rounded-4 p-3">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <h5 class="mb-0">{{ t.subject }}</h5>
-          <small class="text-muted">{{ formatDate(t.createdDate) }}</small>
-        </div>
-        <p class="text-muted mb-1">分類：{{ t.categoryName || '未分類' }}</p>
-        <p class="text-muted small mt-2">
-  {{ t.userMessage || '（尚無留言內容）' }}
-</p>
+      <div v-for="t in tickets" :key="t.ticketId" class="ticket-card mb-3 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-1">{{ t.subject }}</h5>
+<span class="badge" :class="getStatusClass(t.statusText)">
+  {{ t.statusText }}
+</span>
 
-        <p class="text-muted small">狀態：
-          <span class="badge bg-secondary">{{ t.statusText }}</span>
+        </div>
+
+        <div class="small text-muted mb-2">
+          <i class="bi bi-calendar-event"></i>
+          {{ formatDate(t.createdDate) }}
+          <span class="mx-2">｜</span>
+          分類：{{ t.categoryName || '未分類' }}
+        </div>
+
+        <p class="mb-0 text-body-secondary small">
+          {{ t.userMessage || '（沒有留下問題描述）' }}
         </p>
-
-        <div class="text-end">
-          <router-link
-            class="btn btn-primary btn-sm"
-            :to="`/cs/tickets/${t.ticketId}`"
-          >
-            查看回復
-          </router-link>
-        </div>
       </div>
     </div>
   </div>
@@ -58,27 +54,46 @@ onMounted(async () => {
 })
 
 function formatDate(dt) {
-  return new Date(dt).toLocaleDateString('zh-TW', { hour12: false })
+  return new Date(dt).toLocaleString('zh-TW', { hour12: false })
 }
+function getStatusClass(status) {
+  switch (status) {
+    case '待處理':
+      return 'bg-warning text-dark'
+    case '已回覆':
+      return 'bg-success'
+    case '已結案':
+      return 'bg-secondary'
+    default:
+      return 'bg-light text-dark'
+  }
+}
+
 </script>
 
 <style scoped>
 .center-narrow {
-  max-width: 720px; 
+  max-width: 720px;
   margin: 0 auto;
 }
-.card {
+
+.ticket-card {
+  background: #fff;
+  border: 1px solid #eaeaea;
+  border-radius: 1rem;
   padding: 1rem 1.25rem;
+  transition: all 0.25s ease;
 }
-.hover-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-card:hover {
+.ticket-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
-.btn-primary {
-  background-color:rgb(0, 147, 171);
-  border-color: rgb( 77, 180, 193 );
+
+.badge.bg-status {
+  background-color: rgb(0, 147, 171);
+}
+
+.main-color-green-text {
+  color: rgb(0, 147, 171);
 }
 </style>

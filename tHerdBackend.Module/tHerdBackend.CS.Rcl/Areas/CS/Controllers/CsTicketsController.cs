@@ -4,40 +4,62 @@ using tHerdBackend.Core.Interfaces.CS;
 
 namespace tHerdBackend.CS.Rcl.Areas.CS.Controllers
 {
-    [Area("CS")]
-    public class CsTicketsController : Controller
-    {
-        private readonly ICsTicketService _service;
+	[Area("CS")]
+	[Authorize] 
+	public class CsTicketsController : Controller
+	{
+		private readonly ICsTicketService _service;
 
-        public CsTicketsController(ICsTicketService service)
-        {
-            _service = service;
-        }
+		public CsTicketsController(ICsTicketService service)
+		{
+			_service = service;
+		}
 
-        // ✅ 顯示工單清單
-        public async Task<IActionResult> Index()
-        {
-            var tickets = await _service.GetAllAsync();
-            return View(tickets);
-        }
+		// =====================================================
+		// 🟩 1️⃣ 工單清單頁
+		// =====================================================
+		public async Task<IActionResult> Index()
+		{
+			var tickets = await _service.GetAllAsync();
+			return View(tickets);
+		}
 
-        // ✅ 查看詳情 + 回覆
-        public async Task<IActionResult> Details(int id)
-        {
-            var ticket = await _service.GetTicketByIdAsync(id);
-            return View(ticket);
-        }
+		// =====================================================
+		// 🟩 2️⃣ 單筆詳情頁（含Email、UserId、留言）
+		// =====================================================
+		public async Task<IActionResult> Details(int id)
+		{
+			var ticket = await _service.GetTicketByIdAsync(id);
 
-        // ✅ 提交回覆
-        [HttpPost]
-        public async Task<IActionResult> Reply(int ticketId, string replyText)
-        {
-            await _service.AddReplyAsync(ticketId, replyText);
-            return RedirectToAction("Detail", new { id = ticketId });
-        }
+			if (ticket == null)
+				return NotFound("找不到該工單");
 
+			return View(ticket);
+		}
+
+		// =====================================================
+		// 🟩 3️⃣ 回覆信件（表單版）
+		// =====================================================
 		[HttpPost]
-	
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> Reply(int ticketId, string replyText)
+		{
+			if (string.IsNullOrWhiteSpace(replyText))
+			{
+				TempData["Error"] = "回覆內容不可為空白";
+				return RedirectToAction("Details", new { id = ticketId });
+			}
+
+			await _service.AddReplyAsync(ticketId, replyText);
+			TempData["Success"] = "回覆已寄出！";
+
+			return RedirectToAction("Details", new { id = ticketId });
+		}
+
+		// =====================================================
+		// 🟩 4️⃣ 回覆信件（Ajax 版，前端 fetch 使用）
+		// =====================================================
+		[HttpPost]
 		public async Task<IActionResult> ReplyAjax(int ticketId, string replyText)
 		{
 			try
@@ -50,7 +72,7 @@ namespace tHerdBackend.CS.Rcl.Areas.CS.Controllers
 				return Json(new
 				{
 					ok = true,
-					message = "回覆已寄出",
+					message = "回覆信件已寄出！",
 					redirectUrl = Url.Action("Index", "CsTickets", new { area = "CS" })
 				});
 			}
@@ -59,8 +81,5 @@ namespace tHerdBackend.CS.Rcl.Areas.CS.Controllers
 				return Json(new { ok = false, message = "寄信失敗：" + ex.Message });
 			}
 		}
-
-
-
 	}
 }

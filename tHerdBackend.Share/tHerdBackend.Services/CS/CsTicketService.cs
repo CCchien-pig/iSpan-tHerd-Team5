@@ -75,22 +75,13 @@ namespace tHerdBackend.Services.CS
 			return ticketId;
 		}
 
-
-		/// <summary>查單筆工單（建立後回傳）</summary>
+		/// <summary>查單筆工單（完整內容）</summary>
 		public async Task<TicketOut?> GetTicketByIdAsync(int ticketId)
 		{
-			var tickets = await _repo.GetAllAsync();
-			var found = tickets.FirstOrDefault(x => x.TicketId == ticketId);
-			return found == null ? null : new TicketOut
-			{
-				TicketId = found.TicketId,
-				Subject = found.Subject,
-				CategoryName = found.CategoryName ?? "未分類",
-				PriorityText = found.PriorityText,
-				CreatedDate = found.CreatedDate,
-				StatusText = found.StatusText
-			};
+			// ✅ 改成呼叫 repo 的單筆方法，不要撈全部
+			return await _repo.GetByIdAsync(ticketId);
 		}
+
 		/// <summary>取得某會員工單清單</summary>
 		public async Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId)
 		{
@@ -100,7 +91,7 @@ namespace tHerdBackend.Services.CS
         public async Task AddReplyAsync(int ticketId, string messageText)
         {
             // ✅ 1️⃣ 新增客服留言
-            await _repo.AddMessageAsync(ticketId, messageText, senderType: 2); // 2 = 客服
+            await _repo.AddMessageAsync(ticketId, senderType: 2,messageText); // 2 = 客服
 
             // ✅ 2️⃣ 更新工單狀態為已回覆
             await _repo.UpdateStatusAsync(ticketId, 2);

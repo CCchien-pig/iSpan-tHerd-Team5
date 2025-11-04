@@ -12,5 +12,8 @@
 		public DateTime CreatedDate { get; set; }
 		public string StatusText { get; set; } = "待處理"; // 新增：狀態文字
         public string? Email { get; set; }
-    }
+		public int? UserId { get; set; }       // 顯示會員編號
+		public string? UserMessage { get; set; } // 顯示會員留言
+
+	}
 }
