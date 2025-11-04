@@ -1,5 +1,6 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.ord;
 using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
@@ -9,14 +10,16 @@ namespace tHerdBackend.Services.PROD.API
     public class ProductsForApiService : IProductsForApiService
 	{
         private readonly IProdProductRepository _repo;
+		private readonly IShoppingCartRepository _srepo;
 
-        // 伺服器端「單頁最大筆數」卡控
-        private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
+		// 伺服器端「單頁最大筆數」卡控
+		private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
 
-        public ProductsForApiService(IProdProductRepository repo)
+        public ProductsForApiService(IProdProductRepository repo, IShoppingCartRepository srepo)
         {
             _repo = repo;
-        }
+			_srepo = srepo;
+		}
 
         /// <summary>
         /// 前台: 依傳入條件，取得產品清單
@@ -97,5 +100,27 @@ namespace tHerdBackend.Services.PROD.API
                 throw;
             }
         }
-    }
+
+		/// <summary>
+		/// 新增購物車
+		/// </summary>
+		/// <param name="dto"></param>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default)
+		{
+			try
+			{
+				// 新增購物車
+				var item = await _srepo.AddShoppingCartAsync(dto, ct);
+
+				return item;
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+	}
 }
