@@ -77,14 +77,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// 前台：查詢產品分類
         /// </summary>
         /// <returns></returns>
-        [HttpGet("ProductTypetree")]
+        [HttpGet("ProductTypetree/{id:int}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetProductTypeTree(
+        public async Task<IActionResult> GetProductTypeTree(int? id,
             CancellationToken ct = default)
         {
             try
             {
-                var data = await _service.GetProductTypeTreeAsync(ct);
+                var data = await _service.GetProductTypeTreeAsync(id, ct);
                 return Ok(ApiResponse<IEnumerable<ProductTypeTreeDto>>.Ok(data));
             }
             catch (Exception ex)

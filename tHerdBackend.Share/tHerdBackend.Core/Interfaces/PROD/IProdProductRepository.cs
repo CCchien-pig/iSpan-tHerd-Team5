@@ -22,7 +22,7 @@ namespace tHerdBackend.Core.Interfaces.Products
 
         // Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
 
-        Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
+        Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);
 
 		//Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
 	}
