@@ -15,7 +15,8 @@ namespace tHerdBackend.Infra.Repositories.Interfaces.CS
 		Task<IEnumerable<TicketsDto>> GetByUserIdAsync(int userId);
         Task AddMessageAsync(int ticketId, string messageText, int senderType);
         Task UpdateStatusAsync(int ticketId, int newStatus);
-
+        Task<TicketOut?> GetByIdAsync(int ticketId);
+        Task<IEnumerable<TicketMessageDto>> GetMessagesAsync(int ticketId);
 
     }
 }

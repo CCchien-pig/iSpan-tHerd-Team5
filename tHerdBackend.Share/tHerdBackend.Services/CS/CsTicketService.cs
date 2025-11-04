@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Dynamic;
 using System.Text.Json;
 using tHerdBackend.Core.DTOs;
@@ -14,12 +15,14 @@ namespace tHerdBackend.Services.CS
 	{
 		private readonly ICsTicketRepository _repo;
 		private readonly ISysAssetFileRepository _assetRepo;
-
-		public CsTicketService(ICsTicketRepository repo, ISysAssetFileRepository assetRepo)
-		{
+        private readonly IEmailSender _email;
+        public CsTicketService(ICsTicketRepository repo, ISysAssetFileRepository assetRepo, IEmailSender email)
+        {
 			_repo = repo;
 			_assetRepo = assetRepo; //注入共用圖片模組
-		}
+            _email = email;
+
+        }
 
 		/// <summary>取得全部工單清單</summary>
 		public async Task<IEnumerable<TicketsDto>> GetAllAsync()
@@ -93,14 +96,34 @@ namespace tHerdBackend.Services.CS
 		{
 			return await _repo.GetByUserIdAsync(userId);
 		}
+        /// <summary>客服回覆（儲存留言 + 更新狀態 + 寄信）</summary>
         public async Task AddReplyAsync(int ticketId, string messageText)
         {
-            // 新增客服留言
-            await _repo.AddMessageAsync(ticketId, messageText, senderType: 0);
+            // ✅ 1️⃣ 新增客服留言
+            await _repo.AddMessageAsync(ticketId, messageText, senderType: 2); // 2 = 客服
 
-            // 更新工單狀態為已回覆
+            // ✅ 2️⃣ 更新工單狀態為已回覆
             await _repo.UpdateStatusAsync(ticketId, 2);
-        }
 
+            // ✅ 3️⃣ 撈取工單資料（含 Email）
+            var ticket = await _repo.GetByIdAsync(ticketId);
+            if (ticket == null || string.IsNullOrEmpty(ticket.Email))
+                return; // 若沒有信箱就不寄
+
+            // ✅ 4️⃣ 組信件內容
+            var subject = $"tHerd 客服中心 - 您的問題已有回覆 (#{ticket.TicketId})";
+            var html = $@"
+<p>親愛的會員您好：</p>
+<p>您提交的問題「<b>{ticket.Subject}</b>」已有回覆：</p>
+<div style='background:#f8f9fa;padding:1rem;border-radius:8px;border:1px solid #ddd;'>
+    {messageText}
+</div>
+<p>如需進一步協助，請直接回覆此信件，我們將盡快為您服務。</p>
+<p style='color:#888;font-size:0.9em'>tHerd 客服中心 敬上</p>";
+
+            // ✅ 5️⃣ 寄信
+            await _email.SendEmailAsync(ticket.Email, subject, html);
+        }
     }
 }
+

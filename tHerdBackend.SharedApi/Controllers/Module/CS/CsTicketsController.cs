@@ -1,9 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using tHerdBackend.Core.DTOs.CS;
+using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.CS;
 using tHerdBackend.Core.ValueObjects;
-using System.Security.Claims;
+using tHerdBackend.Infra.Models;
 
 
 [ApiController]
@@ -13,11 +17,20 @@ public class CsTicketsController : ControllerBase
 {
 	private readonly ICsTicketService _service;
 	private readonly IFaqService _faqService;
-	public CsTicketsController(ICsTicketService service, IFaqService faqService)
-	{
-		_service = service;
-		_faqService = faqService;
-	}
+    private readonly UserManager<ApplicationUser> _userMgr;
+    private readonly ApplicationDbContext _appDb;
+    public CsTicketsController(
+        ICsTicketService service,
+        IFaqService faqService,
+        UserManager<ApplicationUser> userMgr,
+        ApplicationDbContext appDb
+    )
+    {
+        _service = service;
+        _faqService = faqService;
+        _userMgr = userMgr;
+        _appDb = appDb;
+    }
 
     ///// <summary>取得全部客服工單清單（限後台登入者）</summary>
     //[HttpGet("list")]
@@ -112,5 +125,33 @@ public class CsTicketsController : ControllerBase
 		}
 
 	}
+    [Authorize]
+    [HttpPost("create")]
+    public async Task<IActionResult> CreateAsync([FromBody] TicketIn dto)
+    {
+        // 取得登入者 Id
+        var userId = _userMgr.GetUserId(User);
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { error = "未登入" });
+
+        // 查出會員 Email + UserNumberId
+        var u = await _appDb.Users
+            .AsNoTracking()
+            .Where(x => x.Id == userId)
+            .Select(x => new { x.UserNumberId, x.Email })
+            .FirstOrDefaultAsync();
+
+        if (u == null)
+            return NotFound(new { error = "找不到會員資料" });
+
+        // 把會員資料寫進 DTO
+        dto.UserId = u.UserNumberId;
+        dto.Email = u.Email;
+
+        // 建立工單
+        var ticketId = await _service.CreateAsync(dto);
+        return Ok(new { ok = true, ticketId, message = "工單建立成功" });
+    }
+
 
 }

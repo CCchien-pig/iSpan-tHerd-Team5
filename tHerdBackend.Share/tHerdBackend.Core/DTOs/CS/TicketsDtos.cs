@@ -15,7 +15,7 @@
 
         public string? UserMessage { get; set; } //某會員的工單清單（含使用者留言）
 
-
+        public string? Email { get; set; }
     }
 }
 
