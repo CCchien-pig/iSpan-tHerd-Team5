@@ -49,11 +49,13 @@
               data-bs-display="static"
             >
               <i class="bi bi-person me-1 main-color-white-text"></i>
-              <span class="main-color-white-text">登入</span>
+              <span v-if="!isLogin" class="main-color-white-text">登入</span>
+              <span v-if="isLogin" class="main-color-white-text">已登入</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>
-              <li><a class="dropdown-item" @click.prevent="$router.push({ name: 'userregister' })" href="#">註冊</a></li>
+              <li v-if="!isLogin"><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userlogin', query: { redirect: $route.fullPath }})" href="#">登入</a></li>
+              <li v-if="!isLogin"><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userregister' })" href="#">註冊</a></li>
+              <li v-if="isLogin"><a class="dropdown-item"  @click="onLogout" href="#">登出</a></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a class="dropdown-item"  @click.prevent="$router.push({ name: 'userme' })" href="#">我的帳戶</a></li>
               <!-- 修正完在把我的帳戶新增：v-if="isLogin" -->
@@ -138,8 +140,18 @@
 
 <script>
 import { Dropdown } from 'bootstrap'
+import { mapStores } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 export default {
   name: 'AppHeader',
+
+  computed: {
+    // 讓 this.authStore 可用，且能即時反應登入狀態
+    ...mapStores(useAuthStore),
+    isLogin() {
+      return this.authStore.isAuthenticated
+    },
+  },
 
   data() {
     return {
@@ -149,6 +161,9 @@ export default {
   },
 
   mounted() {
+    // 確保刷新頁面後能從 storage 載回登入狀態
+    this.authStore.init?.()
+
     const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
     if (!btn) return
 
@@ -184,10 +199,12 @@ export default {
   goToCart() {
     this.$router.push('/cart'); 
   },
-  goToOrders() {
-  this.$router.push('/orders');
-  }
-}
+  async onLogout() {
+      await this.authStore.logout()          // ★ 透過 this.authStore
+      this.$router.replace({ name: 'home' }) // ★ 用 this.$router
+      alert('你已成功登出')
+    },
+},
 };
 </script>
 

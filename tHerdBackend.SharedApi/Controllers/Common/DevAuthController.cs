@@ -40,8 +40,8 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 		{
 			// 嚴格限制：僅 Development 或旗標開啟時可用
 			var enabled = _config.GetValue<bool>("DevAuth:Enabled");
-			if (!_env.IsDevelopment() && !enabled)
-				return NotFound(); // 避免被誤用，直接偽裝不存在
+			if (!(_env.IsDevelopment() && enabled))
+				return NotFound();
 
 			var email = _config["DevAuth:Email"];
 			if (string.IsNullOrWhiteSpace(email))

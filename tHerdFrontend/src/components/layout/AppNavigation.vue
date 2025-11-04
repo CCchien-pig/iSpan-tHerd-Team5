@@ -8,7 +8,7 @@
       <div class="row align-items-center">
         <div class="col-12">
           <!-- 🍔 手機版漢堡按鈕 -->
-          <button 
+          <button
             class="hamburger-btn d-lg-none"
             @click="toggleMobileMenu"
             :class="{ active: showMobileMenu }"
@@ -21,30 +21,25 @@
           <!-- 🖥️ 桌面版導航 -->
           <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
             <li
-              v-for="item in productMenus"
-              :key="item.id"
-              class="nav-item position-relative mega-menu-container"
-              @mouseenter="openMegaMenu(item)"
-              @mouseleave="closeMegaMenu"
+              v-for="item in navigationItemsWithIcon"
+              :key="item.name"
+              class="nav-item position-relative"
             >
-              <button
-                type="button"
-                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center"
-                :class="{ 
-                  active: activeMenuId === item.id,
+              <router-link
+                :to="item.path"
+                class="nav-link fw-medium rounded-pill d-flex align-items-center"
+                :class="{
+                  active: $route.path.startsWith(item.path),
                   'has-icon': item.icon,
-                  'text-only': !item.icon
+                  'text-only': !item.icon,
                 }"
               >
                 <div v-if="item.icon" class="nav-icon-wrapper">
                   <img :src="item.icon" alt="" class="nav-icon" />
                 </div>
                 <span>{{ item.name }}</span>
-              </button>
+              </router-link>
             </li>
-
-
-            <li class="nav-divider mx-3"></li>
 
             <!-- 品牌 A-Z -->
             <li
@@ -52,18 +47,19 @@
               @mouseenter="showBrands = true"
               @mouseleave="showBrands = false"
             >
-              <button
-                type="button"
-                class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center text-only"
+              <router-link
+                to="/brands"
+                class="nav-link fw-medium rounded-pill d-flex align-items-center text-only"
                 :class="{ active: showBrands }"
-                @click="toggleBrands"
+                @click="showBrands = false"
               >
                 <span>品牌 A-Z</span>
-              </button>
+              </router-link>
 
+              <!-- hover 展開的 mega menu -->
               <transition name="fade">
-                <div 
-                  v-if="showBrands" 
+                <div
+                  v-if="showBrands"
                   class="mega-menu shadow-lg bg-white"
                   @mouseenter="showBrands = true"
                   @mouseleave="showBrands = false"
@@ -73,16 +69,16 @@
                       <div
                         class="col-6 col-md-2"
                         v-for="(group, gIdx) in brandGroups"
-                        :key="gIdx"
+                        :key="`grp-${gIdx}`"
                       >
                         <ul class="list-unstyled mb-0">
-                          <li v-for="brand in group" :key="brand" class="mb-2">
+                          <li v-for="b in group" :key="b.brandId" class="mb-2">
                             <router-link
-                              :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                              :to="toBrandPath(b.brandName, b.brandId)"
                               class="text-dark text-decoration-none brand-link"
                               @click="showBrands = false"
                             >
-                              {{ brand }}
+                              {{ b.brandName }}
                             </router-link>
                           </li>
                         </ul>
@@ -111,52 +107,7 @@
                 </div>
               </transition>
             </li>
-
-              <!-- ✅ 固定項目（品牌A-Z後面） -->
-            <li v-for="item in staticMenus" :key="item.path" class="nav-item">
-              <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill text-only"
-                :class="{ active: $route.path.startsWith(item.path) }"
-              >
-                {{ item.name }}
-              </router-link>
-            </li>
           </ul>
-
-          <!-- ✅ 把 MegaMenu 放在 ul 外 -->
-          <transition name="fade">
-            <div 
-              v-if="activeMenuId"
-              class="mega-menu shadow-lg bg-white"
-              @mouseenter="clearCloseTimer"
-              @mouseleave="closeMegaMenu"
-            >
-              <div v-if="isLoadingMenu" class="p-4 text-center text-muted">載入中...</div>
-              <div v-else-if="megaMenuData" class="container-fluid py-4 px-4">
-                <div class="row g-4">
-                  <div
-                    v-for="col in megaMenuData.columns"
-                    :key="col.title"
-                    class="col-6 col-md-2"
-                  >
-                    <h6 class="fw-bold text-success mb-3">{{ col.title }}</h6>
-                    <ul class="list-unstyled mb-0">
-                      <li v-for="sub in col.items" :key="sub.id" class="mb-2">
-                        <router-link
-                          :to="sub.url"
-                          class="text-dark text-decoration-none brand-link"
-                          @click="closeMegaMenu"
-                        >
-                          {{ sub.name }}
-                        </router-link>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </transition>
 
           <!-- 📱 手機版側邊選單 -->
           <transition name="slide">
@@ -173,7 +124,7 @@
                 <div class="menu-section">
                   <h6 class="menu-section-title">產品分類</h6>
                   <router-link
-                    v-for="item in navigationItemsWithIcon.filter(i => i.icon)"
+                    v-for="item in navigationItemsWithIcon.filter((i) => i.icon)"
                     :key="item.name"
                     :to="item.path"
                     class="mobile-menu-item"
@@ -192,7 +143,7 @@
                 <div class="menu-section">
                   <h6 class="menu-section-title">快速連結</h6>
                   <router-link
-                    v-for="item in navigationItemsWithIcon.filter(i => !i.icon)"
+                    v-for="item in navigationItemsWithIcon.filter((i) => !i.icon)"
                     :key="item.name"
                     :to="item.path"
                     class="mobile-menu-item text-only-item"
@@ -207,29 +158,24 @@
 
                 <!-- ✅ 品牌選單（修正版） -->
                 <div class="menu-section">
-                  <h6 
-                    class="menu-section-title clickable" 
-                    @click="toggleBrandsInMobile"
-                  >
+                  <h6 class="menu-section-title clickable" @click="goBrandsAndClose">
                     <span>品牌 A-Z</span>
-                    <i 
-                      class="bi" 
-                      :class="showBrandsInMobile ? 'bi-chevron-up' : 'bi-chevron-down'"
-                    ></i>
+                    <i class="bi bi-chevron-right"></i>
                   </h6>
-                  
+
+                  <!-- 展開清單 -->
                   <transition name="expand">
                     <div v-if="showBrandsInMobile" class="brands-list">
                       <!-- ✅ 正確的雙層 v-for 結構 -->
                       <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
                         <router-link
-                          v-for="brand in group"
-                          :key="brand"
-                          :to="`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`"
+                          v-for="b in group"
+                          :key="b.brandId"
+                          :to="toBrandPath(b.brandName, b.brandId)"
                           class="brand-item"
                           @click="closeMobileMenu"
                         >
-                          {{ brand }}
+                          {{ b.brandName }}
                         </router-link>
                       </template>
                     </div>
@@ -241,11 +187,7 @@
 
           <!-- 🎭 背景遮罩 -->
           <transition name="fade-mask">
-            <div 
-              v-if="showMobileMenu" 
-              class="mobile-menu-overlay"
-              @click="closeMobileMenu"
-            ></div>
+            <div v-if="showMobileMenu" class="mobile-menu-overlay" @click="closeMobileMenu"></div>
           </transition>
         </div>
       </div>
@@ -253,194 +195,111 @@
   </nav>
 </template>
 
-<script setup>
-import { ref, onMounted, onBeforeUnmount  } from 'vue'
-import ProductsApi from '@/api/modules/prod/ProductsApi' 
+<script>
+export default {
+  name: 'AppNavigation',
+  data() {
+    return {
+      showMobileMenu: false,
+      showBrands: false,
+      showBrandsInMobile: false,
 
-// ==================== 狀態變數 ====================
-const showMobileMenu = ref(false)
-const showBrands = ref(false)
-const showBrandsInMobile = ref(false)
-const productMenus = ref([])
-const activeMenuId = ref(null)
-const megaMenuData = ref(null)
-const isLoadingMenu = ref(false)
-const loadedMenus = ref({}) // ✅ 預載快取資料
+      navigationItemsWithIcon: [
+        { name: '補充劑', path: '/supplements', icon: '/homePageIcon/supplement.png' },
+        { name: '運動營養', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
+        { name: '沐浴', path: '/bath', icon: '/homePageIcon/bath.png' },
+        { name: '美容美妝', path: '/beauty', icon: '/homePageIcon/makeup.png' },
+        { name: '食品百貨', path: '/grocery', icon: '/homePageIcon/food.png' },
+        { name: '健康家居', path: '/healthy-home', icon: '/homePageIcon/health.png' },
+        { name: '嬰童用品', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
+        { name: '寵物用品', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
+        { name: '健康主題', path: '/health-topics' },
+        { name: '特惠', path: '/specials' },
+        { name: '暢銷', path: '/bestsellers' },
+        { name: '試用', path: '/trials' },
+        { name: '新產品', path: '/new-products' },
+        { name: '健康中心', path: '/cnt' },
+      ],
 
-const navigationItemsWithIcon = [
-        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png' },
-        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
-        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png' },
-        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png' },
-        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png' },
-        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
-        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
-        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
-      ]
+      brandGroups: [
+        [
+          { brandId: 1002, brandName: 'Animal' },
+          { brandId: 1005, brandName: 'Bioschwartz' },
+          { brandId: 1008, brandName: 'Codeage' },
+          { brandId: 1010, brandName: 'Dr. Mercola' },
+          { brandId: 1013, brandName: 'Eucerin' },
+        ],
+        [
+          { brandId: 1016, brandName: 'Force Factor' },
+          { brandId: 1019, brandName: 'Garden Of Life' },
+          { brandId: 1022, brandName: 'Healths Harmony' },
+          { brandId: 1024, brandName: 'Irwin Naturals' },
+          { brandId: 1025, brandName: 'Idealove' },
+        ],
+        [
+          { brandId: 1027, brandName: 'Jarrow formulas' },
+          { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
+          { brandId: 1038, brandName: 'Mild By Nature' },
+          { brandId: 1039, brandName: 'Natural Factors' },
+          { brandId: 1042, brandName: 'Optimum Nutrition' },
+        ],
+        [
+          { brandId: 1054, brandName: 'Solaray' },
+          { brandId: 1058, brandName: 'Trace' },
+          { brandId: 1061, brandName: 'Vitamatic' },
+          { brandId: 1064, brandName: "Wiley's Finest" },
+          { brandId: 1072, brandName: 'Zahler' },
+        ],
+      ],
 
-// 品牌A-Z後的固定連結
-const staticMenus = [
-  { name: '健康主題', path: '/health-topics' },
-  { name: '特惠', path: '/specials' },
-  { name: '暢銷', path: '/bestsellers' },
-  { name: '試用', path: '/trials' },
-  { name: '新產品', path: '/new-products' },
-  { name: '健康中心', path: '/cnt' },
-]
-
-// === 初始化 ===
-onMounted(() => {
-  productMenus.value = navigationItemsWithIcon
-    .filter(i => i.type === 'pr')
-    .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
-
-  preloadMegaMenus() // 一次預載所有資料
-})
-
-// === 預先載入所有分類資料 ===
-async function preloadMegaMenus() {
-  try {
-    isLoadingMenu.value = true
-
-    const res = await ProductsApi.getProductCategories()
-    console.log('🐞 API 回傳結果：', res.data)
-
-    const apiResult = res.data || {}
-    if (Array.isArray(apiResult)) {
-      buildMegaMenu(apiResult)
-    } else if (apiResult.success && Array.isArray(apiResult.data)) {
-      buildMegaMenu(apiResult.data)
-    } else {
-      throw new Error(apiResult.message || '查詢分類失敗')
+      recommendedBrands: [
+        { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
+        { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
+        { name: 'Life Extension', url: '/brands/life-extension-1033' },
+      ],
     }
-  } catch (err) {
-    console.error('❌ 無法載入 MegaMenu 資料：', err)
-  } finally {
-    isLoadingMenu.value = false
-  }
+  },
+  methods: {
+    toggleMobileMenu() {
+      this.showMobileMenu = !this.showMobileMenu
+      // 防止背景滾動
+      document.body.style.overflow = this.showMobileMenu ? 'hidden' : ''
+    },
+    closeMobileMenu() {
+      this.showMobileMenu = false
+      document.body.style.overflow = ''
+    },
+    toggleBrands() {
+      this.showBrands = !this.showBrands
+    },
+    toggleBrandsInMobile() {
+      this.showBrandsInMobile = !this.showBrandsInMobile
+    },
+    goBrandsAndClose() {
+      this.$router.push('/brands')
+      this.closeMobileMenu()
+    },
+    toBrandPath(name, id) {
+      const slug = String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+      return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
+    },
+  },
+  beforeUnmount() {
+    // 清理
+    document.body.style.overflow = ''
+  },
 }
-
-function buildMegaMenu(treeData) {
-  // 建立層級 URL
-  function buildUrl(item, parentCode = '', prefix = '') {
-    const path = parentCode
-      ? `${parentCode}/${item.productTypeCode?.toLowerCase()}`
-      : item.productTypeCode?.toLowerCase()
-
-    item.url = `/products/${prefix}${path}`
-    if (item.children?.length) {
-      item.children.forEach(c => buildUrl(c, path, prefix))
-    }
-  }
-
-  // 🔹依主分類（補充劑、運動營養...）分別產出
-  productMenus.value.forEach(menu => {
-    const prefix = menu.path.replace('/', '') + '/'  // e.g. supplements/
-    const columns = treeData.map(parent => {
-      buildUrl(parent, '', prefix)
-      return {
-        title: parent.productTypeName,
-        items: (parent.children || []).map(child => ({
-          id: child.productTypeId,
-          name: child.productTypeName,
-          url: child.url,
-        })),
-      }
-    })
-    loadedMenus.value[menu.id] = { columns }
-  })
-
-  console.log(' MegaMenu 已載入:', loadedMenus.value)
-}
-
-let closeTimer = null
-
-// === 開關 MegaMenu ===
-function openMegaMenu(item) {
-  clearTimeout(closeTimer)
-  activeMenuId.value = item.id
-  megaMenuData.value = loadedMenus.value[item.id]
-}
-
-function closeMegaMenu() {
-  clearTimeout(closeTimer)
-  // 延遲一點再關閉，給滑鼠移動時間
-  closeTimer = setTimeout(() => {
-    activeMenuId.value = null
-  }, 200)
-}
-
-function clearCloseTimer() {
-  clearTimeout(closeTimer)
-}
-
-// 品牌清單
-const brandGroups = [
-  ['21st Century', 'ACURE', 'ALLMAX', 'Beauty of Joseon'],
-  ["Doctor's Best", 'Eucerin', 'Fairhaven Health', 'Garden of Life'],
-  ['Life Extension', 'MegaFood', 'NOW Foods', "Nature's Bounty"],
-  ['Solgar', 'Thorne', 'Vital Proteins', 'The Vitamin Shoppe']
-]
-
-const recommendedBrands = [
-  { name: "Nature's Bounty", url: '/brands/natures-bounty' },
-  { name: '21st Century', url: '/brands/21st-century' },
-  { name: 'Fairhaven Health', url: '/brands/fairhaven-health' }
-]
-
-// ==================== 手機選單 ====================
-function toggleMobileMenu() {
-  showMobileMenu.value = !showMobileMenu.value
-  document.body.style.overflow = showMobileMenu.value ? 'hidden' : ''
-}
-
-function closeMobileMenu() {
-  showMobileMenu.value = false
-  document.body.style.overflow = ''
-}
-
-// ==================== 品牌選單 ====================
-function toggleBrands() {
-  showBrands.value = !showBrands.value
-}
-function toggleBrandsInMobile() {
-  showBrandsInMobile.value = !showBrandsInMobile.value
-}
-
-// 關閉前清理滾動鎖定
-onBeforeUnmount(() => {
-  document.body.style.overflow = ''
-})
-
 </script>
 
 <style scoped>
 @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
-
-/* 🌗 淡黑色分隔線（桌面版用） */
-.nav-divider {
-  width: 1px;
-  height: 30px;
-  background-color: rgba(0, 0, 0, 0.3);
-  align-self: center;
-  opacity: 1;
-  transform: scaleY(1);
-  transition: all 0.4s ease; /* ✨ 動畫關鍵 */
-}
-
-/* 📱 小於: 分隔線變成換行 + 淡出 */
-@media (max-width: 2000px) {
-  .nav-divider {
-    display: block;
-    width: 100%;
-    height: 1px;
-    background-color: transparent;
-    margin: 10px 0;
-    opacity: 0;          /* 漸淡出 */
-    transform: scaleY(0.2); /* 線條縮小 */
-    transition: all 0.4s ease;
-  }
-}
 
 .main-navigation {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -714,7 +573,6 @@ onBeforeUnmount(() => {
   max-height: 80vh;
   overflow-y: auto;
   border-top: 3px solid rgb(77, 180, 193);
-  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .brand-link {
@@ -773,7 +631,9 @@ onBeforeUnmount(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from {
@@ -814,7 +674,6 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   transition: all 0.3s ease;
 }
-
 
 /* 📱 響應式 */
 @media (min-width: 992px) {

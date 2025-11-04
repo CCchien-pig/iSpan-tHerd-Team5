@@ -29,7 +29,9 @@
     "chartjs-plugin-annotation": "^3.1.0",
     "echarts": "^6.0.0",
     "element-plus": "^2.11.5",
+    "node-vibrant": "^4.0.3",
     "pinia": "^3.0.3",
+    "qrcode": "^1.5.4",
     "sweetalert2": "^11.26.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"

@@ -26,7 +26,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 		public async Task<ActionResult<PagedResult<ProdProductDto>>> GetProductsByTag(
 			[FromRoute] int tagId,
 			[FromQuery] int page = 1,
-			[FromQuery] int pageSize = 24)
+			[FromQuery] int pageSize = 24,
+			[FromQuery] string sort = "default"   // ⭐ 新增
+		)
 		{
 			if (tagId <= 0)
 			{
@@ -35,7 +37,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 
 			// 呼叫 service，而不是直接碰 DbContext
 			var result = await _tagProductQueryService
-				.GetProductsByTagAsync(tagId, page, pageSize);
+				.GetProductsByTagAsync(tagId, page, pageSize, sort);  // ⭐ 多丟一個 sort
 
 			// result 內容長這樣：
 			// {

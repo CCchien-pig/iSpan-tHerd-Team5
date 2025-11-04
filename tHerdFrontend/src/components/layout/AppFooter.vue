@@ -33,13 +33,15 @@
           <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
             <li>
-             <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
+              <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
             </li>
             <li>
-             <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
+              <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
             </li>
             <li>
-              <router-link to="/sup/logistics-info" class="text-light text-decoration-none"
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
+                class="text-light text-decoration-none"
                 >配送資訊</router-link
               >
             </li>
@@ -63,7 +65,9 @@
               <a href="#" class="text-light text-decoration-none">付款方式</a>
             </li>
             <li>
-              <router-link to="/sup/logistics-fee" class="text-light text-decoration-none"
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
+                class="text-light text-decoration-none"
                 >運費計算</router-link
               >
             </li>

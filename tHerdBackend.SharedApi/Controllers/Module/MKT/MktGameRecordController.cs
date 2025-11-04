@@ -8,7 +8,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
 {
     [ApiController]
     [Route("api/mkt/[controller]")]
-    [AllowAnonymous]
+    [Authorize]
     public class MktGameRecordController : ControllerBase
     {
         private readonly IMktGameRecordService _service;

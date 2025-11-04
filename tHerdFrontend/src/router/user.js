@@ -27,4 +27,25 @@ export default [
     component: () => import('@/pages/modules/user/UserMe.vue'),
     meta: { title: '我的帳戶', requiresAuth: false },
   },
+  { path: '/user/login/callback', 
+    name: 'userlogincallback', 
+    component: () => import('@/pages/modules/user/UserLoginCallback.vue') 
+  },
+  {
+  path: '/user/security/2fa',
+  name: 'twostep',
+  component: () => import('@/pages/modules/user/UserTwoStep.vue'),
+  meta: { requiresAuth: true }
+},
+{ path: '/user/account', 
+  name: 'account', 
+  component: () => import('@/pages/modules/user/AccountInfo.vue'),
+  meta: { requiresAuth: true }
+},
+  
+  {path: '/user/rewards',
+    name: 'rewards',
+    component: () => import('@/pages/modules/user/UserRewards.vue'),
+    meta: { requiresAuth: true }
+  }
 ];

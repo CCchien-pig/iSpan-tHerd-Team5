@@ -18,7 +18,13 @@ const refreshHttp = axios.create({
 
 // ===== Request：自動夾 Authorization（保留你的寫法與除錯 log）=====
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore().accessToken
+  const auth = useAuthStore()
+  // ★ 冷啟/重新整理時，先把 storage 的值載回 store
+  // ★ 取 token：先看 store，沒有就從兩種 storage 補
+  const token =
+    auth.accessToken ||
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken')
   if (token) {
     ;(config.headers ??= {} as any)
     ;(config.headers as any).Authorization = `Bearer ${token}`
@@ -56,6 +62,8 @@ http.interceptors.response.use(
     if (!error.response || error.response.status !== 401 || !original || original._retried) {
       throw error
     }
+
+     auth.loadFromStorage?.()
 
     // 沒有 refreshToken → 清空身分並丟出
     if (!auth.refreshToken) {

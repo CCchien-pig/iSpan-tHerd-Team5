@@ -79,7 +79,7 @@ const textColor = computed(() => {
   } else if (name.toUpperCase().includes('中秋') || name.includes('專屬')) {
     return 'rgb(123,92,168)'
   } else if (name.includes('限時') || name.includes('活動')) {
-    return 'rgb(27,42,73)'
+    return 'rgb(40, 105, 158)'
   } else {
     return 'rgb(0,112,131)'
   }

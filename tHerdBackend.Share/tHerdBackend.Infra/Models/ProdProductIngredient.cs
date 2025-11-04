@@ -41,9 +41,9 @@ public partial class ProdProductIngredient
     public int OrderSeq { get; set; }
 
     /// <summary>
-    /// 原始百分比或文字（如 &quot;50%&quot;, &quot;含少許&quot; 等）
+    /// 單位（如 mg, IU, %, ml）
     /// </summary>
-    public string PercentageText { get; set; }
+    public string Unit { get; set; }
 
     public virtual ProdIngredient Ingredient { get; set; }
 
