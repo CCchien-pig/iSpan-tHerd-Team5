@@ -17,9 +17,10 @@ namespace tHerdBackend.Services.CNT
 		}
 
 		public async Task<PagedResult<ProdProductDto>> GetProductsByTagAsync(
-			int tagId,
-			int page,
-			int pageSize)
+				int tagId,
+				int page,
+				int pageSize,
+				string sort)
 		{
 			var (total, rows) = await _repo.GetTagProductsPageAsync(tagId, page, pageSize);
 
@@ -92,6 +93,23 @@ namespace tHerdBackend.Services.CNT
 					ProductTypeDesc = new List<string>()
 				};
 			}).ToList();
+
+			// ⭐ 這裡做排序：目前是「這一頁裡」的排序
+			sort = (sort ?? "default").ToLowerInvariant();
+
+			if (sort == "price-asc")
+			{
+				dtoItems = dtoItems
+					.OrderBy(x => x.SalePrice ?? x.ListPrice ?? x.UnitPrice ?? 0m)
+					.ToList();
+			}
+			else if (sort == "price-desc")
+			{
+				dtoItems = dtoItems
+					.OrderByDescending(x => x.SalePrice ?? x.ListPrice ?? x.UnitPrice ?? 0m)
+					.ToList();
+			}
+			// default：什麼都不做，維持 Repo 原本的排序（IsPrimary, DisplayOrder, RevisedDate）
 
 			return new PagedResult<ProdProductDto>
 			{

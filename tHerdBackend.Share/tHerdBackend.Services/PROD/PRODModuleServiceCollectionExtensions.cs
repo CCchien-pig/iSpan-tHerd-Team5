@@ -22,7 +22,9 @@ namespace tHerdBackend.Services.PROD
             services.AddScoped<IProdProductQueryRepository, ProductQueryRepository>();
             services.AddScoped<ISysCodeRepository, SysCodeRepository>();
 
-            MapsterConfig.Register();
+			services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
+
+			MapsterConfig.Register();
 
             return services;
         }

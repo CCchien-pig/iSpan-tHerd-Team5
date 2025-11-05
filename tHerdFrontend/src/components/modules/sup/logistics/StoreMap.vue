@@ -21,6 +21,8 @@ const cityOptions = ref([])
 const storeOptions = ref([])
 const addressInput = ref('')
 
+const isMapReady = ref(false)
+const infoLock = ref(false)
 const mapRef = ref(null)
 const mapCenter = ref({ lat: 23.5, lng: 121 })
 const mapZoom = ref(7)
@@ -28,10 +30,15 @@ const markers = ref([])
 const userLocation = ref(null)
 const routePath = ref([])
 const distanceText = ref('')
-const currentInfoStore = ref(null)
-const addressInfo = ref(null) // 顯示搜尋地址內容
+
+// 單一資訊卡狀態
+const unifiedType = ref(null) // 'store' | 'address' | null
+const unifiedInfo = ref(null) // 內容物：store 或 { address, lat, lng }
 const activeMode = ref('query')
 
+function onMapReady() {
+  isMapReady.value = true
+}
 function parseCity(address) {
   const list = [
     '台北市',
@@ -87,9 +94,9 @@ function updateStoreOptions() {
 }
 
 function fitBoundsAllMarker(filtered) {
-  nextTick(() => {
+  setTimeout(() => {
     const gmap = mapRef.value?.$mapObject
-    if (gmap && filtered.length > 1) {
+    if (gmap && filtered.length > 1 && window?.google?.maps) {
       const bounds = new window.google.maps.LatLngBounds()
       filtered.forEach((s) => bounds.extend(new window.google.maps.LatLng(s.Latitude, s.Longitude)))
       gmap.fitBounds(bounds)
@@ -97,13 +104,13 @@ function fitBoundsAllMarker(filtered) {
       mapCenter.value = { lat: center.lat(), lng: center.lng() }
       mapZoom.value = gmap.getZoom()
     }
-  })
+  }, 0)
 }
 
 function fitBoundsRoute(route, origin, dest) {
-  nextTick(() => {
+  setTimeout(() => {
     const gmap = mapRef.value?.$mapObject
-    if (gmap && route.length) {
+    if (gmap && route.length && window?.google?.maps) {
       const bounds = new window.google.maps.LatLngBounds()
       route.forEach((pt) => bounds.extend(new window.google.maps.LatLng(pt.lat, pt.lng)))
       bounds.extend(new window.google.maps.LatLng(origin.lat, origin.lng))
@@ -113,16 +120,21 @@ function fitBoundsRoute(route, origin, dest) {
       mapCenter.value = { lat: center.lat(), lng: center.lng() }
       mapZoom.value = gmap.getZoom()
     }
-  })
+  }, 0)
+}
+
+function closeUnified() {
+  if (infoLock.value) return
+  unifiedType.value = null
+  unifiedInfo.value = null
 }
 
 function onQuery() {
-  currentInfoStore.value = null // 關掉舊 InfoWindow
-  addressInfo.value = null // 關掉舊地址卡片
+  // 關掉舊卡片
+  closeUnified()
   const stores = logisticsOpts.find((o) => o.value === selectedLogistics.value)?.stores || []
   const withCity = processStoreData(stores)
   let filtered = withCity
-
   if (selectedCity.value !== '全台')
     filtered = withCity.filter((s) => s.City === selectedCity.value)
   const store = filtered.find((s) => s.StoreID === selectedStoreId.value)
@@ -132,7 +144,6 @@ function onQuery() {
       position: { lat: s.Latitude, lng: s.Longitude },
       store: s,
     }))
-    // 下面這兩行強制重設 mapCenter（多加一層物件，確保 Vue 會 patch）
     mapCenter.value = {
       lat: filtered[0].Latitude + Math.random() * 0.00001,
       lng: filtered[0].Longitude,
@@ -144,7 +155,6 @@ function onQuery() {
     fitBoundsAllMarker(filtered)
   } else if (store) {
     markers.value = [{ position: { lat: store.Latitude, lng: store.Longitude }, store }]
-    // 同理小幅變化座標，保證 Vue 判定為新物件
     mapCenter.value = { lat: store.Latitude + Math.random() * 0.00001, lng: store.Longitude }
     mapZoom.value = 17
     routePath.value = []
@@ -152,11 +162,10 @@ function onQuery() {
     distanceText.value = ''
   }
 }
-//最近門市模式
-async function searchNearestStore() {
-  currentInfoStore.value = null // 每次執行查詢都先清空門市卡片
-  addressInfo.value = null // 清空舊地址卡片
 
+// 最近門市模式
+async function searchNearestStore() {
+  closeUnified()
   activeMode.value = 'search'
   if (!addressInput.value || !selectedLogistics.value) return
   const geo = await geocode(addressInput.value)
@@ -175,13 +184,12 @@ async function searchNearestStore() {
   }
   if (!nearest) return alert('這個物流商沒有門市')
 
-  // 只標註 userLocation，不自動開啟地址卡片
   userLocation.value = geo
-  // addressInfo 不設值，留給 marker/地標 click 時才 set
-
+  // 僅顯示最近門市 marker
   markers.value = [{ position: { lat: nearest.Latitude, lng: nearest.Longitude }, store: nearest }]
   mapCenter.value = geo
   mapZoom.value = 13
+
   const dir = new window.google.maps.DirectionsService()
   dir.route(
     {
@@ -198,19 +206,34 @@ async function searchNearestStore() {
     },
   )
 }
-function onMarkerClick(store) {
-  addressInfo.value = null // 關掉地址卡片
-  currentInfoStore.value = store // 開啟門市卡片
+
+async function handleMarkerClick(store) {
+  if (infoLock.value) return
+  infoLock.value = true
+
+  // 關閉舊卡片，等一個 tick 確保 Overlay 卸載完成
+  unifiedType.value = null
+  unifiedInfo.value = null
+  await nextTick()
+
+  // 再開新卡
+  unifiedType.value = 'store'
+  unifiedInfo.value = store
+  await nextTick()
+
+  infoLock.value = false
 }
-function handleMarkerClick(store) {
-  currentInfoStore.value = null
-  addressInfo.value = null
-  onMarkerClick(store)
+
+function handleCloseInfo() {
+  if (infoLock.value) return
+  unifiedType.value = null
+  unifiedInfo.value = null
 }
+
 function openAddressInfoMarker() {
-  // 清掉門市 InfoWindow，打開地址卡片
-  currentInfoStore.value = null
-  addressInfo.value = {
+  if (infoLock.value) return
+  unifiedType.value = 'address'
+  unifiedInfo.value = {
     address: addressInput.value,
     lat: userLocation.value.lat,
     lng: userLocation.value.lng,
@@ -227,15 +250,13 @@ async function geocode(addr) {
 function fillExampleAddress(a) {
   addressInput.value = a
 }
+
 watch(selectedLogistics, updateCityOptions)
 watch(selectedCity, updateStoreOptions)
-// watch([activeMode, routePath], ([mode, path]) => {
-//   console.log('activeMode', mode, 'routePath length', path.length)
-// })
 </script>
 
 <template>
-  <h2>門市地圖</h2>
+  <!-- <h2>門市地圖</h2> -->
   <div class="map-container">
     <div class="section">
       <h3 class="section-title">依物流門市篩選</h3>
@@ -285,7 +306,6 @@ watch(selectedCity, updateStoreOptions)
 
     <div class="section">
       <h3 class="section-title">輸入地名、地址搜尋最近門市</h3>
-      <!-- 輸入區 -->
       <form class="search-zone" @submit.prevent="searchNearestStore" autocomplete="off">
         <label for="search-logistics">物流商：</label>
         <select id="search-logistics" name="searchLogistics" v-model="selectedLogistics" required>
@@ -303,12 +323,11 @@ watch(selectedCity, updateStoreOptions)
           placeholder="輸入地址或地標"
           required
           autocomplete="off"
-          @input="sanitize"
         />
 
         <button type="submit" :disabled="!addressInput || !selectedLogistics">搜尋最近門市</button>
       </form>
-      <!-- 範例按鈕 -->
+
       <div class="example-buttons">
         <span style="margin-right: 8px">範例：</span>
         <button
@@ -326,6 +345,7 @@ watch(selectedCity, updateStoreOptions)
           北車
         </button>
       </div>
+
       <div v-if="distanceText" style="margin-top: 12px; color: blue">
         導航線路徑距離：{{ distanceText }}
       </div>
@@ -334,11 +354,16 @@ watch(selectedCity, updateStoreOptions)
     <GMapMap
       ref="mapRef"
       :api-key="apiKey"
-      :key="`${mapCenter.lat}_${mapCenter.lng}_${mapZoom}`"
       :center="mapCenter"
       :zoom="mapZoom"
       style="width: 100%; height: 500px; margin-top: 16px"
-      @click="currentInfoStore = null"
+      @click="
+        () => {
+          unifiedType = null
+          unifiedInfo = null
+        }
+      "
+      @ready="onMapReady"
     >
       <GMapMarker
         v-for="marker in markers"
@@ -346,59 +371,53 @@ watch(selectedCity, updateStoreOptions)
         :position="marker.position"
         @click="handleMarkerClick(marker.store)"
       />
-      <!-- 使用者位置標記 -->
       <GMapMarker v-if="userLocation" :position="userLocation" @click="openAddressInfoMarker" />
-      <!-- 路徑線 -->
       <GMapPolyline
         v-if="activeMode === 'search' && routePath.length > 1"
         :key="routePath.length"
         :path="routePath"
         :options="{ strokeColor: '#0079fd', strokeWeight: 4, strokeOpacity: 0.8 }"
       />
-      <!-- 輸入地址卡片 -->
+
+      <!-- 單一 InfoWindow：用 opened 控制，切換內容 -->
       <GMapInfoWindow
-        v-if="addressInfo"
-        :position="{ lat: addressInfo.lat, lng: addressInfo.lng }"
-        @closeclick="addressInfo = null"
+        :position="
+          unifiedType === 'store' && unifiedInfo
+            ? { lat: unifiedInfo.Latitude, lng: unifiedInfo.Longitude }
+            : unifiedType === 'address' && unifiedInfo
+              ? { lat: unifiedInfo.lat, lng: unifiedInfo.lng }
+              : null
+        "
+        :opened="Boolean(unifiedType && unifiedInfo)"
+        @closeclick="handleCloseInfo"
       >
-        <div class="address-card">
-          <!-- <div class="card-title">搜尋地址</div> -->
-          <div class="card-row">
-            <span class="label">查詢地址： <br /> </span>{{ addressInfo.address }}
+        <template v-if="unifiedType === 'store' && unifiedInfo">
+          <div class="marker-card">
+            <div class="card-title">{{ unifiedInfo?.StoreName }}</div>
+            <div class="card-type">{{ unifiedInfo?.Type }}</div>
+            <div class="card-row">
+              <span class="label">分店編號：</span>{{ unifiedInfo?.StoreID }}
+            </div>
+            <div class="card-row"><span class="label">地址：</span>{{ unifiedInfo?.Address }}</div>
+            <div class="card-row"><span class="label">城市：</span>{{ unifiedInfo?.City }}</div>
+            <div class="card-row"><span class="label">電話：</span>{{ unifiedInfo?.Phone }}</div>
+            <div class="card-row">
+              <span class="label">座標：</span>
+              {{ unifiedInfo?.Latitude?.toFixed(4) }}, {{ unifiedInfo?.Longitude?.toFixed(4) }}
+            </div>
           </div>
-          <div class="card-row">
-            <span class="label">座標：</span>{{ addressInfo.lat.toFixed(6) }},
-            {{ addressInfo.lng.toFixed(6) }}
+        </template>
+        <template v-else-if="unifiedType === 'address' && unifiedInfo">
+          <div class="address-card">
+            <div class="card-row">
+              <span class="label">查詢地址：<br /></span>{{ unifiedInfo.address }}
+            </div>
+            <div class="card-row">
+              <span class="label">座標：</span>
+              {{ unifiedInfo.lat.toFixed(6) }}, {{ unifiedInfo.lng.toFixed(6) }}
+            </div>
           </div>
-        </div>
-      </GMapInfoWindow>
-      <!-- 門市卡片 -->
-      <GMapInfoWindow
-        v-if="currentInfoStore"
-        :key="currentInfoStore.StoreID"
-        :position="{ lat: currentInfoStore.Latitude, lng: currentInfoStore.Longitude }"
-        @closeclick="currentInfoStore = null"
-      >
-        <!-- 門市卡片內容 -->
-        <div class="marker-card">
-          <div class="card-title">{{ currentInfoStore.StoreName }}</div>
-          <div class="card-type">{{ currentInfoStore.Type }}</div>
-          <div class="card-row">
-            <span class="label">分店編號：</span>{{ currentInfoStore.StoreID }}
-          </div>
-          <div class="card-row">
-            <span class="label">地址：</span>{{ currentInfoStore.Address }}
-          </div>
-          <div class="card-row"><span class="label">城市：</span>{{ currentInfoStore.City }}</div>
-          <div class="card-row"><span class="label">電話：</span>{{ currentInfoStore.Phone }}</div>
-          <div class="card-row">
-            <span class="label">座標：</span>
-            <span>
-              {{ currentInfoStore.Latitude.toFixed(4) }},
-              {{ currentInfoStore.Longitude.toFixed(4) }}
-            </span>
-          </div>
-        </div>
+        </template>
       </GMapInfoWindow>
     </GMapMap>
   </div>

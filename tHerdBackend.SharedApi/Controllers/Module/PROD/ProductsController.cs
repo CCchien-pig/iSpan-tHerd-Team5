@@ -2,13 +2,15 @@
 using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.ord;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.ValueObjects;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.PROD
 {
 	[ApiController]
-    [Route("api/[folder]/[controller]")]   // 統一為 /api/prod/Products
+    [Area("prod")]
+    [Route("api/[area]/[controller]")]   // 統一為 /api/prod/Products
     public class ProductsController : ControllerBase
 	{
 		private readonly IProductsForApiService _service;  // 服務注入
@@ -67,6 +69,55 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
             catch (Exception ex)
             {
                 // 捕捉異常（例如 SQL 錯誤、參數錯誤）
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 前台：查詢產品分類
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("ProductTypetree/{id:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductTypeTree(int? id,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                var data = await _service.GetProductTypeTreeAsync(id, ct);
+                return Ok(ApiResponse<IEnumerable<ProductTypeTreeDto>>.Ok(data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.Fail("查詢商品分類時發生錯誤：" + ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// 加入購物車（以 Sku 為主）
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("add-to-cart")]
+        public async Task<IActionResult> AddShoppingCartAsync([FromBody] AddToCartDto dto, CancellationToken ct = default)
+        {
+            try
+            {
+                if (dto == null)
+                    return BadRequest(ApiResponse<string>.Fail("參數錯誤：Body 為空"));
+
+                var cartId = await _service.AddShoppingCartAsync(dto, ct);
+
+                if (cartId <= 0)
+                    return NotFound(ApiResponse<string>.Fail("找不到商品或加入失敗"));
+
+                return Ok(ApiResponse<object>.Ok(new
+                {
+                    Message = "商品已成功加入購物車",
+                    CartId = cartId
+                }));
+            }
+            catch (Exception ex)
+            {
                 return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
             }
         }

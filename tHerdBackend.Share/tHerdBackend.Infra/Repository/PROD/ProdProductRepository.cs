@@ -82,7 +82,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
-                SELECT 
+                                SELECT 
                     p.ProductId, p.ProductName, 
                     p.BrandId, s.BrandName, 
                     p.SeoId, p.Badge, 
@@ -92,8 +92,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
-                LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId = p.SeoId AND sma.IsPrimary = 1
-                LEFT JOIN SYS_AssetFile af ON af.FileId = sma.FileId
+                LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
+                LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
                 WHERE 1 = 1
             ");
 
@@ -109,9 +109,9 @@ namespace tHerdBackend.Infra.Repository.PROD
                 SELECT COUNT(DISTINCT p.ProductId)
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
-                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId=p.MainSkuId
-                  LEFT JOIN SYS_SeoMetaAsset sma ON sma.SeoId=p.SeoId AND sma.IsPrimary=1
-                  LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
+                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
+                    LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
+                    LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
                  WHERE 1 = 1 ");
 
             ProductQueryBuilder.AppendFilters(countSql, query);
@@ -833,18 +833,132 @@ namespace tHerdBackend.Infra.Repository.PROD
 	                .Where(p => p.ProductName == name && p.ProductId != id).Count()>0;
 		}
 
-		//public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
-		//{
-		//	if (barcodes == null || !barcodes.Any())
-		//		return string.Empty;
+        /// <summary>
+        /// 取得商品分類樹狀結構（含子分類）
+        /// 用於前台 MegaMenu 或分類篩選
+        /// </summary>
+        /// <summary>
+        /// 取得商品分類樹狀結構（含子分類）
+        /// 用於前台 MegaMenu 或分類篩選
+        /// </summary>
 
-		//	var exists = await _db.ProdProductSkus
-		//		.AsNoTracking()
-		//		.Where(p => barcodes.Contains(p.Barcode))
-		//		.Select(p => p.Barcode)   // 只取出條碼字串
-		//		.ToListAsync(ct);
+        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default)
+        {
+            const string sql = @"
+                ;WITH RecursiveTypes AS (
+                    -- 起點：指定的 ProductTypeId
+                    SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
+                    FROM PROD_ProductTypeConfig
+                    WHERE ProductTypeId = @Id AND IsActive = 1
 
-		//	return string.Join("、", exists);
-		//}
-	}
+                    UNION ALL
+
+                    -- 遞迴抓出所有子節點
+                    SELECT c.ProductTypeId, c.ParentId, c.ProductTypeCode, c.ProductTypeName, c.OrderSeq, c.IsActive
+                    FROM PROD_ProductTypeConfig c
+                    INNER JOIN RecursiveTypes p ON c.ParentId = p.ProductTypeId
+                    WHERE c.IsActive = 1
+                )
+                SELECT * FROM RecursiveTypes
+                ORDER BY ParentId, OrderSeq, ProductTypeName;
+            ";
+
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var list = (await conn.QueryAsync<ProductTypeTreeDto>(
+                    new CommandDefinition(sql, new { Id = id }, tx, cancellationToken: ct))).ToList();
+
+                if (!list.Any())
+                    return new List<ProductTypeTreeDto>();
+
+                // === Step 1. 建立查找字典 ===
+                var lookup = list.ToDictionary(x => x.ProductTypeId, x => x);
+
+                // === Step 2. 初始化 Children ===
+                foreach (var item in list)
+                {
+                    item.Children = new List<ProductTypeTreeNodeDto>();
+                }
+
+                // === Step 3. 將子節點加入父節點 ===
+                foreach (var item in list)
+                {
+                    if (item.ParentId.HasValue && lookup.TryGetValue(item.ParentId.Value, out var parent))
+                    {
+                        parent.Children.Add(new ProductTypeTreeNodeDto
+                        {
+                            ProductTypeId = item.ProductTypeId,
+                            ParentId = item.ParentId,
+                            ProductTypeCode = item.ProductTypeCode,
+                            ProductTypeName = item.ProductTypeName,
+                            OrderSeq = item.OrderSeq,
+                            IsActive = item.IsActive,
+                            Children = new List<ProductTypeTreeNodeDto>()
+                        });
+                    }
+                }
+
+                // === Step 4. 找出根節點（即傳入的 id 對應節點） ===
+                var roots = list.Where(x => x.ProductTypeId == id).ToList();
+
+                return roots;
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 前台: 查詢商品清單 (增加效率)
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        //public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        //{
+        //    var sql = new StringBuilder(@"
+        //            SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
+        //            FROM PROD_ProductTypeConfig
+        //            WHERE IsActive = 1
+        //            ORDER BY ParentId, OrderSeq, ProductTypeName;
+        //    ");
+
+        //    // === Step 5. 查詢執行 ===
+        //    var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+        //    try
+        //    {
+        //        // 查詢
+        //        using var multi = await conn.QueryMultipleAsync($"{sql}", tx);
+
+        //        var list = await multi.ReadAsync<ProductTypeTreeDto>();
+
+        //        return list;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
+        //        return Enumerable.Empty<ProductTypeTreeDto>();
+        //    }
+        //    finally
+        //    {
+        //        if (needDispose) conn.Dispose();
+        //    }
+        //}
+
+        //public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
+        //{
+        //	if (barcodes == null || !barcodes.Any())
+        //		return string.Empty;
+
+        //	var exists = await _db.ProdProductSkus
+        //		.AsNoTracking()
+        //		.Where(p => barcodes.Contains(p.Barcode))
+        //		.Select(p => p.Barcode)   // 只取出條碼字串
+        //		.ToListAsync(ct);
+
+        //	return string.Join("、", exists);
+        //}
+    }
 }

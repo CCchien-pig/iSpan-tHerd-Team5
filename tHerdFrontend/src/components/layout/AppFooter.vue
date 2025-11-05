@@ -1,9 +1,3 @@
-<!--
-  AppFooter.vue - 主Footer組件
-  功能：展示網站頁腳信息，包含公司信息、客戶服務、產品分類等
-  特色：多欄位布局、響應式設計、社交媒體鏈接
-  用途：作為所有頁面的底部信息區域
--->
 <template>
   <!-- 主Footer容器 -->
   <footer class="main-footer main-color-darkwhite text-light py-5">
@@ -13,18 +7,12 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">關於 tHerd</h5>
           <ul class="list-unstyled">
-            <li>
-              <a href="#" class="text-light text-decoration-none">關於我們</a>
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">職業機會</a>
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">新聞中心</a>
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">投資者關係</a>
-            </li>
+            <li> <RouterLink to="/cs/ticket" class="text-light text-decoration-none">聯絡我們</RouterLink></li>
+            <li><RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink></li>
+            
+            <!-- <li><a href="#" class="text-light text-decoration-none">職業機會</a></li>
+            <li><a href="#" class="text-light text-decoration-none">新聞中心</a></li>
+            <li><a href="#" class="text-light text-decoration-none">投資者關係</a></li> -->
           </ul>
         </div>
 
@@ -32,23 +20,14 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
+            <li><RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink></li>
             <li>
-             <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
+                class="text-light text-decoration-none">配送資訊</router-link>
             </li>
-            <li>
-             <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
-            </li>
-            <li>
-              <router-link to="/sup/logistics-info" class="text-light text-decoration-none"
-                >配送資訊</router-link
-              >
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">退貨政策</a>
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">追蹤訂單</a>
-            </li>
+            <li><a href="#" class="text-light text-decoration-none">退貨政策</a></li>
+            <!-- <li><a href="#" class="text-light text-decoration-none">追蹤訂單</a></li> -->
           </ul>
         </div>
 
@@ -56,45 +35,29 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">購物指南</h5>
           <ul class="list-unstyled">
+            <!-- <li><a href="#" class="text-light text-decoration-none">如何訂購</a></li>
+            <li><a href="#" class="text-light text-decoration-none">付款方式</a></li> -->
             <li>
-              <a href="#" class="text-light text-decoration-none">如何訂購</a>
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
+                class="text-light text-decoration-none">運費計算</router-link>
             </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">付款方式</a>
-            </li>
-            <li>
-              <router-link to="/sup/logistics-fee" class="text-light text-decoration-none"
-                >運費計算</router-link
-              >
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">會員制度</a>
-            </li>
-            <li>
-              <a href="#" class="text-light text-decoration-none">優惠券使用</a>
-            </li>
+            <li><a href="#" class="text-light text-decoration-none">會員制度</a></li>
+            <!-- <li><a href="#" class="text-light text-decoration-none">優惠券使用</a></li> -->
           </ul>
         </div>
 
-        <!-- 社群媒體 -->
+        <!-- 社群媒體 + 電子報訂閱 -->
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="main-color-white-text mb-3">關注我們</h5>
           <div class="social-links mb-3">
-            <a href="#" class="text-light me-3">
-              <i class="bi bi-facebook fs-4"></i>
-            </a>
-            <a href="#" class="text-light me-3">
-              <i class="bi bi-instagram fs-4"></i>
-            </a>
-            <a href="#" class="text-light me-3">
-              <i class="bi bi-youtube fs-4"></i>
-            </a>
-            <a href="#" class="text-light me-3">
-              <i class="bi bi-twitter fs-4"></i>
-            </a>
+            <a href="#" class="text-light me-3"><i class="bi bi-facebook fs-4"></i></a>
+            <a href="#" class="text-light me-3"><i class="bi bi-instagram fs-4"></i></a>
+            <a href="#" class="text-light me-3"><i class="bi bi-youtube fs-4"></i></a>
+            <a href="#" class="text-light me-3"><i class="bi bi-twitter fs-4"></i></a>
           </div>
 
-          <!-- 電子報訂閱 -->
+          <!-- ✅ 電子報訂閱 -->
           <div class="newsletter">
             <h6 class="main-color-white-text mb-2">訂閱電子報</h6>
             <div class="input-group" style="max-width: 300px">
@@ -108,11 +71,13 @@
                 訂閱
               </button>
             </div>
+            <div v-if="message" class="small mt-2 main-color-white-text">
+              {{ message }}
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 分隔線 -->
       <hr class="my-4" />
 
       <!-- 底部資訊 -->
@@ -147,40 +112,36 @@
 </template>
 
 <script>
-/**
- * AppFooter.vue 組件配置
- * 功能：主Footer組件，展示網站頁腳信息
- * 特色：多欄位布局、電子報訂閱、社交媒體鏈接
- */
-export default {
-  name: 'AppFooter', // 組件名稱
+import http from '@/api/http'
 
-  /**
-   * 組件數據 - 電子報訂閱
-   */
+export default {
+  name: 'AppFooter',
+
   data() {
     return {
-      email: '', // 電子報訂閱郵箱
+      email: '',
+      message: '',
+      success: false,
     }
   },
 
-  /**
-   * 方法定義 - 處理用戶交互
-   */
   methods: {
-    /**
-     * 處理電子報訂閱
-     * 當用戶輸入郵箱並點擊訂閱按鈕時觸發
-     * TODO: 實現電子報訂閱API
-     */
-    subscribeNewsletter() {
-      if (this.email.trim()) {
-        // 處理電子報訂閱邏輯
-        // TODO: 實現電子報訂閱API
-        alert('感謝您的訂閱！')
+    async subscribeNewsletter() {
+      if (!this.email.trim()) {
+        this.message = '請輸入有效的電子郵件地址'
+        this.success = false
+        return
+      }
+
+      try {
+        const { data } = await http.post('/mkt/newsletter/subscribe', { email: this.email })
+        this.message = data.message || '訂閱成功！請查收信箱'
+        this.success = data.ok
         this.email = ''
-      } else {
-        alert('請輸入有效的電子郵件地址')
+      } catch (err) {
+        console.error('❌ 訂閱電子報失敗', err)
+        this.message = '訂閱失敗，請稍後再試'
+        this.success = false
       }
     },
   },
@@ -195,18 +156,12 @@ export default {
 .social-links a {
   transition: color 0.3s ease;
 }
-
 .social-links a:hover {
   color: #28a745 !important;
 }
-
-/* 使用內聯樣式，無需CSS */
-
 .payment-methods i {
   font-size: 1.5rem;
-  color: #6c757d;
 }
-
 .legal-links a:hover {
   color: #28a745 !important;
 }
@@ -215,11 +170,9 @@ export default {
   .main-footer .col-lg-3 {
     margin-bottom: 2rem;
   }
-
   .newsletter .input-group {
     max-width: 100%;
   }
-
   .payment-methods {
     text-align: center;
     margin-top: 1rem;

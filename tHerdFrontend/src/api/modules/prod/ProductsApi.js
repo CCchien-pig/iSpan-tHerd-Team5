@@ -60,6 +60,30 @@ class productsApi {
     return await baseApi.post(`${this.path}/Products/search`, finalParams)
   }
 
+    // ==================== 商品分類 ====================
+
+/**
+ * 查詢商品分類樹狀清單（可指定 ProductTypeId）
+ * @param {number} [productTypeId] - 要查詢的分類 ID（若省略則回傳全部分類）
+ * @returns {Promise} API 回應
+ * @example
+ * const res = await productsApi.getProductCategoriesByTypeId(2040)
+ */
+async getProductCategoriesByTypeId(productTypeId = null) {
+  try {
+    // 若有傳入 id，使用新版 API：/ProductTypeTree/{id}
+    const url = productTypeId
+      ? `${this.path}/Products/ProductTypeTree/${productTypeId}`
+      : `${this.path}/Products/ProductTypeTree`  // 傳 null 時 fallback 為全分類
+
+    const res = await baseApi.get(url)
+    return res // ✅ 保留完整結構給前端使用
+  } catch (error) {
+    console.error('❌ 取得指定分類清單失敗:', error)
+    throw error
+  }
+}
+
   /**
    * 查詢商品詳細資訊
    * @param {number} productId - 商品 ID

@@ -9,5 +9,7 @@ namespace tHerdBackend.Core.Interfaces.CS
 		Task<int> AddFeedbackAsync(FaqFeedbackIn input);
         Task<IEnumerable<FaqSuggestDto>> SuggestAsync(string q, int limit);
         Task<FaqDetailDto?> GetDetailAsync(int id);
-    }
+		// 給工單使用的 FAQ 分類清單
+		Task<IEnumerable<FaqCategoryDto>> GetActiveCategoriesAsync();
+	}
 }

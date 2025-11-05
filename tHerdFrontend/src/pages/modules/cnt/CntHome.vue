@@ -130,8 +130,8 @@ const articles = ref([])
 // }
 
 const coverPool = [
-  '/images/cover00.png','/images/cover01.png','/images/cover02.png',
-  '/images/cover03.png','/images/cover04.png','/images/cover05.png','/images/cover06.png'
+  '/images/CntFolder/cover00.png','/images/CntFolder/cover01.png','/images/CntFolder/cover02.png',
+  '/images/CntFolder/cover03.png','/images/CntFolder/cover04.png','/images/CntFolder/cover05.png','/images/CntFolder/cover06.png'
 ]
 
 function attachRandomCover(list) {
