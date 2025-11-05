@@ -19,7 +19,7 @@
           </button>
 
           <!-- 🖥️ 桌面版導航 -->
-         <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
+          <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
             <li
               v-for="item in productMenus"
               :key="item.id"
@@ -30,10 +30,10 @@
               <button
                 type="button"
                 class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center"
-                :class="{ 
+                :class="{
                   active: activeMenuId === item.id,
                   'has-icon': item.icon,
-                  'text-only': !item.icon
+                  'text-only': !item.icon,
                 }"
               >
                 <div v-if="item.icon" class="nav-icon-wrapper">
@@ -111,7 +111,7 @@
                 </div>
               </transition>
             </li>
-              <!-- ✅ 固定項目（品牌A-Z後面） -->
+            <!-- ✅ 固定項目（品牌A-Z後面） -->
             <li v-for="item in staticMenus" :key="item.path" class="nav-item">
               <router-link
                 :to="item.path"
@@ -125,7 +125,7 @@
 
           <!-- ✅ 把 MegaMenu 放在 ul 外 -->
           <transition name="fade">
-            <div 
+            <div
               v-if="activeMenuId"
               class="mega-menu shadow-lg bg-white"
               @mouseenter="clearCloseTimer"
@@ -134,11 +134,7 @@
               <div v-if="isLoadingMenu" class="p-4 text-center text-muted">載入中...</div>
               <div v-else-if="megaMenuData" class="container-fluid py-4 px-4">
                 <div class="row g-4">
-                  <div
-                    v-for="col in megaMenuData.columns"
-                    :key="col.title"
-                    class="col-6 col-md-2"
-                  >
+                  <div v-for="col in megaMenuData.columns" :key="col.title" class="col-6 col-md-2">
                     <h6 class="fw-bold text-success mb-3">{{ col.title }}</h6>
                     <ul class="list-unstyled mb-0">
                       <li v-for="sub in col.items" :key="sub.id" class="mb-2">
@@ -156,7 +152,7 @@
               </div>
             </div>
           </transition>
-          
+
           <!-- 📱 手機版側邊選單 -->
           <transition name="slide">
             <div v-if="showMobileMenu" class="mobile-menu">
@@ -206,15 +202,19 @@
 
                 <!-- ✅ 品牌選單（修正版） -->
                 <div class="menu-section">
-                  <h6 class="menu-section-title clickable" @click="goBrandsAndClose">
+                  <!-- 設定到總覽頁路由 -->
+                  <router-link
+                    to="/brands"
+                    class="menu-section-title no-underline d-flex justify-content-between align-items-center"
+                    @click="closeMobileMenu"
+                  >
                     <span>品牌 A-Z</span>
                     <i class="bi bi-chevron-right"></i>
-                  </h6>
+                  </router-link>
 
                   <!-- 展開清單 -->
-                  <transition name="expand">
+                  <!-- <transition name="expand">
                     <div v-if="showBrandsInMobile" class="brands-list">
-                      <!-- ✅ 正確的雙層 v-for 結構 -->
                       <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
                         <router-link
                           v-for="b in group"
@@ -227,7 +227,7 @@
                         </router-link>
                       </template>
                     </div>
-                  </transition>
+                  </transition> -->
                 </div>
               </div>
             </div>
@@ -244,8 +244,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount  } from 'vue'
-import ProductsApi from '@/api/modules/prod/ProductsApi' 
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 
 // ==================== 狀態變數 ====================
 const showMobileMenu = ref(false)
@@ -258,15 +258,15 @@ const isLoadingMenu = ref(false)
 const loadedMenus = ref({}) // ✅ 預載快取資料
 
 const navigationItemsWithIcon = [
-        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png' },
-        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
-        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png' },
-        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png' },
-        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png' },
-        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
-        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
-        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
-      ]
+  { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png' },
+  { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png' },
+  { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png' },
+  { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png' },
+  { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png' },
+  { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png' },
+  { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png' },
+  { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png' },
+]
 
 // 品牌A-Z後的固定連結
 const staticMenus = [
@@ -281,7 +281,7 @@ const staticMenus = [
 // === 初始化 ===
 onMounted(() => {
   productMenus.value = navigationItemsWithIcon
-    .filter(i => i.type === 'pr')
+    .filter((i) => i.type === 'pr')
     .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
 
   //preloadMegaMenus() // 一次預載所有資料
@@ -319,18 +319,18 @@ function buildMegaMenu(treeData) {
 
     item.url = `/products/${prefix}${path}`
     if (item.children?.length) {
-      item.children.forEach(c => buildUrl(c, path, prefix))
+      item.children.forEach((c) => buildUrl(c, path, prefix))
     }
   }
 
   // 🔹依主分類（補充劑、運動營養...）分別產出
-  productMenus.value.forEach(menu => {
-    const prefix = menu.path.replace('/', '') + '/'  // e.g. supplements/
-    const columns = treeData.map(parent => {
+  productMenus.value.forEach((menu) => {
+    const prefix = menu.path.replace('/', '') + '/' // e.g. supplements/
+    const columns = treeData.map((parent) => {
       buildUrl(parent, '', prefix)
       return {
         title: parent.productTypeName,
-        items: (parent.children || []).map(child => ({
+        items: (parent.children || []).map((child) => ({
           id: child.productTypeId,
           name: child.productTypeName,
           url: child.url,
@@ -366,41 +366,41 @@ function clearCloseTimer() {
 
 // 品牌清單
 const brandGroups = [
-        [
-          { brandId: 1002, brandName: 'Animal' },
-          { brandId: 1005, brandName: 'Bioschwartz' },
-          { brandId: 1008, brandName: 'Codeage' },
-          { brandId: 1010, brandName: 'Dr. Mercola' },
-          { brandId: 1013, brandName: 'Eucerin' },
-        ],
-        [
-          { brandId: 1016, brandName: 'Force Factor' },
-          { brandId: 1019, brandName: 'Garden Of Life' },
-          { brandId: 1022, brandName: 'Healths Harmony' },
-          { brandId: 1024, brandName: 'Irwin Naturals' },
-          { brandId: 1025, brandName: 'Idealove' },
-        ],
-        [
-          { brandId: 1027, brandName: 'Jarrow formulas' },
-          { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
-          { brandId: 1038, brandName: 'Mild By Nature' },
-          { brandId: 1039, brandName: 'Natural Factors' },
-          { brandId: 1042, brandName: 'Optimum Nutrition' },
-        ],
-        [
-          { brandId: 1054, brandName: 'Solaray' },
-          { brandId: 1058, brandName: 'Trace' },
-          { brandId: 1061, brandName: 'Vitamatic' },
-          { brandId: 1064, brandName: "Wiley's Finest" },
-          { brandId: 1072, brandName: 'Zahler' },
-        ],
-      ]
+  [
+    { brandId: 1002, brandName: 'Animal' },
+    { brandId: 1005, brandName: 'Bioschwartz' },
+    { brandId: 1008, brandName: 'Codeage' },
+    { brandId: 1010, brandName: 'Dr. Mercola' },
+    { brandId: 1013, brandName: 'Eucerin' },
+  ],
+  [
+    { brandId: 1016, brandName: 'Force Factor' },
+    { brandId: 1019, brandName: 'Garden Of Life' },
+    { brandId: 1022, brandName: 'Healths Harmony' },
+    { brandId: 1024, brandName: 'Irwin Naturals' },
+    { brandId: 1025, brandName: 'Idealove' },
+  ],
+  [
+    { brandId: 1027, brandName: 'Jarrow formulas' },
+    { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
+    { brandId: 1038, brandName: 'Mild By Nature' },
+    { brandId: 1039, brandName: 'Natural Factors' },
+    { brandId: 1042, brandName: 'Optimum Nutrition' },
+  ],
+  [
+    { brandId: 1054, brandName: 'Solaray' },
+    { brandId: 1058, brandName: 'Trace' },
+    { brandId: 1061, brandName: 'Vitamatic' },
+    { brandId: 1064, brandName: "Wiley's Finest" },
+    { brandId: 1072, brandName: 'Zahler' },
+  ],
+]
 
 const recommendedBrands = [
-        { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
-        { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
-        { name: 'Life Extension', url: '/brands/life-extension-1033' },
-      ]
+  { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
+  { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
+  { name: 'Life Extension', url: '/brands/life-extension-1033' },
+]
 
 // ==================== 手機選單 ====================
 function toggleMobileMenu() {
@@ -421,28 +421,27 @@ function toggleBrandsInMobile() {
   showBrandsInMobile.value = !showBrandsInMobile.value
 }
 
-    function goBrandsAndClose() {
-      this.$router.push('/brands')
-      this.closeMobileMenu()
-    }
+function goBrandsAndClose() {
+  this.$router.push('/brands')
+  this.closeMobileMenu()
+}
 
-    function toBrandPath(name, id) {
-      const slug = String(name || '')
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/&/g, 'and')
-        .replace(/[^a-z0-9-]/g, '')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-      return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
-    }
+function toBrandPath(name, id) {
+  const slug = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
+}
 
 // 關閉前清理滾動鎖定
 onBeforeUnmount(() => {
   document.body.style.overflow = ''
 })
-
 </script>
 
 <style scoped>
