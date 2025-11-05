@@ -82,8 +82,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
-                                SELECT 
-                    p.ProductId, p.ProductName, 
+                SELECT p.ProductId, p.ProductName, 
                     p.BrandId, s.BrandName, 
                     p.SeoId, p.Badge, 
                     p.MainSkuId, 

@@ -145,5 +145,18 @@ namespace tHerdBackend.Core.DTOs.PROD
         /// 軟刪除標記（1=已刪除）
         /// </summary>
         public bool IsDeleted { get; set; } = false;
-    }
+
+		/// <summary>
+		/// 結帳單價
+		/// </summary>
+		private static decimal? FirstPositive(params decimal?[] prices)
+	=> prices.FirstOrDefault(p => p.HasValue && p.Value > 0);
+
+		public decimal? BillingPrice => FirstPositive(SalePrice, UnitPrice, ListPrice);
+
+		/// <summary>
+		/// 商品規格統稱
+		/// </summary>
+		public string? OptionName { get; set; }
+	}
 }

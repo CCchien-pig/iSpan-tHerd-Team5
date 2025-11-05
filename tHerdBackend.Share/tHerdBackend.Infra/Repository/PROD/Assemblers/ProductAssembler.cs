@@ -49,27 +49,39 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
                 .Where(s => s.ProductId == item.ProductId).ToListAsync(ct);
             item.Skus = skus.Select(MapSku).ToList();
 
-            if (item.Skus != null && item.MainSkuId!=null) {
-                var main = item.Skus.FirstOrDefault(x => x.SkuId == item.MainSkuId);
-                if (main != null)
-                {
-                    item.ListPrice = main.ListPrice;
-                    item.UnitPrice = main.UnitPrice;
-                    item.SalePrice = main.SalePrice;
-                }
-                else {
-                    main = item.Skus.First();
-                    item.ListPrice = main.ListPrice;
-                    item.UnitPrice = main.UnitPrice;
-                    item.SalePrice = main.SalePrice;
-                }
-            }
+			if (item.Skus?.Any() == true)
+			{
+				var main = item.Skus.FirstOrDefault(x => x.SkuId == item.MainSkuId)
+						   ?? item.Skus.First();
 
-            // 3. 規格群組
-            item.SpecConfigs = await BuildSpecConfigsAsync(item, _db);
+				item.ListPrice = main.ListPrice;
+				item.UnitPrice = main.UnitPrice;
+				item.SalePrice = main.SalePrice;
+			}
 
-            // 4. 分類
-            item.Types = await _db.ProdProductTypes
+			// 3. 規格群組
+			item.SpecConfigs = await BuildSpecConfigsAsync(item, _db);
+
+            var configNames = item.SpecConfigs.Select(s => s.SpecificationConfigId);
+
+			foreach (var s in item.Skus)
+			{
+				var optionNames = new List<string>();
+
+				foreach (var c in configNames)
+				{
+					var config = item.SpecConfigs.FirstOrDefault(a => a.SpecificationConfigId == c);
+					var option = config?.SpecOptions.FirstOrDefault(so => so.SkuId == s.SkuId);
+
+					if (!string.IsNullOrWhiteSpace(option?.OptionName))
+						optionNames.Add(option.OptionName);
+				}
+
+				s.OptionName = string.Join(" / ", optionNames);
+			}
+
+			// 4. 分類
+			item.Types = await _db.ProdProductTypes
                 .Where(t => t.ProductId == item.ProductId)
                 .Select(t => new ProdProductTypeDto { ProductTypeId = t.ProductTypeId, ProductId = t.ProductId, IsPrimary = t.IsPrimary })
                 .OrderByDescending(t => t.IsPrimary).ToListAsync(ct);
