@@ -14,7 +14,7 @@ const mountedOnce = ref(false)
 onMounted(() => {
   if (!mountedOnce.value) {
     mountedOnce.value = true
-    document.title = '翻牌記憶遊戲 | tHerd'
+    document.title = 'tHerd'
   }
 })
 </script>
