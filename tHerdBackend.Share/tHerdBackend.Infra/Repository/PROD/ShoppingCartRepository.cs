@@ -45,6 +45,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             try
             {
+                var now = DateTime.Now;
                 // 若無 SessionId，建立新的 Guid
                 // var sessionId = Guid.NewGuid().ToString(); // 佔不用
 
@@ -61,8 +62,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                     cartId = await conn.ExecuteScalarAsync<int>(
                         @"INSERT INTO ORD_ShoppingCart (UserNumberId, SessionId, MaxItemsAllowed, CreatedDate)
                   OUTPUT INSERTED.CartId
-                  VALUES (@UserNumberId, @SessionId, 20, SYSDATETIME())",
-                        new { dto.UserNumberId, dto.SessionId }, tran);
+                  VALUES (@UserNumberId, @SessionId, 20, @now)",
+                        new { dto.UserNumberId, dto.SessionId, now }, tran);
                 }
 
                 // 檢查是否已有相同 SKU
@@ -75,17 +76,18 @@ namespace tHerdBackend.Infra.Repository.PROD
                 {
                     // 更新數量
                     await conn.ExecuteAsync(
-                        @"UPDATE ORD_ShoppingCartItem
+						@"UPDATE ORD_ShoppingCartItem
                   SET Qty = Qty + @Qty,
                       UnitPrice = @UnitPrice,
-                      CreatedDate = SYSDATETIME()
+                      CreatedDate = @now
                   WHERE CartItemId = @CartItemId",
                         new
                         {
                             CartItemId = existItemId,
                             dto.Qty,
-                            dto.UnitPrice
-                        }, tran);
+                            dto.UnitPrice,
+							now
+						}, tran);
                 }
                 else
                 {
@@ -101,24 +103,25 @@ namespace tHerdBackend.Infra.Repository.PROD
 
                     // 新增新項目
                     await conn.ExecuteAsync(
-                        @"INSERT INTO ORD_ShoppingCartItem (CartId, ProductId, SkuId, Qty, UnitPrice, CreatedDate)
-                  VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, SYSDATETIME())",
+						@"INSERT INTO ORD_ShoppingCartItem (CartId, ProductId, SkuId, Qty, UnitPrice, CreatedDate)
+                  VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, @now)",
                         new
                         {
                             CartId = cartId,
                             ProductId = productId,
                             dto.SkuId,
                             dto.Qty,
-                            dto.UnitPrice
+                            dto.UnitPrice,
+                            now
                         }, tran);
                 }
 
                 // 更新購物車修改時間
                 await conn.ExecuteAsync(
-                    @"UPDATE ORD_ShoppingCart 
-              SET RevisedDate = SYSDATETIME()
+					@"UPDATE ORD_ShoppingCart 
+              SET RevisedDate = @now
               WHERE CartId = @CartId",
-                    new { CartId = cartId }, tran);
+                    new { CartId = cartId, now }, tran);
 
                 if (tran != null)
                     tran.Commit();
