@@ -20,9 +20,6 @@ defineEmits(['jump'])
 
 <style scoped>
 .alpha-index {
-  width: 100%;
-  max-width: 1200px; /* ✅ 與跑馬燈寬度一致 */
-  margin: 0 auto 16px; /* 下方留距 */
   background: #f8fafc;
   border-radius: 10px;
   text-align: center;
