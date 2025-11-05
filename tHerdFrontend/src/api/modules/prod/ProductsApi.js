@@ -15,6 +15,31 @@ import baseApi from '../../baseApi'
  */
 class productsApi {
   path = '/prod'
+
+    // ==================== 購物車 ====================
+
+  /**
+   * 加入購物車
+   * @param {Object} data - 購物車資料
+   * @param {number} data.userNumberId - 會員編號（訪客可為 0）
+   * @param {number} data.skuId - SKU 編號
+   * @param {number} data.qty - 數量
+   * @param {number} data.unitPrice - 單價
+   * @param {string} [data.sessionId] - 訪客 Session ID（可選）
+   * @returns {Promise} API 回應
+   * @example
+   * const res = await ProductsApi.addToCart({
+   *   userNumberId: 1001,
+   *   skuId: 20500,
+   *   qty: 2,
+   *   unitPrice: 499,
+   *   sessionId: 'visitor-abc123'
+   * })
+   */
+  async addToCart(params = {}) {
+    return await baseApi.post(`${this.path}/Products/add-to-cart`, params)
+  }
+
   // ==================== 商品查詢 ====================
 
   /**
