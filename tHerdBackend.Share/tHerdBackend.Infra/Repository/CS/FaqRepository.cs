@@ -116,5 +116,21 @@ WHERE f.IsActive = 1 AND c.IsActive = 1 AND f.FaqId = @id;";
             using var conn = new SqlConnection(_connStr);
             return await conn.QueryFirstOrDefaultAsync<FaqDetailDto>(sql, new { id });
         }
-    }
+		//工單faqcategory下拉選單
+		public async Task<IEnumerable<FaqCategoryDto>> GetActiveCategoriesAsync()
+		{
+			const string sql = @"
+SELECT CategoryId, CategoryName
+FROM CS_FaqCategory
+WHERE IsActive = 1
+ORDER BY OrderSeq, CategoryId;";
+
+			using var cn = new SqlConnection(_connStr);
+			var rows = await cn.QueryAsync<FaqCategoryDto>(sql);
+			return rows.ToList();
+		}
+
+
+
+	}
 }
