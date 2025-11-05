@@ -45,5 +45,13 @@ public partial class CntPurchase
     /// </summary>
     public DateTime? RevisedDate { get; set; }
 
+    public string PaymentMethod { get; set; }
+
+    public string PaymentStatus { get; set; }
+
+    public string GatewayTransactionId { get; set; }
+
+    public string Currency { get; set; }
+
     public virtual CntPage Page { get; set; }
 }
