@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
 using tHerdBackend.Infra.Models.Sup;
@@ -7,11 +8,13 @@ public class BrandService : IBrandService
 {
 	private readonly IBrandRepository _repo;
 	private readonly ILogger<IBrandService> _logger;
+	private readonly ICurrentUser _me;
 
-	public BrandService(IBrandRepository repo, ILogger<IBrandService> logger)
+	public BrandService(IBrandRepository repo, ILogger<IBrandService> logger, ICurrentUser me)
 	{
 		_repo = repo;
 		_logger = logger;
+		_me = me;
 	}
 
 	#region 品牌

@@ -23,6 +23,9 @@ import VueGoogleMaps from '@fawmi/vue-google-maps'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
+// 載入 Notiwind
+import Notiwind from 'notiwind'
+
 const app = createApp(App);
 
 app.use(createPinia())
@@ -88,5 +91,7 @@ if (import.meta.env.DEV && !auth.accessToken) {
   }
 }
 
+// Notiwind
+app.use(Notiwind)
 
 app.mount('#app')

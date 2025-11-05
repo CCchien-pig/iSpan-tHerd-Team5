@@ -1,5 +1,202 @@
+<template>
+  <!-- <h2>門市地圖</h2> -->
+  <div class="map-container">
+    <div class="section">
+      <h3 class="section-title">查詢物流門市</h3>
+      <div class="selector-zone">
+        <label for="logistics-select">物流商：</label>
+        <select
+          id="logistics-select"
+          name="logistics"
+          style="min-width: 150px; margin-right: 5px"
+          v-model="selectedLogistics"
+          required
+        >
+          <option :value="null" disabled>請選擇</option>
+          <option v-for="opt in logisticsOpts" :value="opt.value" :key="opt.value">
+            {{ opt.label }} - {{ opt.method }}
+          </option>
+        </select>
+
+        <label for="city-select">地區：</label>
+        <select
+          id="city-select"
+          name="city"
+          style="margin-right: 5px"
+          v-model="selectedCity"
+          :disabled="!selectedLogistics"
+          required
+        >
+          <option v-for="city in cityOptions" :value="city" :key="city">{{ city }}</option>
+        </select>
+
+        <label for="store-select">門市：</label>
+        <select
+          id="store-select"
+          name="store"
+          style="margin-right: 5px"
+          v-model="selectedStoreId"
+          :disabled="!selectedCity"
+          required
+        >
+          <option v-for="store in storeOptions" :value="store.StoreID" :key="store.StoreID">
+            {{ store.StoreName }}
+          </option>
+        </select>
+
+        <button
+          @click="onQuery"
+          :disabled="!selectedLogistics || !selectedCity || !selectedStoreId"
+        >
+          查詢
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <h3 class="section-title">輸入所在地，搜尋最近門市</h3>
+      <form class="search-zone" @submit.prevent="searchNearestStore" autocomplete="off">
+        <label for="search-logistics">物流商：</label>
+        <select
+          id="search-logistics"
+          name="searchLogistics"
+          style="min-width: 150px; margin-right: 5px"
+          v-model="selectedLogistics"
+          required
+        >
+          <option :value="null" disabled>請選擇</option>
+          <option v-for="opt in logisticsOpts" :value="opt.value" :key="opt.value">
+            {{ opt.label }} - {{ opt.method }}
+          </option>
+        </select>
+
+        <label for="address-input">地址、地標：</label>
+        <input
+          id="address-input"
+          name="address"
+          v-model.lazy="addressInput"
+          placeholder="輸入地址或地標"
+          required
+          autocomplete="off"
+        />
+
+        <button type="submit" :disabled="!addressInput || !selectedLogistics">搜尋最近門市</button>
+      </form>
+
+      <div class="example-buttons">
+        <span style="margin-right: 8px">範例：</span>
+        <button
+          class="example-btn"
+          type="button"
+          @click="fillExampleAddress('桃園市中壢區新生路二段421號')"
+        >
+          聖德基督學院
+        </button>
+        <button
+          class="example-btn"
+          type="button"
+          @click="fillExampleAddress('臺北市中正區黎明里北平西路3號')"
+        >
+          北車
+        </button>
+      </div>
+
+      <div
+        v-if="distanceText"
+        style="
+          margin-top: 10px;
+          color: rgb(0, 112, 131);
+          text-align: center;
+          font-weight: bold;
+          font-size: 18px;
+        "
+      >
+        輸入地址與 {{ selectedLogisticsLabel }} 最近門市的距離：{{ distanceText }}
+      </div>
+    </div>
+
+    <GMapMap
+      ref="mapRef"
+      :api-key="apiKey"
+      :center="mapCenter"
+      :zoom="mapZoom"
+      style="width: 100%; height: 500px; margin-top: 16px"
+      @click="
+        () => {
+          unifiedType = null
+          unifiedInfo = null
+        }
+      "
+      @ready="onMapReady"
+    >
+      <GMapMarker
+        v-for="marker in markers"
+        :key="marker.store.StoreID"
+        :position="marker.position"
+        @click="handleMarkerClick(marker.store)"
+      />
+      <GMapMarker v-if="userLocation" :position="userLocation" @click="openAddressInfoMarker" />
+      <GMapPolyline
+        v-if="activeMode === 'search' && routePath.length > 1"
+        :key="routePath.length"
+        :path="routePath"
+        :options="{ strokeColor: '#0079fd', strokeWeight: 4, strokeOpacity: 0.8 }"
+      />
+
+      <!-- 單一 InfoWindow：用 opened 控制，切換內容 -->
+      <GMapInfoWindow
+        :position="
+          unifiedType === 'store' && unifiedInfo
+            ? { lat: unifiedInfo.Latitude, lng: unifiedInfo.Longitude }
+            : unifiedType === 'address' && unifiedInfo
+              ? { lat: unifiedInfo.lat, lng: unifiedInfo.lng }
+              : null
+        "
+        :opened="Boolean(unifiedType && unifiedInfo)"
+        :options="{
+          pixelOffset: {
+            width: 0,
+            height: -35, // 負值表示向上偏移，您可以根據 Marker 的高度調整這個數值
+          },
+        }"
+        @closeclick="handleCloseInfo"
+      >
+        <template v-if="unifiedType === 'store' && unifiedInfo">
+          <div class="marker-card">
+            <div class="card-title">{{ unifiedInfo?.StoreName }}</div>
+            <div class="card-type">{{ unifiedInfo?.Type }}</div>
+            <div class="card-row">
+              <span class="label">分店編號：</span>{{ unifiedInfo?.StoreID }}
+            </div>
+            <div class="card-row"><span class="label">地址：</span>{{ unifiedInfo?.Address }}</div>
+            <div class="card-row"><span class="label">城市：</span>{{ unifiedInfo?.City }}</div>
+            <div class="card-row"><span class="label">電話：</span>{{ unifiedInfo?.Phone }}</div>
+            <div class="card-row">
+              <span class="label">座標：</span>
+              {{ unifiedInfo?.Latitude?.toFixed(4) }}, {{ unifiedInfo?.Longitude?.toFixed(4) }}
+            </div>
+          </div>
+        </template>
+        <template v-else-if="unifiedType === 'address' && unifiedInfo">
+          <div class="address-card">
+            <div class="card-row">
+              <span class="label">查詢地址：<br /></span>{{ unifiedInfo.address }}
+            </div>
+            <div class="card-row">
+              <span class="label">座標：</span>
+              {{ unifiedInfo.lat.toFixed(6) }}, {{ unifiedInfo.lng.toFixed(6) }}
+            </div>
+          </div>
+        </template>
+      </GMapInfoWindow>
+    </GMapMap>
+  </div>
+</template>
+
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import sfStores from '../assets/mock_sf_stores.json'
 import sevenStores from '../assets/mock_711_stores.json'
 import blackcatStores from '../assets/mock_blackcat_stores.json'
@@ -8,10 +205,11 @@ import postStores from '../assets/mock_post_stores.json'
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
 const logisticsOpts = [
-  { value: 'sf', label: '順豐速運', stores: sfStores },
-  { value: '711', label: '7-11', stores: sevenStores },
-  { value: 'blackcat', label: '黑貓宅急便', stores: blackcatStores },
-  { value: 'post', label: '中華郵政', stores: postStores },
+  { value: 'sf', label: '順豐速運', method: '宅配到府', stores: sfStores },
+  { value: 'blackcat', label: '黑貓宅急便', method: '低溫宅配', stores: blackcatStores },
+  { value: '711', label: '7-11', method: '超商店到店', stores: sevenStores },
+  { value: 'postBox', label: '中華郵政', method: 'i 郵箱', stores: postStores },
+  { value: 'post', label: '中華郵政', method: '掛號包裹', stores: postStores },
 ]
 
 const selectedLogistics = ref(null)
@@ -35,6 +233,11 @@ const distanceText = ref('')
 const unifiedType = ref(null) // 'store' | 'address' | null
 const unifiedInfo = ref(null) // 內容物：store 或 { address, lat, lng }
 const activeMode = ref('query')
+
+const selectedLogisticsLabel = computed(() => {
+  const option = logisticsOpts.find((opt) => opt.value === selectedLogistics.value)
+  return option ? option.label : ''
+})
 
 function onMapReady() {
   isMapReady.value = true
@@ -255,174 +458,6 @@ watch(selectedLogistics, updateCityOptions)
 watch(selectedCity, updateStoreOptions)
 </script>
 
-<template>
-  <!-- <h2>門市地圖</h2> -->
-  <div class="map-container">
-    <div class="section">
-      <h3 class="section-title">依物流門市篩選</h3>
-      <div class="selector-zone">
-        <label for="logistics-select">物流商：</label>
-        <select id="logistics-select" name="logistics" v-model="selectedLogistics" required>
-          <option :value="null" disabled>請選擇</option>
-          <option v-for="opt in logisticsOpts" :value="opt.value" :key="opt.value">
-            {{ opt.label }}
-          </option>
-        </select>
-
-        <label for="city-select">地區：</label>
-        <select
-          id="city-select"
-          name="city"
-          v-model="selectedCity"
-          :disabled="!selectedLogistics"
-          required
-        >
-          <option v-for="city in cityOptions" :value="city" :key="city">{{ city }}</option>
-        </select>
-
-        <label for="store-select">門市：</label>
-        <select
-          id="store-select"
-          name="store"
-          v-model="selectedStoreId"
-          :disabled="!selectedCity"
-          required
-        >
-          <option v-for="store in storeOptions" :value="store.StoreID" :key="store.StoreID">
-            {{ store.StoreName }}
-          </option>
-        </select>
-
-        <button
-          @click="onQuery"
-          :disabled="!selectedLogistics || !selectedCity || !selectedStoreId"
-        >
-          查詢
-        </button>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="section">
-      <h3 class="section-title">輸入地名、地址搜尋最近門市</h3>
-      <form class="search-zone" @submit.prevent="searchNearestStore" autocomplete="off">
-        <label for="search-logistics">物流商：</label>
-        <select id="search-logistics" name="searchLogistics" v-model="selectedLogistics" required>
-          <option :value="null" disabled>請選擇</option>
-          <option v-for="opt in logisticsOpts" :value="opt.value" :key="opt.value">
-            {{ opt.label }}
-          </option>
-        </select>
-
-        <label for="address-input">地址、地標：</label>
-        <input
-          id="address-input"
-          name="address"
-          v-model.lazy="addressInput"
-          placeholder="輸入地址或地標"
-          required
-          autocomplete="off"
-        />
-
-        <button type="submit" :disabled="!addressInput || !selectedLogistics">搜尋最近門市</button>
-      </form>
-
-      <div class="example-buttons">
-        <span style="margin-right: 8px">範例：</span>
-        <button
-          class="example-btn"
-          type="button"
-          @click="fillExampleAddress('桃園市中壢區新生路二段421號')"
-        >
-          聖德基督學院
-        </button>
-        <button
-          class="example-btn"
-          type="button"
-          @click="fillExampleAddress('臺北市中正區黎明里北平西路3號')"
-        >
-          北車
-        </button>
-      </div>
-
-      <div v-if="distanceText" style="margin-top: 12px; color: blue">
-        導航線路徑距離：{{ distanceText }}
-      </div>
-    </div>
-
-    <GMapMap
-      ref="mapRef"
-      :api-key="apiKey"
-      :center="mapCenter"
-      :zoom="mapZoom"
-      style="width: 100%; height: 500px; margin-top: 16px"
-      @click="
-        () => {
-          unifiedType = null
-          unifiedInfo = null
-        }
-      "
-      @ready="onMapReady"
-    >
-      <GMapMarker
-        v-for="marker in markers"
-        :key="marker.store.StoreID"
-        :position="marker.position"
-        @click="handleMarkerClick(marker.store)"
-      />
-      <GMapMarker v-if="userLocation" :position="userLocation" @click="openAddressInfoMarker" />
-      <GMapPolyline
-        v-if="activeMode === 'search' && routePath.length > 1"
-        :key="routePath.length"
-        :path="routePath"
-        :options="{ strokeColor: '#0079fd', strokeWeight: 4, strokeOpacity: 0.8 }"
-      />
-
-      <!-- 單一 InfoWindow：用 opened 控制，切換內容 -->
-      <GMapInfoWindow
-        :position="
-          unifiedType === 'store' && unifiedInfo
-            ? { lat: unifiedInfo.Latitude, lng: unifiedInfo.Longitude }
-            : unifiedType === 'address' && unifiedInfo
-              ? { lat: unifiedInfo.lat, lng: unifiedInfo.lng }
-              : null
-        "
-        :opened="Boolean(unifiedType && unifiedInfo)"
-        @closeclick="handleCloseInfo"
-      >
-        <template v-if="unifiedType === 'store' && unifiedInfo">
-          <div class="marker-card">
-            <div class="card-title">{{ unifiedInfo?.StoreName }}</div>
-            <div class="card-type">{{ unifiedInfo?.Type }}</div>
-            <div class="card-row">
-              <span class="label">分店編號：</span>{{ unifiedInfo?.StoreID }}
-            </div>
-            <div class="card-row"><span class="label">地址：</span>{{ unifiedInfo?.Address }}</div>
-            <div class="card-row"><span class="label">城市：</span>{{ unifiedInfo?.City }}</div>
-            <div class="card-row"><span class="label">電話：</span>{{ unifiedInfo?.Phone }}</div>
-            <div class="card-row">
-              <span class="label">座標：</span>
-              {{ unifiedInfo?.Latitude?.toFixed(4) }}, {{ unifiedInfo?.Longitude?.toFixed(4) }}
-            </div>
-          </div>
-        </template>
-        <template v-else-if="unifiedType === 'address' && unifiedInfo">
-          <div class="address-card">
-            <div class="card-row">
-              <span class="label">查詢地址：<br /></span>{{ unifiedInfo.address }}
-            </div>
-            <div class="card-row">
-              <span class="label">座標：</span>
-              {{ unifiedInfo.lat.toFixed(6) }}, {{ unifiedInfo.lng.toFixed(6) }}
-            </div>
-          </div>
-        </template>
-      </GMapInfoWindow>
-    </GMapMap>
-  </div>
-</template>
-
 <style scoped>
 h2 {
   margin-top: 30px;
@@ -488,6 +523,7 @@ label {
 }
 select,
 input {
+  min-width: 80px;
   font-size: 16px;
   padding: 4px 8px;
   border-radius: 6px;
@@ -546,5 +582,12 @@ button:disabled {
   color: #197ba8;
   font-weight: bold;
   margin-right: 4px;
+}
+
+select {
+  width: auto; /* 讓寬度自動根據內容最長的選項來決定 */
+  max-width: 100%; /* 防止內容過長時超出父容器 */
+  flex-shrink: 0; /* 確保不會因為空間不足而被擠壓變形 */
+  padding-right: 40px;
 }
 </style>

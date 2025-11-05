@@ -32,8 +32,14 @@ const itemRefs = ref({})
 
 const displayChars = computed(() => {
   const arr = [...(props.chars || [])]
-  if (arr[0] === '0-9') arr[0] = '9' // 顯示上用 9 取代 0-9
-  return arr
+  
+  const idx = arr.indexOf('0-9')
+  if (idx > -1) {
+    arr.splice(idx, 1)
+    arr.push('0-9') // 把 '0-9' 加在末尾
+  }
+  // 顯示時以 '9' 代表 '0-9'
+  return arr.map((c) => (c === '0-9' ? '9' : c))
 })
 
 const isActive = (c) => props.active === (c === '9' ? '0-9' : c)

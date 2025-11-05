@@ -7,9 +7,15 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">關於 tHerd</h5>
           <ul class="list-unstyled">
-            <li> <RouterLink to="/cs/ticket" class="text-light text-decoration-none">聯絡我們</RouterLink></li>
-            <li><RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink></li>
-            
+            <li>
+              <RouterLink to="/cs/ticket" class="text-light text-decoration-none"
+                >聯絡我們</RouterLink
+              >
+            </li>
+            <li>
+              <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
+            </li>
+
             <!-- <li><a href="#" class="text-light text-decoration-none">職業機會</a></li>
             <li><a href="#" class="text-light text-decoration-none">新聞中心</a></li>
             <li><a href="#" class="text-light text-decoration-none">投資者關係</a></li> -->
@@ -20,11 +26,15 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">客戶服務</h5>
           <ul class="list-unstyled">
-            <li><RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink></li>
+            <li>
+              <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
+            </li>
             <li>
               <router-link
-                :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
-                class="text-light text-decoration-none">配送資訊</router-link>
+                :to="{ path: '/sup/logistics-info', query: { tab: 'info' } }"
+                class="text-light text-decoration-none"
+                >配送資訊</router-link
+              >
             </li>
             <li><a href="#" class="text-light text-decoration-none">退貨政策</a></li>
             <!-- <li><a href="#" class="text-light text-decoration-none">追蹤訂單</a></li> -->
@@ -40,7 +50,9 @@
             <li>
               <router-link
                 :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
-                class="text-light text-decoration-none">運費計算</router-link>
+                class="text-light text-decoration-none"
+                >運費計算</router-link
+              >
             </li>
             <li><a href="#" class="text-light text-decoration-none">會員制度</a></li>
             <!-- <li><a href="#" class="text-light text-decoration-none">優惠券使用</a></li> -->
@@ -157,13 +169,13 @@ export default {
   transition: color 0.3s ease;
 }
 .social-links a:hover {
-  color: #28a745 !important;
+  color: rgb(118, 201, 212) !important;
 }
 .payment-methods i {
   font-size: 1.5rem;
 }
 .legal-links a:hover {
-  color: #28a745 !important;
+  color: rgb(77, 180, 193) !important;
 }
 
 @media (max-width: 768px) {
@@ -177,5 +189,8 @@ export default {
     text-align: center;
     margin-top: 1rem;
   }
+}
+.text-muted {
+  color: rgb(248, 249, 250) !important;
 }
 </style>
