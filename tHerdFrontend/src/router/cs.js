@@ -22,7 +22,7 @@ export default [
     path: '/cs/tickets',
     name: 'TicketList',
     component: () => import('@/pages/modules/cs/TicketList.vue'),
-    meta: { title: '我的工單', requiresAuth: true }
+    meta: { title: '我的工單' ,requiresAuth: true}
   },
   {
     path: '/cs/tickets/:id',
