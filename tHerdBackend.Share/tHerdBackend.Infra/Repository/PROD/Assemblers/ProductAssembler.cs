@@ -21,7 +21,7 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
             _factory = factory;
         }
 
-        public async Task AssembleDetailsAsync(ProdProductDetailDto item, IDbConnection conn, IDbTransaction? tx, CancellationToken ct)
+        public async Task AssembleDetailsAsync(ProdProductDetailDto item, int? skuId, IDbConnection conn, IDbTransaction? tx, CancellationToken ct)
         {
             // 1. SEO
             var seo = await _db.SysSeoMeta.FirstOrDefaultAsync(s => 
@@ -48,6 +48,10 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
             var skus = await _db.ProdProductSkus.Include(s => s.SpecificationOptions)
                 .Where(s => s.ProductId == item.ProductId).ToListAsync(ct);
             item.Skus = skus.Select(MapSku).ToList();
+
+            if (skuId.HasValue) {
+				item.Skus = item.Skus.Where(s => s.SkuId == skuId).ToList();
+			}
 
 			if (item.Skus?.Any() == true)
 			{

@@ -305,17 +305,33 @@ const formatDate = (dateString) => {
 
 /* 響應式設計 */
 @media (max-width: 768px) {
-  .product-info {
-    padding: 20px;
-  }
-
-  .product-title {
-    font-size: 1.25rem;
+  .spec-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 每行兩個 */
+    gap: 8px;
   }
 
   .spec-button {
-    min-width: 100px;
-    padding: 10px;
+    min-width: auto; /* 移除固定寬度 */
+    width: 100%;
+    padding: 0;
+  }
+
+  .spec-name-box {
+    padding: 6px 0;
+  }
+
+  .spec-price,
+  .spec-price-box {
+    padding: 4px 0;
+  }
+
+  .price-sale {
+    font-size: 0.9rem;
+  }
+
+  .price-old {
+    font-size: 0.65rem;
   }
 }
 </style>

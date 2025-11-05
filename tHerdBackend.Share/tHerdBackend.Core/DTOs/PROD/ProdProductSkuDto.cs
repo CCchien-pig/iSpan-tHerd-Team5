@@ -158,5 +158,36 @@ namespace tHerdBackend.Core.DTOs.PROD
 		/// 商品規格統稱
 		/// </summary>
 		public string? OptionName { get; set; }
+
+		/// <summary>
+		/// 此 SKU 的所有效期清單（由外部填入，非資料庫欄位）
+		/// </summary>
+		public List<DateTime>? ExpiryDates { get; set; }
+
+		/// <summary>
+		/// 是否有庫存（依 StockQty > 0）
+		/// </summary>
+		[Display(Name = "是否有庫存")]
+		public bool HasStock => StockQty > 0;
+
+		/// <summary>
+		/// 此 SKU 最舊效期（排除過期項目）
+		/// </summary>
+		[Display(Name = "最舊效期")]
+		public DateTime? EarliestExpiryDate
+		{
+			get
+			{
+				if (ExpiryDates == null || !ExpiryDates.Any())
+					return null;
+
+				// 排除已過期項目，只取有效的最舊日期
+				var now = DateTime.Now;
+				return ExpiryDates
+					.Where(d => d > now)
+					.OrderBy(d => d)
+					.FirstOrDefault();
+			}
+		}
 	}
 }

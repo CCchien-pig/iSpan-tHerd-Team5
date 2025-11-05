@@ -179,14 +179,14 @@ namespace tHerdBackend.Services.PROD
             }
         }
 
-        public async Task<ProdProductDetailDto?> GetByIdAsync(int Id)
+        public async Task<ProdProductDetailDto?> GetByIdAsync(int Id, int? skuId)
         {
             try
             {
                 if (Id <= 0)
                     throw new ArgumentException("ProductId must be greater than zero.");
 
-                return await _repo.GetByIdAsync(Id);
+                return await _repo.GetByIdAsync(Id, skuId);
             }
             catch (Exception ex)
             {
