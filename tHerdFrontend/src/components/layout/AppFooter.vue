@@ -7,7 +7,7 @@
         <div class="col-lg-3 col-md-6 mb-4">
           <h5 class="mb-3 main-color-white-text">關於 tHerd</h5>
           <ul class="list-unstyled">
-            <li><a href="#" class="text-light text-decoration-none">關於我們</a></li>
+            <li> <RouterLink to="/cs/ticket" class="text-light text-decoration-none">聯絡我們</RouterLink></li>
             <li><RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink></li>
             
             <!-- <li><a href="#" class="text-light text-decoration-none">職業機會</a></li>

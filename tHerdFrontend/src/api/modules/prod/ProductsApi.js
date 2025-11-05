@@ -62,25 +62,28 @@ class productsApi {
 
     // ==================== 商品分類 ====================
 
-  /**
-   * 查詢商品分類清單
-   * @param {Object} [params] - 可選參數
-   * @param {boolean} [params.includeSub] - 是否包含子分類（預設：true）
-   * @param {boolean} [params.isActiveOnly] - 是否只取啟用分類（預設：true）
-   * @returns {Promise} API 回應
-   * @example
-   * const result = await productsApi.getProductCategories({ includeSub: true })
-   */
-  async getProductCategories() {
-    try {
-      // 直接呼叫後端
-      const res = await baseApi.get(`${this.path}/Products/ProductTypetree`)
-      return res  // ✅ 保留完整結構給前端自己解析
-    } catch (error) {
-      console.error('❌ 取得商品分類失敗:', error)
-      throw error  // ✅ 讓上層 catch
-    }
+/**
+ * 查詢商品分類樹狀清單（可指定 ProductTypeId）
+ * @param {number} [productTypeId] - 要查詢的分類 ID（若省略則回傳全部分類）
+ * @returns {Promise} API 回應
+ * @example
+ * const res = await productsApi.getProductCategoriesByTypeId(2040)
+ */
+async getProductCategoriesByTypeId(productTypeId = null) {
+  try {
+    // 若有傳入 id，使用新版 API：/ProductTypeTree/{id}
+    const url = productTypeId
+      ? `${this.path}/Products/ProductTypeTree/${productTypeId}`
+      : `${this.path}/Products/ProductTypeTree`  // 傳 null 時 fallback 為全分類
+
+    const res = await baseApi.get(url)
+    return res // ✅ 保留完整結構給前端使用
+  } catch (error) {
+    console.error('❌ 取得指定分類清單失敗:', error)
+    throw error
   }
+}
+
   /**
    * 查詢商品詳細資訊
    * @param {number} productId - 商品 ID
