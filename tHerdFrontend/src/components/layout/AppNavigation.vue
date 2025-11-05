@@ -19,7 +19,7 @@
           </button>
 
           <!-- 🖥️ 桌面版導航 -->
-         <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
+          <ul class="nav nav-pills justify-content-center flex-wrap py-2 d-none d-lg-flex">
             <li
               v-for="item in productMenus"
               :key="item.id"
@@ -29,10 +29,10 @@
               <button
                 type="button"
                 class="nav-link fw-medium rounded-pill border-0 bg-transparent d-flex align-items-center"
-                :class="{ 
+                :class="{
                   active: activeMenuId === item.id,
                   'has-icon': item.icon,
-                  'text-only': !item.icon
+                  'text-only': !item.icon,
                 }"
                 @click="goCategory(item)"
               >
@@ -111,7 +111,7 @@
                 </div>
               </transition>
             </li>
-              <!-- ✅ 固定項目（品牌A-Z後面） -->
+            <!-- ✅ 固定項目（品牌A-Z後面） -->
             <li v-for="item in staticMenus" :key="item.path" class="nav-item">
               <router-link
                 :to="item.path"
@@ -182,15 +182,19 @@
 
                 <!-- ✅ 品牌選單（修正版） -->
                 <div class="menu-section">
-                  <h6 class="menu-section-title clickable" @click="goBrandsAndClose">
+                  <!-- 設定到總覽頁路由 -->
+                  <router-link
+                    to="/brands"
+                    class="menu-section-title no-underline d-flex justify-content-between align-items-center"
+                    @click="closeMobileMenu"
+                  >
                     <span>品牌 A-Z</span>
                     <i class="bi bi-chevron-right"></i>
-                  </h6>
+                  </router-link>
 
                   <!-- 展開清單 -->
-                  <transition name="expand">
+                  <!-- <transition name="expand">
                     <div v-if="showBrandsInMobile" class="brands-list">
-                      <!-- ✅ 正確的雙層 v-for 結構 -->
                       <template v-for="(group, gIdx) in brandGroups" :key="`group-${gIdx}`">
                         <router-link
                           v-for="b in group"
@@ -203,7 +207,7 @@
                         </router-link>
                       </template>
                     </div>
-                  </transition>
+                  </transition> -->
                 </div>
               </div>
             </div>
@@ -382,41 +386,41 @@ function clearCloseTimer() {
 
 // 品牌清單
 const brandGroups = [
-        [
-          { brandId: 1002, brandName: 'Animal' },
-          { brandId: 1005, brandName: 'Bioschwartz' },
-          { brandId: 1008, brandName: 'Codeage' },
-          { brandId: 1010, brandName: 'Dr. Mercola' },
-          { brandId: 1013, brandName: 'Eucerin' },
-        ],
-        [
-          { brandId: 1016, brandName: 'Force Factor' },
-          { brandId: 1019, brandName: 'Garden Of Life' },
-          { brandId: 1022, brandName: 'Healths Harmony' },
-          { brandId: 1024, brandName: 'Irwin Naturals' },
-          { brandId: 1025, brandName: 'Idealove' },
-        ],
-        [
-          { brandId: 1027, brandName: 'Jarrow formulas' },
-          { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
-          { brandId: 1038, brandName: 'Mild By Nature' },
-          { brandId: 1039, brandName: 'Natural Factors' },
-          { brandId: 1042, brandName: 'Optimum Nutrition' },
-        ],
-        [
-          { brandId: 1054, brandName: 'Solaray' },
-          { brandId: 1058, brandName: 'Trace' },
-          { brandId: 1061, brandName: 'Vitamatic' },
-          { brandId: 1064, brandName: "Wiley's Finest" },
-          { brandId: 1072, brandName: 'Zahler' },
-        ],
-      ]
+  [
+    { brandId: 1002, brandName: 'Animal' },
+    { brandId: 1005, brandName: 'Bioschwartz' },
+    { brandId: 1008, brandName: 'Codeage' },
+    { brandId: 1010, brandName: 'Dr. Mercola' },
+    { brandId: 1013, brandName: 'Eucerin' },
+  ],
+  [
+    { brandId: 1016, brandName: 'Force Factor' },
+    { brandId: 1019, brandName: 'Garden Of Life' },
+    { brandId: 1022, brandName: 'Healths Harmony' },
+    { brandId: 1024, brandName: 'Irwin Naturals' },
+    { brandId: 1025, brandName: 'Idealove' },
+  ],
+  [
+    { brandId: 1027, brandName: 'Jarrow formulas' },
+    { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
+    { brandId: 1038, brandName: 'Mild By Nature' },
+    { brandId: 1039, brandName: 'Natural Factors' },
+    { brandId: 1042, brandName: 'Optimum Nutrition' },
+  ],
+  [
+    { brandId: 1054, brandName: 'Solaray' },
+    { brandId: 1058, brandName: 'Trace' },
+    { brandId: 1061, brandName: 'Vitamatic' },
+    { brandId: 1064, brandName: "Wiley's Finest" },
+    { brandId: 1072, brandName: 'Zahler' },
+  ],
+]
 
 const recommendedBrands = [
-        { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
-        { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
-        { name: 'Life Extension', url: '/brands/life-extension-1033' },
-      ]
+  { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
+  { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
+  { name: 'Life Extension', url: '/brands/life-extension-1033' },
+]
 
 // ==================== 手機選單 ====================
 function toggleMobileMenu() {
@@ -437,28 +441,27 @@ function toggleBrandsInMobile() {
   showBrandsInMobile.value = !showBrandsInMobile.value
 }
 
-    function goBrandsAndClose() {
-      this.$router.push('/brands')
-      this.closeMobileMenu()
-    }
+function goBrandsAndClose() {
+  this.$router.push('/brands')
+  this.closeMobileMenu()
+}
 
-    function toBrandPath(name, id) {
-      const slug = String(name || '')
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/&/g, 'and')
-        .replace(/[^a-z0-9-]/g, '')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-      return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
-    }
+function toBrandPath(name, id) {
+  const slug = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return id ? `/brands/${slug}-${id}` : `/brands/${slug}`
+}
 
 // 關閉前清理滾動鎖定
 onBeforeUnmount(() => {
   document.body.style.overflow = ''
 })
-
 </script>
 
 <style scoped>

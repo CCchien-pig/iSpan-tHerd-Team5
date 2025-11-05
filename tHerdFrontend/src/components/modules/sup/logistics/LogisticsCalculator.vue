@@ -65,7 +65,7 @@ function calcFee() {
   <div class="calculator-container">
     <div class="calc-title">物流運費試算</div>
     <form class="form-zone" @submit.prevent="calcFee" autocomplete="off">
-      <label for="method-select"> 配送方式 </label>
+      <label for="method-select"> 配送方式：</label>
       <select id="method-select" name="logisticsMethod" v-model="selectedMethod" required>
         <option :value="null" disabled>請選擇</option>
         <option v-for="item in logisticsList" :key="item.logisticsId" :value="item">
@@ -75,7 +75,7 @@ function calcFee() {
 
       <span v-if="loading" class="info-text">物流商載入中...</span>
 
-      <label for="weight-input"> 包裹重量 (kg) </label>
+      <label for="weight-input"> 包裹重量 (kg)：</label>
       <input
         id="weight-input"
         name="weight"
@@ -95,7 +95,7 @@ function calcFee() {
 
     <div class="result-zone">
       <div v-if="fee !== null">
-        運費：<span class="fee-text">NTD$ {{ fee }}</span>
+        試算運費：<span class="fee-text">NTD$ {{ fee }}</span>
       </div>
       <div v-if="error" class="error-text">{{ error }}</div>
     </div>
@@ -144,7 +144,7 @@ input {
   padding: 2px 7px;
   border-radius: 6px;
   border: 1px solid #ccc;
-  margin-left: 6px;
+  margin-left: -6px;
   height: 32px;
 }
 button {
@@ -186,5 +186,10 @@ button:disabled {
 .error-text {
   color: #d50052;
   font-weight: bold;
+}
+/* 新增：針對配送方式下拉選單設定寬度 */
+#method-select {
+  min-width: 210px; /* 你可以依需求調整這個數值 */
+  /* 或者使用 width: 300px; 強制固定寬度 */
 }
 </style>

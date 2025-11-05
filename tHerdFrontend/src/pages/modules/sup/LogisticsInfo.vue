@@ -1,10 +1,12 @@
 <template>
   <nav>
-    <button v-if="activeTab !== 'info'" class="btn link-btn" @click="setTab('info')">
+    <button :disabled="activeTab === 'info'" class="btn link-btn" @click="setTab('info')">
       配送資訊
     </button>
-    <button v-if="activeTab !== 'fee'" class="btn link-btn" @click="setTab('fee')">運費計算</button>
-    <button v-if="activeTab !== 'map'" class="btn link-btn" @click="setTab('map')">
+    <button :disabled="activeTab === 'fee'" class="btn link-btn" @click="setTab('fee')">
+      運費計算
+    </button>
+    <button :disabled="activeTab === 'map'" class="btn link-btn" @click="setTab('map')">
       門市地圖查詢
     </button>
   </nav>
@@ -101,6 +103,7 @@ const setTab = (tab) => {
 <style scoped>
 nav {
   padding: 1rem;
+  text-align: center;
 }
 nav a {
   margin-right: 1rem;
@@ -126,6 +129,27 @@ nav a:hover {
 }
 .btn.link-btn:hover {
   background-color: rgb(77, 180, 193);
+  color: rgb(248, 249, 250);
+}
+/* 新增 disabled 樣式 */
+.btn.link-btn:disabled {
+  opacity: 0.6; /* 降低透明度 */
+  cursor: default; /* 滑鼠游標改為預設箭頭 */
+  background-color: rgba(
+    38,
+    119,
+    133,
+    0.588
+  ); /* 可以改成一個比較淺的顏色，或者維持原色但降低透明度 */
+
+  color: rgb(81, 90, 99);
+  /* 也可以考慮加個底線或邊框來強調它是當前選中的項目 */
+  /* border-bottom: 2px solid #2c3e50; */
+}
+
+/* 確保 disabled 狀態下 hover 不會改變顏色 */
+.btn.link-btn:disabled:hover {
+  background-color: rgb(77, 180, 193); /* 維持 disabled 的背景色 */
   color: rgb(248, 249, 250);
 }
 
@@ -192,6 +216,9 @@ nav a:hover {
   margin: 12px auto 8px;
   padding: 10px 12px 8px;
   border-bottom: 2px solid rgb(77, 180, 193);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 整體置中 */
 }
 .page-header h1 {
   margin: 0;
