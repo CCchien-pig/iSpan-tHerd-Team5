@@ -31,17 +31,18 @@ import { NotificationGroup, Notification } from 'notiwind'
             :key="notification.id"
             class="flex w-full max-w-sm mx-auto mt-4 overflow-hidden bg-white rounded-lg shadow-md pointer-events-auto ring-1 ring-black ring-opacity-5"
           >
+            <!-- 左側圖示區塊，背景色依通知類型變化 -->
             <div
-              class="flex items-center justify-center w-12"
+              class="flex items-center justify-center w-12 rounded-l-lg"
               :class="{
-                'main-color-green-bg': notification.type === 'success',
-                'text-yellow-500': notification.type === 'error',
-                'text-blue-500': notification.type === 'info',
+                'bg-main-color-green': notification.type === 'success',
+                'bg-yellow-400': notification.type === 'error',
+                'bg-blue-400': notification.type === 'info',
               }"
             >
               <template v-if="notification.type === 'success'">
                 <svg
-                  class="w-6 h-6 main-color-white-text"
+                  class="w-6 h-6 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -55,9 +56,8 @@ import { NotificationGroup, Notification } from 'notiwind'
                 </svg>
               </template>
               <template v-else-if="notification.type === 'error'">
-                <!-- 警告icon (可以換成警告符號) -->
                 <svg
-                  class="w-6 h-6 main-color-white-text"
+                  class="w-6 h-6 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -72,7 +72,7 @@ import { NotificationGroup, Notification } from 'notiwind'
               </template>
               <template v-else>
                 <svg
-                  class="w-6 h-6 main-color-white-text"
+                  class="w-6 h-6 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -87,6 +87,7 @@ import { NotificationGroup, Notification } from 'notiwind'
               </template>
             </div>
 
+            <!-- 通知內容區 -->
             <div class="px-4 py-3 -mx-3">
               <div class="mx-3">
                 <span

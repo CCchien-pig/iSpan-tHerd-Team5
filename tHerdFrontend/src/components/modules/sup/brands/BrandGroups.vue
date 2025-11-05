@@ -5,8 +5,33 @@
       <button @click="toast('測試通知', 'success')">測試通知</button>
     </div> -->
     <div v-if="loading" class="text-muted small">載入中…</div>
+
     <div v-else>
-      <div v-for="g in groups" :key="g.letter" class="group-section">
+      <!-- 品牌收藏篩選單選框 -->
+      <div class="flex space-x-6 mb-4">
+        <label
+          v-for="o in options"
+          :key="o.value"
+          class="cursor-pointer flex items-center space-x-2"
+        >
+          <input
+            type="radio"
+            :value="o.value"
+            v-model="brandFilter"
+            class="w-5 h-5 text-[rgb(77,180,193)] bg-gray-100 border-gray-300 focus:ring-[rgb(0,147,171)]"
+          />
+          <span class="select-none main-color-green-text font-semibold">{{ o.label }}</span>
+        </label>
+      </div>
+
+      <div
+        v-if="brandFilter === 'favorite' && filteredGroups.length === 0"
+        class="no-favorites-msg"
+      >
+        目前沒有收藏中的品牌~
+      </div>
+      <!-- 列表改為使用 filteredGroups -->
+      <div v-for="g in filteredGroups" :key="g.letter" class="group-section">
         <div class="group-title" :id="g.letter" ref="anchorRefs">
           <strong class="h5">{{ g.letter }}</strong>
         </div>
@@ -49,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { toBrandSlug } from '@/utils/supSlugify'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
@@ -64,8 +89,28 @@ const props = defineProps({
 const emit = defineEmits(['mounted-anchors'])
 
 const auth = useAuthStore()
+const brandFilter = ref('all') // 預設選擇「所有品牌」
 const favorites = ref(new Set())
-const lettersOrder = ['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))]
+// 讓 0-9 放在 Z 後面
+const lettersOrder = [...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)), '0-9']
+
+const filteredGroups = computed(() => {
+  const allGroups = JSON.parse(JSON.stringify(props.groups))
+  allGroups.forEach((group) => {
+    group.brands = group.brands.filter((b) => {
+      if (brandFilter.value === 'favorite') {
+        return favorites.value.has(b.brandId)
+      }
+      return true
+    })
+  })
+  return allGroups.filter((g) => g.brands.length > 0)
+})
+// 單選框選項
+const options = [
+  { value: 'all', label: '所有品牌' },
+  { value: 'favorite', label: '已收藏品牌' },
+]
 
 const isFav = (id) => favorites.value.has(id)
 
@@ -241,5 +286,11 @@ watch(() => props.groups, buildMapAndEmit)
   .brand-text-list {
     columns: 5;
   }
+}
+.no-favorites-msg {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 1.2rem;
+  color: #666;
 }
 </style>

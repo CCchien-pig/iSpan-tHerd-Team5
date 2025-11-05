@@ -245,9 +245,9 @@ watch(
 }
 /* hover 時提高 z-index，確保卡片在最上層 */
 .card:hover {
-  border-color: #c9ebdc;
+  border-color: #76d2aa;
   box-shadow:
-    inset 0 0 0 2px rgba(22, 121, 76, 0.18),
+    inset 0 0 0 3px rgba(22, 121, 76, 0.18),
     0 6px 16px rgba(0, 0, 0, 0.1);
   transform: translateY(-5px) scale(1.06);
   z-index: 10; /* ✅ 提高層級，蓋過相鄰卡片 */
