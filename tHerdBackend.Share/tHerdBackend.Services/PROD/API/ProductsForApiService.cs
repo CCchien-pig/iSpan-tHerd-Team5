@@ -84,12 +84,12 @@ namespace tHerdBackend.Services.PROD.API
         /// 用於前台 MegaMenu 或分類篩選
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default)
         {
             try
             {
                 // 查詢商品詳細
-                var item = await _repo.GetProductTypeTreeAsync(ct);
+                var item = await _repo.GetProductTypeTreeAsync(id, ct);
 
                 // 回傳分頁結果
                 return item;

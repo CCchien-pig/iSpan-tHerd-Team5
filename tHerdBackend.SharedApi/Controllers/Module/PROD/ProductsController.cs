@@ -9,7 +9,7 @@ using tHerdBackend.Core.ValueObjects;
 namespace tHerdBackend.SharedApi.Controllers.Module.PROD
 {
 	[ApiController]
-    [Area("PROD")]
+    [Area("prod")]
     [Route("api/[area]/[controller]")]   // 統一為 /api/prod/Products
     public class ProductsController : ControllerBase
 	{
@@ -77,14 +77,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// 前台：查詢產品分類
         /// </summary>
         /// <returns></returns>
-        [HttpGet("ProductTypetree")]
+        [HttpGet("ProductTypetree/{id:int}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetProductTypeTree(
+        public async Task<IActionResult> GetProductTypeTree(int? id,
             CancellationToken ct = default)
         {
             try
             {
-                var data = await _service.GetProductTypeTreeAsync(ct);
+                var data = await _service.GetProductTypeTreeAsync(id, ct);
                 return Ok(ApiResponse<IEnumerable<ProductTypeTreeDto>>.Ok(data));
             }
             catch (Exception ex)
@@ -97,20 +97,19 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// 加入購物車（以 Sku 為主）
         /// </summary>
         [AllowAnonymous]
-        [HttpPost("add")]
+        [HttpPost("add-to-cart")]
         public async Task<IActionResult> AddShoppingCartAsync([FromBody] AddToCartDto dto, CancellationToken ct = default)
         {
             try
             {
                 if (dto == null)
-                    return BadRequest(ApiResponse<string>.Fail("參數錯誤：dto 為空"));
+                    return BadRequest(ApiResponse<string>.Fail("參數錯誤：Body 為空"));
 
                 var cartId = await _service.AddShoppingCartAsync(dto, ct);
 
                 if (cartId <= 0)
                     return NotFound(ApiResponse<string>.Fail("找不到商品或加入失敗"));
 
-                // 改為回傳成功訊息與購物車編號
                 return Ok(ApiResponse<object>.Ok(new
                 {
                     Message = "商品已成功加入購物車",
@@ -119,7 +118,6 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
             }
             catch (Exception ex)
             {
-                // 加入例外類型判斷，可依需要細分
                 return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
             }
         }

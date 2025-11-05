@@ -9,7 +9,7 @@ namespace tHerdBackend.Core.Interfaces.PROD
 		Task<PagedResult<ProdProductSearchDto>> GetFrontProductListAsync(ProductFilterQueryDto query, CancellationToken ct = default);
         Task<ProdProductDetailDto?> GetFrontProductListAsync(int productId, CancellationToken ct = default);
 
-        Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default);
+        Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);
         Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default);
     }
 }
