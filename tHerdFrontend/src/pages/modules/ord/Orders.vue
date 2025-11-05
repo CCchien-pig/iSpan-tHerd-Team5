@@ -293,13 +293,13 @@
 
 <script>
 import { Modal } from 'bootstrap';
-import axios from 'axios';
+import { http } from '@/api/http';
 
 export default {
   name: 'Orders',
   data() {
     return {
-      userNumberId: 1056,
+     userNumberId: 0,
       orders: [],
       orderDetail: null,
       loading: false,
@@ -323,9 +323,8 @@ export default {
     async loadOrders() {
       this.loading = true;
       try {
-        const res = await axios.get(`/api/ord/OrdersApi/member/${this.userNumberId}`);
+      const res = await http.get(`/ord/OrdersApi/member/me`);
         this.orders = res.data;
-        console.log('Orders loaded:', this.orders);
       } catch (err) {
         console.error(err);
         alert('載入訂單失敗: ' + (err.response?.data || err.message));
@@ -335,7 +334,7 @@ export default {
     },
     async viewDetail(orderId) {
       try {
-        const res = await axios.get(`/api/ord/OrdersApi/${orderId}?userNumberId=${this.userNumberId}`);
+       const res = await http.get(`/ord/OrdersApi/${orderId}`);
         this.orderDetail = res.data;
         const modal = new Modal(document.getElementById('orderDetailModal'));
         modal.show();
@@ -348,31 +347,28 @@ export default {
       alert('此訂單已經申請過退換貨，無法重複申請！');
     },
     async openRmaModal(order) {
-      console.log('Opening RMA modal for order:', order);
-      
       if (order.hasRmaRequest) {
         alert('此訂單已經申請過退換貨，無法重複申請！');
         return;
       }
-      
       if (!order.canReturn) {
         alert('此訂單無法申請退換貨！');
         return;
       }
-      
+
       this.rmaForm.orderId = order.orderId;
       this.rmaForm.requestType = 'refund';
       this.rmaForm.refundScope = 'order';
       this.rmaForm.reasonCode = 'damaged';
       this.rmaForm.reason = '';
-      
+
       try {
-        const res = await axios.get(`/api/ord/OrdersApi/${order.orderId}?userNumberId=${this.userNumberId}`);
+       const res = await http.get(`/ord/OrdersApi/${order.orderId}`);
         this.orderDetail = res.data;
       } catch (err) {
         console.error(err);
       }
-      
+
       const modal = new Modal(document.getElementById('rmaModal'));
       modal.show();
     },
@@ -391,9 +387,9 @@ export default {
       }
 
       try {
-        await axios.post('/api/ord/OrdersApi/rma', {
+        await http.post('/ord/OrdersApi/rma', {
           orderId: this.rmaForm.orderId,
-          userNumberId: this.userNumberId,
+        //  userNumberId: this.userNumberId,
           requestType: this.rmaForm.requestType,
           refundScope: this.rmaForm.refundScope,
           reasonCode: this.rmaForm.reasonCode,
@@ -411,7 +407,7 @@ export default {
     async loadRmaList() {
       this.loadingRma = true;
       try {
-        const res = await axios.get(`/api/ord/OrdersApi/member/${this.userNumberId}/rma`);
+      const res = await http.get(`/ord/OrdersApi/member/me/rma`);
         this.rmaList = res.data;
       } catch (err) {
         console.error(err);
