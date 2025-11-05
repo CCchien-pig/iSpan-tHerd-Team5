@@ -82,6 +82,19 @@ namespace tHerdBackend.SharedApi.Controllers.Common
 			=> _cache.RemoveAsync(TwoFaCacheKey(sessionId));
 
 		[AllowAnonymous]
+		[HttpGet("guest")]
+		public IActionResult Guest()
+		{
+			var id = HttpContext.Session.GetString("guestId");
+			if (string.IsNullOrEmpty(id))
+			{
+				id = Guid.NewGuid().ToString("N");
+				HttpContext.Session.SetString("guestId", id);
+			}
+			return Ok(new { guestId = id });
+		}
+
+		[AllowAnonymous]
 		[HttpGet("ExternalLogin")]
 		public IActionResult ExternalLogin([FromQuery] string provider, [FromQuery] bool rememberMe = true, [FromQuery] string? redirect = "/")
 		{

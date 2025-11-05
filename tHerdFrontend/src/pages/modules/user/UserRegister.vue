@@ -32,8 +32,12 @@
             <div class="row row-2">
               <div class="field">
                 <!-- <label class="label">姓氏 <span class="req">*</span></label> -->
-                <input v-model.trim="lastName" class="input" placeholder=""/>
-                <label class="label" flex>姓氏 <span class="req">*</span></label>
+                <label class="label">姓氏 <span class="req">*</span></label>
+                <input v-model.trim="lastName" class="input"
+       @input="touch('lastName')" @blur="touch('lastName')"
+       :class="{ 'is-invalid': touched.lastName && lastNameError }" />
+<div class="field-error" v-if="touched.lastName && lastNameError">{{ lastNameError }}</div>
+                
               </div>
               <div class="field">
                 <label class="label">名字 <span class="req">*</span></label>
