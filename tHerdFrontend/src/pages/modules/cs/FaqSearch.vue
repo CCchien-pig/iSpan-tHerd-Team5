@@ -193,7 +193,7 @@ onUnmounted(cleanupWidget)
 
 
 <script>
-import { getFaqList, searchFaq , suggestFaq, getFaqDetail } from './api/csfaq'
+import { getFaqList, searchFaq , suggestFaq, getFaqDetail } from '@/api/modules/cs/csfaq'
 export default {
   name: 'FaqSearch',
   data() {
@@ -641,5 +641,5 @@ _cleanupChatbase() {
 :deep(.suggest-item:hover .text-muted) {
   color: #fff !important;
 }
-
 </style>
+
