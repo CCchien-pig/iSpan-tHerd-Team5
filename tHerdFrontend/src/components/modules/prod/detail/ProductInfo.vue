@@ -127,7 +127,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { onMounted } from 'vue'
+
+const props = defineProps({
   product: {
     type: Object,
     required: true,
@@ -146,6 +148,18 @@ const emit = defineEmits(['spec-selected'])
 const selectSpec = (spec) => {
   emit('spec-selected', spec)
 }
+
+// 頁面載入時，若有 mainSkuId，自動選定對應規格
+onMounted(() => {
+  if (props.product?.mainSkuId && props.product?.skus?.length) {
+    const mainSpec = props.product.skus.find(
+      (s) => s.skuId === props.product.mainSkuId
+    )
+    if (mainSpec) {
+      selectSpec(mainSpec)
+    }
+  }
+})
 
 /**
  * 格式化日期
