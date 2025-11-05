@@ -53,13 +53,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// <param name="ct">連線</param>
         /// <returns></returns>
         [AllowAnonymous]  // 不用 JWT，前台也能看
-        [HttpGet("{id:int}")]
+        [HttpGet("{productId:int}")]
         public async Task<IActionResult> GetProductDetail(
-            int id, CancellationToken ct = default)
+            int productId, int? skuId, CancellationToken ct = default)
         {
             try
             {
-                var result = await _service.GetFrontProductListAsync(id, ct);
+                var result = await _service.GetFrontProductListAsync(productId, skuId, ct);
 
                 if (result == null)
                     return NotFound(ApiResponse<string>.Fail("找不到商品"));

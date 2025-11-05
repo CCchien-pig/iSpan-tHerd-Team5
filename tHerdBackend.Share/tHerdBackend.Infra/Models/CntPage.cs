@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace tHerdBackend.Infra.Models;
 
 /// <summary>
-/// 頁面
+/// 內容頁資料表（文章、付費內容）
 /// </summary>
 public partial class CntPage
 {
@@ -64,6 +64,11 @@ public partial class CntPage
     /// 發布時間
     /// </summary>
     public DateTime? PublishedDate { get; set; }
+
+    /// <summary>
+    /// 售價（例如 80.00, 120.00）
+    /// </summary>
+    public decimal? Price { get; set; }
 
     public virtual ICollection<CntPageBlock> CntPageBlocks { get; set; } = new List<CntPageBlock>();
 

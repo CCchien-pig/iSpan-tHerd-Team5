@@ -39,10 +39,10 @@
                 :original-price="originalPrice"
                 :has-discount="hasDiscount"
                 :discount-percent="discountPercent"
+                :unit-text="selectedSpec?.UnitText || '件'"
                 v-model:quantity="quantity"
                 @add-to-cart="handleAddToCart"
                 @toggle-favorite="handleToggleFavorite"
-                @toggle-like="handleToggleLike"
               />
             </div>
           </div>
@@ -118,7 +118,7 @@ const breadcrumbs = computed(() => {
 // 當前價格
 const currentPrice = computed(() => {
   if (selectedSpec.value) {
-    return selectedSpec.value.SalePrice || selectedSpec.value.UnitPrice
+    return selectedSpec.value.salePrice || selectedSpec.value.unitPrice
   }
   return product.value?.salePrice || 0
 })
@@ -126,7 +126,7 @@ const currentPrice = computed(() => {
 // 原價
 const originalPrice = computed(() => {
   if (selectedSpec.value) {
-    return selectedSpec.value.UnitPrice
+    return selectedSpec.value.unitPrice
   }
   return product.value?.listPrice || 0
 })
