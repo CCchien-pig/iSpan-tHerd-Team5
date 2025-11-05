@@ -68,8 +68,15 @@ export default [
         component: () => import('@/pages/modules/prod/ProductDetail.vue'),
         props: true,
         meta: { title: '商品詳情' }
+      },
+      // src/router/modules/cnt.js 之類
+      {
+        path: '/member/articles',
+        name: 'cnt-my-articles',
+        component: () => import('@/pages/modules/cnt/MyPurchasedArticles.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }
-];
+]; d
 
