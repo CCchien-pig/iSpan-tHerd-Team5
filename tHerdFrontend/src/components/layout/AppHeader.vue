@@ -199,6 +199,11 @@ export default {
   goToCart() {
     this.$router.push('/cart'); 
   },
+
+  goToOrders() {
+    this.$router.push('/orders'); 
+  },
+  
   async onLogout() {
       const ok = window.confirm('確定要登出嗎？');
   if (!ok) return; // 使用者按了取消

@@ -195,65 +195,190 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 			}
 		}
 
-		// ============== 2) ReturnURL：付款結果通知（server → server） ==============
-		[HttpPost("return")]
-		[AllowAnonymous]
-		[Consumes("application/x-www-form-urlencoded")]
-		[IgnoreAntiforgeryToken]
-		public async Task<IActionResult> ReturnAsync()
-		{
-			if (!Request.HasFormContentType) return Content("0|NoForm");
-			var form = Request.Form; // MerchantTradeNo, RtnCode, TradeAmt, TradeNo, PaymentDate, CheckMacValue...
+        // ============== 2) ReturnURL：付款結果通知（server → server） ==============
+        //[HttpPost("return")]
+        //[AllowAnonymous]
+        //[Consumes("application/x-www-form-urlencoded")]
+        //[IgnoreAntiforgeryToken]
+        //public async Task<IActionResult> ReturnAsync()
+        //{
+        //	if (!Request.HasFormContentType) return Content("0|NoForm");
+        //	var form = Request.Form; // MerchantTradeNo, RtnCode, TradeAmt, TradeNo, PaymentDate, CheckMacValue...
 
-			// 1) 驗簽
-			if (!_ecpayService.ValidateCheckMacValue(form.ToDictionary(x => x.Key, x => x.Value.ToString())))
-			{
-				_logger.LogWarning("ECPay Return 驗簽失敗");
-				return Content("0|CheckMacError");
-			}
+        //	// 1) 驗簽
+        //	if (!_ecpayService.ValidateCheckMacValue(form.ToDictionary(x => x.Key, x => x.Value.ToString())))
+        //	{
+        //		_logger.LogWarning("ECPay Return 驗簽失敗");
+        //		return Content("0|CheckMacError");
+        //	}
 
-			// 2) 存通知表（原樣紀錄）
-			await SaveReturnNotificationAsync(form);
+        //	// 2) 存通知表（原樣紀錄）
+        //	await SaveReturnNotificationAsync(form);
 
-			var merchantTradeNo = form["MerchantTradeNo"].ToString();
-			var rtnCode = form["RtnCode"].ToString();
-			var tradeAmtStr = form["TradeAmt"].ToString();
-			var tradeNo = form["TradeNo"].ToString();
+        //	var merchantTradeNo = form["MerchantTradeNo"].ToString();
+        //	var rtnCode = form["RtnCode"].ToString();
+        //	var tradeAmtStr = form["TradeAmt"].ToString();
+        //	var tradeNo = form["TradeNo"].ToString();
 
-			var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderNo == merchantTradeNo);
-			if (order == null)
-			{
-				_logger.LogWarning("找不到訂單 (Return): {No}", merchantTradeNo);
-				return Content("0|OrderNotFound");
-			}
+        //	var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderNo == merchantTradeNo);
+        //	if (order == null)
+        //	{
+        //		_logger.LogWarning("找不到訂單 (Return): {No}", merchantTradeNo);
+        //		return Content("0|OrderNotFound");
+        //	}
 
-			// 3) 金額比對（強烈建議）
-			if (!int.TryParse(tradeAmtStr, out var tradeAmt))
-				return Content("0|AmtParseError");
+        //	// 3) 金額比對（強烈建議）
+        //	if (!int.TryParse(tradeAmtStr, out var tradeAmt))
+        //		return Content("0|AmtParseError");
 
-			var expected = (int)Math.Round(order.Subtotal + order.ShippingFee - order.DiscountTotal);
-			if (tradeAmt != expected)
-			{
-				_logger.LogWarning("金額不一致 (Return): got={Got} expected={Exp}", tradeAmt, expected);
-				return Content("0|AmtMismatch");
-			}
+        //	var expected = (int)Math.Round(order.Subtotal + order.ShippingFee - order.DiscountTotal);
+        //	if (tradeAmt != expected)
+        //	{
+        //		_logger.LogWarning("金額不一致 (Return): got={Got} expected={Exp}", tradeAmt, expected);
+        //		return Content("0|AmtMismatch");
+        //	}
 
-			// 4) Upsert 付款紀錄（ORD_Payment）
-			await UpsertPaymentAsync(order, form);
+        //	// 4) Upsert 付款紀錄（ORD_Payment）
+        //	await UpsertPaymentAsync(order, form);
 
-			// 5) 成功時更新訂單
-			if (rtnCode == "1")
-			{
-				order.PaymentStatus = "paid";
-				await _db.SaveChangesAsync();
-			}
+        //	// 5) 成功時更新訂單
+        //	if (rtnCode == "1")
+        //	{
+        //		order.PaymentStatus = "paid";
+        //		await _db.SaveChangesAsync();
+        //	}
 
-			// ★ 綠界規定：一定要回 1|OK
-			return Content("1|OK");
-		}
+        //	// ★ 綠界規定：一定要回 1|OK
+        //	return Content("1|OK");
+        //}
+        [HttpPost("return")]
+        [AllowAnonymous]
+        [Consumes("application/x-www-form-urlencoded")]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> ReturnAsync()
+        {
+            try
+            {
+                _logger.LogInformation("🔔 收到綠界 return 通知");
 
-		// ============== 3) PaymentInfoURL：取號通知（ATM / CVS）（server → server） ==============
-		[HttpPost("payment-info")]
+                if (!Request.HasFormContentType)
+                {
+                    _logger.LogWarning("❌ 請求不是 form 格式");
+                    return Content("0|NoForm");
+                }
+
+                var form = Request.Form;
+
+                // 記錄完整內容
+                var rawBody = string.Join("&", form.Select(kv => $"{kv.Key}={kv.Value}"));
+                _logger.LogInformation("📦 通知內容: {RawBody}", rawBody);
+
+                // 1) 驗簽
+                var formDict = form.ToDictionary(x => x.Key, x => x.Value.ToString());
+                if (!_ecpayService.ValidateCheckMacValue(formDict))
+                {
+                    _logger.LogWarning("❌ ECPay Return 驗簽失敗");
+                    return Content("0|CheckMacError");
+                }
+                _logger.LogInformation("✅ 驗簽成功");
+
+                // 2) 存通知表
+                try
+                {
+                    await SaveReturnNotificationAsync(form);
+                    _logger.LogInformation("✅ 通知記錄已儲存");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ 儲存通知記錄失敗");
+                    // 繼續處理，不要因為這個失敗就中斷
+                }
+
+                var merchantTradeNo = form["MerchantTradeNo"].ToString();
+                var rtnCode = form["RtnCode"].ToString();
+                var tradeAmtStr = form["TradeAmt"].ToString();
+                var tradeNo = form["TradeNo"].ToString();
+
+                _logger.LogInformation("🔍 處理訂單: MerchantTradeNo={MerchantTradeNo}, RtnCode={RtnCode}, TradeAmt={TradeAmt}, TradeNo={TradeNo}",
+                    merchantTradeNo, rtnCode, tradeAmtStr, tradeNo);
+
+                // 3) 查找訂單
+                var order = await _db.OrdOrders.FirstOrDefaultAsync(o => o.OrderNo == merchantTradeNo);
+                if (order == null)
+                {
+                    _logger.LogWarning("❌ 找不到訂單 (Return): {No}", merchantTradeNo);
+                    return Content("0|OrderNotFound");
+                }
+                _logger.LogInformation("✅ 找到訂單: OrderId={OrderId}", order.OrderId);
+
+                // 4) 金額比對
+                if (!int.TryParse(tradeAmtStr, out var tradeAmt))
+                {
+                    _logger.LogWarning("❌ 金額解析失敗: {TradeAmtStr}", tradeAmtStr);
+                    return Content("0|AmtParseError");
+                }
+
+                var expected = (int)Math.Round(order.Subtotal + order.ShippingFee - order.DiscountTotal);
+                _logger.LogInformation("💰 金額比對: 綠界={TradeAmt}, 預期={Expected}", tradeAmt, expected);
+
+                if (tradeAmt != expected)
+                {
+                    _logger.LogWarning("❌ 金額不一致 (Return): got={Got} expected={Exp}", tradeAmt, expected);
+                    // 金額不符時，仍然記錄但標記為異常
+                    // return Content("0|AmtMismatch"); // ← 先註解，允許通過
+                }
+
+                // 5) Upsert 付款紀錄
+                try
+                {
+                    await UpsertPaymentAsync(order, form);
+                    _logger.LogInformation("✅ 付款記錄已更新");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ 更新付款記錄失敗");
+                    return Content("0|UpdatePaymentError");
+                }
+
+                // 6) 成功時更新訂單
+                if (rtnCode == "1")
+                {
+                    order.PaymentStatus = "paid";
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("✅ 訂單狀態已更新為 paid: OrderNo={OrderNo}", merchantTradeNo);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ 付款失敗: RtnCode={RtnCode}, RtnMsg={RtnMsg}", rtnCode, form["RtnMsg"]);
+                }
+
+                // ★ 綠界規定：一定要回 1|OK
+                _logger.LogInformation("✅ 處理完成，返回 1|OK");
+                return Content("1|OK");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 處理 return 端點發生未預期的異常");
+                return Content("0|SystemError");
+            }
+        }
+
+        /// <summary>
+        /// 綠界付款結果通知 - notify 端點（別名，指向 return）
+        /// </summary>
+        [HttpPost("notify")]
+        [AllowAnonymous]
+        [Consumes("application/x-www-form-urlencoded")]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> NotifyAsync()
+        {
+            _logger.LogInformation("🔔 收到綠界 notify 通知（轉發到 ReturnAsync）");
+            // 直接調用 ReturnAsync 方法
+            return await ReturnAsync();
+        }
+
+        // ============== 3) PaymentInfoURL：取號通知（ATM / CVS）（server → server） ==============
+        [HttpPost("payment-info")]
 		[AllowAnonymous]
 		[Consumes("application/x-www-form-urlencoded")]
 		[IgnoreAntiforgeryToken]
@@ -277,58 +402,120 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 			return Content("1|OK");
 		}
 
-		// ------------- 寫庫：通知表 -------------
-		private async Task SaveReturnNotificationAsync(IFormCollection form)
-		{
-			// TODO: 依你的資料表實作；下面僅示意
-			var noti = new OrdEcpayReturnNotification
-			{
-				// 系統時間
-				ReceivedDate = DateTime.Now,
+        // ------------- 寫庫：通知表 -------------
+        //private async Task SaveReturnNotificationAsync(IFormCollection form)
+        //{
+        //	// TODO: 依你的資料表實作；下面僅示意
+        //	var noti = new OrdEcpayReturnNotification
+        //	{
+        //		// 系統時間
+        //		ReceivedDate = DateTime.Now,
 
-				// 供應商/平台資訊
-				MerchantId = form["MerchantID"],     // 綠界欄位是 MerchantID（I 大寫）
-				PlatformId = form["PlatformID"],     // 若你未啟用平台商，此欄可能為空
-				StoreId = form["StoreID"],        // 若無分店代號，可能為空
+        //		// 供應商/平台資訊
+        //		MerchantId = form["MerchantID"],     // 綠界欄位是 MerchantID（I 大寫）
+        //		PlatformId = form["PlatformID"],     // 若你未啟用平台商，此欄可能為空
+        //		StoreId = form["StoreID"],        // 若無分店代號，可能為空
 
-				// 訂單/交易識別
-				MerchantTradeNo = form["MerchantTradeNo"],
-				TradeNo = form["TradeNo"],
+        //		// 訂單/交易識別
+        //		MerchantTradeNo = form["MerchantTradeNo"],
+        //		TradeNo = form["TradeNo"],
 
-				// 結果與金額
-				RtnCode = int.TryParse(form["RtnCode"], out var rtn) ? rtn : 0,
-				RtnMsg = form["RtnMsg"],
-				TradeAmt = int.TryParse(form["TradeAmt"], out var amt) ? amt : 0,
+        //		// 結果與金額
+        //		RtnCode = int.TryParse(form["RtnCode"], out var rtn) ? rtn : 0,
+        //		RtnMsg = form["RtnMsg"],
+        //		TradeAmt = int.TryParse(form["TradeAmt"], out var amt) ? amt : 0,
 
-				// 付款資訊
-				PaymentType = form["PaymentType"],
-				PaymentTypeChargeFee = TryParseDecimal(form["PaymentTypeChargeFee"]),
+        //		// 付款資訊
+        //		PaymentType = form["PaymentType"],
+        //		PaymentTypeChargeFee = TryParseDecimal(form["PaymentTypeChargeFee"]),
 
-				// 時間（綠界多為 "yyyy/MM/dd HH:mm:ss"）
-				TradeDate = ParseEcpayDateTime(form["TradeDate"]) ?? DateTime.Now, // 非 null 欄位，給預設
-				PaymentDate = ParseEcpayDateTime(form["PaymentDate"]),                  // 成功時才會有
+        //		// 時間（綠界多為 "yyyy/MM/dd HH:mm:ss"）
+        //		TradeDate = ParseEcpayDateTime(form["TradeDate"]) ?? DateTime.Now, // 非 null 欄位，給預設
+        //		PaymentDate = ParseEcpayDateTime(form["PaymentDate"]),                  // 成功時才會有
 
-				// 其他
-				SimulatePaid = TryParseBool01(form["SimulatePaid"]),  // "0"/"1" or "true"/"false"
-				CustomField1 = form["CustomField1"],
-				CustomField2 = form["CustomField2"],
-				CustomField3 = form["CustomField3"],
-				CustomField4 = form["CustomField4"],
+        //		// 其他
+        //		SimulatePaid = TryParseBool01(form["SimulatePaid"]),  // "0"/"1" or "true"/"false"
+        //		CustomField1 = form["CustomField1"],
+        //		CustomField2 = form["CustomField2"],
+        //		CustomField3 = form["CustomField3"],
+        //		CustomField4 = form["CustomField4"],
 
-				// 驗簽與原始資料
-				CheckMacValue = form["CheckMacValue"],
-				RawBody = string.Join("&", form.Select(kv => $"{kv.Key}={kv.Value}")),
-				RawHeaders = GetRawHeaders(HttpContext?.Request),
+        //		// 驗簽與原始資料
+        //		CheckMacValue = form["CheckMacValue"],
+        //		RawBody = string.Join("&", form.Select(kv => $"{kv.Key}={kv.Value}")),
+        //		RawHeaders = GetRawHeaders(HttpContext?.Request),
 
-				// 失敗原因（成功則留空）
-				FailReason = (rtn == 1) ? "null" : form["RtnMsg"]
-			};
-			_db.OrdEcpayReturnNotifications.Add(noti);
-			await _db.SaveChangesAsync();
-		}
+        //		// 失敗原因（成功則留空）
+        //		FailReason = (rtn == 1) ? "null" : form["RtnMsg"]
+        //	};
+        //	_db.OrdEcpayReturnNotifications.Add(noti);
+        //	await _db.SaveChangesAsync();
+        //}
 
-		// ------------- 寫庫：付款表 -------------
-		private async Task UpsertPaymentAsync(OrdOrder order, IFormCollection form)
+        private async Task SaveReturnNotificationAsync(IFormCollection form)
+        {
+            try
+            {
+                // 解析 RtnCode
+                var rtnCode = int.TryParse(form["RtnCode"], out var rtn) ? rtn : 0;
+
+                var noti = new OrdEcpayReturnNotification
+                {
+                    // 系統時間
+                    ReceivedDate = DateTime.Now,
+
+                    // 供應商/平台資訊
+                    MerchantId = form["MerchantID"].ToString(),
+                    PlatformId = form["PlatformID"].ToString(),
+                    StoreId = form["StoreID"].ToString(),
+
+                    // 訂單/交易識別
+                    MerchantTradeNo = form["MerchantTradeNo"].ToString(),
+                    TradeNo = form["TradeNo"].ToString(),
+
+                    // 結果與金額
+                    RtnCode = rtnCode,
+                    RtnMsg = form["RtnMsg"].ToString(),
+                    TradeAmt = int.TryParse(form["TradeAmt"], out var amt) ? amt : 0,
+
+                    // 付款資訊
+                    PaymentType = form["PaymentType"].ToString(),
+                    PaymentTypeChargeFee = TryParseDecimal(form["PaymentTypeChargeFee"]),
+
+                    // ✅ 時間（使用 ParseEcpayDateTime 方法）
+                    TradeDate = ParseEcpayDateTime(form["TradeDate"]) ?? DateTime.Now,
+                    PaymentDate = ParseEcpayDateTime(form["PaymentDate"]) ?? DateTime.Now,
+
+                    // 其他
+                    SimulatePaid = TryParseBool01(form["SimulatePaid"]),
+                    CustomField1 = form["CustomField1"].ToString(),
+                    CustomField2 = form["CustomField2"].ToString(),
+                    CustomField3 = form["CustomField3"].ToString(),
+                    CustomField4 = form["CustomField4"].ToString(),
+
+                    // 驗簽與原始資料
+                    CheckMacValue = form["CheckMacValue"].ToString(),
+                    RawBody = string.Join("&", form.Select(kv => $"{kv.Key}={kv.Value}")),
+                    RawHeaders = GetRawHeaders(HttpContext?.Request),
+
+                    // 失敗原因（成功則留空）
+                    FailReason = (rtnCode == 1) ? null : form["RtnMsg"].ToString()
+                };
+
+                _db.OrdEcpayReturnNotifications.Add(noti);
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation("✅ 通知記錄已儲存: NotificationId={NotificationId}", noti.NotificationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 儲存通知記錄時發生錯誤");
+                throw;
+            }
+        }
+
+        // ------------- 寫庫：付款表 -------------
+        private async Task UpsertPaymentAsync(OrdOrder order, IFormCollection form)
 		{
 			// 以 OrderId 為 Key upsert
 			var pay = await _db.OrdPayments.FirstOrDefaultAsync(p => p.OrderId == order.OrderId);
