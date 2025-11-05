@@ -62,12 +62,12 @@ namespace tHerdBackend.Services.PROD.API
         /// <param name="ct"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<ProdProductDetailDto?> GetFrontProductListAsync(int id, CancellationToken ct = default)
+        public async Task<ProdProductDetailDto?> GetFrontProductListAsync(int id, int? skuId, CancellationToken ct = default)
         {
             try
             {
                 // 查詢商品詳細
-                var item = await _repo.GetByIdAsync(id, ct);
+                var item = await _repo.GetByIdAsync(id, skuId, ct);
 
                 // 回傳分頁結果
                 return item;

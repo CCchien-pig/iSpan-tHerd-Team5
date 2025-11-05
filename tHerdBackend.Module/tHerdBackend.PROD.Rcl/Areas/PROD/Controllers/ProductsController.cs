@@ -103,7 +103,7 @@ namespace tHerdBackend.Products.Rcl.Areas.PROD.Controllers
 		[HttpGet]
         public async Task<IActionResult> Upsert(int? id)
         {
-            var dto = id.HasValue ? await _repo.GetByIdAsync((int)id) : new ProdProductDetailDto();
+            var dto = id.HasValue ? await _repo.GetByIdAsync((int)id, null) : new ProdProductDetailDto();
             await GetData();
             return View("Upsert", dto);
         }
