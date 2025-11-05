@@ -841,21 +841,36 @@ namespace tHerdBackend.Infra.Repository.PROD
         /// 取得商品分類樹狀結構（含子分類）
         /// 用於前台 MegaMenu 或分類篩選
         /// </summary>
-        /*
-        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+
+        public async Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default)
         {
             const string sql = @"
+                ;WITH RecursiveTypes AS (
+                    -- 起點：指定的 ProductTypeId
                     SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
                     FROM PROD_ProductTypeConfig
-                    WHERE IsActive = 1
-                    ORDER BY ParentId, OrderSeq, ProductTypeName;
-                ";
+                    WHERE ProductTypeId = @Id AND IsActive = 1
+
+                    UNION ALL
+
+                    -- 遞迴抓出所有子節點
+                    SELECT c.ProductTypeId, c.ParentId, c.ProductTypeCode, c.ProductTypeName, c.OrderSeq, c.IsActive
+                    FROM PROD_ProductTypeConfig c
+                    INNER JOIN RecursiveTypes p ON c.ParentId = p.ProductTypeId
+                    WHERE c.IsActive = 1
+                )
+                SELECT * FROM RecursiveTypes
+                ORDER BY ParentId, OrderSeq, ProductTypeName;
+            ";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
             try
             {
                 var list = (await conn.QueryAsync<ProductTypeTreeDto>(
-                    new CommandDefinition(sql, tx, cancellationToken: ct))).ToList();
+                    new CommandDefinition(sql, new { Id = id }, tx, cancellationToken: ct))).ToList();
+
+                if (!list.Any())
+                    return new List<ProductTypeTreeDto>();
 
                 // === Step 1. 建立查找字典 ===
                 var lookup = list.ToDictionary(x => x.ProductTypeId, x => x);
@@ -863,7 +878,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                 // === Step 2. 初始化 Children ===
                 foreach (var item in list)
                 {
-                    item.Children = new List<ProductTypeTreeDto>();
+                    item.Children = new List<ProductTypeTreeNodeDto>();
                 }
 
                 // === Step 3. 將子節點加入父節點 ===
@@ -871,21 +886,21 @@ namespace tHerdBackend.Infra.Repository.PROD
                 {
                     if (item.ParentId.HasValue && lookup.TryGetValue(item.ParentId.Value, out var parent))
                     {
-                        parent.Children.Add(item);
+                        parent.Children.Add(new ProductTypeTreeNodeDto
+                        {
+                            ProductTypeId = item.ProductTypeId,
+                            ParentId = item.ParentId,
+                            ProductTypeCode = item.ProductTypeCode,
+                            ProductTypeName = item.ProductTypeName,
+                            OrderSeq = item.OrderSeq,
+                            IsActive = item.IsActive,
+                            Children = new List<ProductTypeTreeNodeDto>()
+                        });
                     }
                 }
 
-                // === Step 4. 找出所有根節點（ParentId 為 NULL 或 父節點不存在） ===
-                var allIds = lookup.Keys.ToHashSet();
-                var roots = list
-                    .Where(x => !x.ParentId.HasValue || !allIds.Contains(x.ParentId.Value))
-                    .OrderBy(x => x.OrderSeq)
-                    .ThenBy(x => x.ProductTypeName)
-                    .ToList();
-
-                // === Step 5. 保險機制：若根節點仍為空，退回全部分類 ===
-                if (!roots.Any())
-                    roots = list.OrderBy(x => x.OrderSeq).ThenBy(x => x.ProductTypeName).ToList();
+                // === Step 4. 找出根節點（即傳入的 id 對應節點） ===
+                var roots = list.Where(x => x.ProductTypeId == id).ToList();
 
                 return roots;
             }
@@ -894,7 +909,6 @@ namespace tHerdBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-        */
 
         /// <summary>
         /// 前台: 查詢商品清單 (增加效率)
@@ -902,36 +916,36 @@ namespace tHerdBackend.Infra.Repository.PROD
         /// <param name="query"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
-        {
-            var sql = new StringBuilder(@"
-                    SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
-                    FROM PROD_ProductTypeConfig
-                    WHERE IsActive = 1
-                    ORDER BY ParentId, OrderSeq, ProductTypeName;
-            ");
+        //public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
+        //{
+        //    var sql = new StringBuilder(@"
+        //            SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
+        //            FROM PROD_ProductTypeConfig
+        //            WHERE IsActive = 1
+        //            ORDER BY ParentId, OrderSeq, ProductTypeName;
+        //    ");
 
-            // === Step 5. 查詢執行 ===
-            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
-            try
-            {
-                // 查詢
-                using var multi = await conn.QueryMultipleAsync($"{sql}", tx);
+        //    // === Step 5. 查詢執行 ===
+        //    var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+        //    try
+        //    {
+        //        // 查詢
+        //        using var multi = await conn.QueryMultipleAsync($"{sql}", tx);
 
-                var list = await multi.ReadAsync<ProductTypeTreeDto>();
+        //        var list = await multi.ReadAsync<ProductTypeTreeDto>();
 
-                return list;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
-                return Enumerable.Empty<ProductTypeTreeDto>();
-            }
-            finally
-            {
-                if (needDispose) conn.Dispose();
-            }
-        }
+        //        return list;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
+        //        return Enumerable.Empty<ProductTypeTreeDto>();
+        //    }
+        //    finally
+        //    {
+        //        if (needDispose) conn.Dispose();
+        //    }
+        //}
 
         //public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
         //{

@@ -15,4 +15,9 @@ export default [
   name: 'product-main-search',
   component: () => import('@/pages/modules/prod/ProductMainSearch.vue')
   },
+  {
+    path: '/products/:category?/:sub?',
+    name: 'search-by-type',
+    component: () => import('@/pages/modules/prod/ProductSearchExample.vue'),
+  },
 ]

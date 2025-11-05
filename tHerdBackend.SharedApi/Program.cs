@@ -204,6 +204,7 @@ namespace tHerdBackend.SharedApi
 			builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 			builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 			builder.Services.AddSingleton<IReferralCodeGenerator, ReferralCodeGenerator>();
+			builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 			// === SQL Connection Factory ===
 			builder.Services.AddScoped<ISqlConnectionFactory>(sp => new SqlConnectionFactory(connectionString));
 
@@ -310,9 +311,10 @@ namespace tHerdBackend.SharedApi
             });
 
             var app = builder.Build();
+			app.UseMiddleware<ProblemDetailsExceptionMiddleware>();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
             {
 				app.UseSwagger();
                 app.UseSwaggerUI();

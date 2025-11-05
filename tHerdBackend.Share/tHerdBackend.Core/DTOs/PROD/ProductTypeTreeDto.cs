@@ -20,7 +20,7 @@
         /// <summary>
         /// 自動生成的分類 URL，例如 /products/vitamins-2040
         /// </summary>
-        public string Url => $"/products/{ProductTypeCode.ToLower()}-{ProductTypeId}";
+        public string Url => $"/prt/{ProductTypeCode.ToLower()}-{ProductTypeId}";
     }
 
     /// <summary>
@@ -40,6 +40,6 @@
         /// <summary>
         /// 自動生成的分類 URL，例如 /products/vitamins-2040
         /// </summary>
-        public string Url => $"/products/{ProductTypeCode.ToLower()}-{ProductTypeId}";
+        public string Url => $"/prt/{ProductTypeCode.ToLower()}-{ProductTypeId}";
     }
 }
