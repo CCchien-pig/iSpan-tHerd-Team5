@@ -46,14 +46,14 @@ namespace tHerdBackend.Infra.Repository.PROD
             try
             {
                 // 若無 SessionId，建立新的 Guid
-                var sessionId = Guid.NewGuid().ToString();
+                // var sessionId = Guid.NewGuid().ToString(); // 佔不用
 
                 // 嘗試取得現有購物車
                 var cartId = await conn.ExecuteScalarAsync<int?>(
                     @"SELECT CartId FROM ORD_ShoppingCart 
               WHERE (UserNumberId = @UserNumberId OR SessionId = @SessionId)
               ORDER BY CreatedDate DESC",
-                    new { dto.UserNumberId, SessionId = sessionId }, tran);
+                    new { dto.UserNumberId, dto.SessionId }, tran);
 
                 // 若沒有購物車則建立
                 if (cartId == null)
@@ -62,7 +62,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                         @"INSERT INTO ORD_ShoppingCart (UserNumberId, SessionId, MaxItemsAllowed, CreatedDate)
                   OUTPUT INSERTED.CartId
                   VALUES (@UserNumberId, @SessionId, 20, SYSDATETIME())",
-                        new { dto.UserNumberId, SessionId = sessionId }, tran);
+                        new { dto.UserNumberId, dto.SessionId }, tran);
                 }
 
                 // 檢查是否已有相同 SKU
@@ -89,7 +89,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                 }
                 else
                 {
-                    // ✅ 用 Dapper 查出 ProductId（取代 _db）
+                    //  用 Dapper 查出 ProductId（取代 _db）
                     var productId = await conn.ExecuteScalarAsync<int>(
                         @"SELECT TOP 1 ProductId 
                   FROM PROD_ProductSku 
