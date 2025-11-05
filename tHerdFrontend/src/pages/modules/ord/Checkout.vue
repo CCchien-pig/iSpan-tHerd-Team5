@@ -64,6 +64,9 @@
 
 <script>
 import CartAPI from '@/api/cart'
+import { http } from '@/api/http'              // 共用 axios 實例（自動夾帶 Token）
+import { useAuthStore } from '@/stores/auth'   // 讀取 accessToken
+import { useRouter, useRoute } from 'vue-router'
 
 export default {
   data() {
@@ -171,45 +174,82 @@ export default {
     },
 
     async checkout() {
-      if (!this.canCheckout) {
-        alert('請填寫完整收件資料')
-        return
-      }
+  // 1) 必填檢查
+  if (!this.canCheckout) {
+    alert('請填寫完整收件資料')
+    return
+  }
+  if (this.invalidItems.length > 0) {
+    alert('購物車中有無效商品，請移除後再結帳')
+    return
+  }
 
-      if (this.invalidItems.length > 0) {
-        alert('購物車中有無效商品，請移除後再結帳')
-        return
-      }
+  // 2) 檢查是否登入
+  const auth = useAuthStore()
+  if (!auth?.accessToken) {
+    const router = useRouter(); const route = useRoute()
+    alert('請先登入會員再結帳')
+    router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
+    return
+  }
 
-      const sessionId = localStorage.getItem('sessionId')
+  // 3) 組 payload（❌ 不要再送 sessionId）
+  const payload = {
+    cartItems: this.validItems.map(i => ({
+      productId: i.productId,
+      skuId: i.skuId,
+      productName: i.productName,
+      // ⬇️ 送成交價：以前是 unitPrice（原價）
+      salePrice: i.salePrice ?? i.unitPrice, 
+      quantity: i.qty ?? i.quantity ?? 1
+    })),
+    receiverName: this.receiverName,
+    receiverPhone: this.receiverPhone,
+    receiverAddress: this.receiverAddress,
+    couponCode: this.couponCode || null
+  }
 
-      const response = await CartAPI.checkout({
-        sessionId,
-        cartItems: this.validItems.map(i => ({
-          productId: i.productId,
-          skuId: i.skuId,
-          productName: i.productName,
-          salePrice: i.unitPrice,
-          quantity: i.qty
-        })),
-        receiverName: this.receiverName,
-        receiverPhone: this.receiverPhone,
-        receiverAddress: this.receiverAddress,
-        couponCode: this.couponCode
-      })
+  try {
+    // 4) 用共用 http（自動帶 Token）
+    const res = await http.post('http:localhost:7200/api/ord/cart/checkout', payload)
 
-      if (response.data.success) {
-        // 顯示綠界付款表單
-        document.body.innerHTML = response.data.ecpayFormHtml
-        document.forms[0].submit()
-      } else {
-        if (response.data.errors) {
-          alert('結帳失敗：\n' + response.data.errors.join('\n'))
-        } else {
-          alert(response.data.message)
-        }
-      }
+    if (res.data?.success) {
+      const html = res.data.ecpayFormHtml
+      if (!html) throw new Error('後端未回傳 ecpayFormHtml')
+
+      // ✅ 安全提交綠界表單：插入 DOM 後 submit
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, 'text/html')
+      const form = doc.querySelector('form')
+      if (!form) throw new Error('找不到綠界 <form>')
+
+      document.body.appendChild(form)
+      form.submit()
+      return
     }
+
+    // 失敗訊息
+    if (res.data?.errors?.length) {
+      alert('結帳失敗：\n' + res.data.errors.join('\n'))
+    } else {
+      alert(res.data?.message || '結帳失敗，請稍後再試')
+    }
+  } catch (err) {
+    // 401/403 → 重新登入
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
+      const router = useRouter(); const route = useRoute()
+      alert('登入逾時，請重新登入')
+      router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
+      return
+    }
+    // 其他錯誤
+    const msg = err?.response?.data?.message 
+      || err?.message 
+      || '結帳失敗，請稍後再試'
+    alert('❌ ' + msg)
+    console.error('checkout error:', err)
+  }
+}
   }
 }
 </script>
