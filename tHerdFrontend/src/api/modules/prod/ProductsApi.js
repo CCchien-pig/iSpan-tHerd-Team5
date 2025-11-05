@@ -8,6 +8,7 @@
  */
 
 import baseApi from '../../baseApi'
+import { useCartStore } from '@/composables/modules/prod/cartStore'
 
 /**
  * 商品 API 類別
@@ -19,25 +20,49 @@ class productsApi {
     // ==================== 購物車 ====================
 
   /**
-   * 加入購物車
+   * 加入購物車 + 立即刷新購物車數量
    * @param {Object} data - 購物車資料
    * @param {number} data.userNumberId - 會員編號（訪客可為 0）
    * @param {number} data.skuId - SKU 編號
    * @param {number} data.qty - 數量
    * @param {number} data.unitPrice - 單價
    * @param {string} [data.sessionId] - 訪客 Session ID（可選）
-   * @returns {Promise} API 回應
-   * @example
-   * const res = await ProductsApi.addToCart({
-   *   userNumberId: 1001,
-   *   skuId: 20500,
-   *   qty: 2,
-   *   unitPrice: 499,
-   *   sessionId: 'visitor-abc123'
-   * })
+   * @returns {Promise<Object>} API 回應
    */
-  async addToCart(params = {}) {
-    return await baseApi.post(`${this.path}/Products/add-to-cart`, params)
+  async addToCart(data = {}) {
+    try {
+      const res = await baseApi.post(`${this.path}/Products/add-to-cart`, data)
+      const result = res.data
+      if (res?.success) {
+        return result
+      } else {
+        console.warn('❌ 加入購物車失敗:', res.message)
+        return null
+      }
+    } catch (err) {
+      console.error('🚨 加入購物車 API 錯誤:', err)
+      return null
+    }
+  }
+
+  async getCartSummary(userNumberId = null, sessionId = null) {
+    try {      
+      const res = await baseApi.get(`${this.path}/Products/get-summary-cart`, {
+          userNumberId: userNumberId,
+          sessionId: sessionId,
+      })
+
+      const result = res.data
+      if (res?.success) {
+        return result
+      } else {
+        console.warn('⚠️ 購物車摘要查詢失敗:', res.message)
+        return { ItemCount: 0 }
+      }
+    } catch (err) {
+      console.error('🚨 購物車摘要 API 錯誤:', err)
+      return { ItemCount: 0 }
+    }
   }
 
   // ==================== 商品查詢 ====================

@@ -59,7 +59,7 @@
 import { computed } from 'vue'
 
 // 加入購物車
-import { useAddToCart } from '@/composables/modules/prod//useAddToCart'
+import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 const { addToCart } = useAddToCart()
 
 const props = defineProps({
