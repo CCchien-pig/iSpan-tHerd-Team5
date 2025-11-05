@@ -21,7 +21,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Controllers\Module\CS\" />
 		<Folder Include="Controllers\Module\SYS\" />
 	</ItemGroup>
 

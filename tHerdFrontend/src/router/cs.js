@@ -29,5 +29,12 @@ export default [
     name: 'TicketDetail',
     component: () => import('@/pages/modules/cs/TicketDetail.vue'),
     meta: { title: '工單詳情', requiresAuth: true }
-  }
+  },
+  {
+  path: '/cs/chat',
+  name: 'CsChat',
+  component: () => import('@/pages/modules/cs/CsChat.vue'),
+  meta: { title: '智能客服' }
+}
+
 ];

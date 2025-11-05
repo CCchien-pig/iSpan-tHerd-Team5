@@ -21,8 +21,8 @@
     <Folder Include="Domain\SUP\" />
     <Folder Include="Domain\USER\" />
     <Folder Include="Domain\PROD\" />
-    <Folder Include="Interfaces\CS\" />
     <Folder Include="Interfaces\ORD\" />
+    <Folder Include="Interfaces\USER\" />
     <Folder Include="ValueObjects\CNT\" />
     <Folder Include="ValueObjects\CS\" />
     <Folder Include="ValueObjects\MKT\" />

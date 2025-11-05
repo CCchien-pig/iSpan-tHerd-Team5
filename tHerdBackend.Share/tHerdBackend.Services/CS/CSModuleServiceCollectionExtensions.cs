@@ -21,6 +21,8 @@ namespace tHerdBackend.Services.CS
 			services.AddScoped<IFaqService, FaqService>();
 		    services.AddScoped<ICsTicketService, CsTicketService>();
 		services.AddScoped<ISysAssetFileRepository, SysAssetFileRepository>();
+			services.AddScoped<IChatService, ChatService>();
+
 
 			return services;
         }
