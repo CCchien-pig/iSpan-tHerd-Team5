@@ -169,13 +169,13 @@ export default {
   transition: color 0.3s ease;
 }
 .social-links a:hover {
-  color: #28a745 !important;
+  color: rgb(118, 201, 212) !important;
 }
 .payment-methods i {
   font-size: 1.5rem;
 }
 .legal-links a:hover {
-  color: #28a745 !important;
+  color: rgb(77, 180, 193) !important;
 }
 
 @media (max-width: 768px) {
@@ -189,5 +189,8 @@ export default {
     text-align: center;
     margin-top: 1rem;
   }
+}
+.text-muted {
+  color: rgb(248, 249, 250) !important;
 }
 </style>

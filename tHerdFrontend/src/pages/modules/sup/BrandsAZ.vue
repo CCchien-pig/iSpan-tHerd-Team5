@@ -1,5 +1,5 @@
 <!-- \tHerdFrontend\src\pages\modules\sup\BrandsAZ.vue -->
-<!-- （頁面進入點） -->
+<!-- （品牌A-Z頁） -->
 
 <template>
   <section class="brands-az">

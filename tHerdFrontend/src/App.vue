@@ -25,7 +25,6 @@ import { NotificationGroup, Notification } from 'notiwind'
           leave-to="opacity-0"
           move="transition duration-500"
           move-delay="delay-300"
-          class="w-full max-w-sm"
         >
           <div
             v-for="notification in notifications"
@@ -35,14 +34,14 @@ import { NotificationGroup, Notification } from 'notiwind'
             <div
               class="flex items-center justify-center w-12"
               :class="{
-                'bg-green-500': notification.type === 'success',
-                'bg-yellow-500': notification.type === 'error',
-                'bg-blue-500': notification.type === 'info',
+                'main-color-green-bg': notification.type === 'success',
+                'text-yellow-500': notification.type === 'error',
+                'text-blue-500': notification.type === 'info',
               }"
             >
               <template v-if="notification.type === 'success'">
                 <svg
-                  class="w-6 h-6 text-white"
+                  class="w-6 h-6 main-color-white-text"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -58,7 +57,7 @@ import { NotificationGroup, Notification } from 'notiwind'
               <template v-else-if="notification.type === 'error'">
                 <!-- 警告icon (可以換成警告符號) -->
                 <svg
-                  class="w-6 h-6 text-white"
+                  class="w-6 h-6 main-color-white-text"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -73,7 +72,7 @@ import { NotificationGroup, Notification } from 'notiwind'
               </template>
               <template v-else>
                 <svg
-                  class="w-6 h-6 text-white"
+                  class="w-6 h-6 main-color-white-text"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -93,7 +92,7 @@ import { NotificationGroup, Notification } from 'notiwind'
                 <span
                   class="font-semibold"
                   :class="{
-                    'text-green-500': notification.type === 'success',
+                    'main-color-green-text': notification.type === 'success',
                     'text-yellow-500': notification.type === 'error',
                     'text-blue-500': notification.type === 'info',
                   }"
@@ -119,7 +118,15 @@ import { NotificationGroup, Notification } from 'notiwind'
 </template>
 
 <style>
-/* [註]：Style 區域保持空白，
-  Notiwind 的樣式主要依賴 tailwind class。
-*/
+.main-color-green-bg {
+  background-color: rgb(0, 112, 131) !important;
+}
+
+.main-color-white-text {
+  color: rgb(248, 249, 250) !important;
+}
+
+.main-color-green-text {
+  color: rgb(0, 112, 131) !important;
+}
 </style>

@@ -192,6 +192,9 @@ nav a:hover {
   margin: 12px auto 8px;
   padding: 10px 12px 8px;
   border-bottom: 2px solid rgb(77, 180, 193);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 整體置中 */
 }
 .page-header h1 {
   margin: 0;
