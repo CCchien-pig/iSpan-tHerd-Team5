@@ -84,7 +84,9 @@
             <div class="row row-2">
               <div class="field">
                 <label class="label">手機號碼 <span class="req">*</span></label>
-<input v-model.trim="phoneNumber" type="tel" class="input" placeholder="0900000000" inputmode="numeric"
+<input type="text" 
+       pattern="[0-9]*" 
+       maxlength="10" v-model.trim="phoneNumber" class="input" placeholder="0900000000" inputmode="numeric"
        @input="touch('phoneNumber')" @blur="touch('phoneNumber')"
        :class="{ 'is-invalid': touched.phoneNumber && phoneError }" />
 <div class="field-error" v-if="touched.phoneNumber && phoneError">{{ phoneError }}</div>
