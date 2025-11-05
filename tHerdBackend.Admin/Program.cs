@@ -115,11 +115,11 @@ namespace tHerdBackend.Admin
             builder.Services.AddSingleton(cloudinary);
 
             // 全站預設需要登入 
-            var mvc = builder.Services.AddControllersWithViews(options => {
-				var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
-				.Build(); options.Filters.Add(new AuthorizeFilter(policy));
-			}).AddApplicationPart(typeof(UiKitRclMarker).Assembly)
-			  .AddApplicationPart(typeof(DashboardController).Assembly);
+   //         var mvc = builder.Services.AddControllersWithViews(options => {
+			//	var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
+			//	.Build(); options.Filters.Add(new AuthorizeFilter(policy));
+			//}).AddApplicationPart(typeof(UiKitRclMarker).Assembly)
+			//  .AddApplicationPart(typeof(DashboardController).Assembly);
 			//----------------------------------------
 
 			//新增Razor Pages 規約，允許特定頁面匿名
