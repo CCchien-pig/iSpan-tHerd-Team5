@@ -16,7 +16,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import http from '@/api/http'          // ✅ 自動附帶 JWT 的 axios
+import http from '@/api/http'
 import Swal from 'sweetalert2'
 import CouponCard from '@/components/modules/mkt/CouponCard.vue'
 
@@ -25,8 +25,9 @@ const auth = useAuthStore()
 const user = computed(() => auth.user)
 const isLogin = computed(() => auth.isAuthenticated)
 
-// ✅ 優惠券列表
+// ✅ 優惠券與會員資料
 const couponList = ref([])
+const userDetail = ref(null)
 
 // ✅ 遊戲紀錄狀態
 const hasGameRecord = ref(false)
@@ -38,13 +39,28 @@ async function loadCoupons() {
     couponList.value = []
     return
   }
-
   try {
-    const { data } = await http.get('/mkt/coupon') // 自動帶 JWT
+    const { data } = await http.get('/mkt/coupon')
     couponList.value = data
-    console.log('💰 優惠券載入成功:', data.map(c => c.couponName))
+    console.log('優惠券載入成功:', data.map(c => c.couponName))
   } catch (err) {
     console.error('[CouponPage] 載入失敗', err)
+  }
+}
+
+// 🚀 載入會員資料（直接呼叫 API，不改其他檔案）
+async function loadUserDetail() {
+  if (!isLogin.value) {
+    userDetail.value = null
+    return
+  }
+  try {
+    const { data } = await http.get('/user/me/detail')
+    userDetail.value = data
+    console.log('會員資料載入成功:', data)
+  } catch (err) {
+    console.warn('載入會員資料失敗（可能未登入）', err)
+    userDetail.value = null
   }
 }
 
@@ -58,26 +74,26 @@ async function checkGameRecord() {
   try {
     const userId = user.value?.userNumberId || user.value?.user_number_id
     if (!userId) {
-      console.warn('⚠️ 無法取得 userNumberId')
+      console.warn('無法取得 userNumberId')
       return
     }
 
     const { data } = await http.get(`/mkt/MktGameRecord/${userId}`)
-    console.log('🎮 遊戲紀錄查詢結果:', data)
+    console.log('遊戲紀錄查詢結果:', data)
 
     if (data?.played === true && data?.record) {
       hasGameRecord.value = true
       lastGameScore.value = data.record.score
       localStorage.setItem('gameScore', data.record.score)
-      console.log('✅ 偵測到今日分數:', data.record.score)
+      console.log('偵測到今日分數:', data.record.score)
     } else {
       hasGameRecord.value = false
       lastGameScore.value = null
       localStorage.removeItem('gameScore')
-      console.log('🚫 尚未玩過遊戲')
+      console.log('尚未玩過遊戲')
     }
   } catch (err) {
-    console.error('🔍 檢查遊戲紀錄失敗', err)
+    console.error('檢查遊戲紀錄失敗', err)
     hasGameRecord.value = false
   }
 }
@@ -85,14 +101,14 @@ async function checkGameRecord() {
 // ✅ 掛載時初始化
 onMounted(() => {
   if (isLogin.value) {
+    loadUserDetail()
     loadCoupons()
     checkGameRecord()
   }
 
-  // ✅ 監聽 localStorage「refreshCoupons」事件（遊戲結束後觸發）
   const onStorageChange = e => {
     if (e.key === 'refreshCoupons' && e.newValue === 'true') {
-      console.log('🎯 偵測到 refreshCoupons，重新載入優惠券')
+      console.log('偵測到 refreshCoupons，重新載入優惠券')
       loadCoupons()
       checkGameRecord()
       localStorage.removeItem('refreshCoupons')
@@ -100,7 +116,6 @@ onMounted(() => {
   }
   window.addEventListener('storage', onStorageChange)
 
-  // ✅ 卸載監聽
   onUnmounted(() => {
     window.removeEventListener('storage', onStorageChange)
   })
@@ -109,34 +124,57 @@ onMounted(() => {
 // ✅ 登入狀態變化時自動刷新
 watch(isLogin, newVal => {
   if (newVal) {
+    loadUserDetail()
     loadCoupons()
     checkGameRecord()
   } else {
     couponList.value = []
     hasGameRecord.value = false
     lastGameScore.value = null
+    userDetail.value = null
   }
 })
 
-// ✅ 過濾顯示優惠券（依遊戲紀錄決定）
+// ✅ 綜合篩選邏輯（遊戲 + 會員等級）
 const filteredCoupons = computed(() => {
   if (!isLogin.value) return []
 
-  // ❌ 未玩過遊戲：不顯示 GAME 類券
-  if (!hasGameRecord.value) {
-    return couponList.value.filter(c => !c.couponCode?.startsWith('GAME'))
+  let list = couponList.value
+
+  // 🔹 會員等級篩選
+  const rankId = userDetail.value?.memberRankId
+  if (rankId === 'MR001') {
+    // 一般會員：篩掉白銀與黃金
+    list = list.filter(c =>
+      !c.couponName?.includes('(白銀)會員分級優惠券') &&
+      !c.couponName?.includes('(黃金)會員分級優惠券')
+    )
+  } else if (rankId === 'MR002') {
+    // 白銀會員：篩掉黃金
+    list = list.filter(c =>
+      !c.couponName?.includes('(黃金)會員分級優惠券')
+    )
+  } else if (rankId === 'MR003') {
+    // 黃金會員：篩掉白銀
+    list = list.filter(c =>
+      !c.couponName?.includes('(白銀)會員分級優惠券')
+    )
   }
 
-  // ✅ 已玩過：顯示對應分數的遊戲券
+  // 🔹 遊戲篩選
+  if (!hasGameRecord.value) {
+    return list.filter(c => !c.couponCode?.startsWith('GAME'))
+  }
+
   const score = lastGameScore.value ?? localStorage.getItem('gameScore')
   if (!score) {
-    return couponList.value.filter(c => !c.couponCode?.startsWith('GAME'))
+    return list.filter(c => !c.couponCode?.startsWith('GAME'))
   }
 
   const normalizedScore = Number(score)
   console.log('🎯 篩選遊戲分數:', normalizedScore)
 
-  return couponList.value.filter(c => {
+  return list.filter(c => {
     if (c.couponCode?.startsWith('GAME')) {
       const name = c.couponName?.replace(/[（）]/g, s => (s === '（' ? '(' : s === '）' ? ')' : s))
       return name?.includes(`翻牌遊戲獎勵(${normalizedScore}分)`)
