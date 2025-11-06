@@ -275,7 +275,9 @@ onMounted(async () => {
     }))
 
   // ② 更新購物車紅點
-  await cartStore.refreshCartCount()
+  setTimeout(async () => {
+    await cartStore.refreshCartCount()
+  }, 100)
 })
 
 // ==================== 點擊分類載入 MegaMenu ====================
@@ -291,17 +293,13 @@ async function goCategory(item) {
 
   // 第二次點相同分類 → 直接導向分類搜尋頁
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
-    const slug = `${item.productTypeCode.toLowerCase()}-${item.productTypeId}`
-
     router.push({
       name: 'product-type-search',
-      params: { slug },
+      params: {
+        productTypeCode: item.productTypeCode,
+        productTypeId: item.productTypeId
+      }
     })
-
-    // 🧩 導頁後順便關掉 MegaMenu
-    activeMenuId.value = null
-    megaMenuData.value = null
-    lastClickedId = null
   }
 }
 

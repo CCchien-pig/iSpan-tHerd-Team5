@@ -200,11 +200,9 @@ export default {
 
     // === 有關鍵字：導向搜尋頁 ===
     if (keyword) {
-      const isSamePage = this.$route.name === 'product-main-search'
-      const isSameQuery = this.$route.query?.q === keyword
-
-      // 若已在搜尋頁，且關鍵字相同 → 不重導
-      if (isSamePage && isSameQuery) return
+      const samePage = this.$route.name === 'product-main-search'
+      const sameQuery = this.$route.query?.q === keyword
+      if (samePage && sameQuery) return
 
       // 若目前在分類頁（product-type-search），改導到搜尋頁
       this.$router.push({
@@ -214,14 +212,13 @@ export default {
       return
     }
 
-    // === 關鍵字被清空 ===
-    // 若目前在搜尋頁 → 清空結果
+    // 在搜尋頁且清空關鍵字 → 清空結果（避免重覆導航）
     if (this.$route.name === 'product-main-search' && this.$route.query?.q) {
       this.$router.push({ name: 'product-main-search' }) // 不帶 q
       return
     }
 
-    // === 沒輸入且不在首頁 → 回首頁 ===
+    // 沒輸入且不在搜尋頁 → 回首頁（若專案沒有 name: 'home'，改成 path: '/'）
     if (this.$route.name !== 'home') {
       this.$router.push({ name: 'home' })
     }
