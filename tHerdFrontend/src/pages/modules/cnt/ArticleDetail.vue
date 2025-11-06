@@ -809,26 +809,25 @@ async function onPurchase() {
   try {
     const pageId = article.value?.pageId || Number(route.params.id);
 
-    // 3) 建立 / 取得訂單（這裡會回 PurchaseSummaryDto）
-    const summary = await cntArticlesApi.createPurchase(pageId);
-    console.log("購買成功", summary);
-    lastPurchase.value = summary; // 要記錄也可以
+    // 3) 建立 / 取得訂單（後端會回 PurchaseSummaryDto）
+    const summary = await cntArticlesApi.createPurchase(pageId, "LINEPAY");
+    console.log("建立訂單成功", summary);
+    lastPurchase.value = summary;
 
-    // 4) 期末展示用：直接「模擬付款」 + 解鎖文章
-    //    注意大小寫：後端 JSON 可能是 purchaseId 或 PurchaseId
-    const purchaseId = summary.purchaseId ?? summary.PurchaseId;
-    if (!purchaseId) {
-      console.error("找不到 purchaseId，無法 mockPay", summary);
-      alert("訂單建立成功，但無法確認訂單編號，請稍後再試。");
+    // 4) 取出付款網址（不同命名都試一下）
+    const paymentUrl =
+      summary.paymentUrl ??
+      summary.PaymentUrl ??
+      summary.linePayPaymentUrl ??
+      null;
+
+    if (!paymentUrl) {
+      alert("訂單建立成功，但後端沒有回付款連結，請稍後再試。");
       return;
     }
 
-    await cntArticlesApi.mockPay(purchaseId);
-
-    alert("付款完成，文章已解鎖！也可以到「我買過的文章」查看這筆訂單。");
-
-    // 5) 重新載入文章，讓 canViewFullContent / blocks 跟後端同步
-    await loadPage();
+    // 5) 導去 LINE Pay 付款頁
+    window.location.href = paymentUrl;
   } catch (err) {
     console.error("購買失敗", err?.response?.status, err);
     if (err?.response?.status === 401) {
@@ -841,7 +840,6 @@ async function onPurchase() {
     isPurchasing.value = false;
   }
 }
-
 
 // utils
 function wireToCamel(x) {

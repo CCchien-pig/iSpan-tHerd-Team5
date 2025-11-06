@@ -8,9 +8,8 @@ class CntArticlesApi {
     async createPurchase(pageId, paymentMethod = 'LINEPAY') {
         const { data } = await http.post(
             `${this.basePath}/articles/${pageId}/purchase`,
-            { paymentMethod }
+            { paymentMethod },
         )
-
         // 後端直接回 PurchaseSummaryDto，所以 data 就是訂單摘要
         return data
     }

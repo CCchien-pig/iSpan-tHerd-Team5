@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer; // JwtBearerDefaults
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using tHerdBackend.Core.DTOs.CNT;
 using tHerdBackend.Core.Interfaces.CNT;
@@ -45,15 +44,66 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 
 		[HttpPost("purchases/{id:int}/mock-pay")]
 		#if DEBUG
-		[AllowAnonymous]   // 或保留 [Authorize] 都可以，開發用而已
+		[AllowAnonymous]   // 開發用
 		#endif
 		public async Task<IActionResult> MockPay([FromRoute] int id, CancellationToken ct)
 		{
-			await _svc.MockPayAsync(id, ct);  // 你在 Service 寫一個簡單方法呼叫 UpdatePaymentAsync
+			await _svc.MockPayAsync(id, ct: ct);   // 👈 ct 用參數名稱帶
 			return NoContent();
 		}
 
+		// LINE Pay 付款成功後的 callback
+		[HttpGet("payments/linepay/confirm")]
+		[AllowAnonymous]  // ⭐ 很重要：LINE Pay 回呼不會帶你的 JWT，所以一定要 AllowAnonymous
+		public async Task<IActionResult> LinePayConfirm(
+			[FromQuery] int purchaseId,
+			[FromQuery] string transactionId,
+			[FromQuery] string orderId,
+			CancellationToken ct)
+		{
+			// 1) 把這筆訂單標記為已付款，並寫入交易編號
+			await _svc.MockPayAsync(purchaseId, transactionId, ct);
 
+			// 2) 查出這筆訂單對應哪一篇文章
+			var purchase = await _db.CntPurchases
+				.AsNoTracking()
+				.FirstOrDefaultAsync(x => x.PurchaseId == purchaseId, ct);
+
+			if (purchase == null)
+			{
+				// 找不到訂單，就顯示一段簡單訊息（不想 Redirect 也可以）
+				return Content("付款完成，但找不到對應訂單，請回會員中心確認。");
+			}
+
+			// 3) Redirect 回前端文章頁（期末先寫死 localhost:5173 就好）
+			var frontBaseUrl = "http://localhost:5173";
+			var redirectUrl = $"{frontBaseUrl}/cnt/article/{purchase.PageId}?paid=1";
+
+			return Redirect(redirectUrl);
+		}
+		[HttpGet("payments/linepay/cancel")]
+		[AllowAnonymous]
+		public async Task<IActionResult> LinePayCancel(
+			[FromQuery] int purchaseId,
+			[FromQuery] string transactionId,
+			[FromQuery] string orderId,
+			CancellationToken ct)
+				{
+					// 這裡看需求，要不要把訂單標記成 CANCELLED
+					var purchase = await _db.CntPurchases
+						.AsNoTracking()
+						.FirstOrDefaultAsync(x => x.PurchaseId == purchaseId, ct);
+
+					var frontBaseUrl = "http://localhost:5173";
+
+					if (purchase == null)
+					{
+						return Redirect($"{frontBaseUrl}/cnt/articles?cancel=1");
+					}
+
+					var redirectUrl = $"{frontBaseUrl}/cnt/article/{purchase.PageId}?cancel=1";
+					return Redirect(redirectUrl);
+				}
 
 		// 會員中心：我購買的文章
 		[HttpGet("member/purchased-articles")]

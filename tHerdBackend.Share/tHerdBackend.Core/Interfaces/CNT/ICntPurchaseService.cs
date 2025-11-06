@@ -15,9 +15,10 @@ namespace tHerdBackend.Core.Interfaces.CNT
 			int userNumberId,
 			CancellationToken ct = default);
 
-		/// <summary>開發用：把某筆購買紀錄標記為已付款</summary>
+		/// <summary>把某筆購買紀錄標記為已付款</summary>
 		Task MockPayAsync(
 			int purchaseId,
+			string gatewayTransactionId = "MOCK",
 			CancellationToken ct = default);
 	}
 }
