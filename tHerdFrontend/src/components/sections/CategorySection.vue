@@ -32,7 +32,7 @@
             <a
               href="#"
               class="btn btn-outline-success"
-              @click="handleCategoryClick(category)"
+              @click.prevent="handleCategoryClick(category)"
             >
               瀏覽產品
             </a>
@@ -43,46 +43,31 @@
   </section>
 </template>
 
-<script>
+<script setup>
+import { useRouter } from 'vue-router'
 /**
  * CategorySection.vue 組件配置
  * 功能：可重用的產品分類展示組件
  * 特色：支持動態分類數據、卡片式布局、交互事件
  */
-export default {
-  name: 'CategorySection', // 組件名稱
+const props = defineProps({
+  title: { type: String, default: '熱門分類' },
+  categories: { type: Array, required: true, default: () => [] },
+})
 
-  /**
-   * Props定義 - 組件的可配置屬性
-   */
-  props: {
-    // 區塊標題
-    title: {
-      type: String,
-      default: '熱門分類',
-    },
-    // 分類數據數組
-    categories: {
-      type: Array,
-      required: true, // 必須提供分類數據
-      default: () => [], // 默認為空數組
-    },
-  },
+const emit = defineEmits(['category-click'])
+const router = useRouter()
 
-  /**
-   * 方法定義 - 處理用戶交互事件
-   */
-  methods: {
-    /**
-     * 處理分類點擊事件
-     * @param {Object} category - 被點擊的分類對象
-     * 發送category-click事件給父組件，傳遞分類信息
-     */
-    handleCategoryClick(category) {
-      this.$emit('category-click', category);
-    },
-  },
-};
+function handleCategoryClick(category) {
+  // 觸發父層事件（如果有需要監聽）
+  emit('category-click', category)
+
+  // 🚀 導向到商品搜尋頁（帶上關鍵字）
+  router.push({
+    name: 'product-main-search',
+    query: { q: category.name },
+  })
+}
 </script>
 
 <style scoped>

@@ -1,50 +1,53 @@
-<!--
-  ProductBreadcrumb.vue - 產品麵包屑組件
-  功能：顯示產品頁面的導航路徑，包含首頁、分類、品牌、產品詳情
-  特色：動態路徑生成、可配置麵包屑項目
-  用途：用於產品詳情頁面的導航路徑顯示
--->
 <template>
-  <!-- 使用通用麵包屑組件，傳入產品相關的導航路徑 -->
   <BreadcrumbNav :breadcrumbs="productBreadcrumbs" />
 </template>
 
 <script>
-// 導入通用麵包屑導航組件
-import BreadcrumbNav from '@/components/ui/BreadcrumbNav.vue';
+import BreadcrumbNav from '@/components/ui/BreadcrumbNav.vue'
 
-/**
- * ProductBreadcrumb.vue 組件配置
- * 功能：產品專用的麵包屑導航組件
- * 特色：預設產品導航路徑、可擴展配置
- */
 export default {
-  name: 'ProductBreadcrumb', // 組件名稱
-
-  /**
-   * 子組件註冊
-   */
-  components: {
-    BreadcrumbNav,
+  name: 'ProductBreadcrumb',
+  components: { BreadcrumbNav },
+  props: {
+    product: { type: Object, required: true },
   },
-
-  /**
-   * 計算屬性 - 生成產品麵包屑導航路徑
-   */
   computed: {
-    /**
-     * 產品麵包屑導航路徑
-     * 包含從首頁到產品詳情的完整路徑
-     * TODO: 可根據實際路由動態生成
-     */
     productBreadcrumbs() {
-      return [
-        { name: '首頁', path: '/' },
-        { name: '品牌 A-Z', path: '/brands' },
-        { name: 'Life Extension', path: '/brands/life-extension' },
-        { name: '產品詳情', path: null }, // 當前頁面，無需鏈接
-      ];
+      const crumbs = [{ name: '首頁', path: '/' }]
+
+      // 🔹 分類階層：生成可點擊路由
+      if (this.product?.categoryPath) {
+        const categories = this.product.categoryPath.split(' > ')
+        let basePath = '/products' // 可依你實際路由修改
+        categories.forEach((cat, i) => {
+          // 轉成 SEO 友好的路徑，例如 /products/vitamins/123
+          const slug = encodeURIComponent(cat.toLowerCase().replace(/\s+/g, '-'))
+          const typeId = this.product.categoryIds?.[i] // ← 如果後端能提供對應的分類ID會更好
+          crumbs.push({
+            name: cat,
+            path: i < categories.length - 1
+              ? `${basePath}/${slug}${typeId ? '/' + typeId : ''}`
+              : null,
+          })
+        })
+      }
+
+      // 🔹 品牌階層
+      if (this.product?.brandName) {
+        crumbs.push({
+          name: this.product.brandName,
+          path: `/brands/${this.product.brandCode || this.product.brandName}`,
+        })
+      }
+
+      // 🔹 最後一層（商品名稱，無連結）
+      crumbs.push({
+        name: this.product?.productName || '產品詳情',
+        path: null,
+      })
+
+      return crumbs
     },
   },
-};
+}
 </script>
