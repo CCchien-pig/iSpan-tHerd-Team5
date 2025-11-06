@@ -7,9 +7,12 @@
 版面：
 1) BrandBanner：顯示 Banner。
 2) BrandButtons：顯示分類按鈕（背景取主色；hover 反轉）。
-3) BrandMoreCard：了解更多卡片（左文群組、右圖；無圖時左側滿版）。
+
+-- 了解更多展開:(3/4 皆無時不顯示)
+3) BrandInfo：產品資訊框
+4) BrandMoreCard：卡片（左文群組、右圖；無圖時左側滿版）。
 ---
-4) ProductList：產品清單卡片
+5) ProductList：產品清單卡片
 -->
 
 <template>
@@ -31,9 +34,9 @@
         @tap="onFilter"
       />
 
-      <!-- 了解更多（有 Accordion 才顯示）-->
+      <!-- 了解更多（按鈕及折疊） -->
       <!-- 未展開：分隔線 + 中央按鈕 -->
-      <div v-if="vm.accordions?.length && !moreOpen" class="my-4">
+      <div v-if="(vm.accordions?.length || vm.brandInfoAvailable) && !moreOpen" class="my-4">
         <div class="split-line anchor-to-top" ref="moreAnchor">
           <button
             class="btn btn-sm"
@@ -45,18 +48,26 @@
         </div>
       </div>
 
-      <!-- 展開卡片 -->
-      <BrandMoreCard
-        v-if="vm.accordions?.length && moreOpen"
-        class="mb-2 pt-3"
-        :groups="vm.accordions"
-        :images-right="imagesRight"
-        :accent-rgb="vm.mainColor"
-        :alt-text="vm.brandName"
-      />
+      <!-- 展開卡片區域 -->
+      <div v-show="moreOpen && (vm.accordions?.length || vm.brandInfoAvailable)" class="mb-2 pt-3">
+        <BrandInfo
+          v-if="vm.brandId"
+          :brand-id="vm.brandId"
+          class="mb-3"
+          v-model:brandInfoAvailable="vm.brandInfoAvailable"
+        />
+
+        <BrandMoreCard
+          v-if="vm.accordions?.length"
+          :groups="vm.accordions"
+          :images-right="imagesRight"
+          :accent-rgb="vm.mainColor"
+          :alt-text="vm.brandName"
+        />
+      </div>
 
       <!-- 展開：下方分隔線 + 中央關閉按鈕 -->
-      <div v-if="vm.accordions?.length && moreOpen" class="my-3">
+      <div v-if="moreOpen && (vm.accordions?.length || vm.brandInfoAvailable)" class="my-3">
         <div class="split-line">
           <button
             class="btn btn-sm"
@@ -94,6 +105,8 @@ import { Vibrant } from 'node-vibrant/browser'
 // 子元件
 import BrandBanner from '@/components/modules/sup/brands/BrandBanner.vue'
 import BrandButtons from '@/components/modules/sup/brands/BrandButtons.vue'
+import BrandInfo from '@/components/modules/sup/brands/BrandInfo.vue'
+
 import BrandMoreCard from '@/components/modules/sup/brands/BrandMoreCard.vue'
 import ProductList from '@/components/modules/prod/list/ProductList.vue'
 
@@ -114,6 +127,7 @@ const vm = ref({
   buttons: [],
   accordions: [],
   mainColor: { ...DEFAULT_RGB },
+  brandInfoAvailable: false, // [新增] 明確初始化
 })
 
 // 產品列表狀態與分頁
@@ -157,6 +171,7 @@ function resetStateForNewPage() {
     buttons: [],
     accordions: [],
     mainColor: { ...DEFAULT_RGB },
+    brandInfoAvailable: false, // [新增] 重置時也還原為 false
   }
   products.value = []
   totalCount.value = 0

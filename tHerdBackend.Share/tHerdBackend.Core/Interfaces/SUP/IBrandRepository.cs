@@ -34,6 +34,8 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		Task<List<BrandButtonDto>> GetBrandButtonsAsync(int brandId, CancellationToken ct);
 		Task<List<(string contentKey, BrandAccordionItemDto item)>> GetBrandAccordionRawAsync(int brandId, CancellationToken ct);
 
+		Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId);
+
 		#endregion
 
 	}

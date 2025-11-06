@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
@@ -109,6 +110,12 @@ public class BrandService : IBrandService
 			// OrderedBlocks = new() { "Banner", "Buttons", "Accordion" } // 未實作 LayoutConfig 前的預設
 		};
 	}
+
+	public Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId)
+	{
+		return _repo.GetBrandOverviewAsync(brandId);
+	}
+
 
 	#endregion
 

@@ -559,6 +559,33 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 
+		/// <summary>
+		/// 取得品牌綜合資訊（商品數、被收藏數、建立時間、供應商名稱）
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <returns>品牌資訊</returns>
+		[AllowAnonymous]
+		[HttpGet("{brandId}/overview")]
+		public async Task<IActionResult> GetBrandOverviewAsync(int brandId)
+		{
+			try
+			{
+				var dto = await _service.GetBrandOverviewAsync(brandId);
+				if (dto == null)
+				{
+					return NotFound(new { success = false, message = "找不到該品牌" });
+				}
+				return Ok(ApiResponse<object>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, $"GetBrandOverviewAsync error. brandId={brandId}");
+				return BadRequest(ApiResponse<object>.Fail("系統錯誤，請聯絡管理員"));
+			}
+		}
+
+
+
 		#endregion
 
 	}
