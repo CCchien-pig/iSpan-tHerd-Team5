@@ -156,19 +156,20 @@
             </h3>
           </div>
 
-          <!-- 物流選擇 -->
+          <!-- 🔥 物流選擇（對應實際資料表） -->
           <div class="mt-4">
             <label class="fw-bold mb-2">配送方式</label>
             <select 
               class="form-select mb-3" 
-              v-model="selectedLogisticsId"
+              v-model.number="selectedLogisticsId"
               @change="calculateShippingFee"
               :disabled="!canCheckout"
             >
-              <option :value="1000">宅配（常溫）</option>
-              <option :value="1001">宅配（冷凍）</option>
-              <option :value="1002">宅配（冷藏）</option>
-              <option :value="1003">超商取貨</option>
+              <option :value="1000">宅配到府（順豐速運）</option>
+              <option :value="1001">低溫宅配（黑貓宅急便）</option>
+              <option :value="1002">超商店到店（7-ELEVEN）</option>
+              <option :value="1003">i郵箱（中華郵政）</option>
+              <option :value="1004">掛號包裹（中華郵政）</option>
             </select>
           </div>
 
@@ -258,7 +259,7 @@ export default {
       canCheckout: true,
       invalidCount: 0,
       shippingFee: 0,
-      selectedLogisticsId: 1000
+      selectedLogisticsId: 1000  // 🔥 預設：宅配到府
     }
   },
   computed: {
@@ -355,11 +356,7 @@ export default {
           return
         }
 
-        // 🔥 修正：從 auth.user.userNumberId 取得
         const userNumberId = auth.user?.userNumberId || auth.userNumberId
-
-        console.log('完整 auth:', auth)
-        console.log('userNumberId:', userNumberId)
 
         if (!userNumberId || userNumberId <= 0) {
           alert('❌ 無法取得會員資訊，請重新登入')
@@ -372,9 +369,6 @@ export default {
           subtotal: this.subtotal,
           couponId: this.couponCode
         }
-
-        console.log('=== 發送到 API 的 payload ===')
-        console.log(payload)
 
         const res = await http.post('/promotion/calculate', payload)
 
@@ -394,7 +388,6 @@ export default {
       }
     },
 
-    // 🔥 重新驗證優惠券（當購物車改變時）
     async revalidatePromotion() {
       if (this.couponCode && this.promotionResult) {
         await this.calculatePromotion()
@@ -420,7 +413,6 @@ export default {
       try {
         await http.put(`/ord/cart/update/${item.cartItemId}`, { qty: newQty })
         await this.loadCart()
-        // 🔥 數量改變後重新驗證優惠券
         await this.revalidatePromotion()
       } catch (err) {
         console.error('更新失敗:', err)
@@ -449,11 +441,9 @@ export default {
         await http.delete(`/ord/cart/remove/${i.cartItemId}`)
         await this.loadCart()
         
-        // 🔥 刪除商品後重新驗證優惠券
         if (this.couponCode && this.promotionResult) {
           await this.revalidatePromotion()
         } else {
-          // 如果沒有優惠券，清空結果
           this.promotionResult = null
         }
         
@@ -482,6 +472,8 @@ export default {
       this.isCheckingOut = true
       try {
         const validItems = this.cartItems.filter(i => i.isValid)
+        
+        // 🔥 確保 logisticsId 是數字
         const payload = {
           cartItems: validItems.map(i => ({
             productId: i.productId,
@@ -493,8 +485,15 @@ export default {
           receiverName: this.receiverName,
           receiverPhone: this.receiverPhone,
           receiverAddress: this.receiverAddress,
-          couponCode: this.couponCode || null
+          couponCode: this.couponCode || null,
+          logisticsId: Number(this.selectedLogisticsId),  // 🔥 確保是數字
+          shippingFee: Number(this.shippingFee)           // 🔥 確保是數字
         }
+
+        console.log('=== 結帳 Payload ===')
+        console.log('logisticsId:', payload.logisticsId, typeof payload.logisticsId)
+        console.log('shippingFee:', payload.shippingFee, typeof payload.shippingFee)
+        console.log('完整 payload:', JSON.stringify(payload, null, 2))
 
         const res = await http.post('/ord/cart/checkout', payload)
 
