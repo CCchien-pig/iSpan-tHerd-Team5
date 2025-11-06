@@ -102,7 +102,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 				// 建議從 Config 讀取 Host，這裡先寫死範例
 				// 如果您用 ngrok，請換成 ngrok 的 https 網址
 				//var callbackUrl = $"{Request.Scheme}://{Request.Host}/api/sup/logistics/map-reply";
-				var callbackUrl = "https://nonforming-morbifically-heriberto.ngrok-free.dev/api/sup/logistics/map-reply";
+				var callbackUrl = "https://hoarier-jame-intersidereal.ngrok-free.dev/api/sup/logistics/map-reply";
 				
 				var html = _ecpayLogisticsService.CreateMapForm(
 					request.LogisticsSubType,

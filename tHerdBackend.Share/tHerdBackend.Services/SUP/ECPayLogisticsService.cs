@@ -1,25 +1,30 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using tHerdBackend.Core.DTOs.ORD; // 假設共用 Config DTO
+using tHerdBackend.Core.DTOs.SUP; // 確保引用到新的 Logistics DTO namespace
+using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
 
 namespace tHerdBackend.Services.SUP
 {
 	public class ECPayLogisticsService : IECPayLogisticsService
 	{
-		private readonly ECPayConfigDTO _config;
+		// 1. 正確的設定檔型別 (物流專用)
+		private readonly ECPayLogisticsConfig _config;
+		// 2. 正確的 Logger 型別
 		private readonly ILogger<ECPayLogisticsService> _logger;
-
+		
 		// 物流 API 介接網址 (測試環境)
 		// 正式環境請改為: https://logistics.ecpay.com.tw/Express/map
-		private const string MAP_URL_STAGE = "https://logistics-stage.ecpay.com.tw/Express/map";
 
+		private const string MAP_URL_STAGE = "https://logistics-stage.ecpay.com.tw/Express/map";
 		public ECPayLogisticsService(
-			IOptions<ECPayConfigDTO> config,
-			ILogger<ECPayLogisticsService> logger)
+			IOptions<ECPayLogisticsConfig> config, // 👈 注入物流設定
+			ILogger<ECPayLogisticsService> logger)  // 👈 注入 Logger
 		{
 			_config = config.Value;
 			_logger = logger;
