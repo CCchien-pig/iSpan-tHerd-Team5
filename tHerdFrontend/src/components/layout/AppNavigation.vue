@@ -228,10 +228,10 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
 import MegaMenu from '@/components/modules/prod/menu/MegaMenu.vue'
-
-const router = useRouter()
+import { useCartStore } from '@/composables/modules/prod/cartStore'
 
 // ==================== 狀態變數 ====================
+const router = useRouter()
 const showMobileMenu = ref(false)
 const showBrands = ref(false)
 const showBrandsInMobile = ref(false)
@@ -240,6 +240,7 @@ const activeMenuId = ref(null)
 const megaMenuData = ref(null)
 const isLoadingMenu = ref(false)
 const loadedMenus = ref({})
+const cartStore = useCartStore()
 
 const navigationItemsWithIcon = [
         { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png', productTypeId: 2785 },
@@ -254,7 +255,7 @@ const navigationItemsWithIcon = [
 
 // 品牌A-Z後的固定連結
 const staticMenus = [
-  { name: '健康主題', path: '/health-topics' },
+  //{ name: '健康主題', path: '/health-topics' },
   { name: '特惠', path: '/specials' },
   { name: '暢銷', path: '/bestsellers' },
   { name: '試用', path: '/trials' },
@@ -263,19 +264,26 @@ const staticMenus = [
 ]
 
 // === 初始化 ===
-onMounted(() => {
+onMounted(async () => {
+  // ① 導覽初始化
   productMenus.value = navigationItemsWithIcon
     .filter(i => i.type === 'pr')
     .map((item, index) => ({
       ...item,
       id: `menu-${index + 1}`,
-      productTypeCode: item.path.replace('/', '') // 加上 code
+      productTypeCode: item.path.replace('/', '')
     }))
+
+  // ② 更新購物車紅點
+  setTimeout(async () => {
+    await cartStore.refreshCartCount()
+  }, 100)
 })
 
 // ==================== 點擊分類載入 MegaMenu ====================
 let lastClickedId = null
 async function goCategory(item) {
+  // 第一次點：打開 MegaMenu
   if (activeMenuId.value !== item.id) {
     activeMenuId.value = item.id
     await loadMegaMenuByCategory(item)
@@ -283,7 +291,7 @@ async function goCategory(item) {
     return
   }
 
-  // 第二次點相同分類 → 直接跳轉到分類搜尋頁
+  // 第二次點相同分類 → 直接導向分類搜尋頁
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
     router.push({
       name: 'product-type-search',

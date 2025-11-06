@@ -57,11 +57,11 @@ class productsApi {
         return result
       } else {
         console.warn('⚠️ 購物車摘要查詢失敗:', res.message)
-        return { ItemCount: 0 }
+        return { TotalQty: 0 }
       }
     } catch (err) {
       console.error('🚨 購物車摘要 API 錯誤:', err)
-      return { ItemCount: 0 }
+      return { TotalQty: 0 }
     }
   }
 
