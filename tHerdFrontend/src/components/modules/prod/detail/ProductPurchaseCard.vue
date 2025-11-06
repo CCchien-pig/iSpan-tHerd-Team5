@@ -11,6 +11,9 @@
           <h4 class="text-danger fw-bold mb-0">
             NT${{ formatPrice(currentPrice) }}
           </h4>
+          <span v-if="unitText" class="small text-muted mt-1">
+             / {{ unitText }}
+          </span>
 
           <!-- 折扣徽章 -->
           <span v-if="hasDiscount" class="badge bg-danger small">
@@ -25,7 +28,7 @@
           </span>
 
           <!-- 單價提示 -->
-          <span v-if="unitText" class="small text-muted mt-1">
+          <span v-if="unitText && hasDiscount" class="small text-muted mt-1">
              / {{ unitText }}
           </span>
         </div>
@@ -71,6 +74,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 
+// 接收父層傳入的 props
 const props = defineProps({
   currentPrice: Number,
   originalPrice: Number,
@@ -84,10 +88,17 @@ const props = defineProps({
     type: String,
     default: '', // 例如「瓶」、「包」、「盒」
   },
+  // 新增：接收父層傳入的已選規格（selectedSpec / selectedSku）
+  selectedSku: {
+    type: Object,
+    default: null
+  }
 })
 
+// 宣告 emits
 const emit = defineEmits(['add-to-cart', 'toggle-favorite', 'toggle-like', 'update:quantity'])
 
+// 數量內部綁定
 const internalQuantity = ref(props.quantity)
 
 watch(
@@ -115,15 +126,19 @@ const decreaseQuantity = () => {
   }
 }
 
+
 const updateQuantity = () => {
   if (internalQuantity.value < 1) internalQuantity.value = 1
   emit('update:quantity', internalQuantity.value)
 }
 
+// ✅ 正確 emit
 const handleAddToCart = () => {
-  emit('add-to-cart', {
-    quantity: internalQuantity.value,
-  })
+  if (!props.selectedSku) {
+    console.warn('請選擇規格')
+    return
+  }
+  emit('add-to-cart', props.selectedSku, internalQuantity.value)
 }
 </script>
 
