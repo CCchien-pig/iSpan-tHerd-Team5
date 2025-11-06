@@ -5,5 +5,6 @@ namespace tHerdBackend.Core.Interfaces.PROD
 	public interface IShoppingCartRepository
     {
         Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default);
+        Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default);
     }
 }

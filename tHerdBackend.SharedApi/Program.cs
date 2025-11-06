@@ -20,13 +20,16 @@ using tHerdBackend.Core.DTOs.ORD;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
+using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.SYS;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
+using tHerdBackend.Infra.Repository.PROD;
 using tHerdBackend.Infra.Repository.SYS;
 using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
+using tHerdBackend.Services.ORD;
 using tHerdBackend.Services.USER;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
@@ -34,6 +37,9 @@ using tHerdBackend.SharedApi.Infrastructure.Config;
 using tHerdBackend.SharedApi.Infrastructure.Email.EmailSender.cs;
 using tHerdBackend.SharedApi.Infrastructure.Referral;
 using tHerdBackend.SharedApi.Infrastructure.Services;
+using SharedECPayService = tHerdBackend.SharedApi.Infrastructure.Services.ECPayService;
+
+
 
 
 namespace tHerdBackend.SharedApi
@@ -274,8 +280,30 @@ namespace tHerdBackend.SharedApi
 				cloudinaryConfig.ApiSecret
 			);
 
-			// 註冊 Cloudinary 為 Singleton
-			var cloudinary = new Cloudinary(account);
+            // === 註冊 Session ===
+            builder.Services.AddDistributedMemoryCache();
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromDays(7);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
+            // === 註冊 ShoppingCartRepository ===
+            builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
+
+
+            // === 讀取綠界設定值 ===
+            builder.Services.Configure<ECPaySettings>(
+            builder.Configuration.GetSection("ECPay"));
+            builder.Services.AddScoped<SharedECPayService>();
+            //builder.Services.AddScoped<ECPayService>();
+
+            // === 訂單計算服務 ===
+            builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
+
+            // 註冊 Cloudinary 為 Singleton
+            var cloudinary = new Cloudinary(account);
 			builder.Services.AddSingleton(cloudinary);
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
@@ -321,7 +349,12 @@ namespace tHerdBackend.SharedApi
             });
 
             var app = builder.Build();
-			app.UseMiddleware<ProblemDetailsExceptionMiddleware>();
+
+
+            // === 啟用 Session ===
+            app.UseSession();
+			
+            app.UseMiddleware<ProblemDetailsExceptionMiddleware>();
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
@@ -352,11 +385,6 @@ namespace tHerdBackend.SharedApi
 			app.MapControllers();
 
             app.Run();
-
-            // === 讀取綠界設定值 ===
-            builder.Services.Configure<ECPaySettings>(
-		    builder.Configuration.GetSection("ECPay"));
-            builder.Services.AddScoped<ECPayService>();
 
         }
     }

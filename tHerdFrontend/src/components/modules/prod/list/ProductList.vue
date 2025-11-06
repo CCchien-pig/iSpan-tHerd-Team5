@@ -22,7 +22,7 @@
       </div>
 
       <!-- 若沒有資料顯示提示 -->
-      <div v-else class="text-center text-muted py-5 fs-5">找不到符合的商品</div>
+      <div v-else class="text-center text-muted py-5 fs-5">查無相關商品</div>
 
       <!-- 分頁按鈕 -->
       <nav v-if="totalPages > 1" class="mt-5">

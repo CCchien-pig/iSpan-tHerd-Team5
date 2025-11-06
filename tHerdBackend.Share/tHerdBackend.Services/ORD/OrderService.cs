@@ -1,5 +1,5 @@
-﻿// tHerdBackend.Services/ORD/OrderService.cs
-using tHerdBackend.Infra.Models;
+﻿using tHerdBackend.Infra.Models;
+using tHerdBackend.Core.DTOs.ORD;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +8,7 @@ namespace tHerdBackend.Services.ORD
     public interface IOrderService
     {
         Task<OrderResult> CreateOrderAsync(OrderCreateDto dto);
-        Task<OrderResult> CallSupSaleStockAsync(List<OrderItemDto> items, string orderNo);
+        Task<OrderResult> CallSupSaleStockAsync(List<OrderDetailDto> items, string orderNo);
     }
 
     public class OrderService : IOrderService
@@ -42,7 +42,6 @@ namespace tHerdBackend.Services.ORD
                     PaymentStatus = "paid",
                     ShippingStatusId = "unshipped",
                     Subtotal = dto.Subtotal,
-                    // ... 其他欄位
                     CreatedDate = DateTime.Now
                 };
 
@@ -70,7 +69,7 @@ namespace tHerdBackend.Services.ORD
 
                 // 呼叫 SUP 扣庫存
                 var stockResult = await CallSupSaleStockAsync(
-                    orderItems.Select(x => new OrderItemDto
+                    orderItems.Select(x => new OrderDetailDto
                     {
                         OrderItemId = x.OrderItemId,
                         SkuId = x.SkuId,
@@ -110,7 +109,7 @@ namespace tHerdBackend.Services.ORD
             }
         }
 
-        public async Task<OrderResult> CallSupSaleStockAsync(List<OrderItemDto> items, string orderNo)
+        public async Task<OrderResult> CallSupSaleStockAsync(List<OrderDetailDto> items, string orderNo)
         {
             try
             {
@@ -197,36 +196,5 @@ namespace tHerdBackend.Services.ORD
 
             return $"{datePrefix}{nextNumber:D7}";
         }
-    }
-
-    // DTO
-    public class OrderCreateDto
-    {
-        public int UserNumberId { get; set; }
-        public decimal Subtotal { get; set; }
-        public List<OrderItemDto> Items { get; set; }
-    }
-
-    public class OrderItemDto
-    {
-        public int OrderItemId { get; set; }
-        public int ProductId { get; set; }
-        public int SkuId { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-    }
-
-    public class OrderResult
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; }
-        public string OrderNo { get; set; }
-        public int OrderId { get; set; }
-    }
-
-    public class SupApiResult
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; }
     }
 }

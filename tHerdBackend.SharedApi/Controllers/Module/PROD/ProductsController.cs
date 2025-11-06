@@ -110,11 +110,26 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
                 if (cartId <= 0)
                     return NotFound(ApiResponse<string>.Fail("找不到商品或加入失敗"));
 
-                return Ok(ApiResponse<object>.Ok(new
-                {
-                    Message = "商品已成功加入購物車",
-                    CartId = cartId
-                }));
+                return Ok(ApiResponse<int>.Ok(cartId, "商品已成功加入購物車"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 取得購物車即時數量
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("get-summary-cart")]
+        public async Task<IActionResult> GetCartSummaryAsync([FromQuery] int? userNumberId, [FromQuery] string? sessionId, CancellationToken ct = default)
+        {
+            try
+            {
+                var result = await _service.GetCartSummaryAsync(userNumberId, sessionId, ct);
+
+                return Ok(ApiResponse<dynamic>.Ok(result));
             }
             catch (Exception ex)
             {

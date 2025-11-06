@@ -11,5 +11,6 @@ namespace tHerdBackend.Core.Interfaces.PROD
 
         Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);
         Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default);
+        Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default);
     }
 }
