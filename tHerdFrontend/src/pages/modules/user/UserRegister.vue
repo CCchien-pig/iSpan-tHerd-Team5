@@ -170,6 +170,17 @@
             <li>快速結帳｜多元支付</li>
             <li>訂單追蹤｜即時客服</li>
           </ul>
+          <!-- 一鍵註冊 CTA -->
+<div class="promo-cta">
+  <button
+    class="btn btn-primary w-100"
+    :disabled="busy"
+    @click="quickRegister"
+  >
+    一鍵註冊（測試）
+  </button>
+  <small class="muted">將自動填入測試資料並送出</small>
+</div>
           <div class="promo-badge">
             <div class="stars" aria-label="5 星評價">★★★★★</div>
             <div class="badge-text">超過 100,000 則好評</div>
@@ -181,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,nextTick  } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
 
@@ -337,6 +348,27 @@ async function resendConfirmEmail() {
 
 function goLogin() {
   router.replace({ name: 'userlogin', query: { email: email.value } })
+}
+
+// ✅ 自動填入你指定的註冊資料
+function quickFillRegister() {
+  lastName.value = '測試'
+  firstName.value = '人員10'
+  email.value = '126130@g.nccu.edu.tw'
+  password.value = 'iSpan0919~'
+  phoneNumber.value = '0900000007'
+  usedReferralCode.value = 'REF-C68D52B4'
+  gender.value = gender.value || '男' // 若沒選就維持預設男
+
+  // 讓所有欄位呈現 touched 狀態，立即顯示驗證結果
+  Object.keys(touched.value).forEach(k => (touched.value[k] = true))
+}
+
+// ✅ 一鍵註冊：先填、再送出（沿用你的 doRegister 驗證與 API）
+async function quickRegister() {
+  quickFillRegister()
+  await nextTick() // 等待 v-model 同步、computed 驗證更新
+  // await doRegister()
 }
 </script>
 
