@@ -39,27 +39,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLoading } from "@/composables/useLoading";
 import ProductsApi from "@/api/modules/prod/ProductsApi";
-//import ProductCard from "@/components/modules/prod/card/ProductCard.vue";
 import ProductList from '@/components/modules/prod/list/ProductList.vue';
 
 const route = useRoute()
 const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
-
-// const keyword = ref("")
-// const products = ref([
-  // { id: 1, name: "維他命C 膠囊", price: 450, image: "https://via.placeholder.com/300x200?text=Vitamin+C" },
-  // { id: 2, name: "護手霜", price: 320, image: "https://via.placeholder.com/300x200?text=Hand+Cream" },
-  // { id: 3, name: "洗衣精", price: 199, image: "https://via.placeholder.com/300x200?text=Detergent" }
-// ])
+const searchKeyword = computed(() => route.query.q || '')
 const error = ref(null)
 
 // 🔸 狀態變數
-const keyword = ref('')
+const keyword = ref(route.query.q || '')
 const products = ref([])
 const totalCount = ref(0)
 const pageIndex = ref(1)
@@ -125,6 +118,15 @@ const searchProducts = async (page = 1) => {
   }
 }
 
+// 監聽網址 query 變化時，自動重新搜尋
+watch(
+  () => route.query.q,
+  (newVal) => {
+    keyword.value = newVal || ''
+    searchProducts(1)
+  },
+  { immediate: true }
+)
 
 // 點擊商品跳轉
 const goToProduct = (productId) => {

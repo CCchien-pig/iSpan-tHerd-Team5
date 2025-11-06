@@ -6,7 +6,7 @@ namespace tHerdBackend.Core.Interfaces.PROD
 {
     public interface IProductsForApiService
 	{
-		Task<PagedResult<ProdProductSearchDto>> GetFrontProductListAsync(ProductFilterQueryDto query, CancellationToken ct = default);
+		Task<PagedResult<ProdProductSearchDto>> GetFrontProductListAsync(ProductFrontFilterQueryDto query, CancellationToken ct = default);
         Task<ProdProductDetailDto?> GetFrontProductListAsync(int productId, int? skuId, CancellationToken ct = default);
 
         Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);

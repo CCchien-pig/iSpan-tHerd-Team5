@@ -196,15 +196,20 @@ export default {
   
   methods: {
   handleSearch() {
-    // 🔹 不帶參數，直接導向 ProductMainSearch 頁面
-    this.$router.push({ name: 'product-main-search' });
-    // if (this.searchQuery.trim()) {
-    //   this.$router.push({
-    //     name: 'search',
-    //     query: { q: this.searchQuery },
-    //   });
-    // }
+    const keyword = this.searchQuery?.trim()
+
+    if (keyword) {
+      // 🔹 攜帶關鍵字參數導向 ProductMainSearch 頁面
+      this.$router.push({
+        name: 'product-main-search',
+        query: { q: keyword }
+      })
+    } else {
+      // 🔹 沒輸入關鍵字也能進搜尋頁
+      this.$router.push({ name: 'product-main-search' })
+    }
   },
+
   goToCart() {
     this.$router.push('/cart'); 
   },
