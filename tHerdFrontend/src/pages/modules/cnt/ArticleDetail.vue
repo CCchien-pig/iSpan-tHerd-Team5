@@ -189,12 +189,15 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/auth';
 import { getArticleDetail, getArticleList } from "@/pages/modules/cnt/api/cntService";
 
 // 建立購買流程增加
 import cntArticlesApi from '@/pages/modules/cnt/api/cntArticlesApi'
+const isLogin = computed(() => auth.isAuthenticated)
 const isPurchasing = ref(false)
-const lastPurchase = ref(null);        // ⬅ 可選：記錄最後一次建立的購買紀錄
+const lastPurchase = ref(null)
+const auth = useAuthStore()
 // ---------------
 
 const route = useRoute();
@@ -782,44 +785,36 @@ function onLogin() {
 }
 
 async function onPurchase() {
-  if (!article.value) return
+  // 1) 先看有沒有登入
+  if (!isLogin.value) {
+    // 依你專案的登入頁名稱調整
+    router.push({ name: 'login', query: { returnUrl: route.fullPath } })
+    return
+  }
+
+  if (isPurchasing.value) return
+  isPurchasing.value = true
 
   try {
-    isPurchasing.value = true
+    const pageId = article.value?.pageId || route.params.id
+    const summary = await cntArticlesApi.createPurchase(pageId)
 
-    const dto = await cntArticlesApi.createPurchase(
-      article.value.pageId,
-      'LINEPAY'
-    )
-    console.log('建立購買紀錄成功', dto)
+    console.log('購買成功', summary)
+    lastPurchase.value = summary
+    alert('訂單建立成功，可以到「我買過的文章」查看')
 
-    if (dto.isPaid) {
-      alert('已購買成功，可以看全文了！')
-      // 這裡可以直接把遮罩關掉：
-      canViewFullContent.value = true
-      return
-    }
-
-    if (dto.paymentUrl) {
-      window.location.href = dto.paymentUrl
-      return
-    }
-
-    alert(`已建立訂單 #${dto.purchaseId}，目前狀態：${dto.paymentStatus}`)
+    // 之後真的要串金流，可以在這裡接 mock-pay / 綠界... 等流程
   } catch (err) {
-    console.error('建立購買紀錄失敗', err)
-    if (err.response?.status === 401) {
-      alert('請先登入再購買')
+    console.error('購買失敗', err?.response?.status, err)
+    if (err?.response?.status === 401) {
+      alert('登入逾時，請重新登入後再購買')
     } else {
-      alert('建立購買紀錄失敗，請稍後再試')
+      alert('購買失敗，請稍後再試')
     }
   } finally {
     isPurchasing.value = false
   }
 }
-
-
-
 // utils
 function wireToCamel(x) {
   return {
