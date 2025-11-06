@@ -48,7 +48,7 @@ async function loadCoupons() {
   }
 }
 
-// 🚀 載入會員資料
+// 🚀 載入會員資料（直接呼叫 API，不改其他檔案）
 async function loadUserDetail() {
   if (!isLogin.value) {
     userDetail.value = null
@@ -59,12 +59,12 @@ async function loadUserDetail() {
     userDetail.value = data
     console.log('會員資料載入成功:', data)
   } catch (err) {
-    console.warn('載入會員資料失敗', err)
+    console.warn('載入會員資料失敗（可能未登入）', err)
     userDetail.value = null
   }
 }
 
-// ✅ 檢查遊戲紀錄
+// ✅ 檢查今日遊戲紀錄
 async function checkGameRecord() {
   if (!isLogin.value) {
     hasGameRecord.value = false
@@ -108,6 +108,7 @@ onMounted(() => {
 
   const onStorageChange = e => {
     if (e.key === 'refreshCoupons' && e.newValue === 'true') {
+      console.log('偵測到 refreshCoupons，重新載入優惠券')
       loadCoupons()
       checkGameRecord()
       localStorage.removeItem('refreshCoupons')
@@ -143,6 +144,7 @@ const filteredCoupons = computed(() => {
   // 🔹 會員等級篩選
   const rankId = userDetail.value?.memberRankId
   if (rankId === 'MR001') {
+    // 一般會員：篩掉白銀與黃金
     list = list.filter(c =>
       !c.couponName?.includes('(白銀)會員分級優惠券') &&
       !c.couponName?.includes('(黃金)會員分級優惠券')
