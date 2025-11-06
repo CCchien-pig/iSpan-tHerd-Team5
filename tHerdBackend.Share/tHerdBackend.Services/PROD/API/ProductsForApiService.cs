@@ -28,7 +28,7 @@ namespace tHerdBackend.Services.PROD.API
         /// <param name="ct">連線</param>
         /// <returns></returns>
         public async Task<PagedResult<ProdProductSearchDto>> GetFrontProductListAsync(
-            ProductFilterQueryDto query, CancellationToken ct = default)
+            ProductFrontFilterQueryDto query, CancellationToken ct = default)
         {
             try
             {

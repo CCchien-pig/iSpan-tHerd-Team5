@@ -30,7 +30,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         [AllowAnonymous]  // 不用 JWT，前台也能看
         [HttpPost("search")]
 		public async Task<IActionResult> SearchProducts(
-			[FromBody] ProductFilterQueryDto query,
+			[FromBody] ProductFrontFilterQueryDto query,
 			CancellationToken ct = default)
 		{
             try
