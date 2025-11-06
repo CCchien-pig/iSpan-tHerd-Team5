@@ -71,13 +71,23 @@ namespace tHerdBackend.SharedApi.Controllers.Module.MKT
             }
             catch (Exception ex)
             {
+                // 🔍 詳細錯誤輸出
                 return StatusCode(500, new
                 {
                     message = "伺服器錯誤",
-                    error = ex.InnerException?.Message ?? ex.Message
+                    error = ex.Message,
+                    inner = ex.InnerException?.Message,
+                    stack = ex.StackTrace,
+                    user = new
+                    {
+                        _me.IsAuthenticated,
+                        _me.UserNumberId,
+                        
+                    }
                 });
             }
         }
+
 
 
 

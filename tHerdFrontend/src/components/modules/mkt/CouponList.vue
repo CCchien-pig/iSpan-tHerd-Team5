@@ -98,7 +98,7 @@ async function checkGameRecord() {
   }
 }
 
-// ✅ 掛載時初始化
+// ✅ 掛載初始化
 onMounted(() => {
   if (isLogin.value) {
     loadUserDetail()
@@ -121,7 +121,7 @@ onMounted(() => {
   })
 })
 
-// ✅ 登入狀態變化時自動刷新
+// ✅ 登入變化時自動刷新
 watch(isLogin, newVal => {
   if (newVal) {
     loadUserDetail()
@@ -135,7 +135,7 @@ watch(isLogin, newVal => {
   }
 })
 
-// ✅ 綜合篩選邏輯（遊戲 + 會員等級）
+// ✅ 綜合篩選邏輯（會員等級 + 生日月 + 遊戲）
 const filteredCoupons = computed(() => {
   if (!isLogin.value) return []
 
@@ -150,15 +150,24 @@ const filteredCoupons = computed(() => {
       !c.couponName?.includes('(黃金)會員分級優惠券')
     )
   } else if (rankId === 'MR002') {
-    // 白銀會員：篩掉黃金
-    list = list.filter(c =>
-      !c.couponName?.includes('(黃金)會員分級優惠券')
-    )
+    list = list.filter(c => !c.couponName?.includes('(黃金)會員分級優惠券'))
   } else if (rankId === 'MR003') {
-    // 黃金會員：篩掉白銀
-    list = list.filter(c =>
-      !c.couponName?.includes('(白銀)會員分級優惠券')
-    )
+    list = list.filter(c => !c.couponName?.includes('(白銀)會員分級優惠券'))
+  }
+
+  // 🔹 生日月份篩選
+  const birthDate = userDetail.value?.birthDate
+  if (birthDate) {
+    const birthMonth = new Date(birthDate).getMonth() + 1
+    const nowMonth = new Date().getMonth() + 1
+
+    // 如果會員不是當月生日 → 篩掉「會員生日禮優惠」
+    if (birthMonth !== nowMonth) {
+      list = list.filter(c => c.couponName !== '會員生日禮優惠')
+    }
+  } else {
+    // 沒生日資料 → 篩掉生日券
+    list = list.filter(c => c.couponName !== '會員生日禮優惠')
   }
 
   // 🔹 遊戲篩選
@@ -176,7 +185,9 @@ const filteredCoupons = computed(() => {
 
   return list.filter(c => {
     if (c.couponCode?.startsWith('GAME')) {
-      const name = c.couponName?.replace(/[（）]/g, s => (s === '（' ? '(' : s === '）' ? ')' : s))
+      const name = c.couponName?.replace(/[（）]/g, s =>
+        s === '（' ? '(' : s === '）' ? ')' : s
+      )
       return name?.includes(`翻牌遊戲獎勵(${normalizedScore}分)`)
     }
     return true
