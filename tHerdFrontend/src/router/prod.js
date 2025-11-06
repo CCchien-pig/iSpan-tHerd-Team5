@@ -1,23 +1,26 @@
 export default [
   {
     path: '/prod/search',
-    name: 'search',
-    component: () => import('@/pages/modules/prod/ProductSearchExample.vue'),
-    meta: { title: '商品查詢' },
+    redirect: { name: 'product-main-search' },
   },
   {
     path: '/prod/products/:id',
     name: 'product-detail',
     component: () => import('@/pages/modules/prod/ProductDetail.vue'),
+    meta: { title: '商品詳情' },
   },
   {
-  path: '/prod/products/search',
-  name: 'product-main-search',
-  component: () => import('@/pages/modules/prod/ProductMainSearch.vue')
+    path: '/prod/products/search',
+    name: 'product-main-search',
+    component: () => import('@/pages/modules/prod/ProductMainSearch.vue'),
+    meta: { title: '商品搜尋' },
   },
+  // 新增這一段：支援 SEO URL
   {
-    path: '/products/:category?/:sub?',
-    name: 'search-by-type',
-    component: () => import('@/pages/modules/prod/ProductSearchExample.vue'),
+    path: '/products/:slug',
+    name: 'product-type-search',
+    component: () => import('@/pages/modules/prod/ProductMainSearch.vue'),
+    props: true, // 讓 params 自動傳進組件
+    meta: { title: '商品分類搜尋' },
   },
 ]

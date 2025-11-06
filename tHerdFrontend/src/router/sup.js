@@ -9,6 +9,9 @@ import LogisticsFee from '../components/modules/sup/logistics/LogisticsFee.vue'
 import LogisticsList from '../components/modules/sup/logistics/LogisticsList.vue'
 import StoreMap from '../components/modules/sup/logistics/StoreMap.vue'
 
+import TestCart from '@/pages/modules/sup/testCart.vue' // 請確認實際路徑
+import CheckoutCallback from '@/components/modules/sup/logistics/CheckoutCallback.vue' // 請確認實際路徑
+
 // 品牌 A-Z 總覽頁
 const BrandsAZ = () => import('../pages/modules/sup/BrandsAZ.vue')
 
@@ -70,5 +73,18 @@ export default [
     component: () => import('../pages/modules/sup/BrandDetail.vue'),
     props: (route) => ({ brandId: Number(route.params.brandId), slug: route.params.slug }),
     meta: { title: '品牌' },
+  },
+
+  // 門市資料
+  {
+    path: '/checkout/callback',
+    name: 'CheckoutCallback',
+    component: () => import('../components/modules/sup/logistics/CheckoutCallback.vue'),
+  },
+  // 測試購物車頁
+  {
+    path: '/test/cart',
+    name: 'TestCart',
+    component: TestCart,
   },
 ]
