@@ -122,5 +122,27 @@ namespace tHerdBackend.Services.PROD.API
 				throw;
 			}
 		}
-	}
+
+        /// <summary>
+        /// 查詢購物車數量
+        /// </summary>
+        /// <param name="userNumberId"></param>
+        /// <param name="sessionId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default)
+        {
+            try
+            {
+                var item = await _srepo.GetCartSummaryAsync(userNumberId, sessionId, ct);
+
+                return item;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+    }
 }

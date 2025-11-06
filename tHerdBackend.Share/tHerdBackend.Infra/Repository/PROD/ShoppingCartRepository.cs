@@ -1,39 +1,23 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.PROD.ord;
-using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.PROD;
+using tHerdBackend.Core.ValueObjects;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Infra.Repository.Common;
-using tHerdBackend.Infra.Repository.PROD.Services;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
     public class ShoppingCartRepository : BaseRepository, IShoppingCartRepository
     {
-        private readonly ICurrentUser _currentUser;          // 目前登入使用者
-        private readonly UserManager<ApplicationUser>? _userMgr;    // Identity UserManager
-        private readonly SignInManager<ApplicationUser>? _signInMgr;// Identity SignInManager
-        private readonly ProductRelationService _relationSvc; // 商品關聯服務
-
         public ShoppingCartRepository(
             ISqlConnectionFactory factory,
-            tHerdDBContext db,
-            ICurrentUser currentUser,
-            UserManager<ApplicationUser>? userMgr = null,
-            SignInManager<ApplicationUser>? signInMgr = null)
+            tHerdDBContext db)
             : base(factory, db)
         {
-            _currentUser = currentUser;
-            _userMgr = userMgr;
-            _signInMgr = signInMgr;
-            _relationSvc = new ProductRelationService();
         }
 
         /// <summary>
@@ -46,8 +30,6 @@ namespace tHerdBackend.Infra.Repository.PROD
             try
             {
                 var now = DateTime.Now;
-                // 若無 SessionId，建立新的 Guid
-                // var sessionId = Guid.NewGuid().ToString(); // 佔不用
 
                 // 嘗試取得現有購物車
                 var cartId = await conn.ExecuteScalarAsync<int?>(
@@ -136,6 +118,38 @@ namespace tHerdBackend.Infra.Repository.PROD
             finally
             {
                 if (needDispose && conn != null)
+                    conn.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 取得購物車摘要（商品數量 / 總數量 / 小計）
+        /// </summary>
+        public async Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default)
+        {
+            var (conn, tran, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+
+            try
+            {
+                var data = await conn.QueryFirstOrDefaultAsync(
+                    @"SELECT 
+                          COUNT(DISTINCT sci.CartItemId) AS ItemCount,
+                          ISNULL(SUM(sci.Qty), 0) AS TotalQty,
+                          ISNULL(SUM(sci.Qty * sci.UnitPrice), 0) AS Subtotal
+                      FROM ORD_ShoppingCart sc
+                      JOIN ORD_ShoppingCartItem sci ON sc.CartId = sci.CartId
+                      WHERE (sc.UserNumberId = @UserNumberId OR sc.SessionId = @SessionId);",
+                    new { UserNumberId = userNumberId, SessionId = sessionId });
+
+                return data;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"取得購物車摘要時發生錯誤：{ex.Message}", ex);
+            }
+            finally
+            {
+                if (needDispose)
                     conn.Dispose();
             }
         }

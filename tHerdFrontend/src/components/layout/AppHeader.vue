@@ -71,9 +71,10 @@
             <i class="bi bi-cart3 me-1 main-color-white-text"></i>
             <span class="main-color-white-text">購物車</span>
             <span
+              v-if="cartStore.totalCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
-              {{ cartCount }}
+              {{ cartStore.totalCount }}
             </span>
           </button>
         </div>
@@ -124,9 +125,10 @@
           <button class="btn btn-md w-100 main-color-green text-start position-relative" @click="goToCart">
             <i class="bi bi-cart3 me-2"></i> 購物車
             <span
+              v-if="cartStore.totalCount > 0"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
             >
-              {{ cartCount }}
+              {{ cartStore.totalCount }}
             </span>
           </button>
           <button class="btn btn-md w-100 main-color-green text-start" @click="goToOrders">
@@ -142,6 +144,8 @@
 import { Dropdown } from 'bootstrap'
 import { mapStores } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/composables/modules/prod/cartStore'
+
 export default {
   name: 'AppHeader',
 
@@ -151,6 +155,8 @@ export default {
     isLogin() {
       return this.authStore.isAuthenticated
     },
+    // 新增購物車 store (即時紅點)
+    ...mapStores(useCartStore),
   },
 
   data() {
@@ -163,6 +169,9 @@ export default {
   mounted() {
     // 確保刷新頁面後能從 storage 載回登入狀態
     this.authStore.init?.()
+
+    // 🔹 確保 Pinia 實例已建立後再載入
+    this.cartStore.refreshCartCount()
 
     const btn = this.$el.querySelector('.dropdown > [data-bs-toggle="dropdown"]')
     if (!btn) return
