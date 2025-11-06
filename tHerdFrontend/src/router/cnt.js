@@ -71,12 +71,18 @@ export default [
       },
       // src/router/modules/cnt.js 之類
       {
-        path: '/member/articles',
+        path: 'my-articles',
         name: 'cnt-my-articles',
         component: () => import('@/pages/modules/cnt/MyPurchasedArticles.vue'),
-        meta: { requiresAuth: true }
-      }
+        meta: { title: '我買過的文章', requiresAuth: true }
+      },
+      // {
+      //   path: 'articles',
+      //   name: 'member-articles',
+      //   component: () => import('@/pages/modules/cnt/MyPurchasedArticles.vue'),
+      //   meta: { title: '我購買過的文章', requiresAuth: true }
+      // }
     ]
   }
-]; d
+];
 

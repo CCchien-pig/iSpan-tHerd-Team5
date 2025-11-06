@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace tHerdBackend.Core.DTOs.CNT
+﻿namespace tHerdBackend.Core.DTOs.CNT
 {
 	/// <summary>購買紀錄摘要 – 建立/查詢用</summary>
 	public class PurchaseSummaryDto

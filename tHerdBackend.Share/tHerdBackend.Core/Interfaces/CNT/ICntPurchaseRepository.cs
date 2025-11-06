@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using tHerdBackend.Core.DTOs.CNT;
+﻿using tHerdBackend.Core.DTOs.CNT;
 
 namespace tHerdBackend.Core.Interfaces.CNT
 {

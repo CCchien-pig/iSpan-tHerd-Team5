@@ -106,12 +106,12 @@
             登入
           </button>
           <button
+            class="btn teal-reflect-button text-white px-4"
             type="button"
-            class="btn btn-outline-secondary"
+            :disabled="isPurchasing"
             @click="onPurchase"
-            :disabled="creatingPurchase"
           >
-            {{ creatingPurchase ? '建立訂單中…' : '去購買' }}
+            {{ isPurchasing ? '建立訂單中…' : '立即購買全文' }}
           </button>
         </div>
       </div>
@@ -189,18 +189,19 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getArticleDetail, getArticleList } from "./api/cntService";
-import { createArticlePurchase } from "@/api/cntArticlesApi"; // 路徑照你實際放的改
-import cntArticlesApi from '@/api/modules/cnt/cntArticlesApi'
+import { getArticleDetail, getArticleList } from "@/pages/modules/cnt/api/cntService";
 
+// 建立購買流程增加
+import cntArticlesApi from '@/pages/modules/cnt/api/cntArticlesApi'
+const isPurchasing = ref(false)
+const lastPurchase = ref(null);        // ⬅ 可選：記錄最後一次建立的購買紀錄
+// ---------------
 
 const route = useRoute();
 const router = useRouter();
 const article = ref(null);
 const blocks = ref([]);
 const canViewFullContent = ref(true); // 後端控制
-const creatingPurchase = ref(false);   // ⬅ 新增
-const lastPurchase = ref(null);        // ⬅ 可選：記錄最後一次建立的購買紀錄
 const contentRef = ref(null);
 // 推薦文章
 const recommended = ref([]);
@@ -779,17 +780,23 @@ const igIconSvg = `
 function onLogin() {
   alert("請登入以解鎖內容");
 }
+
 async function onPurchase() {
   if (!article.value) return
+
   try {
     isPurchasing.value = true
-    const dto = await cntArticlesApi.createPurchase(article.value.pageId, 'LINEPAY')
+
+    const dto = await cntArticlesApi.createPurchase(
+      article.value.pageId,
+      'LINEPAY'
+    )
     console.log('建立購買紀錄成功', dto)
 
     if (dto.isPaid) {
       alert('已購買成功，可以看全文了！')
-      // 這邊你可以直接把遮罩關掉
-      // article.value.isPaidContent = false
+      // 這裡可以直接把遮罩關掉：
+      canViewFullContent.value = true
       return
     }
 
@@ -810,6 +817,8 @@ async function onPurchase() {
     isPurchasing.value = false
   }
 }
+
+
 
 // utils
 function wireToCamel(x) {

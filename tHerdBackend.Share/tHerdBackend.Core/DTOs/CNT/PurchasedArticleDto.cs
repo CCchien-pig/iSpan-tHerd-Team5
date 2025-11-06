@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace tHerdBackend.Core.DTOs.CNT
+﻿namespace tHerdBackend.Core.DTOs.CNT
 {
 	/// <summary>會員中心「我買過的文章」列表 DTO</summary>
 	public class PurchasedArticleDto

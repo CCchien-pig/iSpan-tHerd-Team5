@@ -51,7 +51,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { getMyPurchasedArticles } from "@/pages/modules/cnt/api/cntService";
+import cntArticlesApi from './api/cntArticlesApi'
 
 const loading = ref(false);
 const items = ref([]);
@@ -59,7 +59,7 @@ const items = ref([]);
 onMounted(async () => {
   loading.value = true;
   try {
-    const data = await getMyPurchasedArticles();
+    const data = await cntArticlesApi.getMyPurchasedArticles();
     items.value = Array.isArray(data) ? data : [];
   } catch (err) {
     console.error("取得購買文章列表失敗", err);
