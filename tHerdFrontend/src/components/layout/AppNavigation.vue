@@ -276,6 +276,7 @@ onMounted(() => {
 // ==================== 點擊分類載入 MegaMenu ====================
 let lastClickedId = null
 async function goCategory(item) {
+  // 第一次點：打開 MegaMenu
   if (activeMenuId.value !== item.id) {
     activeMenuId.value = item.id
     await loadMegaMenuByCategory(item)
@@ -283,15 +284,19 @@ async function goCategory(item) {
     return
   }
 
-  // 第二次點相同分類 → 直接跳轉到分類搜尋頁
+  // 第二次點相同分類 → 直接導向分類搜尋頁
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
+    const slug = `${item.productTypeCode.toLowerCase()}-${item.productTypeId}`
+
     router.push({
       name: 'product-type-search',
-      params: {
-        productTypeCode: item.productTypeCode,
-        productTypeId: item.productTypeId
-      }
+      params: { slug },
     })
+
+    // 🧩 導頁後順便關掉 MegaMenu
+    activeMenuId.value = null
+    megaMenuData.value = null
+    lastClickedId = null
   }
 }
 
