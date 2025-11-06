@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using tHerdBackend.Core.DTOs.CNT;
+﻿using tHerdBackend.Core.DTOs.CNT;
 
 namespace tHerdBackend.Share.DTOs.CNT
 {
