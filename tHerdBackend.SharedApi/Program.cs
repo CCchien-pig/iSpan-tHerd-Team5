@@ -17,6 +17,7 @@ using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.ORD;
+using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Core.Interfaces.SYS;
@@ -52,13 +53,20 @@ namespace tHerdBackend.SharedApi
                 }
             });
 
-            builder.Services.Configure<ECPaySettings>(
-               builder.Configuration.GetSection("ECPay")
-           );
+			// builder.Services.Configure<ECPaySettings>(
+			//    builder.Configuration.GetSection("ECPay")
+			//);
+			// 1. 綁定金流設定 (使用舊有的 DTO，但來源改為 ECPay 下的 Payment 子區塊)
+			builder.Services.Configure<ECPaySettings>(
+				builder.Configuration.GetSection("ECPay:Payment"));
+
+			// 2. 綁定物流設定 (使用新的 DTO，來源為 ECPay 下的 Logistics 子區塊)
+			builder.Services.Configure<ECPayLogisticsConfig>(
+				builder.Configuration.GetSection("ECPay:Logistics"));
 
 
-            //取得連線字串
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+			//取得連線字串
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 			//與後台管理系統共用 Identity 使用者資料庫
