@@ -9,14 +9,20 @@
     <!-- 結果統計列 -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
       <div class="text-muted small">
-        共 {{ totalCount }} 項結果中的第 
-        {{ startIndex }}–{{ endIndex }} 項 
-        「<strong>{{ keyword }}</strong>」
+        共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項：
+        <template v-if="keyword">「<strong>{{ keyword }}</strong>」</template>
+        <template v-else-if="productTypeName">分類：<strong>{{ productTypeName }}</strong></template>
+        <template v-else>全部商品</template>
       </div>
 
       <div class="d-flex align-items-center mt-2 mt-md-0">
         <label class="me-2 text-muted small">排序方式</label>
-        <select v-model="sortBy" class="form-select form-select-sm" style="width: auto" @change="reloadProducts">
+        <select
+          v-model="sortBy"
+          class="form-select form-select-sm"
+          style="width: auto"
+          @change="reloadProducts"
+        >
           <option value="relevance">相關性</option>
           <option value="price-asc">價格：低 → 高</option>
           <option value="price-desc">價格：高 → 低</option>
@@ -24,9 +30,10 @@
         </select>
       </div>
     </div>
+
       <!-- 🧩 商品列表 : 查詢結果 -->
     <ProductList
-      :key="pageIndex + '_' + keyword"
+      :key="pageIndex + '_' + (keyword || productTypeId || 'all')"
       :title="'搜尋結果'"
       :products="products"
       :total-count="totalCount"
@@ -47,12 +54,17 @@ import ProductList from '@/components/modules/prod/list/ProductList.vue';
 
 const route = useRoute()
 const router = useRouter()
+
+// ---- 查詢參數（關鍵字 / 分類）----
 const { showLoading, hideLoading } = useLoading()
 const searchKeyword = computed(() => route.query.q || '')
 const error = ref(null)
 
-// 🔸 狀態變數
+// 若是從 SEO 友善路徑進來（例如 /products/beauty/xzq-1415）
+const productTypeId = ref(route.params.productTypeId || null)
+const productTypeCode = ref(route.params.productTypeCode || '')
 const keyword = ref(route.query.q || '')
+
 const products = ref([])
 const totalCount = ref(0)
 const pageIndex = ref(1)
@@ -85,29 +97,49 @@ const searchProducts = async (page = 1) => {
 
   try {
     showLoading('載入商品中...')
-    const res = await ProductsApi.getProductList({
-      pageIndex: page,
-      pageSize: 40,
-      keyword: keyword.value,
-      sortBy: 'date',
-      sortDesc: true,
-      isPublished: true,
-      isFrontEnd: true
-    })
+    let res
 
-    // 這裡改成確保 data 結構正確
-    const data = res.data
-    if (!data || !Array.isArray(data.items)) {
-      console.warn('⚠️ 無 items 或格式錯誤', data)
-      products.value = []
-      totalCount.value = 0
-      return
+    // 若有分類 ID：執行分類搜尋
+    if (productTypeId.value) {
+      res = await ProductsApi.getProductList({
+        pageIndex: page,
+        pageSize: pageSize.value,
+        productTypeId: productTypeId.value,
+        sortBy: sortBy.value,
+        isPublished: true,
+        isFrontEnd: true
+      })
+    }
+    // 若有關鍵字：執行關鍵字搜尋
+    else if (keyword.value) {
+      res = await ProductsApi.getProductList({
+        pageIndex: page,
+        pageSize: pageSize.value,
+        keyword: keyword.value,
+        sortBy: sortBy.value,
+        isPublished: true,
+        isFrontEnd: true
+      })
+    }
+    // 若都沒有 → 可顯示熱門商品或空結果
+    else {
+      res = await ProductsApi.getProductList({
+        pageIndex: page,
+        pageSize: pageSize.value,
+        isPublished: true,
+        isFrontEnd: true
+      })
     }
 
-    // 更新資料
-    products.value = data.items
-    totalCount.value = data.totalCount || 0
-    pageIndex.value = data.pageIndex || 1
+    const data = res.data
+    if (!data || !Array.isArray(data.items)) {
+      products.value = []
+      totalCount.value = 0
+    } else {
+      products.value = data.items
+      totalCount.value = data.totalCount || 0
+      pageIndex.value = data.pageIndex || 1
+    }
   } catch (err) {
     console.error('搜尋商品錯誤：', err)
     products.value = []
@@ -120,9 +152,10 @@ const searchProducts = async (page = 1) => {
 
 // 監聽網址 query 變化時，自動重新搜尋
 watch(
-  () => route.query.q,
-  (newVal) => {
-    keyword.value = newVal || ''
+  () => [route.params.productTypeId, route.query.q],
+  ([newTypeId, newKeyword]) => {
+    productTypeId.value = newTypeId
+    keyword.value = newKeyword || ''
     searchProducts(1)
   },
   { immediate: true }

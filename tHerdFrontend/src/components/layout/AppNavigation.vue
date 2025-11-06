@@ -225,8 +225,11 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
 import MegaMenu from '@/components/modules/prod/menu/MegaMenu.vue'
+
+const router = useRouter()
 
 // ==================== 狀態變數 ====================
 const showMobileMenu = ref(false)
@@ -259,117 +262,97 @@ const staticMenus = [
   { name: '健康中心', path: '/cnt' },
 ]
 
-// function goCategory(item) {
-//   // 如果點擊不同的分類 → 開啟新的 MegaMenu
-//   if (activeMenuId.value !== item.id) {
-//     activeMenuId.value = item.id
-//     megaMenuData.value = loadedMenus.value[item.id]
-//     return
-//   }
-
-//   // 如果點擊相同的分類 → 關閉 MegaMenu（切換開關效果）
-//   if (activeMenuId.value === item.id) {
-//     activeMenuId.value = null
-//     megaMenuData.value = null
-//   }
-// }
-
 // === 初始化 ===
 onMounted(() => {
   productMenus.value = navigationItemsWithIcon
     .filter(i => i.type === 'pr')
-    .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
-
-  //preloadMegaMenus() // 一次預載所有資料
+    .map((item, index) => ({
+      ...item,
+      id: `menu-${index + 1}`,
+      productTypeCode: item.path.replace('/', '') // 加上 code
+    }))
 })
 
 // ==================== 點擊分類載入 MegaMenu ====================
+let lastClickedId = null
 async function goCategory(item) {
-  // 若點擊不同分類 → 載入該分類樹狀資料
   if (activeMenuId.value !== item.id) {
     activeMenuId.value = item.id
     await loadMegaMenuByCategory(item)
+    lastClickedId = item.id
     return
   }
 
-  // 若點擊相同分類 → 收起
-  if (activeMenuId.value === item.id) {
-    activeMenuId.value = null
-    megaMenuData.value = null
+  // 第二次點相同分類 → 直接跳轉到分類搜尋頁
+  if (activeMenuId.value === item.id && lastClickedId === item.id) {
+    router.push({
+      name: 'product-type-search',
+      params: {
+        productTypeCode: item.productTypeCode,
+        productTypeId: item.productTypeId
+      }
+    })
   }
 }
 
-// ✅ 動態載入該分類與子分類
+// 動態載入該分類與子分類
 async function loadMegaMenuByCategory(item) {
   try {
     isLoadingMenu.value = true
+    console.log('🔍 請求分類資料：', item.productTypeId)
     const res = await ProductsApi.getProductCategoriesByTypeId(item.productTypeId)
+    console.log('✅ 回傳資料：', res.data)
 
-    const apiData = res.data
+    const apiData = res?.data
     const treeData = Array.isArray(apiData?.data)
       ? apiData.data
       : Array.isArray(apiData)
       ? apiData
       : []
 
-    if (!treeData.length) throw new Error('沒有分類資料')
+    if (!treeData.length) {
+      console.warn('⚠️ 無分類資料', apiData)
+      megaMenuData.value = { columns: [] }
+      return
+    }
 
-    const columns = buildMegaMenu(treeData, item.path)
+    const columns = buildMegaMenu(treeData)
     megaMenuData.value = { columns }
     loadedMenus.value[item.id] = { columns }
+    console.log('✅ 轉換後 columns:', columns)
   } catch (err) {
     console.error(`❌ 無法載入 ${item.name} 的分類資料：`, err)
   } finally {
     isLoadingMenu.value = false
+    console.log('finally 結束 isLoadingMenu:', isLoadingMenu.value)
   }
 }
 
 // ==================== 樹狀資料轉換 ====================
-function buildMegaMenu(treeData, prefixPath = '') {
+function buildMegaMenu(treeData) {
   function buildUrl(item) {
-    const raw = (item.productTypeCode || '').trim()
-    const code = raw ? raw.toLowerCase().replace(/[^a-z0-9\-]/g, '') : `id-${item.productTypeId}`
-    item.url = `/products${prefixPath}/${code}`
-
+    const code = (item.productTypeCode || '').trim().toLowerCase()
+    item.url = `/products/${code || 'id'}-${item.productTypeId}`
     if (Array.isArray(item.children) && item.children.length) {
-      item.children.forEach(c => buildUrl(c))
+      item.children.forEach(buildUrl)
     }
   }
 
-  // 🔹 轉換為多欄結構
   return treeData.map(parent => {
-    buildUrl(parent)
     return {
+      id: parent.productTypeId,
+      productTypeCode: parent.productTypeCode,
       title: parent.productTypeName,
-      url: `${parent.url}-${parent.productTypeId}`,
+      url: `/products/${parent.productTypeCode?.toLowerCase() || ''}-${parent.productTypeId}`,
       items: (parent.children || []).map(child => ({
         id: child.productTypeId,
+        productTypeCode: child.productTypeCode,
         name: child.productTypeName,
-        url: `${child.url}-${child.productTypeId}`,
+        url: `/products/${child.productTypeCode?.toLowerCase() || ''}-${child.productTypeId}`,
       })),
     }
   })
 }
-
-  // 為每個 menu 建構對應 columns
-  productMenus.value.forEach(menu => {
-    const prefix = menu.path.replace('/', '') + '/'
-
-    const columns = treeData.map(parent => {
-      buildUrl(parent, prefix)
-      return {
-        title: parent.productTypeName,
-        url: `${parent.url}-${parent.productTypeId}`, // ✅ 主分類
-        items: (parent.children || []).map(child => ({
-          id: child.productTypeId,
-          name: child.productTypeName,
-          url: `${child.url}-${child.productTypeId}`, // ✅ 子分類
-        })),
-      }
-    })
-
-    loadedMenus.value[menu.id] = { columns }
-  })
 
 // ==================== 關閉 MegaMenu ====================
 let closeTimer = null

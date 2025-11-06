@@ -7,14 +7,11 @@
       @mouseleave="$emit('mouseleave')"
     >
       <div class="mega-menu shadow-lg bg-white">
-        <!-- 🌀 載入中 -->
         <div v-if="isLoading" class="text-center p-4">載入中...</div>
-
-        <!-- ❌ 錯誤 -->
         <div v-else-if="error" class="text-danger p-4">{{ error }}</div>
 
         <!-- ✅ 顯示分類欄 -->
-        <div v-else-if="data" class="menu-columns">
+        <div v-else-if="data?.columns?.length" class="menu-columns">
           <div
             v-for="col in data.columns"
             :key="col.title"
@@ -22,29 +19,23 @@
           >
             <h4>
               <router-link
-                v-if="col.url"
                 :to="col.url"
                 class="brand-link fw-bold"
                 @click="$emit('close')"
               >
                 {{ col.title }}
               </router-link>
-              <span v-else class="brand-link fw-bold text-muted">
-                {{ col.title }}
-              </span>
             </h4>
 
             <ul>
               <li v-for="item in col.items" :key="item.id">
                 <router-link
-                  v-if="item.url"
                   :to="item.url"
                   class="brand-link"
                   @click="$emit('close')"
                 >
                   {{ item.name }}
                 </router-link>
-                <span v-else class="brand-link text-muted">{{ item.name }}</span>
               </li>
             </ul>
           </div>
@@ -62,6 +53,9 @@
             </div>
           </div>
         </div>
+
+        <!-- 空結果處理 -->
+        <div v-else class="text-center p-4 text-muted">目前沒有分類資料</div>
       </div>
     </div>
   </transition>
