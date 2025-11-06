@@ -9,14 +9,20 @@
     <!-- 結果統計列 -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
       <div class="text-muted small">
-        共 {{ totalCount }} 項結果中的第 
-        {{ startIndex }}–{{ endIndex }} 項 
-        「<strong>{{ keyword }}</strong>」
+        共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項：
+        <template v-if="keyword">「<strong>{{ keyword }}</strong>」</template>
+        <template v-else-if="productTypeName">分類：<strong>{{ productTypeName }}</strong></template>
+        <template v-else>全部商品</template>
       </div>
 
       <div class="d-flex align-items-center mt-2 mt-md-0">
         <label class="me-2 text-muted small">排序方式</label>
-        <select v-model="sortBy" class="form-select form-select-sm" style="width: auto" @change="reloadProducts">
+        <select
+          v-model="sortBy"
+          class="form-select form-select-sm"
+          style="width: auto"
+          @change="reloadProducts"
+        >
           <option value="relevance">相關性</option>
           <option value="price-asc">價格：低 → 高</option>
           <option value="price-desc">價格：高 → 低</option>
@@ -24,9 +30,10 @@
         </select>
       </div>
     </div>
+
       <!-- 🧩 商品列表 : 查詢結果 -->
     <ProductList
-      :key="pageIndex + '_' + keyword"
+      :key="pageIndex + '_' + (keyword || productTypeId || 'all')"
       :title="'搜尋結果'"
       :products="products"
       :total-count="totalCount"
@@ -39,27 +46,32 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLoading } from "@/composables/useLoading";
 import ProductsApi from "@/api/modules/prod/ProductsApi";
-//import ProductCard from "@/components/modules/prod/card/ProductCard.vue";
 import ProductList from '@/components/modules/prod/list/ProductList.vue';
 
 const route = useRoute()
 const router = useRouter()
-const { showLoading, hideLoading } = useLoading()
 
-// const keyword = ref("")
-// const products = ref([
-  // { id: 1, name: "維他命C 膠囊", price: 450, image: "https://via.placeholder.com/300x200?text=Vitamin+C" },
-  // { id: 2, name: "護手霜", price: 320, image: "https://via.placeholder.com/300x200?text=Hand+Cream" },
-  // { id: 3, name: "洗衣精", price: 199, image: "https://via.placeholder.com/300x200?text=Detergent" }
-// ])
+// ---- 查詢參數（關鍵字 / 分類）----
+const { showLoading, hideLoading } = useLoading()
 const error = ref(null)
 
-// 🔸 狀態變數
-const keyword = ref('')
+// 若是從 SEO 友善路徑進來（例如 /products/beauty/xzq-1415）
+const slug = computed(() => route.params.slug || '')   // 例如 "beauty-1410"
+const productTypeCode = ref('')
+const productTypeId = ref(null)
+const keyword = ref(route.query.q || '')
+
+function parseSlug() {
+  if (!slug.value) return
+  const parts = slug.value.split('-')
+  productTypeId.value = parts.pop()              // 最後一段是 ID
+  productTypeCode.value = parts.join('-') || ''  // 前面的是英文代碼
+}
+
 const products = ref([])
 const totalCount = ref(0)
 const pageIndex = ref(1)
@@ -86,35 +98,31 @@ const filteredProducts = computed(() => {
 const isLoading = ref(false)
 
 // 搜尋動作（之後可接後端 API）
-const searchProducts = async (page = 1) => {
+async function searchProducts(page = 1) {
   if (isLoading.value) return
   isLoading.value = true
+  showLoading('載入商品中...')
 
   try {
-    showLoading('載入商品中...')
-    const res = await ProductsApi.getProductList({
-      pageIndex: page,
-      pageSize: 40,
-      keyword: keyword.value,
-      sortBy: 'date',
-      sortDesc: true,
-      isPublished: true,
-      isFrontEnd: true
-    })
+    parseSlug() // 解析 slug 再查詢
 
-    // 這裡改成確保 data 結構正確
-    const data = res.data
-    if (!data || !Array.isArray(data.items)) {
-      console.warn('⚠️ 無 items 或格式錯誤', data)
-      products.value = []
-      totalCount.value = 0
-      return
+    const query = {
+      pageIndex: page,
+      pageSize: pageSize.value,
+      sortBy: sortBy.value,
+      isPublished: true,
+      isFrontEnd: true,
     }
 
-    // 更新資料
-    products.value = data.items
-    totalCount.value = data.totalCount || 0
-    pageIndex.value = data.pageIndex || 1
+    if (productTypeId.value) query.productTypeId = productTypeId.value
+    if (keyword.value) query.keyword = keyword.value
+
+    const res = await ProductsApi.getProductList(query)
+    const data = res.data
+
+    products.value = Array.isArray(data?.items) ? data.items : []
+    totalCount.value = data?.totalCount || 0
+    pageIndex.value = data?.pageIndex || 1
   } catch (err) {
     console.error('搜尋商品錯誤：', err)
     products.value = []
@@ -125,6 +133,12 @@ const searchProducts = async (page = 1) => {
   }
 }
 
+// 監聽網址 query 變化時，自動重新搜尋
+watch(
+  () => [route.params.slug, route.query.q],
+  () => searchProducts(1),
+  { immediate: true }
+)
 
 // 點擊商品跳轉
 const goToProduct = (productId) => {

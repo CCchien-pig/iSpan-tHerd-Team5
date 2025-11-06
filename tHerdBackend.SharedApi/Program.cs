@@ -17,6 +17,7 @@ using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.Abstractions.Referral;
 using tHerdBackend.Core.Abstractions.Security;
 using tHerdBackend.Core.DTOs.ORD;
+using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Abstractions;
 using tHerdBackend.Core.Interfaces.PROD;
@@ -29,6 +30,7 @@ using tHerdBackend.Infra.Repository.SYS;
 using tHerdBackend.Services.Common;
 using tHerdBackend.Services.Common.Auth;
 using tHerdBackend.Services.ORD;
+using tHerdBackend.Services.SUP;
 using tHerdBackend.Services.USER;
 using tHerdBackend.SharedApi.Controllers.Common;
 using tHerdBackend.SharedApi.Infrastructure.Auth;
@@ -58,13 +60,12 @@ namespace tHerdBackend.SharedApi
                 }
             });
 
-            builder.Services.Configure<ECPaySettings>(
-               builder.Configuration.GetSection("ECPay")
-           );
+			// builder.Services.Configure<ECPaySettings>(
+			//	builder.Configuration.GetSection("ECPay")
+			//);
 
-
-            //取得連線字串
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+			//取得連線字串
+			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
 	?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 			//與後台管理系統共用 Identity 使用者資料庫
@@ -285,17 +286,28 @@ namespace tHerdBackend.SharedApi
             builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
 
 
-            // === 讀取綠界設定值 ===
-            builder.Services.Configure<ECPaySettings>(
-            builder.Configuration.GetSection("ECPay"));
-            builder.Services.AddScoped<SharedECPayService>();
-            //builder.Services.AddScoped<ECPayService>();
+			// === 讀取綠界設定值 ===
+			//builder.Services.Configure<ECPaySettings>(
+			//builder.Configuration.GetSection("ECPay"));
+			//builder.Services.AddScoped<SharedECPayService>();
 
-            // === 訂單計算服務 ===
-            builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
+			// 1. 舊有的金流設定 (ECPaySettings) -> 改讀取 "ECPay:Payment" 子區塊
+			builder.Services.Configure<ECPaySettings>(
+				builder.Configuration.GetSection("ECPay:Payment"));
+			builder.Services.AddScoped<SharedECPayService>();
 
-            // 註冊 Cloudinary 為 Singleton
-            var cloudinary = new Cloudinary(account);
+			// 2. 新增的物流設定 (ECPayLogisticsConfig) -> 讀取 "ECPay:Logistics" 子區塊
+			builder.Services.Configure<ECPayLogisticsConfig>(
+				builder.Configuration.GetSection("ECPay:Logistics"));
+			builder.Services.AddScoped<ECPayLogisticsService>();
+
+			//builder.Services.AddScoped<ECPayService>();
+
+			// === 訂單計算服務 ===
+			builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
+
+			// 註冊 Cloudinary 為 Singleton
+			var cloudinary = new Cloudinary(account);
 			builder.Services.AddSingleton(cloudinary);
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
