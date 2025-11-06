@@ -334,7 +334,7 @@ export default {
     },
     async viewDetail(orderId) {
       try {
-       const res = await http.get(`/ord/OrdersApi/${orderId}`);
+       const res = await http.get(`http:localhost:7200/api/ord/cart/checkout/${orderId}`);
         this.orderDetail = res.data;
         const modal = new Modal(document.getElementById('orderDetailModal'));
         modal.show();
