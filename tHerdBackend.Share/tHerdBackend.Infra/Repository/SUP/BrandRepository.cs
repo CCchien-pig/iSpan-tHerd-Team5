@@ -273,6 +273,43 @@ ORDER BY bac.[ContentId], bac.[OrderSeq];";
 		public int Order { get; set; }
 	}
 
+	public async Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId)
+	{
+		var brand = await _db.SupBrands
+			.Include(x => x.ProdProducts)
+			.Include(x => x.SupBrandFavorites)
+			.Include(x => x.Supplier)
+			.FirstOrDefaultAsync(x => x.BrandId == brandId);
+
+		if (brand == null)
+			return null;
+
+		// 計算距今天數
+		int daysAgo = (DateTime.Now - brand.CreatedDate).Days;
+
+		// 從訂單明細累加該品牌所有產品銷量
+		//先抓該品牌下所有商品 ProductId，再依 OrderItem 中符合商品的 ProductId 做銷量 Qty 加總
+		var productIds = brand.ProdProducts.Select(p => p.ProductId).ToList();
+
+		int totalSalesQty = 0;
+		if (productIds.Any())
+		{
+			totalSalesQty = await _db.OrdOrderItems
+				.Where(oi => productIds.Contains(oi.ProductId))
+				.SumAsync(oi => (int?)oi.Qty) ?? 0;
+		}
+
+		return new BrandOverviewDto
+		{
+			ProductCount = brand.ProdProducts.Count,
+			FavoriteCount = brand.SupBrandFavorites.Count,
+			CreatedDaysAgo = daysAgo,
+			SupplierName = brand.Supplier?.SupplierName ?? "",
+			TotalSalesQty = totalSalesQty
+		};
+	}
+
+
 
 	#endregion
 

@@ -26,7 +26,16 @@ public interface IBrandService
 	/// </summary>
 	Task<int?> GetLikeCountAsync(int brandId);
 
-	# region 品牌折扣
+
+	/// <summary>
+	/// 取得品牌綜合資訊（商品數、被收藏數、建立時間、供應商名稱）
+	/// </summary>
+	/// <param name="brandId">品牌 Id</param>
+	/// <returns>BrandOverviewDto</returns>
+	Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId);
+
+
+	#region 品牌折扣
 
 	Task<bool> CheckBrandExistsAsync(int brandId);
 	Task<List<BrandDiscountDto>> GetAllDiscountsAsync();
