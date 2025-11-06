@@ -6,16 +6,12 @@
 -->
 <template>
   <!-- 產品列表區塊容器 -->
-  <section class="products-section py-5 bg-light">
+  <section class="products-section py-5 bg-light" ref="productsSection">
     <div class="container">
       <!-- 產品卡片網格 -->
       <!-- 若有資料才顯示 -->
       <div v-if="products && products.length > 0" class="row g-4">
-        <div
-          v-for="product in products"
-          :key="product.productId"
-          class="col-lg-3 col-md-6"
-        >
+        <div v-for="product in products" :key="product.productId" class="col-lg-3 col-md-6">
           <ProductCard
             :product="product"
             @add-to-cart="handleAddToCart"
@@ -26,30 +22,19 @@
       </div>
 
       <!-- 若沒有資料顯示提示 -->
-      <div v-else class="text-center text-muted py-5 fs-5">
-        找不到符合的商品
-      </div>
+      <div v-else class="text-center text-muted py-5 fs-5">查無相關商品</div>
 
       <!-- 分頁按鈕 -->
       <nav v-if="totalPages > 1" class="mt-5">
         <ul class="pagination justify-content-center mb-0">
-
           <!-- 第一頁 -->
           <li class="page-item" :class="{ disabled: currentPage === 1 }">
-            <a
-              class="page-link"
-              href="#"
-              @click.prevent="changePage(1)"
-            >第一頁</a>
+            <a class="page-link" href="#" @click.prevent="changePage(1)">第一頁</a>
           </li>
 
           <!-- 上一頁 -->
           <li class="page-item" :class="{ disabled: currentPage === 1 }">
-            <a
-              class="page-link"
-              href="#"
-              @click.prevent="changePage(currentPage - 1)"
-            >上一頁</a>
+            <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">上一頁</a>
           </li>
 
           <!-- 動態頁碼 -->
@@ -66,25 +51,17 @@
 
           <!-- 下一頁 -->
           <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-            <a
-              class="page-link"
-              href="#"
-              @click.prevent="changePage(currentPage + 1)"
-            >下一頁</a>
+            <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">下一頁</a>
           </li>
 
           <!-- 最後一頁 -->
           <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-            <a
-              class="page-link"
-              href="#"
-              @click.prevent="changePage(totalPages)"
-            >最後一頁</a>
+            <a class="page-link" href="#" @click.prevent="changePage(totalPages)">最後一頁</a>
           </li>
         </ul>
 
         <!-- 🔹 新增：跳至指定頁 -->
-        <div class="d-flex justify-content-center align-items-center gap-2">
+        <div class="d-flex justify-content-center align-items-center gap-2 mt-3">
           <span class="text-muted">跳至第</span>
           <input
             v-model.number="jumpPageInput"
@@ -96,7 +73,7 @@
             @keyup.enter="jumpToPage"
           />
           <span class="text-muted">頁</span>
-          <button class="btn btn-sm btn-primary" @click="jumpToPage">Go</button>
+          <button class="btn btn-sm btn-go-custom" @click="jumpToPage">Go</button>
         </div>
       </nav>
     </div>
@@ -117,6 +94,7 @@ import ScrollToTop from '@/components/common/ScrollToTop.vue'
  */
 export default {
   name: 'ProductList', // 組件名稱
+  emits: ['page-change', 'add-to-cart', 'toggle-wishlist', 'quick-view'],
 
   /**
    * 子組件註冊
@@ -214,11 +192,13 @@ export default {
     handleQuickView(product) {
       this.$emit('quick-view', product)
     },
-    
+
     changePage(page) {
       if (page < 1 || page > this.totalPages) return
       this.currentPage = page
       this.$emit('page-change', page)
+
+      this.scrollToTopSmooth() // 新增：呼叫自訂滑動方法
     },
 
     // 🔹 新增：跳頁邏輯
@@ -231,6 +211,16 @@ export default {
       this.changePage(page)
       this.jumpPageInput = ''
     },
+
+    // 新增：滾動到產品列表頂部方法
+    scrollToTopSmooth() {
+      const el = this.$refs.productsSection
+      if (el && el.scrollIntoView) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
   },
 }
 </script>
@@ -238,18 +228,46 @@ export default {
 <style scoped>
 /* 使用Bootstrap類，無需自定義CSS */
 .pagination .page-link {
-  color: #0d6efd;
+  color: rgb(0, 112, 131);
   transition: all 0.2s;
+  user-select: none;
+  font-weight: 500;
+  padding: 0.4rem 0.75rem;
 }
 
 .pagination .page-link:hover {
-  background-color: #0d6efd;
+  background-color: rgb(77, 180, 193);
   color: #fff;
+  text-decoration: none;
 }
 
 .pagination .page-item.disabled .page-link {
   color: #999;
   pointer-events: none;
   background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: rgb(0, 147, 171);
+  border-color: rgb(0, 147, 171);
+  color: #fff;
+  cursor: default;
+}
+
+.d-flex.gap-2 {
+  gap: 0.5rem !important;
+}
+
+.btn-go-custom {
+  background-color: rgb(0, 147, 171);
+  border-color: rgb(0, 147, 171);
+  color: white;
+}
+
+.btn-go-custom:hover {
+  background-color: rgb(77, 180, 193);
+  border-color: rgb(77, 180, 193);
+  color: white;
 }
 </style>

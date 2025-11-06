@@ -47,5 +47,8 @@ export default [
     name: 'rewards',
     component: () => import('@/pages/modules/user/UserRewards.vue'),
     meta: { requiresAuth: true }
-  }
+  },
+   { path: '/user/forgot',  
+     name: 'userforgot',   
+     component: () => import('@/pages/modules/user/ForgotPassword.vue') },
 ];

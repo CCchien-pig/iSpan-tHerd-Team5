@@ -32,6 +32,14 @@
             @flip="flipCard(index)"
           />
         </div>
+
+        <div class="demo-actions">
+        <button @click="forceEndGame" class="teal-reflect-button">
+          Demo(隨機分數)
+        </button>
+      </div>
+
+
       </div>
 
       <!-- ✅ Modal 使用 teleport 掛在 body，避免被覆蓋 -->
@@ -66,6 +74,7 @@ import GameCard from './GameCard.vue'
 import GameResultModal from './GameResultModal.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth' // ✅ 取得登入資訊
+
 
 // ✅ 防止重複掛載
 if (window.__MEMORY_GAME_ACTIVE__) {
@@ -262,6 +271,58 @@ async function submitScore() {
   }
 }
 
+import Swal from 'sweetalert2'
+
+// 🎯 Demo 專用：一鍵結束遊戲 → 顯示品牌風格分數視窗 → 自動上傳
+async function forceEndGame() {
+  clearInterval(timer.value)
+  timer.value = null
+
+  // ✅ 產生隨機分數 0~10
+  const randomScore = Math.floor(Math.random() * 10)+1
+  score.value = randomScore
+  isClear.value = randomScore >= 8 // 高分算通關
+
+  console.log(`Demo 模式，隨機分數：${randomScore}`)
+
+  // ✅ SweetAlert 品牌風格彈窗
+  const result = await Swal.fire({
+    title: 'Demo 模式',
+    html: `
+      <div style="
+        font-size:1.4rem;
+        color:#007083;
+        margin-top:10px;
+        font-weight:600;">
+        您的隨機分數：
+        <span style="font-size:2rem;color:#007083;">
+          ${randomScore} 分
+        </span>
+      </div>
+      <p style="margin-top:10px;color:#444;font-size:1rem;">
+        ${isClear.value ? '成功通關！' : '再接再厲，下次挑戰更高分！'}
+      </p>
+    `,
+    icon: isClear.value ? 'success' : 'info',
+    background: '#ffffff',
+    color: '#007083',
+    showConfirmButton: true,
+    confirmButtonText: '確認',
+    confirmButtonColor: '#007083',
+    customClass: {
+      popup: 'th-brand-popup'
+    },
+    allowOutsideClick: false,
+  })
+
+  // ✅ 確認後自動上傳分數與導回首頁
+  if (result.isConfirmed) {
+    await submitScore()
+  }
+}
+
+
+
 onMounted(checkTodayPlayed)
 onUnmounted(() => {
   if (timer.value) clearInterval(timer.value)
@@ -357,5 +418,34 @@ p.main-color-green-text {
   font-size: 1.4rem;
   color: rgb(0, 112, 131);
 }
+
+.demo-actions {
+  margin-top: 24px;
+}
+
+/* ✅ SweetAlert 品牌風格補充樣式 */
+:deep(.th-brand-popup) {
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(0, 112, 131, 0.35) !important;
+  padding: 1.5rem !important;
+}
+
+:deep(.swal2-confirm) {
+  border-radius: 40px !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  padding: 10px 28px !important;
+  background: linear-gradient(135deg, rgb(0,140,160), rgb(0,112,131)) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 112, 131, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+:deep(.swal2-confirm:hover) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 112, 131, 0.5) !important;
+}
+
+
 
 </style>

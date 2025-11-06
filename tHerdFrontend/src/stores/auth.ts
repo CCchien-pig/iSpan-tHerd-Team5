@@ -16,6 +16,7 @@ export const useAuthStore = defineStore('auth', {
     accessExpiresAt: '' as string,
     refreshToken: '' as string,
     user: null as MeDto | null,
+    guestId: '' as string, 
     _loadedFromStorage: false,   // 已載入 localStorage？
     isReady: false,              // 前端可用的「初始化完成」旗標
   }),
@@ -96,6 +97,14 @@ export const useAuthStore = defineStore('auth', {
   }
 },
 
+async ensureGuest() {
+      if (this.guestId) return this.guestId
+      // 這一請求會讓後端建立/讀取 Session，回傳 guestId
+      const { data } = await http.get('/auth/guest')
+      this.guestId = data.guestId
+      return this.guestId
+    },
+
     // ★ 取得/快取目前登入者
      async ensureUser(force = false) {
       if (!this.isAuthenticated) {
@@ -161,6 +170,8 @@ export const useAuthStore = defineStore('auth', {
           await this.ensureUser()
         } else {
           this.user = null
+                // ★ 未登入就確保建立/讀取 guest Session
+      await this.ensureGuest()
         }
       } catch {
         // 不拋錯，交給路由守門員處理導向

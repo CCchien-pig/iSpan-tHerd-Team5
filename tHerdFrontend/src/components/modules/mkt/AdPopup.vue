@@ -2,6 +2,7 @@
   <div v-if="visible && ad" class="popup-overlay">
     <div class="popup-content">
       <button class="close-btn" @click="closePopup">✕</button>
+
       <!-- 圖片 -->
       <img
         :src="ad.imageUrl"
@@ -9,6 +10,11 @@
         class="ad-image"
         @click="goToLink(ad.link)"
       />
+
+      <!-- 下方功能列 -->
+      <div class="popup-footer">
+        <button class="dismiss-btn" @click="dismissToday">今日不再顯示</button>
+      </div>
     </div>
   </div>
 </template>
@@ -17,7 +23,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-// ✅ 組件設定（是否自動顯示）
+// ✅ 組件設定
 const props = defineProps({
   autoShow: {
     type: Boolean,
@@ -26,10 +32,17 @@ const props = defineProps({
 })
 
 const visible = ref(false)
-const ad = ref(null) // 儲存彈出式廣告資料
+const ad = ref(null)
 
 // === 🧭 關閉廣告 ===
 function closePopup() {
+  visible.value = false
+}
+
+// === 🚫 今日不再顯示 ===
+function dismissToday() {
+  const today = new Date().toISOString().split('T')[0]
+  localStorage.setItem('popupDismissDate', today)
   visible.value = false
 }
 
@@ -41,11 +54,19 @@ function goToLink(link) {
 // === 📡 從後端載入廣告資料 ===
 async function loadPopupAd() {
   try {
+    const today = new Date().toISOString().split('T')[0]
+    const lastDismiss = localStorage.getItem('popupDismissDate')
+
+    // ✅ 若今日已選擇「不再顯示」則直接 return
+    if (lastDismiss === today) {
+      console.log('今日已關閉廣告，不再顯示')
+      return
+    }
+
     const res = await axios.get('/api/mkt/ad/PopupList')
     const list = res.data || []
 
     if (list.length > 0) {
-      // ✅ 這裡可以選擇第一筆或隨機一筆
       ad.value = list[Math.floor(Math.random() * list.length)]
       if (props.autoShow) visible.value = true
     }
@@ -111,7 +132,26 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.8);
 }
 
-/* 🪄 RWD 手機調整 */
+/* 📅 今日不再顯示按鈕 */
+.popup-footer {
+  text-align: center;
+  margin-top: 8px;
+}
+.dismiss-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #007083;
+  border: 1px solid #007083;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.dismiss-btn:hover {
+  background: #007083;
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   .ad-image {
     max-width: 95vw;
@@ -122,18 +162,6 @@ onMounted(() => {
     top: 6px;
     right: 6px;
     padding: 3px 6px;
-  }
-}
-
-/* 📱 超小螢幕 */
-@media (max-width: 480px) {
-  .ad-image {
-    max-width: 95vw;
-    max-height: 70vh;
-  }
-  .close-btn {
-    font-size: 16px;
-    padding: 2px 5px;
   }
 }
 </style>

@@ -62,12 +62,12 @@ namespace tHerdBackend.Services.PROD.API
         /// <param name="ct"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<ProdProductDetailDto?> GetFrontProductListAsync(int id, CancellationToken ct = default)
+        public async Task<ProdProductDetailDto?> GetFrontProductListAsync(int id, int? skuId, CancellationToken ct = default)
         {
             try
             {
                 // 查詢商品詳細
-                var item = await _repo.GetByIdAsync(id, ct);
+                var item = await _repo.GetByIdAsync(id, skuId, ct);
 
                 // 回傳分頁結果
                 return item;
@@ -122,5 +122,27 @@ namespace tHerdBackend.Services.PROD.API
 				throw;
 			}
 		}
-	}
+
+        /// <summary>
+        /// 查詢購物車數量
+        /// </summary>
+        /// <param name="userNumberId"></param>
+        /// <param name="sessionId"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default)
+        {
+            try
+            {
+                var item = await _srepo.GetCartSummaryAsync(userNumberId, sessionId, ct);
+
+                return item;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+    }
 }

@@ -35,9 +35,16 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         public string CreatePaymentForm(string orderId, int totalAmount, string itemName)
         {
+            // 🔍 驗證
+            _logger.LogInformation("📋 配置檢查:");
+            _logger.LogInformation("  MerchantID: {MerchantID}", _config.MerchantID);
+            _logger.LogInformation("  PaymentUrl: {PaymentUrl}", _config.PaymentUrl);
+            _logger.LogInformation("  OrderResultUrl: {OrderResultUrl}", _config.OrderResultUrl);  // ← 檢查這個有沒有值
+            _logger.LogInformation("  ReturnUrl: {ReturnUrl}", _config.ReturnUrl);
+
             var merchantTradeNo = orderId;
             var tradeDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-
+            
             var parameters = new SortedDictionary<string, string>
             {
                 { "MerchantID", _config.MerchantID },

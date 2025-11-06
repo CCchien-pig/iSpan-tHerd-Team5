@@ -115,6 +115,9 @@
         <router-link class="btn btn-link" :to="{ name: 'userregister' }">
           沒有帳號？去註冊
         </router-link>
+         <router-link class="btn btn-link" :to="{ name: 'userforgot' }">
+        忘記密碼？
+        </router-link>
       </div>
 
       <!-- 2FA 驗證碼區塊（僅在 requiresTwoFactor 時顯示） -->
@@ -139,14 +142,14 @@
 
 
       <!-- 需要幫助？ -->
-      <div class="text-center my-3">
+      <!-- <div class="text-center my-3">
         <i class="bi bi-question-circle me-1"></i>
         <a
           href="https://information.iherb.com/hc/zh-tw/sections/360004028091"
           target="_blank"
           class="link-secondary"
         >需要幫助？</a>
-      </div>
+      </div> -->
 
       <!-- 分隔線：或 -->
       <div class="position-relative text-center my-3">

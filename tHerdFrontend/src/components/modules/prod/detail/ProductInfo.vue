@@ -40,27 +40,52 @@
       <span class="badge bg-success">有庫存</span>
     </div>
 
-    <!-- 促銷訊息 -->
-    <div class="promo-message mb-3 p-3 bg-light border-start border-warning border-4">
+    <!-- 促銷訊息 : 暫時不放，要跟MKT串 -->
+    <!-- div class="promo-message mb-3 p-3 bg-light border-start border-warning border-4">
       <i class="bi bi-gift-fill text-warning me-2"></i>
       <strong>「定期自動送貨優惠」特價品</strong>
       <p class="mb-0 mt-1 small">首次訂購可享 30% 優惠至多批！後續訂購享 15% 折扣！</p>
-    </div>
+    </div-->
 
     <!-- 規格選擇 -->
     <div class="spec-section mb-4">
-      <label class="form-label fw-bold">包裝數量: {{ selectedSpec?.OptionName || '請選擇' }}</label>
+      <label class="form-label fw-bold">
+        規格: {{ selectedSpec?.optionName}}
+      </label>
+
       <div class="spec-options">
         <button
-          v-for="spec in product.Specs"
-          :key="spec.SkuId"
+          v-for="spec in product.skus"
+          v-show="spec.isActive"
+          :key="spec.skuId"
           class="spec-button"
-          :class="{ active: selectedSpec?.SkuId === spec.SkuId, disabled: !spec.IsActive }"
-          :disabled="!spec.IsActive"
+          :class="{ active: selectedSpec?.skuId === spec.skuId }"
           @click="selectSpec(spec)"
         >
-          <div class="spec-name">{{ spec.OptionName }}</div>
-          <div class="spec-price">NT${{ spec.SalePrice || spec.UnitPrice }}</div>
+
+          <!-- 規格名稱：黃底 -->
+          <div v-if="spec.optionName" class="spec-name-box">
+            <div class="spec-name">{{ spec.optionName }}</div>
+          </div>
+
+          <div class="spec-price">
+            <!-- 有優惠價 -->
+            <template v-if="spec.salePrice && spec.salePrice > 0 && spec.salePrice < spec.unitPrice">
+              <div class="price-old text-muted text-decoration-line-through small">
+                NT${{ spec.unitPrice }}
+              </div>
+              <div class="price-sale text-danger fw-bold">
+                NT${{ spec.salePrice }}
+              </div>
+            </template>
+
+            <!-- 沒有優惠價 -->
+            <template v-else>
+              <div class="price-normal text-dark fw-semibold">
+                NT${{ spec.unitPrice || spec.listPrice }}
+              </div>
+            </template>
+          </div>
         </button>
       </div>
     </div>
@@ -68,10 +93,10 @@
     <!-- 商品基本資訊 -->
     <div class="product-meta mb-4">
       <ul class="list-unstyled small">
-        <li><strong>包裝規格：</strong>{{ selectedSpec?.OptionName || product.PackageType }}</li>
+        <!--li><strong>包裝規格：</strong>{{ selectedSpec?.optionName || product.PackageType }}</li-->
         <li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li>
         <li v-if="product.dimensions">
-          <strong>約尺寸：</strong>{{ product.weight }}公斤，{{ product.dimensions }}
+          <strong>約尺寸：</strong>{{ product.weight }}公克，{{ product.dimensions }}
         </li>
         <li><strong>商品編號：</strong>{{ product.productId }}</li>
         <li><strong>產品代碼：</strong>{{ product.productCode }}</li>
@@ -79,16 +104,16 @@
       </ul>
     </div>
 
-    <!-- 包裝描述 -->
-    <div class="package-info mb-4 p-3 bg-light rounded">
+    <!-- 包裝描述 : 暫時不放，要跟物流串 -->
+    <!-- div class="package-info mb-4 p-3 bg-light rounded">
       <p class="mb-0 small">
         包裝使用可全面回收的瓶罐，無 BPA 成分，無 PVC 塑膠材質，按此
         <a href="#" class="text-primary">比較</a>
       </p>
-    </div>
+    </div-->
 
-    <!-- 警語說明 -->
-    <div class="warning-info mb-4">
+    <!-- 警語說明 : 暫時不放，要另外建Table -->
+    <!-- div class="warning-info mb-4">
       <p class="small mb-1">
         <i class="bi bi-shield-check text-success me-1"></i>
         無添加製造程序所需之外的成分
@@ -97,12 +122,14 @@
         嗜睡藥物或酒精飲料與本產品一起服用時，會增強嗜睡的效果。
         <a href="#" class="text-primary">比較</a>
       </p>
-    </div>
+    </div-->
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { onMounted } from 'vue'
+
+const props = defineProps({
   product: {
     type: Object,
     required: true,
@@ -121,6 +148,18 @@ const emit = defineEmits(['spec-selected'])
 const selectSpec = (spec) => {
   emit('spec-selected', spec)
 }
+
+// 頁面載入時，若有 mainSkuId，自動選定對應規格
+onMounted(() => {
+  if (props.product?.mainSkuId && props.product?.skus?.length) {
+    const mainSpec = props.product.skus.find(
+      (s) => s.skuId === props.product.mainSkuId
+    )
+    if (mainSpec) {
+      selectSpec(mainSpec)
+    }
+  }
+})
 
 /**
  * 格式化日期
@@ -198,13 +237,14 @@ const formatDate = (dateString) => {
 .spec-button {
   flex: 1;
   min-width: 120px;
-  padding: 15px;
   border: 2px solid #d0d0d0;
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
+  padding: 0; /* 拿掉多餘間距，讓子區塊自己控制 */
+  overflow: hidden;
 }
 
 .spec-button:hover:not(.disabled) {
@@ -224,9 +264,15 @@ const formatDate = (dateString) => {
 }
 
 .spec-name {
+  font-size: 0.9rem;
   font-weight: 600;
   color: #333;
-  margin-bottom: 5px;
+}
+
+/* 規格名稱區：黃底 */
+.spec-name-box {
+  background-color: #fff8e1; /* 🔹淡黃色底 */
+  padding: 8px 0;
 }
 
 .spec-price {
@@ -235,19 +281,71 @@ const formatDate = (dateString) => {
   font-weight: 700;
 }
 
+.price-old {
+  font-size: 0.7rem;
+  color: #999;
+  text-decoration: line-through;
+  display: block;
+}
+
+.spec-price-box {
+  background-color: #f8f9fa; /* 🔹淡灰底 */
+  padding: 6px 0;
+  border-top: 1px solid #e0e0e0;
+}
+
+.price-sale {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #d32f2f;
+}
+
+.price-normal {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Hover 與選中狀態 */
+.spec-button:hover {
+  border-color: #f5c542;
+  box-shadow: 0 2px 8px rgba(245, 197, 66, 0.25);
+}
+
+.spec-button.active {
+  border-color: #f5c542;
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.3);
+}
+
 /* 響應式設計 */
 @media (max-width: 768px) {
-  .product-info {
-    padding: 20px;
-  }
-
-  .product-title {
-    font-size: 1.25rem;
+  .spec-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 每行兩個 */
+    gap: 8px;
   }
 
   .spec-button {
-    min-width: 100px;
-    padding: 10px;
+    min-width: auto; /* 移除固定寬度 */
+    width: 100%;
+    padding: 0;
+  }
+
+  .spec-name-box {
+    padding: 6px 0;
+  }
+
+  .spec-price,
+  .spec-price-box {
+    padding: 4px 0;
+  }
+
+  .price-sale {
+    font-size: 0.9rem;
+  }
+
+  .price-old {
+    font-size: 0.65rem;
   }
 }
 </style>

@@ -1,39 +1,23 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.PROD.ord;
-using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.PROD;
+using tHerdBackend.Core.ValueObjects;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
 using tHerdBackend.Infra.Repository.Common;
-using tHerdBackend.Infra.Repository.PROD.Services;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
     public class ShoppingCartRepository : BaseRepository, IShoppingCartRepository
     {
-        private readonly ICurrentUser _currentUser;          // 目前登入使用者
-        private readonly UserManager<ApplicationUser>? _userMgr;    // Identity UserManager
-        private readonly SignInManager<ApplicationUser>? _signInMgr;// Identity SignInManager
-        private readonly ProductRelationService _relationSvc; // 商品關聯服務
-
         public ShoppingCartRepository(
             ISqlConnectionFactory factory,
-            tHerdDBContext db,
-            ICurrentUser currentUser,
-            UserManager<ApplicationUser>? userMgr = null,
-            SignInManager<ApplicationUser>? signInMgr = null)
+            tHerdDBContext db)
             : base(factory, db)
         {
-            _currentUser = currentUser;
-            _userMgr = userMgr;
-            _signInMgr = signInMgr;
-            _relationSvc = new ProductRelationService();
         }
 
         /// <summary>
@@ -45,8 +29,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             try
             {
-                // 若無 SessionId，建立新的 Guid
-                // var sessionId = Guid.NewGuid().ToString(); // 佔不用
+                var now = DateTime.Now;
 
                 // 嘗試取得現有購物車
                 var cartId = await conn.ExecuteScalarAsync<int?>(
@@ -61,8 +44,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                     cartId = await conn.ExecuteScalarAsync<int>(
                         @"INSERT INTO ORD_ShoppingCart (UserNumberId, SessionId, MaxItemsAllowed, CreatedDate)
                   OUTPUT INSERTED.CartId
-                  VALUES (@UserNumberId, @SessionId, 20, SYSDATETIME())",
-                        new { dto.UserNumberId, dto.SessionId }, tran);
+                  VALUES (@UserNumberId, @SessionId, 20, @now)",
+                        new { dto.UserNumberId, dto.SessionId, now }, tran);
                 }
 
                 // 檢查是否已有相同 SKU
@@ -75,17 +58,18 @@ namespace tHerdBackend.Infra.Repository.PROD
                 {
                     // 更新數量
                     await conn.ExecuteAsync(
-                        @"UPDATE ORD_ShoppingCartItem
+						@"UPDATE ORD_ShoppingCartItem
                   SET Qty = Qty + @Qty,
                       UnitPrice = @UnitPrice,
-                      CreatedDate = SYSDATETIME()
+                      CreatedDate = @now
                   WHERE CartItemId = @CartItemId",
                         new
                         {
                             CartItemId = existItemId,
                             dto.Qty,
-                            dto.UnitPrice
-                        }, tran);
+                            dto.UnitPrice,
+							now
+						}, tran);
                 }
                 else
                 {
@@ -101,24 +85,25 @@ namespace tHerdBackend.Infra.Repository.PROD
 
                     // 新增新項目
                     await conn.ExecuteAsync(
-                        @"INSERT INTO ORD_ShoppingCartItem (CartId, ProductId, SkuId, Qty, UnitPrice, CreatedDate)
-                  VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, SYSDATETIME())",
+						@"INSERT INTO ORD_ShoppingCartItem (CartId, ProductId, SkuId, Qty, UnitPrice, CreatedDate)
+                  VALUES (@CartId, @ProductId, @SkuId, @Qty, @UnitPrice, @now)",
                         new
                         {
                             CartId = cartId,
                             ProductId = productId,
                             dto.SkuId,
                             dto.Qty,
-                            dto.UnitPrice
+                            dto.UnitPrice,
+                            now
                         }, tran);
                 }
 
                 // 更新購物車修改時間
                 await conn.ExecuteAsync(
-                    @"UPDATE ORD_ShoppingCart 
-              SET RevisedDate = SYSDATETIME()
+					@"UPDATE ORD_ShoppingCart 
+              SET RevisedDate = @now
               WHERE CartId = @CartId",
-                    new { CartId = cartId }, tran);
+                    new { CartId = cartId, now }, tran);
 
                 if (tran != null)
                     tran.Commit();
@@ -133,6 +118,38 @@ namespace tHerdBackend.Infra.Repository.PROD
             finally
             {
                 if (needDispose && conn != null)
+                    conn.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 取得購物車摘要（商品數量 / 總數量 / 小計）
+        /// </summary>
+        public async Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default)
+        {
+            var (conn, tran, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+
+            try
+            {
+                var data = await conn.QueryFirstOrDefaultAsync(
+                    @"SELECT 
+                          COUNT(DISTINCT sci.CartItemId) AS ItemCount,
+                          ISNULL(SUM(sci.Qty), 0) AS TotalQty,
+                          ISNULL(SUM(sci.Qty * sci.UnitPrice), 0) AS Subtotal
+                      FROM ORD_ShoppingCart sc
+                      JOIN ORD_ShoppingCartItem sci ON sc.CartId = sci.CartId
+                      WHERE (sc.UserNumberId = @UserNumberId OR sc.SessionId = @SessionId);",
+                    new { UserNumberId = userNumberId, SessionId = sessionId });
+
+                return data;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"取得購物車摘要時發生錯誤：{ex.Message}", ex);
+            }
+            finally
+            {
+                if (needDispose)
                     conn.Dispose();
             }
         }

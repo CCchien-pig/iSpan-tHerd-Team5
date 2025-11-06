@@ -39,10 +39,11 @@
                 :original-price="originalPrice"
                 :has-discount="hasDiscount"
                 :discount-percent="discountPercent"
+                :unit-text="selectedSpec?.UnitText || '件'"
+                :selected-sku="selectedSpec"
                 v-model:quantity="quantity"
                 @add-to-cart="handleAddToCart"
                 @toggle-favorite="handleToggleFavorite"
-                @toggle-like="handleToggleLike"
               />
             </div>
           </div>
@@ -92,6 +93,10 @@ import ProductPurchaseCard from '@/components/modules/prod/detail/ProductPurchas
 import ProductTabs from '@/components/modules/prod/detail/ProductTabs.vue'
 import ProductCard from '@/components/modules/prod/card/ProductCard.vue'
 
+// 加入購物車
+import { useAddToCart } from '@/composables/modules/prod//useAddToCart'
+const { addToCart } = useAddToCart()
+
 const route = useRoute()
 const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
@@ -118,7 +123,7 @@ const breadcrumbs = computed(() => {
 // 當前價格
 const currentPrice = computed(() => {
   if (selectedSpec.value) {
-    return selectedSpec.value.SalePrice || selectedSpec.value.UnitPrice
+    return selectedSpec.value.salePrice || selectedSpec.value.unitPrice
   }
   return product.value?.salePrice || 0
 })
@@ -126,7 +131,7 @@ const currentPrice = computed(() => {
 // 原價
 const originalPrice = computed(() => {
   if (selectedSpec.value) {
-    return selectedSpec.value.UnitPrice
+    return selectedSpec.value.unitPrice
   }
   return product.value?.listPrice || 0
 })
@@ -200,25 +205,8 @@ const handleSpecSelected = (spec) => {
 /**
  * 處理加入購物車
  */
-const handleAddToCart = (data) => {
-  if (!selectedSpec.value) {
-    warning('請選擇商品規格')
-    return
-  }
-
-  console.log('加入購物車:', {
-    product: product.value,
-    spec: selectedSpec.value,
-    quantity: data.quantity,
-    autoDelivery: data.autoDelivery,
-  })
-
-  // TODO: 實作購物車功能
-  toast(
-    `已加入購物車：${product.value.productName} - ${selectedSpec.value.OptionName} x ${data.quantity}`,
-    'success',
-    2000,
-  )
+async function handleAddToCart(selectedSku, qty) {
+  await addToCart(product.value, selectedSku, qty)
 }
 
 /**
