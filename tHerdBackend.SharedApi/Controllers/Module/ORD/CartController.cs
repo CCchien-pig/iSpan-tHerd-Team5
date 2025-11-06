@@ -467,8 +467,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     ShippingStatusId = "unshipped",
                     Subtotal = calculation.Subtotal,
                     DiscountTotal = calculation.Discount,
-                    ShippingFee = request.ShippingFee,      // 🔥 使用前端傳來的運費
-                    LogisticsId = request.LogisticsId,      // 🔥 使用前端選擇的物流
+                    ShippingFee = request.ShippingFee,      
+                    LogisticsId = request.LogisticsId > 0 ? request.LogisticsId : 1000,
                     PaymentConfigId = 1001,
                     ReceiverName = receiverName,
                     ReceiverPhone = receiverPhone,
