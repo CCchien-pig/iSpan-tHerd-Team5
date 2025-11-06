@@ -18,6 +18,7 @@ using tHerdBackend.Infra.Repository.PROD.Assemblers;
 using tHerdBackend.Infra.Repository.PROD.Builders;
 using tHerdBackend.Infra.Repository.PROD.Services;
 using static Dapper.SqlMapper;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -117,19 +118,30 @@ namespace tHerdBackend.Infra.Repository.PROD
                 SELECT 
                     p.ProductId, p.ProductName,
                     p.BrandId, s.BrandName,
-                    p.SeoId, p.Badge,
-                    p.MainSkuId,
+                    p.SeoId, p.Badge, sc.CodeDesc BadgeName,
+                    p.MainSkuId, p.AvgRating, p.ReviewCount,
                     af.FileUrl AS ImageUrl,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice,
                     cp.ProductTypePath
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
                 LEFT JOIN PROD_ProductImage i ON i.ProductId = p.ProductId AND i.IsMain = 1
                 LEFT JOIN SYS_AssetFile af ON af.FileId = i.ImgId
                 LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
                 WHERE 1 = 1
                 ");
+
+            // 熱銷邏輯
+            if (query.Other == "Hot") {
+                if (query.ProductIdList == null) query.ProductIdList = new List<int>();
+
+                var list = await GetOtherFilter(query.PageSize);
+                foreach (var i in list) {
+                    query.ProductIdList.Add(i);
+                }
+            }            
 
 			// === Step 2. 條件過濾 ===
 			ProductFrontQueryBuilder.AppendFilters(sql, query);
@@ -138,8 +150,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                 GROUP BY 
                     p.ProductId, p.ProductName,
                     p.BrandId, s.BrandName,
-                    p.SeoId, p.Badge,
-                    p.MainSkuId, af.FileUrl, 
+                    p.SeoId, p.Badge, sc.CodeDesc,
+                    p.MainSkuId, af.FileUrl, p.AvgRating, p.ReviewCount,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice, 
                     cp.ProductTypePath
                 ");
@@ -211,8 +223,10 @@ namespace tHerdBackend.Infra.Repository.PROD
 					query.ProductTypeId,
 					query.MinPrice,
 					query.MaxPrice,
-					query.IsPublished
-				};
+					query.IsPublished,
+                    query.Badge,
+                    query.ProductIdList
+                };
 
 				using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
 				var list = await multi.ReadAsync<ProdProductSearchDto>();
@@ -231,13 +245,48 @@ namespace tHerdBackend.Infra.Repository.PROD
 			}
 		}
 
-		/// <summary>
-		/// 查詢商品清單
-		/// </summary>
-		/// <param name="query"></param>
-		/// <param name="ct"></param>
-		/// <returns></returns>
-		public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
+        /// <summary>
+        /// 熱銷商品
+        /// </summary>
+        /// <param name="size"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<int>> GetOtherFilter(int size, CancellationToken ct = default)
+        {
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var sql = @"
+                    SELECT oi.ProductId
+                    FROM ORD_Order o
+                    INNER JOIN ORD_OrderItem oi ON oi.OrderId = o.OrderId
+                    INNER JOIN PROD_Product p ON p.ProductId = oi.ProductId AND p.IsPublished=1
+                    WHERE o.CreatedDate >= DATEADD(YEAR, -1, GETDATE())
+                    GROUP BY oi.ProductId
+                    ORDER BY COUNT(1) DESC;";
+
+                // 直接查回 ProductId 清單
+                var list = await conn.QueryAsync<int>(sql, transaction: tx);
+                return list.Take(size);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ [GetOtherFilter] {ex}");
+                return Enumerable.Empty<int>();
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 查詢商品清單
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
 			ProductFilterQueryDto query, CancellationToken ct = default)
 		{
 
@@ -245,10 +294,10 @@ namespace tHerdBackend.Infra.Repository.PROD
 			var sql = new StringBuilder(@"
                 SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                        p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
-                       p.ShortDesc, p.FullDesc, p.IsPublished, p.badge,
+                       p.ShortDesc, p.FullDesc, p.IsPublished, p.Badge, 
                        p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
                        p.CreatedDate, p.Reviser, p.RevisedDate, 
-                       p.mainSkuId, af.FileUrl ImageUrl,
+                       p.mainSkuId, af.FileUrl ImageUrl, 
                        ps.ListPrice, ps.UnitPrice, ps.SalePrice, tc.ProductTypeName
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
@@ -367,13 +416,14 @@ namespace tHerdBackend.Infra.Repository.PROD
         {
             var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
-                           p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
-                           p.badge, p.MainSkuId, 
+                           p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight, 
+                           p.badge, sc.CodeDesc BadgeName, p.MainSkuId, p.AvgRating, p.ReviewCount,
                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
                            p.CreatedDate, p.Reviser, p.RevisedDate
                       FROM PROD_Product p
                       JOIN SUP_Brand b ON b.BrandId=p.BrandId
                       JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
+                      LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                      WHERE p.ProductId=@ProductId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
