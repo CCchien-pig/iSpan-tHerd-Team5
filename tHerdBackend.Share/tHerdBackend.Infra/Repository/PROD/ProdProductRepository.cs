@@ -70,101 +70,179 @@ namespace tHerdBackend.Infra.Repository.PROD
             }
         }
 
-        /// <summary>
-        /// 前台: 查詢商品清單 (增加效率)
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(
-            ProductFilterQueryDto query, CancellationToken ct = default)
-        {
+		/// <summary>
+		/// 前台: 查詢商品清單 (增加效率)
+		/// </summary>
+		/// <param name="query"></param>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(
+			ProductFrontFilterQueryDto query, CancellationToken ct = default)
+		{
+			// === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
+			var sql = new StringBuilder(@"
+                ;WITH TypeHierarchy (ProductId, ProductTypeId, ParentId, ProductTypeName, FullPath) AS (
+                    SELECT 
+                        pt.ProductId,
+                        ptc.ProductTypeId,
+                        ptc.ParentId,
+                        ptc.ProductTypeName,
+                        CAST(ptc.ProductTypeName AS NVARCHAR(MAX)) AS FullPath
+                    FROM PROD_ProductType pt
+                    JOIN PROD_ProductTypeConfig ptc ON pt.ProductTypeId = ptc.ProductTypeId
 
-            // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
-            var sql = new StringBuilder(@"
-                SELECT p.ProductId, p.ProductName, 
-                    p.BrandId, s.BrandName, 
-                    p.SeoId, p.Badge, 
-                    p.MainSkuId, 
+                    UNION ALL
+
+                    SELECT 
+                        th.ProductId,
+                        p2.ProductTypeId,
+                        p2.ParentId,
+                        p2.ProductTypeName,
+                        CAST(p2.ProductTypeName + N' > ' + th.FullPath AS NVARCHAR(MAX)) AS FullPath
+                    FROM PROD_ProductTypeConfig p2
+                    JOIN TypeHierarchy th ON th.ParentId = p2.ProductTypeId
+                ),
+                CategoryPaths AS (
+                    SELECT 
+                        th.ProductId,
+                        STUFF((
+                            SELECT DISTINCT N' / ' + th2.FullPath
+                            FROM TypeHierarchy th2
+                            WHERE th2.ProductId = th.ProductId
+                            FOR XML PATH(''), TYPE
+                        ).value('.', 'NVARCHAR(MAX)'), 1, 3, '') AS ProductTypePath
+                    FROM TypeHierarchy th
+                    GROUP BY th.ProductId
+                )
+                SELECT 
+                    p.ProductId, p.ProductName,
+                    p.BrandId, s.BrandName,
+                    p.SeoId, p.Badge,
+                    p.MainSkuId,
                     af.FileUrl AS ImageUrl,
-                    ps.ListPrice, ps.UnitPrice, ps.SalePrice
+                    ps.ListPrice, ps.UnitPrice, ps.SalePrice,
+                    cp.ProductTypePath
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
-                LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
-                LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
+                LEFT JOIN PROD_ProductImage i ON i.ProductId = p.ProductId AND i.IsMain = 1
+                LEFT JOIN SYS_AssetFile af ON af.FileId = i.ImgId
+                LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
                 WHERE 1 = 1
-            ");
+                ");
 
-            // === Step 2. 條件過濾 ===
-            ProductQueryBuilder.AppendFilters(sql, query);
+			// === Step 2. 條件過濾 ===
+			ProductFrontQueryBuilder.AppendFilters(sql, query);
 
-            // === Step 3. 排序 ===
-            sql.Append(ProductQueryBuilder.BuildOrderClause(query));
-            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
+			sql.AppendLine(@"
+                GROUP BY 
+                    p.ProductId, p.ProductName,
+                    p.BrandId, s.BrandName,
+                    p.SeoId, p.Badge,
+                    p.MainSkuId, af.FileUrl, 
+                    ps.ListPrice, ps.UnitPrice, ps.SalePrice, 
+                    cp.ProductTypePath
+                ");
 
-            // === Step 4. 統計筆數 ===
-            var countSql = new StringBuilder(@"
+			// === Step 3. 排序與分頁 ===
+			var orderByClause = ProductFrontQueryBuilder.BuildOrderClause(query);
+			if (string.IsNullOrWhiteSpace(orderByClause) || !orderByClause.TrimStart().StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+				orderByClause = " ORDER BY p.ProductId DESC";
+
+			sql.AppendLine(orderByClause);
+			sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
+
+			// === Step 4. 統計筆數 ===
+			var countSql = new StringBuilder(@"
+                ;WITH TypeHierarchy (ProductId, ProductTypeId, ParentId, ProductTypeName, FullPath) AS (
+                    SELECT 
+                        pt.ProductId,
+                        ptc.ProductTypeId,
+                        ptc.ParentId,
+                        ptc.ProductTypeName,
+                        CAST(ptc.ProductTypeName AS NVARCHAR(MAX)) AS FullPath
+                    FROM PROD_ProductType pt
+                    JOIN PROD_ProductTypeConfig ptc ON pt.ProductTypeId = ptc.ProductTypeId
+
+                    UNION ALL
+
+                    SELECT 
+                        th.ProductId,
+                        p2.ProductTypeId,
+                        p2.ParentId,
+                        p2.ProductTypeName,
+                        CAST(p2.ProductTypeName + N' > ' + th.FullPath AS NVARCHAR(MAX)) AS FullPath
+                    FROM PROD_ProductTypeConfig p2
+                    JOIN TypeHierarchy th ON th.ParentId = p2.ProductTypeId
+                ),
+                CategoryPaths AS (
+                    SELECT 
+                        th.ProductId,
+                        STUFF((
+                            SELECT DISTINCT N' / ' + th2.FullPath
+                            FROM TypeHierarchy th2
+                            WHERE th2.ProductId = th.ProductId
+                            FOR XML PATH(''), TYPE
+                        ).value('.', 'NVARCHAR(MAX)'), 1, 3, '') AS ProductTypePath
+                    FROM TypeHierarchy th
+                    GROUP BY th.ProductId
+                )
                 SELECT COUNT(DISTINCT p.ProductId)
-                  FROM PROD_Product p
-                  JOIN SUP_Brand s ON s.BrandId=p.BrandId
-                  LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
-                    LEFT JOIN PROD_ProductImage i ON i.ProductId=p.ProductId AND i.IsMain = 1
-                    LEFT JOIN SYS_AssetFile af ON af.FileId=i.ImgId
-                 WHERE 1 = 1 ");
+                FROM PROD_Product p
+                JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
+                LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
+                WHERE 1 = 1
+                ");
 
-            ProductQueryBuilder.AppendFilters(countSql, query);
+			ProductFrontQueryBuilder.AppendFilters(countSql, query);
 
-            // === Step 5. 查詢執行 ===
-            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
-            try
-            {
-                // 查詢參數
-                var parameters = new
-                {
-                    Skip = (query.PageIndex - 1) * query.PageSize,
-                    Take = query.PageSize,
-                    query.ProductId,
-                    query.Keyword,
-                    query.BrandId,
-                    query.ProductTypeId,
-                    query.MinPrice,
-                    query.MaxPrice,
-                    query.IsPublished
-                };
+			// === Step 5. 查詢執行 ===
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var parameters = new
+				{
+					Skip = (query.PageIndex - 1) * query.PageSize,
+					Take = query.PageSize,
+					query.ProductId,
+					query.Keyword,
+					query.BrandId,
+					query.ProductTypeId,
+					query.MinPrice,
+					query.MaxPrice,
+					query.IsPublished
+				};
 
-                // 查詢
-                using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+				using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+				var list = await multi.ReadAsync<ProdProductSearchDto>();
+				var total = await multi.ReadSingleAsync<int>();
 
-                var list = await multi.ReadAsync<ProdProductSearchDto>();
-                var total = await multi.ReadSingleAsync<int>();
+				return (list, total);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
+				return (Enumerable.Empty<ProdProductSearchDto>(), 0);
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
 
-                return (list, total);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
-                return (Enumerable.Empty<ProdProductSearchDto>(), 0);
-            }
-            finally
-            {
-                if (needDispose) conn.Dispose();
-            }
-        }
+		/// <summary>
+		/// 查詢商品清單
+		/// </summary>
+		/// <param name="query"></param>
+		/// <param name="ct"></param>
+		/// <returns></returns>
+		public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
+			ProductFilterQueryDto query, CancellationToken ct = default)
+		{
 
-
-        /// <summary>
-        /// 查詢商品清單
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
-            ProductFilterQueryDto query, CancellationToken ct = default)
-        {
-
-            // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
-            var sql = new StringBuilder(@"
+			// === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
+			var sql = new StringBuilder(@"
                 SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                        p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
                        p.ShortDesc, p.FullDesc, p.IsPublished, p.badge,
@@ -190,15 +268,15 @@ namespace tHerdBackend.Infra.Repository.PROD
                   LEFT JOIN SYS_AssetFile af ON af.FileId=sma.FileId
                  WHERE 1 = 1 ");
 
-            // === Step 2. 條件過濾 ===
-            ProductQueryBuilder.AppendFilters(sql, query);
+			// === Step 2. 條件過濾 ===
+			ProductQueryBuilder.AppendFilters(sql, query);
 
-            // === Step 3. 排序 ===
-            sql.Append(ProductQueryBuilder.BuildOrderClause(query));
-            sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
+			// === Step 3. 排序 ===
+			sql.Append(ProductQueryBuilder.BuildOrderClause(query));
+			sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY ");
 
-            // === Step 4. 統計筆數 ===
-            var countSql = new StringBuilder(@"
+			// === Step 4. 統計筆數 ===
+			var countSql = new StringBuilder(@"
                 SELECT COUNT(DISTINCT p.ProductId)
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
@@ -215,75 +293,76 @@ namespace tHerdBackend.Infra.Repository.PROD
                   ) sp ON sp.ProductId = p.ProductId
                  WHERE 1=1 ");
 
-            ProductQueryBuilder.AppendFilters(countSql, query);
+			ProductQueryBuilder.AppendFilters(countSql, query);
 
-            // === Step 5. 查詢執行 ===
-            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
-            try
-            {
-                // 查詢參數
-                var parameters = new { 
-                    Skip = (query.PageIndex - 1) * query.PageSize, 
-                    Take = query.PageSize,
+			// === Step 5. 查詢執行 ===
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				// 查詢參數
+				var parameters = new
+				{
+					Skip = (query.PageIndex - 1) * query.PageSize,
+					Take = query.PageSize,
 					query.ProductId,
-					query.Keyword, 
-                    query.BrandId, 
-                    query.ProductTypeId, 
-                    query.MinPrice, 
-                    query.MaxPrice,
-                    query.IsPublished
-                };
+					query.Keyword,
+					query.BrandId,
+					query.ProductTypeId,
+					query.MinPrice,
+					query.MaxPrice,
+					query.IsPublished
+				};
 
-                // 查詢
-                var multiSql = $"{sql}; {countSql};";
-                using var multi = await conn.QueryMultipleAsync(multiSql, parameters, tx);
+				// 查詢
+				var multiSql = $"{sql}; {countSql};";
+				using var multi = await conn.QueryMultipleAsync(multiSql, parameters, tx);
 
-                // 讀清單
-                var raw = await multi.ReadAsync<ProdProductDto>();
+				// 讀清單
+				var raw = await multi.ReadAsync<ProdProductDto>();
 
-                // 讀總數
-                var total = await multi.ReadSingleAsync<int>();
+				// 讀總數
+				var total = await multi.ReadSingleAsync<int>();
 
 
-                // 整理類別名稱集合
-                var list = raw.GroupBy(p => p.ProductId).Select(g =>
-                {
-                    var first = g.First();
-                    first.ProductTypeDesc = g
-                        .Select(x => x.ProductTypeName ?? string.Empty)
-                        .Where(n => !string.IsNullOrEmpty(n))
-                        .Distinct()
-                        .ToList();
-                    return first;
-                }).ToList();
+				// 整理類別名稱集合
+				var list = raw.GroupBy(p => p.ProductId).Select(g =>
+				{
+					var first = g.First();
+					first.ProductTypeDesc = g
+						.Select(x => x.ProductTypeName ?? string.Empty)
+						.Where(n => !string.IsNullOrEmpty(n))
+						.Distinct()
+						.ToList();
+					return first;
+				}).ToList();
 
-                // === Step 7. 補 Creator / Reviser 名稱 ===
-                if (query.IsFrontEnd != true)  // 自訂 flag，前台不載入
-                {
-                    var resolver = new UserNameResolver(_factory, _db);
-                    await resolver.LoadAsync(ct);
-                    resolver.Apply(list);
-                }
+				// === Step 7. 補 Creator / Reviser 名稱 ===
+				if (query.IsFrontEnd != true)  // 自訂 flag，前台不載入
+				{
+					var resolver = new UserNameResolver(_factory, _db);
+					await resolver.LoadAsync(ct);
+					resolver.Apply(list);
+				}
 
-                return (list, total);
-            }
+				return (list, total);
+			}
 			catch (Exception ex)
 			{
-                Console.WriteLine("❌ [GetAllAsync] " + ex);
-                return (Enumerable.Empty<ProdProductDto>(), 0);
-            }
+				Console.WriteLine("❌ [GetAllAsync] " + ex);
+				return (Enumerable.Empty<ProdProductDto>(), 0);
+			}
 			finally
-            {
-                if (needDispose) conn.Dispose();
-            }
-        }
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
 
-        /// <summary>
-        /// 查詢單筆商品完整資料
-        /// </summary>
-        /// <param name="ProductId"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
+		/// <summary>
+		/// 查詢單筆商品完整資料
+		/// </summary>
+		/// <param name="ProductId"></param>
+		/// <param name="ct"></param>
+		/// <returns></returns>
 		public async Task<ProdProductDetailDto?> GetByIdAsync(int productId, int? skuId, CancellationToken ct = default)
         {
             var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
@@ -908,56 +987,5 @@ namespace tHerdBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-
-        /// <summary>
-        /// 前台: 查詢商品清單 (增加效率)
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        //public async Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(CancellationToken ct = default)
-        //{
-        //    var sql = new StringBuilder(@"
-        //            SELECT ProductTypeId, ParentId, ProductTypeCode, ProductTypeName, OrderSeq, IsActive
-        //            FROM PROD_ProductTypeConfig
-        //            WHERE IsActive = 1
-        //            ORDER BY ParentId, OrderSeq, ProductTypeName;
-        //    ");
-
-        //    // === Step 5. 查詢執行 ===
-        //    var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
-        //    try
-        //    {
-        //        // 查詢
-        //        using var multi = await conn.QueryMultipleAsync($"{sql}", tx);
-
-        //        var list = await multi.ReadAsync<ProductTypeTreeDto>();
-
-        //        return list;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine("❌ [GetAllFrontAsync] " + ex);
-        //        return Enumerable.Empty<ProductTypeTreeDto>();
-        //    }
-        //    finally
-        //    {
-        //        if (needDispose) conn.Dispose();
-        //    }
-        //}
-
-        //public async Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default)
-        //{
-        //	if (barcodes == null || !barcodes.Any())
-        //		return string.Empty;
-
-        //	var exists = await _db.ProdProductSkus
-        //		.AsNoTracking()
-        //		.Where(p => barcodes.Contains(p.Barcode))
-        //		.Select(p => p.Barcode)   // 只取出條碼字串
-        //		.ToListAsync(ct);
-
-        //	return string.Join("、", exists);
-        //}
     }
 }

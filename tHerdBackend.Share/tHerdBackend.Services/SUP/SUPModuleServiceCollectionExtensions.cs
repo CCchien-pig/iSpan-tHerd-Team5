@@ -57,6 +57,11 @@ namespace tHerdBackend.Services.SUP
 
 			services.AddHttpClient();
 
+
+			// 註冊綠界物流服務
+			services.AddScoped<IECPayLogisticsService, ECPayLogisticsService>();
+		
+
 			return services;
         }
     }

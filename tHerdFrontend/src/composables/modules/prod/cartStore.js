@@ -13,7 +13,7 @@ export const useCartStore = defineStore('cart', {
       try {
         const auth = useAuthStore()
         await auth.init()
-        const sessionId = await auth.ensureGuest()
+        const  sessionId= await auth.ensureGuest()
         const userNumberId = auth.user?.userNumberId || null
         const summary = await ProductsApi.getCartSummary(userNumberId, sessionId)
         this.totalCount = summary?.ItemCount || 0
