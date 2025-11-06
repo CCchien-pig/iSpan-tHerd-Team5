@@ -27,8 +27,8 @@
               </router-link>
             </h4>
 
-            <ul>
-              <li v-for="item in col.items" :key="item.id">
+            <ul class="link-row">
+              <li v-for="item in col.items" :key="item.id" class="link-item">
                 <router-link
                   :to="item.url"
                   class="brand-link"
@@ -138,6 +138,26 @@ defineEmits(['mouseenter', 'mouseleave', 'close'])
   z-index: 5;
   padding: 8px 0;
   border-bottom: 1px solid #e0e0e0;
+}
+
+/* 橫向展開的連結列 */
+.menu-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.link-row {
+  display: flex;
+  flex-wrap: wrap;          /* 橫向排列、滿行自動換行 */
+  gap: 6px 16px;            /* row-gap / column-gap */
+  align-items: center;
+}
+.link-item {
+  display: inline-flex;     /* 讓 item 以行內塊呈現，保持緊湊 */
+}
+/*（可選）限制每個連結最小寬，避免過度擠在一起 */
+.link-item .brand-link {
+  white-space: nowrap;      /* 避免連結內文字自行換行 */
 }
 
 /* ====== 品牌區 ====== */

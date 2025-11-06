@@ -57,13 +57,20 @@ const router = useRouter()
 
 // ---- 查詢參數（關鍵字 / 分類）----
 const { showLoading, hideLoading } = useLoading()
-const searchKeyword = computed(() => route.query.q || '')
 const error = ref(null)
 
 // 若是從 SEO 友善路徑進來（例如 /products/beauty/xzq-1415）
-const productTypeId = ref(route.params.productTypeId || null)
-const productTypeCode = ref(route.params.productTypeCode || '')
+const slug = computed(() => route.params.slug || '')   // 例如 "beauty-1410"
+const productTypeCode = ref('')
+const productTypeId = ref(null)
 const keyword = ref(route.query.q || '')
+
+function parseSlug() {
+  if (!slug.value) return
+  const parts = slug.value.split('-')
+  productTypeId.value = parts.pop()              // 最後一段是 ID
+  productTypeCode.value = parts.join('-') || ''  // 前面的是英文代碼
+}
 
 const products = ref([])
 const totalCount = ref(0)
@@ -91,55 +98,31 @@ const filteredProducts = computed(() => {
 const isLoading = ref(false)
 
 // 搜尋動作（之後可接後端 API）
-const searchProducts = async (page = 1) => {
+async function searchProducts(page = 1) {
   if (isLoading.value) return
   isLoading.value = true
+  showLoading('載入商品中...')
 
   try {
-    showLoading('載入商品中...')
-    let res
+    parseSlug() // 解析 slug 再查詢
 
-    // 若有分類 ID：執行分類搜尋
-    if (productTypeId.value) {
-      res = await ProductsApi.getProductList({
-        pageIndex: page,
-        pageSize: pageSize.value,
-        productTypeId: productTypeId.value,
-        sortBy: sortBy.value,
-        isPublished: true,
-        isFrontEnd: true
-      })
-    }
-    // 若有關鍵字：執行關鍵字搜尋
-    else if (keyword.value) {
-      res = await ProductsApi.getProductList({
-        pageIndex: page,
-        pageSize: pageSize.value,
-        keyword: keyword.value,
-        sortBy: sortBy.value,
-        isPublished: true,
-        isFrontEnd: true
-      })
-    }
-    // 若都沒有 → 可顯示熱門商品或空結果
-    else {
-      res = await ProductsApi.getProductList({
-        pageIndex: page,
-        pageSize: pageSize.value,
-        isPublished: true,
-        isFrontEnd: true
-      })
+    const query = {
+      pageIndex: page,
+      pageSize: pageSize.value,
+      sortBy: sortBy.value,
+      isPublished: true,
+      isFrontEnd: true,
     }
 
+    if (productTypeId.value) query.productTypeId = productTypeId.value
+    if (keyword.value) query.keyword = keyword.value
+
+    const res = await ProductsApi.getProductList(query)
     const data = res.data
-    if (!data || !Array.isArray(data.items)) {
-      products.value = []
-      totalCount.value = 0
-    } else {
-      products.value = data.items
-      totalCount.value = data.totalCount || 0
-      pageIndex.value = data.pageIndex || 1
-    }
+
+    products.value = Array.isArray(data?.items) ? data.items : []
+    totalCount.value = data?.totalCount || 0
+    pageIndex.value = data?.pageIndex || 1
   } catch (err) {
     console.error('搜尋商品錯誤：', err)
     products.value = []
@@ -152,12 +135,8 @@ const searchProducts = async (page = 1) => {
 
 // 監聽網址 query 變化時，自動重新搜尋
 watch(
-  () => [route.params.productTypeId, route.query.q],
-  ([newTypeId, newKeyword]) => {
-    productTypeId.value = newTypeId
-    keyword.value = newKeyword || ''
-    searchProducts(1)
-  },
+  () => [route.params.slug, route.query.q],
+  () => searchProducts(1),
   { immediate: true }
 )
 
