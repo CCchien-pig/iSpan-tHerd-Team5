@@ -1,21 +1,22 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
 
-namespace tHerdBackend.Services.CS
+namespace tHerdBackend.SharedApi.Hubs
 {
 	public class ChatHub : Hub
 	{
-		// 當前端要傳訊息給同一群組（聊天室）
+		// 當使用者傳送訊息
 		public async Task SendMessage(string chatId, string sender, string message)
 		{
+			// 傳給同一聊天室群組內的所有人
 			await Clients.Group(chatId).SendAsync("ReceiveMessage", sender, message);
 		}
 
-		// 使用者加入聊天室群組
+		// 加入聊天室群組
 		public async Task JoinChat(string chatId)
 		{
 			await Groups.AddToGroupAsync(Context.ConnectionId, chatId);
-			await Clients.Group(chatId).SendAsync("ReceiveMessage", "system", "使用者已加入聊天室");
+			await Clients.Group(chatId).SendAsync("ReceiveMessage", "system", $"{chatId} 已加入聊天室");
 		}
 	}
 }

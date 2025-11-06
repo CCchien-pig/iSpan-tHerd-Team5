@@ -1,71 +1,118 @@
 <template>
   <div class="center-narrow py-5">
-    <h3 class="text-center mb-4 main-color-green-text">智能客服助理</h3>
+    <h3 class="text-center mb-4 main-color-green-text">即時客服聊天室（SignalR）</h3>
 
-    <!-- Chatbase 區塊 -->
-    <div id="chatbase-container" class="border rounded-4 shadow-sm p-3 bg-white"></div>
+    <div class="text-center mb-3">
+  <span :class="connected ? 'text-success' : 'text-danger'">
+    ● {{ connected ? '已連線' : '未連線' }}
+  </span>
+</div>
 
-    <!-- 轉人工中狀態 -->
-    <div v-if="loading" class="text-center text-muted mt-4">
-      <div class="spinner-border text-success me-2"></div>
-      客服連線中，請稍候 3～5 分鐘...
+    <!-- 聊天框 -->
+    <div class="chat-box border rounded-4 shadow-sm p-3 bg-white" style="height:400px; overflow-y:auto;">
+      <div
+        v-for="(m, i) in messages"
+        :key="i"
+        :class="['my-2', m.sender === userName ? 'text-end' : 'text-start']"
+      >
+        <div
+          :class="[
+            'd-inline-block px-3 py-2 rounded-4',
+            m.sender === userName
+              ? 'bg-primary text-white'
+              : 'bg-light border'
+          ]"
+        >
+          <small v-if="m.sender !== userName" class="text-muted">{{ m.sender }}：</small>
+          {{ m.text }}
+        </div>
+      </div>
     </div>
 
-    <div v-if="connected" class="alert alert-success mt-4 text-center">
-      ✅ 已由 {{ agentName }} 客服為您服務
+    <!-- 輸入框 -->
+    <div class="input-group mt-3">
+      <input
+        v-model="msg"
+        type="text"
+        class="form-control"
+        placeholder="輸入訊息..."
+        @keyup.enter="send"
+      />
+      <button class="btn btn-primary" @click="send">送出</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { http } from '@/api/http'
+import { ref, onMounted, onUnmounted } from 'vue'
+import * as signalR from '@microsoft/signalr'
+import { useAuthStore } from '@/stores/auth'
 
-
-const loading = ref(false)
+const messages = ref([])
+const msg = ref('')
+const chatId = ref('chat-demo-001')
 const connected = ref(false)
-const agentName = ref('')
+const auth = useAuthStore()
+let connection = null
 
+onMounted(async () => {
+  // ✅ 從登入後的 auth store 取 Token
+  const token = auth.accessToken
 
-onMounted(() => {
-  // 1️⃣ 載入 Chatbase Widget
-  const script = document.createElement('script')
-  script.src = 'https://www.chatbase.co/embed.min.js'
-  script.setAttribute('data-chatbot-id', '你的-chatbase-id') // ← 換成你的 bot id
-  document.body.appendChild(script)
+  // ✅ 用 accessTokenFactory 傳給 Hub
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl('https://localhost:7103/chatHub', {
+      accessTokenFactory: () => token,
+    })
+    .withAutomaticReconnect()
+    .build()
 
-  // 2️⃣ 監聽 Chatbase 訊息事件
-  window.addEventListener('message', async (event) => {
-    if (!event.origin.includes('chatbase.co')) return
-    const data = event.data
+  // === 狀態監控 ===
+  connection.onreconnected(() => (connected.value = true))
+  connection.onclose(() => (connected.value = false))
 
-    // 偵測關鍵字「轉人工」
-    if (typeof data === 'string' && data.includes('轉人工')) {
-      console.log('偵測到轉人工請求')
-      loading.value = true
-
-      try {
-        // 呼叫候位 API
-        const res = await http.post('/api/cs/chat/enqueue')
-        console.log('加入客服候位', res.data)
-      } catch (err) {
-        console.error('enqueue error', err)
-      }
-    }
-
-    // 🔔 若未來你加上 SignalR，可在這裡監聽「connected」事件切換狀態
-    if (typeof data === 'object' && data.type === 'chat_connected') {
-      loading.value = false
-      connected.value = true
-      agentName.value = data.agentName || '客服'
-    }
+  // === 接收訊息事件 ===
+  connection.on('ReceiveMessage', (sender, text) => {
+    messages.value.push({ sender, text })
+    scrollToBottom()
   })
+
+  try {
+    await connection.start()
+    console.log('✅ SignalR 已連線')
+    connected.value = true
+    await connection.invoke('JoinChat', chatId.value)
+  } catch (err) {
+    console.error('❌ 連線失敗', err)
+    connected.value = false
+  }
+})
+
+async function send() {
+  if (!msg.value.trim()) return
+  if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+    alert('尚未連線，請稍候再試。')
+    return
+  }
+  await connection.invoke('SendMessage', chatId.value, msg.value)
+  msg.value = ''
+}
+
+function scrollToBottom() {
+  const box = document.querySelector('.chat-box')
+  if (box) box.scrollTop = box.scrollHeight
+}
+
+onUnmounted(() => {
+  if (connection) connection.stop()
 })
 </script>
 
+
+
+
 <style scoped>
-#chatbase-container {
-  height: 500px;
-  border: 1px solid #eaeaea;
+.chat-box {
+  background-color: #f9f9f9;
 }
 </style>

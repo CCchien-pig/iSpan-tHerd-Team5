@@ -40,7 +40,7 @@ export default [
   path: '/cs/live-chat',
   name: 'LiveChat',
   component: () => import('@/pages/modules/cs/LiveChat.vue'),
-  meta: { title: '即時客服' }
+  meta: { title: '即時聊天室客服' }
 },
 
 ];

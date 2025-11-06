@@ -1,4 +1,5 @@
 ﻿using CloudinaryDotNet;
+using DocumentFormat.OpenXml.Presentation;
 using Microsoft.AspNetCore.Authentication;           // AuthenticationBuilder 擴充
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;    // AddGoogle 擴充方法所在組件
@@ -106,6 +107,9 @@ namespace tHerdBackend.SharedApi
 			// 註冊寄信服務
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
+			// === 即時通訊（SignalR） ===
+			builder.Services.AddSignalR();
+
 			builder.Services.ConfigureExternalCookie(options =>
 			{
 				options.Cookie.Name = ".ExternalAuth.Temp";
@@ -127,6 +131,21 @@ namespace tHerdBackend.SharedApi
 			})
 			.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
+				options.Events = new JwtBearerEvents
+				{
+					// ✅ 新增這段，只給 SignalR 用（不會影響現有會員 API）
+					OnMessageReceived = context =>
+					{
+						var accessToken = context.Request.Query["access_token"];
+						var path = context.HttpContext.Request.Path;
+						if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+						{
+							context.Token = accessToken;
+						}
+						return Task.CompletedTask;
+					}
+				};
+
 				options.MapInboundClaims = false; // 不要把標準 JWT claim 亂映射
 
 				var cfg = builder.Configuration.GetSection("Jwt");
@@ -230,14 +249,28 @@ namespace tHerdBackend.SharedApi
 				o.Cookie.SameSite = SameSiteMode.Lax;
 			});
 
-			// 允許 CORS
+			//// 允許 CORS
+			//builder.Services.AddCors(options =>
+			//{
+			//	options.AddPolicy("AllowAll",
+			//		policy => policy
+			//			.AllowAnyOrigin()
+			//			.AllowAnyMethod()
+			//			.AllowAnyHeader());
+			//});
 			builder.Services.AddCors(options =>
 			{
-				options.AddPolicy("AllowAll",
+				options.AddPolicy("AllowFrontend",
 					policy => policy
-						.AllowAnyOrigin()
+						.AllowAnyHeader()
 						.AllowAnyMethod()
-						.AllowAnyHeader());
+						.AllowCredentials()
+						.SetIsOriginAllowed(origin =>
+							origin.StartsWith("http://localhost:5173") ||  // Vue 前台
+							origin.StartsWith("https://localhost:5173") ||
+							origin.StartsWith("https://localhost:7157")    // ✅ 後台 Admin
+						)
+					);
 			});
 
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
@@ -369,14 +402,18 @@ namespace tHerdBackend.SharedApi
 				await next();
 			});
 
-		
-			// 啟用 JWT 驗證
+			app.UseCors("AllowVue");   // 確保這行存在且在 UseAuthorization 之前
+									   // 啟用 JWT 驗證
 			app.UseAuthentication();
 			app.UseAuthorization();
 
 			app.MapControllers();
 
-            app.Run();
+			// === 即時通訊（SignalR Hub） ===
+		
+			app.MapHub<tHerdBackend.SharedApi.Hubs.ChatHub>("/chatHub");
+
+			app.Run();
 
         }
     }
