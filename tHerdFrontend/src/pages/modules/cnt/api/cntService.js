@@ -1,5 +1,6 @@
 // src/pages/modules/cnt/api/cntService.js
 import axios from "axios";
+import { http } from "@/api/http"; // ★ 新增
 
 // 📌 統一 API 基底位址
 const API_BASE = "https://localhost:7103/api/cnt";
@@ -55,10 +56,11 @@ export async function getArticleList({
  */
 export async function getArticleDetail(id) {
     try {
-        const { data } = await axios.get(`${API_BASE}/articles/${id}`);
-        return data; // { canViewFullContent, data, recommended }
-    } catch (err) {
-        console.error("getArticleDetail 錯誤:", err);
+        // 這裡不用再寫 /api，http 的 baseURL 已經是 /api
+        const { data } = await http.get(`/cnt/articles/${id}?includeBody=true`);
+        return data;
+    } catch (error) {
+        console.error("取得文章詳情時發生錯誤:", error);
         return null;
     }
 }

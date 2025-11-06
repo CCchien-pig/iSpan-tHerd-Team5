@@ -1,38 +1,32 @@
 // src/pages/modules/cnt/api/cntArticlesApi.js
-import { http } from '@/api/http'   // ✅ 改用 http，不要再用 baseApi
+import { http } from '@/api/http'
 
 class CntArticlesApi {
     basePath = '/cnt'
 
     // 建立 / 取得文章購買訂單
     async createPurchase(pageId, paymentMethod = 'LINEPAY') {
-        // http 的回傳是 axios 原始 response
-        const { data: res } = await http.post(
+        const { data } = await http.post(
             `${this.basePath}/articles/${pageId}/purchase`,
             { paymentMethod }
         )
 
-        // 這裡假設後端統一回 { success, message, data }
-        if (!res.success) {
-            throw new Error(res.message || '建立訂單失敗')
-        }
+        // 後端直接回 PurchaseSummaryDto，所以 data 就是訂單摘要
+        return data
+    }
 
-        // res.data 就是後端的 PurchaseSummaryDto
-        return res.data
+    // ⭐ 開發用：呼叫 /mock-pay 把訂單標記為已付款
+    async mockPay(purchaseId) {
+        await http.post(`${this.basePath}/purchases/${purchaseId}/mock-pay`)
     }
 
     // 取得「我買過的文章列表」
     async getMyPurchasedArticles() {
-        const { data: res } = await http.get(
+        const { data } = await http.get(
             `${this.basePath}/member/purchased-articles`
         )
-
-        if (!res.success) {
-            throw new Error(res.message || '取得購買文章清單失敗')
-        }
-
-        // res.data 是 PurchasedArticleDto[]
-        return res.data
+        // 後端回 IReadOnlyList<PurchasedArticleDto> → JSON 陣列
+        return Array.isArray(data) ? data : []
     }
 }
 

@@ -102,12 +102,17 @@
       >
         <p class="mb-3 fw-bold">此內容需登入付費解鎖</p>
         <div class="d-flex gap-2">
-          <button type="button" class="btn teal-reflect-button text-white" @click="onLogin">
+          <!-- 付費遮罩 CTA -->
+          <button
+            v-if="!isLogin"
+            class="btn teal-reflect-button text-white"
+            @click="onLogin"
+          >
             登入
           </button>
+
           <button
-            class="btn teal-reflect-button text-white px-4"
-            type="button"
+            class="btn teal-reflect-button text-white"
             :disabled="isPurchasing"
             @click="onPurchase"
           >
@@ -116,7 +121,7 @@
         </div>
       </div>
     </div>
-
+    <br>
     <!-- Tags：底部（暫時作搜尋導回文章清單） -->
     <div v-if="article.tags && article.tags.length" class="mt-4 pt-3 border-top">
       <h5 class="main-color-green-text mb-2">相關標籤</h5>
@@ -194,10 +199,10 @@ import { getArticleDetail, getArticleList } from "@/pages/modules/cnt/api/cntSer
 
 // 建立購買流程增加
 import cntArticlesApi from '@/pages/modules/cnt/api/cntArticlesApi'
+const auth = useAuthStore()
 const isLogin = computed(() => auth.isAuthenticated)
 const isPurchasing = ref(false)
 const lastPurchase = ref(null)
-const auth = useAuthStore()
 // ---------------
 
 const route = useRoute();
@@ -641,7 +646,7 @@ async function loadPage() {
   }
 
   // 2. 抓目前的 pageId
-  const pageId = route.params.id;
+  const pageId = Number(route.params.id)
 
   // 3. 從後端拿文章詳情
   const res = await getArticleDetail(pageId);
@@ -781,40 +786,63 @@ const igIconSvg = `
 
 // ===== 付費遮罩 CTA（示範用）=====
 function onLogin() {
-  alert("請登入以解鎖內容");
+  if (!isLogin.value) {
+    // 真的沒登入才導去登入頁
+    router.push({ name: 'login', query: { returnUrl: route.fullPath } })
+  } else {
+    // 已經登入就提示一下 / 或什麼都不做
+    alert('您已經登入，可以直接購買或閱讀內容')
+  }
 }
 
 async function onPurchase() {
-  // 1) 先看有沒有登入
+  // 1) 沒登入先導去登入
   if (!isLogin.value) {
-    // 依你專案的登入頁名稱調整
-    router.push({ name: 'login', query: { returnUrl: route.fullPath } })
-    return
+    router.push({ name: "login", query: { returnUrl: route.fullPath } });
+    return;
   }
 
-  if (isPurchasing.value) return
-  isPurchasing.value = true
+  // 2) 防止連點
+  if (isPurchasing.value) return;
+  isPurchasing.value = true;
 
   try {
-    const pageId = article.value?.pageId || route.params.id
-    const summary = await cntArticlesApi.createPurchase(pageId)
+    const pageId = article.value?.pageId || Number(route.params.id);
 
-    console.log('購買成功', summary)
-    lastPurchase.value = summary
-    alert('訂單建立成功，可以到「我買過的文章」查看')
+    // 3) 建立 / 取得訂單（這裡會回 PurchaseSummaryDto）
+    const summary = await cntArticlesApi.createPurchase(pageId);
+    console.log("購買成功", summary);
+    lastPurchase.value = summary; // 要記錄也可以
 
-    // 之後真的要串金流，可以在這裡接 mock-pay / 綠界... 等流程
+    // 4) 期末展示用：直接「模擬付款」 + 解鎖文章
+    //    注意大小寫：後端 JSON 可能是 purchaseId 或 PurchaseId
+    const purchaseId = summary.purchaseId ?? summary.PurchaseId;
+    if (!purchaseId) {
+      console.error("找不到 purchaseId，無法 mockPay", summary);
+      alert("訂單建立成功，但無法確認訂單編號，請稍後再試。");
+      return;
+    }
+
+    await cntArticlesApi.mockPay(purchaseId);
+
+    alert("付款完成，文章已解鎖！也可以到「我買過的文章」查看這筆訂單。");
+
+    // 5) 重新載入文章，讓 canViewFullContent / blocks 跟後端同步
+    await loadPage();
   } catch (err) {
-    console.error('購買失敗', err?.response?.status, err)
+    console.error("購買失敗", err?.response?.status, err);
     if (err?.response?.status === 401) {
-      alert('登入逾時，請重新登入後再購買')
+      alert("登入逾時，請重新登入後再購買");
+      router.push({ name: "login", query: { returnUrl: route.fullPath } });
     } else {
-      alert('購買失敗，請稍後再試')
+      alert("購買失敗，請稍後再試");
     }
   } finally {
-    isPurchasing.value = false
+    isPurchasing.value = false;
   }
 }
+
+
 // utils
 function wireToCamel(x) {
   return {
