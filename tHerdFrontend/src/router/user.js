@@ -51,4 +51,10 @@ export default [
    { path: '/user/forgot',  
      name: 'userforgot',   
      component: () => import('@/pages/modules/user/ForgotPassword.vue') },
+  {
+  path: '/user/favorites',
+  name: 'user-favorites',
+  component: () => import('@/pages/modules/user/UserFavorites.vue'),
+  meta: { requiresAuth: true }
+}
 ];
