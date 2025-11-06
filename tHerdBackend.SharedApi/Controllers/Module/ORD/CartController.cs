@@ -1,483 +1,4 @@
-﻿//using Microsoft.AspNetCore.Authentication.JwtBearer;
-//using Microsoft.AspNetCore.Authorization;
-//using Microsoft.AspNetCore.Identity;
-//using Microsoft.AspNetCore.Mvc;
-//using Microsoft.EntityFrameworkCore;
-//using tHerdBackend.Core.Abstractions;
-//using tHerdBackend.Core.DTOs.ORD;
-//using tHerdBackend.Core.DTOs.PROD.ord;
-//using tHerdBackend.Core.DTOs.USER;
-//using tHerdBackend.Core.Interfaces.ORD;
-//using tHerdBackend.Core.Interfaces.PROD;
-//using tHerdBackend.Core.Models;
-//using tHerdBackend.Infra.Models;
-//using tHerdBackend.Services.Common;
-//using tHerdBackend.Services.ORD;
-
-//// === 新增別名 (防止 AddToCartDto 命名衝突) ===
-//using OrdDto = tHerdBackend.Core.DTOs.ORD.AddToCartDto;
-//using ProdDto = tHerdBackend.Core.DTOs.PROD.ord.AddToCartDto;
-
-//namespace tHerdBackend.SharedApi.Controllers.Module.ORD
-//{
-//    [ApiController]
-//    [Route("api/ord/cart")]
-//    public class CartController : ControllerBase
-//    {
-//        private readonly tHerdDBContext _context;
-//        private readonly IECPayService _ecpayService;
-//        private readonly IOrderCalculationService _calculationService;
-//        private readonly IShoppingCartRepository _cartRepository;
-//        private readonly ICurrentUser _currentUser;
-//        private readonly UserManager<ApplicationUser>? _userManager;
-//        private readonly HttpClient _httpClient;
-//        private readonly ICurrentUserService _current;
-
-//        public CartController(
-//            tHerdDBContext context,
-//            IECPayService ecpayService,
-//            IOrderCalculationService calculationService,
-//            IShoppingCartRepository cartRepository,
-//            ICurrentUser currentUser,
-//            UserManager<ApplicationUser>? userManager,
-//            IHttpClientFactory httpClientFactory,
-//            ICurrentUserService current)
-//        {
-//            _context = context;
-//            _ecpayService = ecpayService;
-//            _calculationService = calculationService;
-//            _cartRepository = cartRepository;
-//            _currentUser = currentUser;
-//            _userManager = userManager;
-//            _httpClient = httpClientFactory.CreateClient();
-//            _current = current;
-//        }
-
-//        /// <summary>
-//        /// 取得當前使用者資訊
-//        /// </summary>
-//        private async Task<(int? UserNumberId, string SessionId)> GetUserInfoAsync()
-//        {
-//            int? userNumberId = null;
-//            string sessionId = HttpContext.Session.Id; // 從 Session 取得
-
-//            // 檢查是否為登入會員
-//            if (_currentUser.IsAuthenticated && _userManager != null)
-//            {
-//                var user = await _userManager.Users.AsNoTracking()
-//                    .FirstOrDefaultAsync(x => x.Id == _currentUser.Id);
-
-//                if (user != null)
-//                {
-//                    userNumberId = user.UserNumberId;
-//                }
-//            }
-
-//            return (userNumberId, sessionId);
-//        }
-
-//        /// <summary>
-//        /// 加入購物車（使用 PROD 的 Repository）
-//        /// </summary>
-//        [HttpPost("add")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> AddToCart([FromBody] ProdDto dto)
-//        {
-//            try
-//            {
-//                var cartId = await _cartRepository.AddShoppingCartAsync(dto);
-
-//                var (userNumberId, sessionId) = await GetUserInfoAsync();
-
-//                return Ok(new
-//                {
-//                    success = true,
-//                    message = "加入購物車成功",
-//                    data = new
-//                    {
-//                        cartId,
-//                        sessionId,
-//                        isAuthenticated = userNumberId.HasValue
-//                    }
-//                });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//        /// <summary>
-//        /// 取得購物車（含商品驗證）
-//        /// </summary>
-//        [HttpGet("get")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> GetCart([FromQuery] string? sessionId)
-//        {
-//            try
-//            {
-//                var (userNumberId, currentSessionId) = await GetUserInfoAsync();
-
-//                // 優先使用會員 ID，其次使用 SessionId
-//                var cart = await _context.OrdShoppingCarts
-//                    .Include(c => c.OrdShoppingCartItems)
-//                    .ThenInclude(i => i.Sku)
-//                    .ThenInclude(s => s.Product)
-//                    .Where(c => (userNumberId.HasValue && c.UserNumberId == userNumberId) ||
-//                               (!userNumberId.HasValue && c.SessionId == (sessionId ?? currentSessionId)))
-//                    .FirstOrDefaultAsync();
-
-//                if (cart == null)
-//                {
-//                    return Ok(new { success = true, data = new { items = new List<object>(), total = 0 } });
-//                }
-
-//                var items = cart.OrdShoppingCartItems.Select(i => new
-//                {
-//                    cartItemId = i.CartItemId,
-//                    productId = i.ProductId,
-//                    skuId = i.SkuId,
-//                    productName = i.Sku?.Product?.ProductName ?? "商品已下架",
-//                    optionName = i.Sku?.SpecCode ?? i.Sku?.SkuCode ?? "",
-//                    unitPrice = i.UnitPrice,
-//                    qty = i.Qty,
-//                    subtotal = i.UnitPrice * i.Qty,
-//                    stockQty = i.Sku?.StockQty ?? 0,
-
-//                    isAvailable = i.Sku != null &&
-//                                  i.Sku.Product != null &&
-//                                  i.Sku.Product.IsPublished &&
-//                                  i.Sku.IsActive,
-//                    isInStock = (i.Sku?.StockQty ?? 0) >= i.Qty,
-//                    warningMessage = GetWarningMessage(i)
-//                }).ToList();
-
-//                var total = items.Where(i => i.isAvailable && i.isInStock).Sum(i => i.subtotal);
-
-//                return Ok(new
-//                {
-//                    success = true,
-//                    data = new
-//                    {
-//                        items,
-//                        total,
-//                        hasInvalidItems = items.Any(i => !i.isAvailable || !i.isInStock),
-//                        isAuthenticated = userNumberId.HasValue
-//                    }
-//                });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//        private string? GetWarningMessage(OrdShoppingCartItem item)
-//        {
-//            if (item.Sku == null || item.Sku.Product == null)
-//                return "❌ 商品已下架";
-
-//            if (!item.Sku.Product.IsPublished)
-//                return "❌ 商品已下架";
-
-//            if (!item.Sku.IsActive)
-//                return "❌ 此規格已停售";
-
-//            if (item.Sku.StockQty < item.Qty)
-//                return $"⚠️ 庫存不足（剩餘 {item.Sku.StockQty}）";
-
-//            return null;
-//        }
-
-//        /// <summary>
-//        /// 更新數量
-//        /// </summary>
-//        [HttpPut("update/{cartItemId}")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> UpdateQuantity(int cartItemId, [FromBody] UpdateQtyDto dto)
-//        {
-//            try
-//            {
-//                var item = await _context.OrdShoppingCartItems.FindAsync(cartItemId);
-//                if (item == null)
-//                    return Ok(new { success = false, message = "找不到商品" });
-
-//                item.Qty = dto.Qty;
-//                await _context.SaveChangesAsync();
-
-//                return Ok(new { success = true, message = "更新成功" });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//        /// <summary>
-//        /// 刪除項目
-//        /// </summary>
-//        [HttpDelete("remove/{cartItemId}")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> RemoveItem(int cartItemId)
-//        {
-//            try
-//            {
-//                var item = await _context.OrdShoppingCartItems.FindAsync(cartItemId);
-//                if (item == null)
-//                    return Ok(new { success = false, message = "找不到商品" });
-
-//                _context.OrdShoppingCartItems.Remove(item);
-//                await _context.SaveChangesAsync();
-
-//                return Ok(new { success = true, message = "刪除成功" });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//        /// <summary>
-//        /// 計算金額（含運費、優惠券）
-//        /// </summary>
-//        [HttpPost("calculate")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> CalculateOrder([FromBody] CalculateOrderRequest request)
-//        {
-//            try
-//            {
-//                var (userNumberId, _) = await GetUserInfoAsync();
-
-//                var result = await _calculationService.CalculateAsync(
-//                    userNumberId,
-//                    request.CartItems,
-//                    request.CouponCode
-//                );
-
-//                return Ok(new { success = true, data = result });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//        /// <summary>
-//        /// 傳送地址給 SUP
-//        /// </summary>
-//        [HttpPost("send-address-to-sup")]
-//        [AllowAnonymous]
-//        public async Task<IActionResult> SendAddressToSUP([FromBody] ShippingAddressDto dto)
-//        {
-//            try
-//            {
-//                var response = await _httpClient.PostAsJsonAsync("/api/sup/shipping/address", new
-//                {
-//                    receiverName = dto.ReceiverName,
-//                    receiverPhone = dto.ReceiverPhone,
-//                    receiverAddress = dto.ReceiverAddress
-//                });
-
-//                if (response.IsSuccessStatusCode)
-//                {
-//                    var result = await response.Content.ReadFromJsonAsync<dynamic>();
-//                    return Ok(new { success = true, message = "地址已傳送至物流系統", data = result });
-//                }
-
-//                return Ok(new { success = false, message = "物流系統連線失敗" });
-//            }
-//            catch (Exception ex)
-//            {
-//                return Ok(new { success = false, message = ex.Message });
-//            }
-//        }
-
-//		/// <summary>
-//		/// 結帳（移除測試用戶）
-//		/// </summary>
-//		[HttpPost("checkout")]
-//		[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-//		public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
-//		{
-//			// 1) 必須登入
-//			var userNumberId = _current.GetRequiredUserNumberId();
-//			if (userNumberId <= 0)
-//				return Ok(new { success = false, message = "請先登入會員" });
-
-//			// 2) 基本驗證
-//			if (request?.CartItems == null || !request.CartItems.Any())
-//				return Ok(new { success = false, message = "購物車是空的" });
-
-//			// 收件人 (若 DB 為 NOT NULL，請先檢查)
-//			if (string.IsNullOrWhiteSpace(request.ReceiverName) ||
-//				string.IsNullOrWhiteSpace(request.ReceiverPhone) ||
-//				string.IsNullOrWhiteSpace(request.ReceiverAddress))
-//				return Ok(new { success = false, message = "收件資料不完整" });
-
-//			using var transaction = await _context.Database.BeginTransactionAsync();
-
-//			try
-//			{
-//				// 3) 驗 SKU/庫存
-//				var skuIds = request.CartItems.Select(x => x.SkuId).ToList();
-//				var skus = await _context.ProdProductSkus
-//					.Include(s => s.Product)
-//					.Where(s => skuIds.Contains(s.SkuId))
-//					.ToDictionaryAsync(s => s.SkuId);
-
-//				var errorList = new List<string>();
-
-//				foreach (var item in request.CartItems)
-//				{
-//					if (!skus.TryGetValue(item.SkuId, out var sku))
-//					{
-//						errorList.Add($"商品不存在: {item.ProductName}");
-//						continue;
-//					}
-//					if (sku.Product == null || !sku.Product.IsPublished)
-//						errorList.Add($"商品已下架: {item.ProductName}");
-//					else if (!sku.IsActive)
-//						errorList.Add($"此規格已停售: {item.ProductName}");
-//					else if (sku.StockQty < item.Quantity)
-//						errorList.Add($"庫存不足: {item.ProductName}（剩餘 {sku.StockQty}）");
-//				}
-
-//				if (errorList.Any())
-//				{
-//					await transaction.RollbackAsync();
-//					return Ok(new { success = false, errors = errorList });
-//				}
-
-//				// 4) 計算金額
-//				var items = request.CartItems.Select(x => new OrderItemDto
-//				{
-//					SkuId = x.SkuId,
-//					SalePrice = x.SalePrice,           // 前端請送成交價
-//					Quantity = x.Quantity
-//				}).ToList();
-
-//				var calculation = await _calculationService.CalculateAsync(userNumberId, items, request.CouponCode);
-
-//				// 5) 取 PaymentConfig（可能查無 → 必須擋）
-//				var paymentConfigId = await _context.OrdPaymentConfigs
-//					.Select(p => (int?)p.PaymentConfigId)
-//					.FirstOrDefaultAsync();
-
-//				if (paymentConfigId is null)
-//				{
-//					await transaction.RollbackAsync();
-//					return Ok(new { success = false, message = "尚未設定金流參數（OrdPaymentConfigs）" });
-//				}
-
-//				// 6) 檢查狀態碼是否存在（若有 FK 或 Check，請確認）
-//				// 這裡示範：若你有代碼表，請真的查一下
-//				// bool statusOk = await _context.SysCodes.AnyAsync(c => c.Type=="OrderStatus" && c.Code=="pending");
-//				// if (!statusOk) ...
-
-//				// 7) 產生訂單編號（避免重複的話可加 random/sequence）
-//				string orderNo = DateTime.Now.ToString("yyyyMMdd") +
-//								 DateTime.Now.ToString("HHmmssfff")[^7..]; // 取末 7 位
-
-//				var order = new OrdOrder
-//				{
-//					OrderNo = orderNo,
-//					UserNumberId = userNumberId,
-//					OrderStatusId = "pending",
-//					PaymentStatus = "pending",         // 請確認允許值清單
-//					ShippingStatusId = "unshipped",    // 請確認允許值清單
-//					Subtotal = calculation.Subtotal,
-//					DiscountTotal = calculation.Discount,
-//					ShippingFee = calculation.ShippingFee,
-//					PaymentConfigId = paymentConfigId.Value,
-//					ReceiverName = request.ReceiverName,
-//					ReceiverPhone = request.ReceiverPhone,
-//					ReceiverAddress = request.ReceiverAddress,
-//					HasShippingLabel = false,
-//					IsVisibleToMember = true,
-//					CreatedDate = DateTime.Now
-//				};
-
-//				_context.OrdOrders.Add(order);
-//				await _context.SaveChangesAsync();     // ← 這次若炸，多半是 PaymentConfigId / 欄位 NOT NULL / 狀態 FK
-
-//				// 8) 訂單明細
-//				foreach (var it in request.CartItems)
-//				{
-//					_context.OrdOrderItems.Add(new OrdOrderItem
-//					{
-//						OrderId = order.OrderId,
-//						ProductId = it.ProductId,
-//						SkuId = it.SkuId,
-//						Qty = it.Quantity,
-//						UnitPrice = it.SalePrice
-//					});
-//				}
-
-//				// 9) 優惠券紀錄（金額記負值是 OK 的，請確認欄位型別/允許範圍）
-//				if (!string.IsNullOrEmpty(calculation.AppliedCouponCode))
-//				{
-//					_context.OrdOrderAdjustments.Add(new OrdOrderAdjustment
-//					{
-//						OrderId = order.OrderId,
-//						Kind = "coupon",
-//						Scope = "order",
-//						Code = calculation.AppliedCouponCode,
-//						Method = "fixed",
-//						AdjustmentAmount = -calculation.Discount,
-//						CreatedDate = DateTime.Now,
-//						RevisedDate = DateTime.Now
-//					});
-//				}
-
-//				await _context.SaveChangesAsync();     // ← 第二次若炸，多半是明細 FK/NOT NULL/數值
-
-//				// 10) 清空購物車（確認表名）
-//				await _context.Database.ExecuteSqlRawAsync(@"
-//            DELETE ci FROM ORD_ShoppingCartItem ci
-//            INNER JOIN ORD_ShoppingCart c ON ci.CartId = c.CartId
-//            WHERE c.UserNumberId = {0}", userNumberId);
-
-//				await transaction.CommitAsync();
-
-//				// 11) 綠界表單
-//				var ecpayFormHtml = _ecpayService.CreatePaymentForm(
-//					orderNo,
-//					(int)Math.Round(calculation.Total),
-//					"tHerd商品"
-//				);
-
-//				return Ok(new
-//				{
-//					success = true,
-//					message = "訂單建立成功",
-//					data = new
-//					{
-//						orderId = order.OrderId,
-//						orderNo,
-//						subtotal = calculation.Subtotal,
-//						shippingFee = calculation.ShippingFee,
-//						discount = calculation.Discount,
-//						total = calculation.Total
-//					},
-//					ecpayFormHtml
-//				});
-//			}
-//			catch (DbUpdateException ex)
-//			{
-//				// 讓錯誤說人話：帶出最內層 SQL 例外
-//				var root = ex.InnerException?.Message ?? ex.Message;
-//				await transaction.RollbackAsync();
-//				return Ok(new { success = false, message = "資料庫寫入失敗", detail = root });
-//			}
-//			catch (Exception ex)
-//			{
-//				await transaction.RollbackAsync();
-//				return Ok(new { success = false, message = ex.Message });
-//			}
-//		}
-//	}
-//}
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -606,10 +127,10 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 			};
 		}
 
-		// ------------------------------------------------
+        // ------------------------------------------------
 
-		/// <summary>加入購物車（使用 PROD 的 Repository）</summary>
-		[HttpPost("add")]
+        /// <summary>加入購物車（使用 PROD 的 Repository）</summary>
+        [HttpPost("add")]
 		[AllowAnonymous]
 		public async Task<IActionResult> AddToCart([FromBody] ProdDto dto)
 		{
@@ -636,79 +157,190 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
 			}
 		}
 
-		/// <summary>取得購物車（含商品驗證）</summary>
-		[HttpGet("get")]
-		[AllowAnonymous]
-		public async Task<IActionResult> GetCart([FromQuery] string? sessionId)
-		{
-			try
-			{
-				var auth = await GetAuthContextAsync();
-				var sid = sessionId ?? auth.SessionId;
+        /// <summary>
+        /// 取得購物車（ORD 模組，即時驗證庫存）
+        /// </summary>
+        [HttpGet("get")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetCart([FromQuery] string? sessionId)
+        {
+            try
+            {
+                var auth = await GetAuthContextAsync();
+                if (!auth.IsAuthenticated || !auth.UserNumberId.HasValue)
+                {
+                    return Ok(new { success = false, message = "請先登入會員" });
+                }
 
-				var cart = await _context.OrdShoppingCarts
-					.Include(c => c.OrdShoppingCartItems)
-						.ThenInclude(i => i.Sku)
-							.ThenInclude(s => s.Product)
-					.Where(c =>
-						(auth.UserNumberId.HasValue && c.UserNumberId == auth.UserNumberId) ||
-						(!auth.UserNumberId.HasValue && c.SessionId == sid))
-					.FirstOrDefaultAsync();
+                int userNumberId = auth.UserNumberId.Value;
+                string currentSessionId = sessionId ?? HttpContext.Session.Id;
 
-				if (cart == null)
-					return Ok(new { success = true, data = new { items = new List<object>(), total = 0, isAuthenticated = auth.IsAuthenticated } });
+                // 查詢購物車
+                var cart = await _context.OrdShoppingCarts
+                    .Include(c => c.OrdShoppingCartItems)
+                    .ThenInclude(i => i.Sku)
+                    .ThenInclude(s => s.Product)
+                    .Where(c => c.UserNumberId == userNumberId || c.SessionId == currentSessionId)
+                    .OrderByDescending(c => c.CreatedDate)
+                    .FirstOrDefaultAsync();
 
-				var items = cart.OrdShoppingCartItems.Select(i => new
-				{
-					cartItemId = i.CartItemId,
-					productId = i.ProductId,
-					skuId = i.SkuId,
-					productName = i.Sku?.Product?.ProductName ?? "商品已下架",
-					optionName = i.Sku?.SpecCode ?? i.Sku?.SkuCode ?? "",
-					unitPrice = i.UnitPrice,
-					qty = i.Qty,
-					subtotal = i.UnitPrice * i.Qty,
-					stockQty = i.Sku?.StockQty ?? 0,
+                if (cart == null || cart.OrdShoppingCartItems == null || !cart.OrdShoppingCartItems.Any())
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        data = new
+                        {
+                            items = new List<object>(),
+                            total = 0,
+                            canCheckout = true,
+                            invalidCount = 0
+                        }
+                    });
+                }
 
-					isAvailable = i.Sku != null &&
-								  i.Sku.Product != null &&
-								  i.Sku.Product.IsPublished &&
-								  i.Sku.IsActive,
-					isInStock = (i.Sku?.StockQty ?? 0) >= i.Qty,
-					warningMessage = GetWarningMessage(i)
-				}).ToList();
+                // 即時驗證每個商品
+                var items = cart.OrdShoppingCartItems.Select(i =>
+                {
+                    bool isAvailable = true;
+                    bool isInStock = true;
+                    string? disabledReason = null;
 
-				var total = items.Where(i => i.isAvailable && i.isInStock).Sum(i => i.subtotal);
+                    if (i.Sku == null || i.Sku.Product == null)
+                    {
+                        isAvailable = false;
+                        disabledReason = "商品已下架";
+                    }
+                    else if (i.Sku.Product.IsPublished != true)
+                    {
+                        isAvailable = false;
+                        disabledReason = "商品已下架";
+                    }
+                    else if (i.Sku.IsActive != true)
+                    {
+                        isAvailable = false;
+                        disabledReason = "此規格已停售";
+                    }
+                    else if (i.Sku.StockQty < i.Qty)
+                    {
+                        isInStock = false;
+                        disabledReason = $"庫存不足，剩餘 {i.Sku.StockQty} 件";
+                    }
 
-				return Ok(new
-				{
-					success = true,
-					data = new
-					{
-						items,
-						total,
-						hasInvalidItems = items.Any(i => !i.isAvailable || !i.isInStock),
-						isAuthenticated = auth.IsAuthenticated
-					}
-				});
-			}
-			catch (Exception ex)
-			{
-				return Ok(new { success = false, message = ex.Message });
-			}
-		}
+                    return new
+                    {
+                        cartItemId = i.CartItemId,
+                        productId = i.ProductId,
+                        skuId = i.SkuId,
+                        productName = i.Sku?.Product?.ProductName ?? "商品已下架",
+                        skuName = i.Sku?.SpecCode ?? i.Sku?.SkuCode ?? "",
+                        unitPrice = i.Sku?.UnitPrice ?? i.UnitPrice,
+                        salePrice = i.Sku?.SalePrice ?? i.UnitPrice,
+                        quantity = i.Qty,
+                        stockQty = i.Sku?.StockQty ?? 0,
+                        isAvailable,
+                        isInStock,
+                        isValid = isAvailable && isInStock,
+                        disabledReason
+                    };
+                }).ToList();
 
-		private string? GetWarningMessage(OrdShoppingCartItem item)
-		{
-			if (item.Sku == null || item.Sku.Product == null) return "❌ 商品已下架";
-			if (!item.Sku.Product.IsPublished) return "❌ 商品已下架";
-			if (!item.Sku.IsActive) return "❌ 此規格已停售";
-			if (item.Sku.StockQty < item.Qty) return $"⚠️ 庫存不足（剩餘 {item.Sku.StockQty}）";
-			return null;
-		}
+                var validItems = items.Where(i => i.isValid).ToList();
+                var total = validItems.Sum(i => i.salePrice * i.quantity);
+                var invalidCount = items.Count(i => !i.isValid);
 
-		/// <summary>更新數量（含所有權保護）</summary>
-		[HttpPut("update/{cartItemId}")]
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        items,
+                        total,
+                        canCheckout = invalidCount == 0,
+                        invalidCount
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+        }
+
+
+        /// <summary>取得購物車（含商品驗證）</summary>
+        //[HttpGet("get")]
+        //[AllowAnonymous]
+        //public async Task<IActionResult> GetCart([FromQuery] string? sessionId)
+        //{
+        //	try
+        //	{
+        //		var auth = await GetAuthContextAsync();
+        //		var sid = sessionId ?? auth.SessionId;
+
+        //		var cart = await _context.OrdShoppingCarts
+        //			.Include(c => c.OrdShoppingCartItems)
+        //				.ThenInclude(i => i.Sku)
+        //					.ThenInclude(s => s.Product)
+        //			.Where(c =>
+        //				(auth.UserNumberId.HasValue && c.UserNumberId == auth.UserNumberId) ||
+        //				(!auth.UserNumberId.HasValue && c.SessionId == sid))
+        //			.FirstOrDefaultAsync();
+
+        //		if (cart == null)
+        //			return Ok(new { success = true, data = new { items = new List<object>(), total = 0, isAuthenticated = auth.IsAuthenticated } });
+
+        //		var items = cart.OrdShoppingCartItems.Select(i => new
+        //		{
+        //			cartItemId = i.CartItemId,
+        //			productId = i.ProductId,
+        //			skuId = i.SkuId,
+        //			productName = i.Sku?.Product?.ProductName ?? "商品已下架",
+        //			optionName = i.Sku?.SpecCode ?? i.Sku?.SkuCode ?? "",
+        //			unitPrice = i.UnitPrice,
+        //			qty = i.Qty,
+        //			subtotal = i.UnitPrice * i.Qty,
+        //			stockQty = i.Sku?.StockQty ?? 0,
+
+        //			isAvailable = i.Sku != null &&
+        //						  i.Sku.Product != null &&
+        //						  i.Sku.Product.IsPublished &&
+        //						  i.Sku.IsActive,
+        //			isInStock = (i.Sku?.StockQty ?? 0) >= i.Qty,
+        //			warningMessage = GetWarningMessage(i)
+        //		}).ToList();
+
+        //		var total = items.Where(i => i.isAvailable && i.isInStock).Sum(i => i.subtotal);
+
+        //		return Ok(new
+        //		{
+        //			success = true,
+        //			data = new
+        //			{
+        //				items,
+        //				total,
+        //				hasInvalidItems = items.Any(i => !i.isAvailable || !i.isInStock),
+        //				isAuthenticated = auth.IsAuthenticated
+        //			}
+        //		});
+        //	}
+        //	catch (Exception ex)
+        //	{
+        //		return Ok(new { success = false, message = ex.Message });
+        //	}
+        //}
+
+        //private string? GetWarningMessage(OrdShoppingCartItem item)
+        //{
+        //	if (item.Sku == null || item.Sku.Product == null) return "❌ 商品已下架";
+        //	if (!item.Sku.Product.IsPublished) return "❌ 商品已下架";
+        //	if (!item.Sku.IsActive) return "❌ 此規格已停售";
+        //	if (item.Sku.StockQty < item.Qty) return $"⚠️ 庫存不足（剩餘 {item.Sku.StockQty}）";
+        //	return null;
+        //}
+
+        /// <summary>更新數量（含所有權保護）</summary>
+        [HttpPut("update/{cartItemId}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> UpdateQuantity(int cartItemId, [FromBody] UpdateQtyDto dto)
 		{
