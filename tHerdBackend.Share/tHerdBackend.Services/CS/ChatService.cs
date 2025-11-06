@@ -4,7 +4,9 @@ using tHerdBackend.Core.Interfaces.CS;
 
 namespace tHerdBackend.Services.CS
 {
-	/// <summary>AI + FAQ 智慧客服邏輯（依據 CS_Faq 資料表）</summary>
+	/// <summary>
+	/// 智慧客服邏輯（加強版：清除語助詞 + 多關鍵字搜尋）
+	/// </summary>
 	public class ChatService : IChatService
 	{
 		private readonly IFaqRepository _faqRepo;
@@ -16,21 +18,39 @@ namespace tHerdBackend.Services.CS
 
 		public async Task<ChatResponse> GetSmartReplyAsync(string msg)
 		{
-			msg = msg.Trim();
-
-			// 🔹 1️⃣ 嘗試從 FAQ 找出關鍵字匹配
-			var faq = await _faqRepo.SearchByKeywordAsync(msg);
-			if (faq != null)
+			if (string.IsNullOrWhiteSpace(msg))
 			{
 				return new ChatResponse
 				{
-					Type = "faq",
-					Title = faq.Title,
-					Content = faq.AnswerHtml
+					Type = "text",
+					Content = "請輸入您想詢問的問題喔 😊"
 				};
 			}
 
-			// 🔹 2️⃣ 若包含「人工客服」
+			// ✅ Step 1. 預處理輸入（清除語助詞、符號）
+			msg = msg.Trim();
+			msg = Regex.Replace(msg, "[呢嗎啊呀的喔哦～!！,.。？?]", ""); // 移除語助詞與標點
+			msg = Regex.Replace(msg, @"\s+", " "); // 移除多餘空白
+
+			// ✅ Step 2. 切割多關鍵字（空白或常見連接詞）
+			var keywords = msg.Split(new[] { " ", "、", "和", "與", "還有", "想", "請問", "我想" },
+									 StringSplitOptions.RemoveEmptyEntries);
+			// ✅ Step 3. 用每個關鍵字依序查詢（命中即回傳）
+			foreach (var kw in keywords)
+			{
+				var faq = await _faqRepo.SearchByKeywordAsync(kw);
+				if (faq != null)
+				{
+					return new ChatResponse
+					{
+						Type = "faq",
+						Title = faq.Title,
+						Content = faq.AnswerHtml
+					};
+				}
+			}
+
+			// ✅ Step 4. 若包含人工關鍵詞 → 引導轉客服
 			if (Regex.IsMatch(msg, "(人工|真人|聯絡客服)"))
 			{
 				return new ChatResponse
@@ -41,11 +61,11 @@ namespace tHerdBackend.Services.CS
 				};
 			}
 
-			// 🔹 3️⃣ 預設回覆
+			// ✅ Step 5. 若都找不到 → 提示使用者
 			return new ChatResponse
 			{
 				Type = "text",
-				Content = "感謝您的提問，目前我無法找到相關資訊，您可以試著輸入其他關鍵字或前往客服表單。"
+				Content = "目前找不到相關的常見問題 😢 您可以試著換個說法，或直接聯絡客服人員喔。"
 			};
 		}
 	}

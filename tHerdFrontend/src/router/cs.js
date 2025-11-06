@@ -35,6 +35,12 @@ export default [
   name: 'CsChat',
   component: () => import('@/pages/modules/cs/CsChat.vue'),
   meta: { title: '智能客服' }
-}
+},
+{
+  path: '/cs/live-chat',
+  name: 'LiveChat',
+  component: () => import('@/pages/modules/cs/LiveChat.vue'),
+  meta: { title: '即時客服' }
+},
 
 ];

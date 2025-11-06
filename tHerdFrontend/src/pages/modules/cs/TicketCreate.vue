@@ -4,43 +4,48 @@
 
     <form @submit.prevent="submitTicket" class="card p-4 shadow-sm">
       <!-- 問題分類 -->
-      <div class="mb-3">
-        <label class="form-label">問題分類</label>
-       <select v-model="form.categoryId" class="form-select" :class="{ 'is-invalid': errors.categoryId }">
-  <option disabled value="">請選擇</option>
-  <option v-for="c in categories" :key="c.categoryId" :value="c.categoryId">
-    {{ c.categoryName }}
-  </option>
-</select>
-<div v-if="errors.categoryId" class="invalid-feedback">
-  {{ errors.categoryId }}
+<div class="mb-3">
+  <label class="form-label">問題分類 <span class="text-danger">*</span></label>
+  <select
+    v-model="form.categoryId"
+    class="form-select"
+    :class="{ 'is-invalid': errors.categoryId }"
+  >
+    <option disabled value="">請選擇</option>
+    <option
+      v-for="c in categories"
+      :key="c.categoryId"
+      :value="c.categoryId"
+    >
+      {{ c.categoryName }}
+    </option>
+  </select>
+  <div v-if="errors.categoryId" class="invalid-feedback">
+    {{ errors.categoryId }}
+  </div>
 </div>
 
-      </div>
-
-      <!-- 聯絡信箱 -->
+<!-- 聯絡信箱 -->
 <div class="mb-3">
   <label class="form-label">聯絡信箱 <span class="text-danger">*</span></label>
   <input
-  v-model="form.email"
-  type="email"
-  class="form-control"
-  :class="{ 'is-invalid': errors.email }"
-  placeholder="請輸入您的電子郵件"
-  required
-/>
-<div class="form-text">客服回覆將寄送至此信箱。</div>
-<div v-if="errors.email" class="invalid-feedback">
-  {{ errors.email }}
+    v-model="form.email"
+    type="email"
+    class="form-control"
+    :class="{ 'is-invalid': errors.email }"
+    placeholder="請輸入您的電子郵件"
+    required
+  />
+  <div class="form-text">客服回覆將寄送至此信箱。</div>
+  <div v-if="errors.email" class="invalid-feedback">
+    {{ errors.email }}
+  </div>
 </div>
 
-</div>
-
-
-      <!-- 主旨 -->
-      <div class="mb-3">
-        <label class="form-label">主旨</label>
-        <input
+<!-- 主旨 -->
+<div class="mb-3">
+  <label class="form-label">主旨 <span class="text-danger">*</span></label>
+  <input
     v-model="form.subject"
     class="form-control"
     :class="{ 'is-invalid': errors.subject }"
@@ -53,7 +58,7 @@
 
 <!-- 問題描述 -->
 <div class="mb-3">
-  <label class="form-label">問題描述</label>
+  <label class="form-label">問題描述 <span class="text-danger">*</span></label>
   <textarea
     v-model="form.messageText"
     rows="4"
@@ -65,14 +70,20 @@
   </div>
 </div>
 
-      <!-- 上傳圖片 -->
-      <div class="mb-3">
-        <label class="form-label">上傳附件（限 1 張圖片）</label>
-        <input type="file" accept="image/*" @change="onFileChange" class="form-control" />
-        <div v-if="previewUrl" class="text-center mt-3">
-          <img :src="previewUrl" alt="預覽" style="max-width: 200px; border-radius: 8px;" />
-        </div>
-      </div>
+<!-- 上傳附件（不加星號） -->
+<div class="mb-3">
+  <label class="form-label">上傳附件（限 1 張圖片）</label>
+  <input
+    type="file"
+    accept="image/*"
+    @change="onFileChange"
+    class="form-control"
+  />
+  <div v-if="previewUrl" class="text-center mt-3">
+    <img :src="previewUrl" alt="預覽" style="max-width: 200px; border-radius: 8px;" />
+  </div>
+</div>
+
 
       <div class="text-center">
         <button class="btn btn-success px-4" type="submit" :disabled="loading">
@@ -217,4 +228,8 @@ function resetForm() {
 .invalid-feedback {
   color: #dc3545;
 }
+label .text-danger {
+  margin-left: 3px;
+}
+
 </style>
