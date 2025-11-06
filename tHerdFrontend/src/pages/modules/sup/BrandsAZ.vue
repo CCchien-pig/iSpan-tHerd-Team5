@@ -1,19 +1,19 @@
 <!-- \tHerdFrontend\src\pages\modules\sup\BrandsAZ.vue -->
-<!-- （頁面進入點） -->
+<!-- （品牌A-Z頁） -->
 
 <template>
   <section class="brands-az">
+    <AlphaIndex class="alpha-index-custom" :chars="chars" @jump="onJumpFromTop" />
+
     <div class="container py-3">
       <div class="brands-layout">
         <div class="brands-main">
-          <AlphaIndex class="mb-4" :chars="chars" @jump="onJumpFromTop" />
-
           <div class="carousel-section">
             <FeaturedCarousel class="mt-3" :brands="featuredBrands" :loading="loadingFeatured" />
           </div>
 
           <BrandGroups
-            class="mt-4"
+            class="mt-2"
             :groups="brandGroups"
             :loading="loadingGroups"
             @mounted-anchors="onAnchorsReady"
@@ -42,8 +42,9 @@ import RightAlphaNav from '@/components/modules/sup/brands/RightAlphaNav.vue'
 // 用 supBrands.js 中匯出的兩個方法
 import { getFeaturedBrands, getGroupedBrands } from '@/core/api/modules/sup/supBrands'
 
-const chars = ref(['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))])
-const lettersOrder = ['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))]
+// 字母順序 先 A-Z，最後再 0-9
+const chars = ref([...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)), '0-9'])
+const lettersOrder = [...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)), '0-9']
 
 // 儲存 API 回傳的資料與載入狀態
 const featuredBrands = ref([])
@@ -99,10 +100,7 @@ const fetchGrouped = async () => {
 const normalizeGroups = (groups) => {
   const map = new Map(groups.map((g) => [g.letter, g]))
   const result = []
-  result.push({
-    letter: '0-9',
-    brands: (map.get('0-9')?.brands ?? []).sort((a, b) => a.brandName.localeCompare(b.brandName)),
-  })
+  // 加 A-Z 的分組
   for (let i = 0; i < 26; i++) {
     const L = String.fromCharCode(65 + i)
     const item = map.get(L)
@@ -111,6 +109,11 @@ const normalizeGroups = (groups) => {
       brands: (item?.brands ?? []).sort((a, b) => a.brandName.localeCompare(b.brandName)),
     })
   }
+  // 加 0-9 分組
+  result.push({
+    letter: '0-9',
+    brands: (map.get('0-9')?.brands ?? []).sort((a, b) => a.brandName.localeCompare(b.brandName)),
+  })
   return result
 }
 
@@ -203,5 +206,8 @@ onBeforeUnmount(() => {
 
   /* 確保容器本身不會裁切掉內容 */
   overflow: visible;
+}
+.brands-main {
+  min-height: 800px;
 }
 </style>

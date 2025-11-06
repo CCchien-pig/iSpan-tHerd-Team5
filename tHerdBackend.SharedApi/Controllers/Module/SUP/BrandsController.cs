@@ -103,6 +103,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 查詢所有品牌的折扣資料
 		/// </summary>
+		// GET /api/sup/Brands/discounts
 		[HttpGet("discounts")]
 		[AllowAnonymous]
 		public async Task<ActionResult<ApiResponse<List<BrandDiscountDto>>>> GetAllBrandDiscounts()
@@ -121,6 +122,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 依品牌ID查詢該品牌的折扣資料
 		/// </summary>
+		// GET /api/sup/Brands/discount/bybrand/{brandId}
 		[HttpGet("discount/bybrand/{brandId}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> GetDiscountByBrandId(int brandId)
@@ -154,6 +156,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得指定品牌的按讚數。
 		/// </summary>
+		// GET /api/sup/Brands/LikeCount/{id}
 		[HttpGet("LikeCount/{id}")]
 		[AllowAnonymous]
 		public async Task<IActionResult> GetBrandLikeCount(int id)
@@ -185,6 +188,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得特定品牌的所有歷史版面設定（含版本與啟用狀態）
 		/// </summary>
+		// GET /api/sup/Brands/{brandId}/layouts
 		[HttpGet("{brandId}/layouts")]
 		public async Task<IActionResult> GetBrandLayouts(int brandId)
 		{
@@ -205,6 +209,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 取得目前啟用中的品牌 Layout（IsActive = 1）
 		/// </summary>
+		// GET /api/sup/Brands/{brandId}/layout/active
 		[HttpGet("{brandId}/layout/active")]
 		[AllowAnonymous] // 前台顯示頁面需要，允許匿名
 		public async Task<IActionResult> GetActiveLayout(int brandId)
@@ -226,6 +231,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 建立新的品牌 Layout JSON 設定
 		/// </summary>
+		// POST /api/sup/Brands/{brandId}/layout
 		[HttpPost("{brandId}/layout")]
 		public async Task<IActionResult> CreateBrandLayout(int brandId, [FromBody] BrandLayoutCreateDto dto)
 		{
@@ -255,6 +261,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 修改品牌版面設定（整體覆寫 LayoutJson）
 		/// </summary>
+		// PUT /api/sup/Brands/layouts/{layoutId}
 		[HttpPut("layouts/{layoutId}")]
 		public async Task<IActionResult> UpdateBrandLayout(int layoutId, [FromBody] BrandLayoutUpdateDto dto)
 		{
@@ -281,6 +288,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 啟用指定版型（同品牌僅允許一個 Layout 為啟用狀態）
 		/// </summary>
+		// PATCH /api/sup/Brands/layouts/{layoutId}/activate
 		[HttpPatch("layouts/{layoutId}/activate")]
 		public async Task<IActionResult> ActivateBrandLayout(int layoutId)
 		{
@@ -304,6 +312,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// <summary>
 		/// 軟刪除（停用）品牌 Layout
 		/// </summary>
+		// DELETE /api/sup/Brands/layouts/{layoutId}
 		[HttpDelete("layouts/{layoutId}")]
 		public async Task<IActionResult> DeleteBrandLayout(int layoutId)
 		{
@@ -332,9 +341,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// 依品牌名稱首字母分組的品牌清單 (可依條件篩選)，回傳分組列表
 		/// 給 Brands A–Z 頁使用
 		/// </summary>
-		// GET /api/sup/Brands/grouped
 		[HttpGet("grouped")]
 		[AllowAnonymous]
+		// GET /api/sup/Brands/grouped
 		public async Task<IActionResult> GetBrandsGroupedByFirstLetter(
 			bool? isActive = null,
 			bool? isDiscountActive = null,
@@ -404,9 +413,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// 取得啟用中品牌 Logo URL
 		/// 從 SYS_AssetFile 表中找出 FolderId = 56 且 IsActive = 1 的圖片，回傳 { brandName, logoUrl } 清單。
 		/// </summary>
-		// GET /api/sup/Brands/logos
 		[HttpGet("logos")]
 		[AllowAnonymous]
+		// GET /api/sup/Brands/logos		
 		public async Task<IActionResult> GetActiveBrandLogos(CancellationToken ct)
 		{
 			try
@@ -434,9 +443,9 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		/// 取得精選品牌清單 (平面列表)，給 Brands A–Z 或首頁 Carousel 使用
 		/// IsActive = true 且 IsFeatured = true 的品牌並透過 _brandLogoService 補上 logoUrl
 		/// </summary>
-		// GET /api/sup/Brands/featured
 		[HttpGet("featured")]
 		[AllowAnonymous]
+		// GET /api/sup/Brands/featured
 		public async Task<IActionResult> GetFeaturedBrands(CancellationToken ct = default)
 		{
 			try
@@ -490,6 +499,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		[ProducesResponseType(typeof(ApiResponse<BrandDetailDto>), StatusCodes.Status200OK)]
 		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
 		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		// GET /api/sup/Brands/{brandId}/detail
 		public async Task<IActionResult> GetDetail([FromRoute] int brandId, CancellationToken ct)
 		{
 			try
@@ -522,6 +532,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		[ProducesResponseType(typeof(ApiResponse<BrandContentImagesDto>), StatusCodes.Status200OK)]
 		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
 		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		// GET /api/sup/Brands/{brandId}/content-images
 		public async Task<IActionResult> GetBrandContentImages(
 			[FromRoute] int brandId,
 			[FromQuery] int folderId = 8,

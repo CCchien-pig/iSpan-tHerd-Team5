@@ -8,92 +8,94 @@
 1) BrandBanner：顯示 Banner。
 2) BrandButtons：顯示分類按鈕（背景取主色；hover 反轉）。
 3) BrandMoreCard：了解更多卡片（左文群組、右圖；無圖時左側滿版）。
+---
+4) ProductList：產品清單卡片
 -->
 
 <template>
-  <!-- TODO: fullpage可移除 -->
-  <div class="fullpage">
-    <section class="container py-3">
-      <div class="content-wrap">
-        <header class="d-flex align-items-center gap-2 mb-3">
-          <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
-        </header>
+  <section class="container py-3">
+    <div class="content-wrap">
+      <header class="d-flex align-items-center gap-2 mb-3">
+        <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
+      </header>
 
-        <!-- Banner -->
-        <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-2" />
+      <!-- Banner -->
+      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-2" />
 
-        <!-- 分類按鈕（有資料才顯示） -->
-        <BrandButtons
-          v-if="vm.buttons?.length"
-          class="mb-2"
-          :buttons="vm.buttons"
-          :bg-rgb="vm.mainColor"
-          @tap="onFilter"
-        />
+      <!-- 分類按鈕（有資料才顯示） -->
+      <BrandButtons
+        v-if="vm.buttons?.length"
+        class="mb-2"
+        :buttons="vm.buttons"
+        :bg-rgb="vm.mainColor"
+        @tap="onFilter"
+      />
 
-        <!-- 了解更多（有 Accordion 才顯示）-->
-        <!-- 未展開：分隔線 + 中央按鈕 -->
-        <div v-if="vm.accordions?.length && !moreOpen" class="my-4">
-          <div class="split-line anchor-to-top" ref="moreAnchor">
-            <button
-              class="btn btn-sm"
-              :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
-              @click="openMore"
-            >
-              了解更多關於 {{ vm.brandName || '品牌' }}
-            </button>
-          </div>
+      <!-- 了解更多（有 Accordion 才顯示）-->
+      <!-- 未展開：分隔線 + 中央按鈕 -->
+      <div v-if="vm.accordions?.length && !moreOpen" class="my-4">
+        <div class="split-line anchor-to-top" ref="moreAnchor">
+          <button
+            class="btn btn-sm"
+            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
+            @click="openMore"
+          >
+            了解更多關於 {{ vm.brandName || '品牌' }}
+          </button>
         </div>
-
-        <!-- 展開卡片 -->
-        <BrandMoreCard
-          v-if="vm.accordions?.length && moreOpen"
-          class="mb-2 pt-3"
-          :groups="vm.accordions"
-          :images-right="imagesRight"
-          :accent-rgb="vm.mainColor"
-          :alt-text="vm.brandName"
-        />
-
-        <!-- 展開：下方分隔線 + 中央關閉按鈕 -->
-        <div v-if="vm.accordions?.length && moreOpen" class="my-3">
-          <div class="split-line">
-            <button
-              class="btn btn-sm"
-              :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
-              @click="closeMoreAndScrollToTop"
-            >
-              關閉
-            </button>
-          </div>
-        </div>
-
-        <!-- 除錯區：直接展示 imagesRight 清單 -->
-        <!-- <div class="small text-muted">
-      <div>Debug imagesRight count: {{ imagesRight.length }}</div>
-      <div v-for="(u, i) in imagesRight" :key="i">{{ u }}</div>
-    </div>
-    <div class="small text-muted">right count: {{ imagesRight?.length }}</div>
-    {{ moreOpen }} -->
-
-        <!-- Loading / Empty -->
-        <div v-if="loading" class="text-muted">載入中…</div>
-        <div v-else-if="!loading && !vm.brandName" class="text-muted">查無品牌資料</div>
       </div>
-    </section>
-  </div>
+
+      <!-- 展開卡片 -->
+      <BrandMoreCard
+        v-if="vm.accordions?.length && moreOpen"
+        class="mb-2 pt-3"
+        :groups="vm.accordions"
+        :images-right="imagesRight"
+        :accent-rgb="vm.mainColor"
+        :alt-text="vm.brandName"
+      />
+
+      <!-- 展開：下方分隔線 + 中央關閉按鈕 -->
+      <div v-if="vm.accordions?.length && moreOpen" class="my-3">
+        <div class="split-line">
+          <button
+            class="btn btn-sm"
+            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
+            @click="closeMoreAndScrollToTop"
+          >
+            關閉
+          </button>
+        </div>
+      </div>
+
+      <!-- 品牌產品列表，放在banner下方 -->
+      <ProductList
+        :products="products"
+        :totalCount="totalCount"
+        :pageSize="pageSize"
+        :pageIndex="currentPage"
+        @page-change="onPageChange"
+      />
+
+      <!-- Loading / Empty -->
+      <div v-if="loading" class="text-muted">載入中…</div>
+      <div v-else-if="!loading && !vm.brandName" class="text-muted">查無品牌資料</div>
+    </div>
+  </section>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
+import axios from 'axios'
 import { Vibrant } from 'node-vibrant/browser'
 
 // 子元件
 import BrandBanner from '@/components/modules/sup/brands/BrandBanner.vue'
 import BrandButtons from '@/components/modules/sup/brands/BrandButtons.vue'
 import BrandMoreCard from '@/components/modules/sup/brands/BrandMoreCard.vue'
+import ProductList from '@/components/modules/prod/list/ProductList.vue'
 
 // 容器頁狀態
 const route = useRoute()
@@ -103,16 +105,22 @@ const moreAnchor = ref(null)
 
 const imagesRight = ref([])
 
-/* 預設主色 */
+// 預設主色
 const DEFAULT_RGB = { r: 0, g: 147, b: 171 }
 const vm = ref({
   brandId: 0,
   brandName: '',
   bannerUrl: '',
   buttons: [],
-  accordions: [], // 後端已以 Title 分組並排序（依 ContentId 最小值），組內 items 依 Order
+  accordions: [],
   mainColor: { ...DEFAULT_RGB },
 })
+
+// 產品列表狀態與分頁
+const products = ref([])
+const totalCount = ref(0)
+const currentPage = ref(1)
+const pageSize = 40
 
 const getLuma = ({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b
 
@@ -136,6 +144,7 @@ async function extractDominantByPopulation(imgUrl, fallback = { ...DEFAULT_RGB }
     return fallback
   }
 }
+
 /* 進入新頁或路由切換時，重置狀態，避免顏色殘留 */
 function resetStateForNewPage() {
   loading.value = false
@@ -147,8 +156,11 @@ function resetStateForNewPage() {
     bannerUrl: '',
     buttons: [],
     accordions: [],
-    mainColor: { ...DEFAULT_RGB }, // 重置為預設主色
+    mainColor: { ...DEFAULT_RGB },
   }
+  products.value = []
+  totalCount.value = 0
+  currentPage.value = 1
 }
 
 /* 依路由 query 控制展開 */
@@ -156,6 +168,7 @@ const syncExpandFromRoute = () => {
   moreOpen.value = String(route.query.expand || '') === '1'
 }
 
+// 取得品牌詳情及Banner等資料
 const fetchDetail = async () => {
   loading.value = true
   try {
@@ -188,7 +201,7 @@ const fetchDetail = async () => {
       bannerUrl: data.bannerUrl || '',
       buttons,
       accordions: acc,
-      mainColor: { ...DEFAULT_RGB }, // 這裡也保險地放預設
+      mainColor: { ...DEFAULT_RGB },
     }
 
     // 重新偵測本頁 Banner 主色（每頁都跑一次）
@@ -209,10 +222,52 @@ const fetchDetail = async () => {
   }
 }
 
+/**
+ * 取得品牌產品清單(依品牌id分頁查詢)
+ * 使用/api/prod/Products/search API
+ */
+const fetchBrandProducts = async (page = 1) => {
+  loading.value = true
+  try {
+    const brandId = Number(route.params.brandId)
+    if (!brandId) return
+
+    const filter = {
+      BrandId: brandId,
+      PageIndex: page,
+      PageSize: pageSize,
+    }
+
+    const resp = await axios.post('/api/prod/Products/search', filter)
+    if (resp.data && resp.data.data) {
+      products.value = resp.data.data.items || []
+      totalCount.value = resp.data.data.totalCount || 0
+      currentPage.value = page
+    } else {
+      products.value = []
+      totalCount.value = 0
+      currentPage.value = 1
+    }
+  } catch (err) {
+    console.error('[BrandDetail] fetchBrandProducts error =', err)
+    products.value = []
+    totalCount.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// 分頁切換事件
+const onPageChange = (page) => {
+  fetchBrandProducts(page)
+}
+
+// 打開了解更多
 const openMore = () => {
   moreOpen.value = true
 }
 
+// 關閉了解更多並滾動到目標位置
 const closeMoreAndScrollToTop = async () => {
   moreOpen.value = false
   await nextTick()
@@ -221,35 +276,34 @@ const closeMoreAndScrollToTop = async () => {
   }
 }
 
+// 頁面進入時初始化資料
 onMounted(() => {
   resetStateForNewPage()
   syncExpandFromRoute()
   fetchDetail()
+  fetchBrandProducts(1)
 })
 
-/* 監看整個 fullPath，切換品牌詳頁就重置 + 重抓，避免任何殘留 */
+// 監聽路由切換，重新加載品牌資料與產品清單
 watch(
   () => route.fullPath,
   () => {
     resetStateForNewPage()
     syncExpandFromRoute()
     fetchDetail()
+    fetchBrandProducts(1)
   },
 )
 
-/* 點擊分類按鈕（依需求導頁或查詢） */
-// TODO:分類導向
+// 點擊分類按鈕（依需求導頁或查詢）
 const onFilter = (btn) => {
+  // TODO:分類導向功能待實作
   // router.push({ name: 'ProductList', query: { brandId: vm.value.brandId, typeId: btn.id } })}
-  //   console.log('[BrandDetail] click filter btn =', btn)
+  console.log('[BrandDetail] click filter btn =', btn)
 }
 </script>
 
 <style scoped>
-.fullpage {
-  height: 1200px;
-}
-
 .anchor-to-top {
   scroll-margin-top: 80px;
 }

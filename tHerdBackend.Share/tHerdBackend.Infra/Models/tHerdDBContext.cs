@@ -243,6 +243,8 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasIndex(e => e.NormalizedEmail, "EmailIndex");
 
+            entity.HasIndex(e => e.UserNumberId, "UQ_AspNetUsers_UserNumber").IsUnique();
+
             entity.HasIndex(e => e.NormalizedUserName, "UserNameIndex")
                 .IsUnique()
                 .HasFilter("([NormalizedUserName] IS NOT NULL)");
@@ -630,7 +632,7 @@ public partial class tHerdDBContext : DbContext
         {
             entity.HasKey(e => e.PageId).HasName("PK__CNT_Page__C565B1045B96AB36");
 
-            entity.ToTable("CNT_Page", tb => tb.HasComment("頁面"));
+            entity.ToTable("CNT_Page", tb => tb.HasComment("內容頁資料表（文章、付費內容）"));
 
             entity.HasIndex(e => e.CreatedDate, "IX_CNT_Page_CreatedDate");
 
@@ -650,6 +652,10 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.IsPaidContent).HasComment("是否為付費內容");
             entity.Property(e => e.PageTypeId).HasComment("分類 ID");
             entity.Property(e => e.PreviewLength).HasComment("試閱字元數或行數");
+            entity.Property(e => e.Price)
+                .HasDefaultValue(0.00m)
+                .HasComment("售價（例如 80.00, 120.00）")
+                .HasColumnType("decimal(10, 2)");
             entity.Property(e => e.PublishedDate).HasComment("發布時間");
             entity.Property(e => e.RevisedDate).HasComment("更新時間");
             entity.Property(e => e.SeoId).HasComment("Seo 設定");
@@ -801,8 +807,24 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(sysdatetime())")
                 .HasComment("建立時間");
+            entity.Property(e => e.Currency)
+                .IsRequired()
+                .HasMaxLength(3)
+                .IsUnicode(false)
+                .HasDefaultValue("TWD")
+                .IsFixedLength();
+            entity.Property(e => e.GatewayTransactionId).HasMaxLength(100);
             entity.Property(e => e.IsPaid).HasComment("是否購買（0=未購買，1=已購買）");
             entity.Property(e => e.PageId).HasComment("文章/課程 ID");
+            entity.Property(e => e.PaymentMethod)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("LINEPAY");
+            entity.Property(e => e.PaymentStatus)
+                .IsRequired()
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("PENDING");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.UnitPrice)
                 .HasComment("單價")

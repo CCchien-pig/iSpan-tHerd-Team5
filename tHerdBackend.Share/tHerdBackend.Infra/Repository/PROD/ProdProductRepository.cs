@@ -82,8 +82,7 @@ namespace tHerdBackend.Infra.Repository.PROD
 
             // === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
             var sql = new StringBuilder(@"
-                                SELECT 
-                    p.ProductId, p.ProductName, 
+                SELECT p.ProductId, p.ProductName, 
                     p.BrandId, s.BrandName, 
                     p.SeoId, p.Badge, 
                     p.MainSkuId, 
@@ -285,7 +284,7 @@ namespace tHerdBackend.Infra.Repository.PROD
         /// <param name="ProductId"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-		public async Task<ProdProductDetailDto?> GetByIdAsync(int productId, CancellationToken ct = default)
+		public async Task<ProdProductDetailDto?> GetByIdAsync(int productId, int? skuId, CancellationToken ct = default)
         {
             var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
@@ -305,7 +304,7 @@ namespace tHerdBackend.Infra.Repository.PROD
                 if (item == null) return null;
 
                 var assembler = new ProductAssembler(_db, _factory);
-                await assembler.AssembleDetailsAsync(item, conn, tx, ct);
+                await assembler.AssembleDetailsAsync(item, skuId, conn, tx, ct);
 
                 var resolver = new UserNameResolver(_factory, _db);
                 await resolver.LoadAsync(ct);

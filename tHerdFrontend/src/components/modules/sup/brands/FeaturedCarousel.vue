@@ -78,24 +78,31 @@ const startIndex = ref(0)
 const noTransition = ref(false)
 const offsetX = ref(0)
 
-const visibleCount = computed(() => {
-  const w = window.innerWidth
-  if (w >= 1200) return 6
-  if (w >= 992) return 5
-  if (w >= 768) return 4
-  if (w >= 576) return 3
-  return 2
-})
+const visibleCount = ref(0)
 
-// 根據起始索引計算目前可見的品牌
-const visibleSlides = computed(() => {
-  const total = props.brands.length
-  const result = []
-  for (let i = 0; i < visibleCount.value; i++) {
-    result.push(props.brands[(startIndex.value + i) % total])
+const recalc = () => {
+  const w = window.innerWidth
+  if (w >= 1200) {
+    cardWidth.value = 180
+    visibleCount.value = 6
+  } else if (w >= 992) {
+    cardWidth.value = 160
+    visibleCount.value = 5
+  } else if (w >= 768) {
+    cardWidth.value = 160
+    visibleCount.value = 4
+  } else if (w >= 576) {
+    cardWidth.value = 140
+    visibleCount.value = 3
+  } else {
+    cardWidth.value = 140
+    visibleCount.value = 2
   }
-  return result
-})
+  // 重新計算起始位置與自動播放狀態
+  startIndex.value = 0
+  stopAutoPlay()
+  startAutoPlay()
+}
 
 // 播放控制
 const autoplayInterval = 3000
@@ -131,16 +138,18 @@ const stopAutoPlay = () => {
   }
 }
 
-const recalc = () => {
-  const w = window.innerWidth
-  if (w >= 1200) cardWidth.value = 180
-  else if (w >= 768) cardWidth.value = 160
-  else cardWidth.value = 140
-}
-
 const onImgError = (e) => {
   e.target.src = placeholder
 }
+
+const visibleSlides = computed(() => {
+  const total = props.brands.length
+  const result = []
+  for (let i = 0; i < visibleCount.value; i++) {
+    result.push(props.brands[(startIndex.value + i) % total])
+  }
+  return result
+})
 
 onMounted(() => {
   recalc()
@@ -236,9 +245,9 @@ watch(
 }
 /* hover 時提高 z-index，確保卡片在最上層 */
 .card:hover {
-  border-color: #c9ebdc;
+  border-color: #76d2aa;
   box-shadow:
-    inset 0 0 0 2px rgba(22, 121, 76, 0.18),
+    inset 0 0 0 3px rgba(22, 121, 76, 0.18),
     0 6px 16px rgba(0, 0, 0, 0.1);
   transform: translateY(-5px) scale(1.06);
   z-index: 10; /* ✅ 提高層級，蓋過相鄰卡片 */

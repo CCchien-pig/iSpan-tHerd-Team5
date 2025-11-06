@@ -1,21 +1,41 @@
-<!-- src/components/modules/sup/brands/BrandGroups.vue -->
-<!-- （A–Z 分組清單） -->
-
 <template>
   <section class="groups">
+    <!-- <div>
+      <section class="groups"></section>
+      <button @click="toast('測試通知', 'success')">測試通知</button>
+    </div> -->
     <div v-if="loading" class="text-muted small">載入中…</div>
+
     <div v-else>
-      <div v-for="g in groups" :key="g.letter" class="group-section">
+      <!-- 品牌收藏篩選單選框 -->
+      <div class="flex space-x-6 mb-4">
+        <label
+          v-for="o in options"
+          :key="o.value"
+          class="cursor-pointer flex items-center space-x-2"
+        >
+          <input
+            type="radio"
+            :value="o.value"
+            v-model="brandFilter"
+            class="w-5 h-5 text-[rgb(77,180,193)] bg-gray-100 border-gray-300 focus:ring-[rgb(0,147,171)]"
+          />
+          <span class="select-none main-color-green-text font-semibold">{{ o.label }}</span>
+        </label>
+      </div>
+
+      <div
+        v-if="brandFilter === 'favorite' && filteredGroups.length === 0"
+        class="no-favorites-msg"
+      >
+        目前沒有收藏中的品牌~
+      </div>
+      <!-- 列表改為使用 filteredGroups -->
+      <div v-for="g in filteredGroups" :key="g.letter" class="group-section">
         <div class="group-title" :id="g.letter" ref="anchorRefs">
-          <div class="title-left">
-            <strong class="h5">{{ g.letter }}</strong>
-          </div>
-          <!-- <div class="title-right">
-            <a href="#top" class="small">返回頂部</a>
-          </div> -->
+          <strong class="h5">{{ g.letter }}</strong>
         </div>
 
-        <!-- 純文字品牌列表 -->
         <ul class="brand-text-list">
           <li v-for="b in g.brands" :key="b.brandId" class="brand-row">
             <button
@@ -43,9 +63,9 @@
                 />
               </svg>
             </button>
-            <router-link :to="toBrandSlug(b.brandName, b.brandId)" class="brand-text-link">{{
-              b.brandName
-            }}</router-link>
+            <router-link :to="toBrandSlug(b.brandName, b.brandId)" class="brand-text-link">
+              {{ b.brandName }}
+            </router-link>
           </li>
         </ul>
       </div>
@@ -54,19 +74,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { toBrandSlug } from '@/utils/supSlugify'
-// const brandTo = () => '/brands'
-// const toBrandSlug = (name, id) => {
-//   const slug = String(name || '')
-//     .trim()
-//     .toLowerCase()
-//     .replace(/\s+/g, '-')
-//     .replace(/&/g, 'and')
-//     .replace(/[^a-z0-9-]/g, '')
-//     .replace(/-+/g, '-')
-//   return `/brands/${slug}-${id}`
-// }
+import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+// [新增] 2. 直接匯入 notify
+import { notify } from 'notiwind'
 
 const props = defineProps({
   groups: { type: Array, default: () => [] },
@@ -75,34 +88,104 @@ const props = defineProps({
 
 const emit = defineEmits(['mounted-anchors'])
 
-/* 收藏邏輯（維持） */
+const auth = useAuthStore()
+const brandFilter = ref('all') // 預設選擇「所有品牌」
 const favorites = ref(new Set())
+// 讓 0-9 放在 Z 後面
+const lettersOrder = [...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)), '0-9']
+
+const filteredGroups = computed(() => {
+  const allGroups = JSON.parse(JSON.stringify(props.groups))
+  allGroups.forEach((group) => {
+    group.brands = group.brands.filter((b) => {
+      if (brandFilter.value === 'favorite') {
+        return favorites.value.has(b.brandId)
+      }
+      return true
+    })
+  })
+  return allGroups.filter((g) => g.brands.length > 0)
+})
+// 單選框選項
+const options = [
+  { value: 'all', label: '所有品牌' },
+  { value: 'favorite', label: '已收藏品牌' },
+]
+
 const isFav = (id) => favorites.value.has(id)
-const toggleFav = (b) => {
-  const s = new Set(favorites.value)
-  s.has(b.brandId) ? s.delete(b.brandId) : s.add(b.brandId)
-  favorites.value = s
-  toast(s.has(b.brandId) ? '已加入收藏' : '已移除收藏')
-}
-const toast = (msg) => {
-  const el = document.createElement('div')
-  el.className = 'toast-mini'
-  el.textContent = msg
-  document.body.appendChild(el)
-  setTimeout(() => el.remove(), 1200)
+
+async function loadFavorites() {
+  if (!auth.isAuthenticated) return
+  try {
+    const res = await axios.get('/api/sup/BrandFavorites/my', {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    })
+    if (res.data.success && Array.isArray(res.data.data)) {
+      favorites.value = new Set(res.data.data.map((item) => item.brandId))
+    }
+  } catch (err) {
+    console.error('載入收藏失敗', err)
+  }
 }
 
-/* A–Z 固定順序，確保 Map 順序一致 */
-const lettersOrder = ['0-9', ...Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))]
+/**
+ * 顯示 Toast 通知
+ * @param {string} msg - 訊息內容
+ * @param {('info'|'success'|'error')} [type='info'] - 通知類型
+ */
+function toast(msg, type = 'info') {
+  console.log('toast:', msg, 'type:', type) // 確認是否有執行
+  notify({
+    text: msg,
+    type,
+    duration: 2000, // 顯示的毫秒數
+    group: 'bottom-center', // <-- 必須使用 'group' 並對應 App.vue
+  })
+}
 
-/* 由 template v-for 綁定的參考 */
+async function toggleFav(b) {
+  console.log('toggleFav triggered for brand:', b)
+  if (!auth.isAuthenticated) {
+    toast('請先登入會員', 'error')
+    console.log('User not authenticated')
+    return
+  }
+  try {
+    if (isFav(b.brandId)) {
+      const res = await axios.delete(`/api/sup/BrandFavorites/${b.brandId}`, {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      })
+      if (res.data.success) {
+        favorites.value.delete(b.brandId)
+        toast('已移除收藏', 'success')
+      } else {
+        toast(res.data.message || '取消收藏失敗', 'error')
+      }
+    } else {
+      const res = await axios.post(
+        '/api/sup/BrandFavorites',
+        { brandId: b.brandId },
+        {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        },
+      )
+      if (res.data.success) {
+        favorites.value.add(b.brandId)
+        toast('已加入收藏', 'success')
+      } else {
+        toast(res.data.message || '加入收藏失敗', 'error')
+      }
+    }
+  } catch (err) {
+    toast(err.response?.data?.message || '操作失敗', 'error')
+  }
+}
+
 const anchorRefs = ref([])
 
-/* 建立錨點 Map（按固定順序插入）並 emit 給父層 */
 const buildMapAndEmit = async () => {
   await nextTick()
   const map = new Map()
-  // 以 id 直接查找元素較穩定，避免 anchorRefs 順序受 DOM 影響
   for (const L of lettersOrder) {
     const el = document.getElementById(L)
     if (el) map.set(L, el)
@@ -110,7 +193,11 @@ const buildMapAndEmit = async () => {
   emit('mounted-anchors', map)
 }
 
-onMounted(buildMapAndEmit)
+onMounted(() => {
+  buildMapAndEmit()
+  loadFavorites()
+})
+
 watch(() => props.groups, buildMapAndEmit)
 </script>
 
@@ -125,7 +212,7 @@ watch(() => props.groups, buildMapAndEmit)
   padding: 6px 0;
   border-bottom: 1px solid #e6eaed;
   position: sticky;
-  top: 80px; /* 和 onJumpTo 的 80 對齊 */
+  top: 80px;
   background: #fff;
   z-index: 1;
 }
@@ -146,13 +233,11 @@ watch(() => props.groups, buildMapAndEmit)
 }
 .brand-text-link:hover {
   color: #4db4c1;
-  /* text-decoration: underline; */
 }
 .brand-text-list li {
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
 }
-
 .brand-row {
   display: flex;
   align-items: center;
@@ -186,21 +271,7 @@ watch(() => props.groups, buildMapAndEmit)
 }
 .fav-btn:active {
   transform: none;
-} /* 不縮小 */
-
-.toast-mini {
-  position: fixed;
-  left: 50%;
-  bottom: 80px;
-  transform: translateX(-50%);
-  background: rgba(17, 24, 39, 0.92);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  z-index: 2000;
 }
-
 @media (min-width: 576px) {
   .brand-text-list {
     columns: 3;
@@ -215,5 +286,11 @@ watch(() => props.groups, buildMapAndEmit)
   .brand-text-list {
     columns: 5;
   }
+}
+.no-favorites-msg {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 1.2rem;
+  color: #666;
 }
 </style>
