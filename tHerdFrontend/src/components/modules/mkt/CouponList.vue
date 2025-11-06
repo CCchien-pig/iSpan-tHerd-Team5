@@ -48,7 +48,7 @@ async function loadCoupons() {
   }
 }
 
-// 🚀 載入會員資料（直接呼叫 API，不改其他檔案）
+// 🚀 載入會員資料
 async function loadUserDetail() {
   if (!isLogin.value) {
     userDetail.value = null
@@ -59,12 +59,12 @@ async function loadUserDetail() {
     userDetail.value = data
     console.log('會員資料載入成功:', data)
   } catch (err) {
-    console.warn('載入會員資料失敗（可能未登入）', err)
+    console.warn('載入會員資料失敗', err)
     userDetail.value = null
   }
 }
 
-// ✅ 檢查今日遊戲紀錄
+// ✅ 檢查遊戲紀錄
 async function checkGameRecord() {
   if (!isLogin.value) {
     hasGameRecord.value = false
@@ -98,7 +98,7 @@ async function checkGameRecord() {
   }
 }
 
-// ✅ 掛載時初始化
+// ✅ 掛載初始化
 onMounted(() => {
   if (isLogin.value) {
     loadUserDetail()
@@ -108,7 +108,6 @@ onMounted(() => {
 
   const onStorageChange = e => {
     if (e.key === 'refreshCoupons' && e.newValue === 'true') {
-      console.log('偵測到 refreshCoupons，重新載入優惠券')
       loadCoupons()
       checkGameRecord()
       localStorage.removeItem('refreshCoupons')
@@ -121,7 +120,7 @@ onMounted(() => {
   })
 })
 
-// ✅ 登入狀態變化時自動刷新
+// ✅ 登入變化時自動刷新
 watch(isLogin, newVal => {
   if (newVal) {
     loadUserDetail()
@@ -135,7 +134,7 @@ watch(isLogin, newVal => {
   }
 })
 
-// ✅ 綜合篩選邏輯（遊戲 + 會員等級）
+// ✅ 綜合篩選邏輯（會員等級 + 生日月 + 遊戲）
 const filteredCoupons = computed(() => {
   if (!isLogin.value) return []
 
@@ -144,21 +143,29 @@ const filteredCoupons = computed(() => {
   // 🔹 會員等級篩選
   const rankId = userDetail.value?.memberRankId
   if (rankId === 'MR001') {
-    // 一般會員：篩掉白銀與黃金
     list = list.filter(c =>
       !c.couponName?.includes('(白銀)會員分級優惠券') &&
       !c.couponName?.includes('(黃金)會員分級優惠券')
     )
   } else if (rankId === 'MR002') {
-    // 白銀會員：篩掉黃金
-    list = list.filter(c =>
-      !c.couponName?.includes('(黃金)會員分級優惠券')
-    )
+    list = list.filter(c => !c.couponName?.includes('(黃金)會員分級優惠券'))
   } else if (rankId === 'MR003') {
-    // 黃金會員：篩掉白銀
-    list = list.filter(c =>
-      !c.couponName?.includes('(白銀)會員分級優惠券')
-    )
+    list = list.filter(c => !c.couponName?.includes('(白銀)會員分級優惠券'))
+  }
+
+  // 🔹 生日月份篩選
+  const birthDate = userDetail.value?.birthDate
+  if (birthDate) {
+    const birthMonth = new Date(birthDate).getMonth() + 1
+    const nowMonth = new Date().getMonth() + 1
+
+    // 如果會員不是當月生日 → 篩掉「會員生日禮優惠」
+    if (birthMonth !== nowMonth) {
+      list = list.filter(c => c.couponName !== '會員生日禮優惠')
+    }
+  } else {
+    // 沒生日資料 → 篩掉生日券
+    list = list.filter(c => c.couponName !== '會員生日禮優惠')
   }
 
   // 🔹 遊戲篩選
@@ -176,7 +183,9 @@ const filteredCoupons = computed(() => {
 
   return list.filter(c => {
     if (c.couponCode?.startsWith('GAME')) {
-      const name = c.couponName?.replace(/[（）]/g, s => (s === '（' ? '(' : s === '）' ? ')' : s))
+      const name = c.couponName?.replace(/[（）]/g, s =>
+        s === '（' ? '(' : s === '）' ? ')' : s
+      )
       return name?.includes(`翻牌遊戲獎勵(${normalizedScore}分)`)
     }
     return true
