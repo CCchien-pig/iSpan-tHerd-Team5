@@ -9,10 +9,10 @@
     <!-- 結果統計列 -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
       <div class="text-muted small">
-        共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項：
-        <template v-if="keyword">「<strong>{{ keyword }}</strong>」</template>
-        <template v-else-if="productTypeName">分類：<strong>{{ productTypeName }}</strong></template>
-        <template v-else>全部商品</template>
+        共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項
+        <template v-if="keyword">：「<strong>{{ keyword }}</strong>」</template>
+        <!-- <template v-else-if="productTypeName">：分類：<strong>{{ productTypeName }}</strong></template> -->
+        <template v-else></template>
       </div>
 
       <div class="d-flex align-items-center mt-2 mt-md-0">
@@ -87,6 +87,7 @@ function parseSlug() {
 
 // ===== 查詢商品 =====
 async function searchProducts(page = 1) {
+  console.log('🟡 route.query:', route.query)
   try {
     isLoading.value = true
     errorMessage.value = ""
@@ -99,12 +100,17 @@ async function searchProducts(page = 1) {
     products.value = []
     totalCount.value = 0
 
+    const badgeQuery = (route.query.badge ?? "").toString().trim()
+    const otherQuery = (route.query.other ?? "").toString().trim()
+
     const query = {
       pageIndex: page,
       pageSize: pageSize.value,
       sortBy: sortBy.value,
       isPublished: true,
       isFrontEnd: true,
+      badge: badgeQuery,
+      other: otherQuery,
     }
 
     if (keyword.value) query.keyword = keyword.value
@@ -112,14 +118,13 @@ async function searchProducts(page = 1) {
 
     const res = await ProductsApi.getProductList(query)
     const data = res.data || {}
-
     products.value = Array.isArray(data.items) ? data.items : []
     totalCount.value = data.totalCount || 0
     pageIndex.value = data.pageIndex || 1
     productTypeName.value =
       data.productTypeName ||
       productTypeCode.value?.toUpperCase() ||
-      "未分類"
+      ""
 
     // UX：滾動到頂部
     window.scrollTo({ top: 0, behavior: "smooth" })
@@ -139,8 +144,8 @@ function reloadProducts() {
 
 // ===== 監聽路由變化 =====
 watch(
-  () => route.fullPath,
+  () => route.query,
   () => searchProducts(1),
-  { immediate: true }
+  { deep: true, immediate: true }
 )
 </script>

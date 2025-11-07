@@ -78,7 +78,6 @@
       </nav>
     </div>
   </section>
-
   <ScrollToTop />
 </template>
 

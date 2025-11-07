@@ -45,7 +45,13 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
 
 			if (query.IsPublished.HasValue)
 				sql.Append(" AND p.IsPublished = @IsPublished");
-		}
+
+            if (!string.IsNullOrWhiteSpace(query.Badge))
+                sql.Append(" AND p.Badge = @Badge");
+
+            if (query.ProductIdList != null && query.ProductIdList.Count()>0)
+                sql.Append(" AND p.ProductId IN @ProductIdList");
+        }
 
 		/// <summary>
 		/// 組合排序子句（支援 SortBy + SortDesc）

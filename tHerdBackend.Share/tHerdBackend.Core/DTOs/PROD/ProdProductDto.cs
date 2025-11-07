@@ -41,6 +41,11 @@ namespace tHerdBackend.Core.DTOs.PROD
 		public virtual string Badge { get; set; } = string.Empty;
 
         /// <summary>
+        /// 商品標籤名稱
+        /// </summary>
+        public virtual string BadgeName { get; set; } = string.Empty;
+
+        /// <summary>
         /// 評價星數
         /// </summary>
         public virtual decimal? AvgRating { get; set; }

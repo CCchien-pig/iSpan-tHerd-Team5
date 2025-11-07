@@ -7,9 +7,10 @@
     ></router-link>
       
       <!-- 商品徽章 -->
-      <div v-if="product.badge" class="product-badge">
-        <span class="badge bg-danger">{{ product.badge }}</span>
-      </div>
+      <ProductBadge
+        v-if="product.badgeName"
+        :badge="product.badgeName"
+      />
 
         <!-- 商品圖片 -->
         <div class="product-image position-relative">
@@ -57,6 +58,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import ProductBadge from '@/components/modules/prod/card/ProductBadge.vue'
 
 // 加入購物車
 import { useAddToCart } from '@/composables/modules/prod/useAddToCart'

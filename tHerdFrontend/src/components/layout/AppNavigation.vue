@@ -113,13 +113,17 @@
             </li>
             <!-- ✅ 固定項目（品牌A-Z後面） -->
             <li v-for="item in staticMenus" :key="item.path" class="nav-item">
-              <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill text-only"
-                :class="{ active: $route.path.startsWith(item.path) }"
+              <button
+                type="button"
+                class="nav-link fw-medium rounded-pill text-only bg-transparent border-0"
+                :class="[
+                  { active: $route.path.startsWith(item.path) },
+                  item.name === '特惠' ? 'text-danger fw-bold' : ''  // 🔹 特惠顯示紅字加粗
+                ]"
+                @click="goStaticMenu(item)"
               >
                 {{ item.name }}
-              </router-link>
+              </button>
             </li>
           </ul>
 
@@ -280,6 +284,39 @@ onMounted(async () => {
   }, 100)
 })
 
+// ==================== 點擊分類載入商品標籤 ====================
+function goStaticMenu(item) {
+  // 特殊處理：點擊「特惠」時轉到商品搜尋頁
+  if (item.path === '/specials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'discount' }
+    })
+  }
+  else if (item.path === '/bestsellers') {
+    router.push({
+      path: '/prod/products/search',
+      query: { other: 'Hot' }
+    })
+  }
+  else if (item.path === '/trials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'try' }
+    })
+  }
+  else if (item.path === '/new-products') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'new' }
+    })
+  }
+  else {
+    // 其他項目維持原行為
+    router.push(item.path)
+  }
+}
+
 // ==================== 點擊分類載入 MegaMenu ====================
 let lastClickedId = null
 async function goCategory(item) {
@@ -307,9 +344,7 @@ async function goCategory(item) {
 async function loadMegaMenuByCategory(item) {
   try {
     isLoadingMenu.value = true
-    console.log('🔍 請求分類資料：', item.productTypeId)
     const res = await ProductsApi.getProductCategoriesByTypeId(item.productTypeId)
-    console.log('✅ 回傳資料：', res.data)
 
     const apiData = res?.data
     const treeData = Array.isArray(apiData?.data)
@@ -327,12 +362,10 @@ async function loadMegaMenuByCategory(item) {
     const columns = buildMegaMenu(treeData)
     megaMenuData.value = { columns }
     loadedMenus.value[item.id] = { columns }
-    console.log('✅ 轉換後 columns:', columns)
   } catch (err) {
     console.error(`❌ 無法載入 ${item.name} 的分類資料：`, err)
   } finally {
     isLoadingMenu.value = false
-    console.log('finally 結束 isLoadingMenu:', isLoadingMenu.value)
   }
 }
 
@@ -672,6 +705,10 @@ onBeforeUnmount(() => {
   align-items: center !important;
   padding: 0.5rem 1rem;
   min-height: 52px;
+}
+
+.nav-link.text-danger {
+  color: #dc3545 !important; /* Bootstrap 的紅色 */
 }
 
 .nav-link:hover {

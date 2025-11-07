@@ -71,7 +71,7 @@
 
           <!-- ✅ 電子報訂閱 -->
           <div class="newsletter">
-            <h6 class="main-color-white-text mb-2">訂閱電子報</h6>
+            <h6 class="main-color-white-text mb-2">訂閱活動電子報</h6>
             <div class="input-group" style="max-width: 300px">
               <input
                 type="email"
