@@ -16,7 +16,7 @@ export const useCartStore = defineStore('cart', {
         const  sessionId= await auth.ensureGuest()
         const userNumberId = auth.user?.userNumberId || null
         const summary = await ProductsApi.getCartSummary(userNumberId, sessionId)
-        this.totalCount = summary?.ItemCount || 0
+        this.totalCount = summary?.TotalQty || 0
       } catch (err) {
         console.error('🚨 載入購物車摘要失敗:', err)
       }

@@ -198,12 +198,13 @@ export default {
   handleSearch() {
     const keyword = this.searchQuery?.trim() || ''
 
-    // 有關鍵字 → 導向搜尋頁（但避免與當前相同的 query 重覆導航）
+    // === 有關鍵字：導向搜尋頁 ===
     if (keyword) {
       const samePage = this.$route.name === 'product-main-search'
       const sameQuery = this.$route.query?.q === keyword
       if (samePage && sameQuery) return
 
+      // 若目前在分類頁（product-type-search），改導到搜尋頁
       this.$router.push({
         name: 'product-main-search',
         query: { q: keyword }
