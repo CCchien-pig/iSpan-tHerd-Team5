@@ -139,10 +139,20 @@ namespace tHerdBackend.SharedApi
 				options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 			})
 			.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-            {
+			{
 				options.Events = new JwtBearerEvents
 				{
 					// ✅ 新增這段，只給 SignalR 用（不會影響現有會員 API）
+					//OnMessageReceived = context =>
+					//{
+					//	var accessToken = context.Request.Query["access_token"];
+					//	var path = context.HttpContext.Request.Path;
+					//	if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+					//	{
+					//		context.Token = accessToken;
+					//	}
+					//	return Task.CompletedTask;
+					//}
 					OnMessageReceived = context =>
 					{
 						var accessToken = context.Request.Query["access_token"];
@@ -150,6 +160,28 @@ namespace tHerdBackend.SharedApi
 						if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
 						{
 							context.Token = accessToken;
+						}
+						return Task.CompletedTask;
+					},
+
+					// ✅ 自訂未授權回應（避免回 HTML）
+					OnChallenge = context =>
+					{
+						context.HandleResponse();
+						context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+						context.Response.ContentType = "application/json";
+						return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
+					},
+
+					// ✅ Token 驗證後補上常用 Claim
+					OnTokenValidated = ctx =>
+					{
+						var id = ctx.Principal?.Identities.FirstOrDefault();
+						if (id is not null && !id.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
+						{
+							var sub = id.FindFirst("sub")?.Value;
+							if (!string.IsNullOrEmpty(sub))
+								id.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub));
 						}
 						return Task.CompletedTask;
 					}
@@ -160,7 +192,7 @@ namespace tHerdBackend.SharedApi
 				var cfg = builder.Configuration.GetSection("Jwt");
 				var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(cfg["SigningKey"]!));
 				options.TokenValidationParameters = new TokenValidationParameters
-                { // 設定驗證參數
+				{ // 設定驗證參數
 					ValidateIssuerSigningKey = true,
 					IssuerSigningKey = key,
 
@@ -177,29 +209,29 @@ namespace tHerdBackend.SharedApi
 					RoleClaimType = "role",
 					NameClaimType = "sub"
 				};
-                options.Events = new JwtBearerEvents // 自訂未授權回應，避免 401 回 HTML
-                {
-                    OnChallenge = context =>
-                    {
-                        context.HandleResponse();
-                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                        context.Response.ContentType = "application/json";
-                        return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
-                    },
+				//options.Events = new JwtBearerEvents // 自訂未授權回應，避免 401 回 HTML
+				//{
+				//	OnChallenge = context =>
+				//	{
+				//		context.HandleResponse();
+				//		context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+				//		context.Response.ContentType = "application/json";
+				//		return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
+				//	},
 
-					OnTokenValidated = ctx =>
-					{
-						var id = ctx.Principal?.Identities.FirstOrDefault();
-						if (id is not null && !id.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
-						{
-							var sub = id.FindFirst("sub")?.Value;
-							if (!string.IsNullOrEmpty(sub))
-								id.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub));
-						}
-						return Task.CompletedTask;
-					}
-				};
-				
+				//	OnTokenValidated = ctx =>
+				//	{
+				//		var id = ctx.Principal?.Identities.FirstOrDefault();
+				//		if (id is not null && !id.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
+				//		{
+				//			var sub = id.FindFirst("sub")?.Value;
+				//			if (!string.IsNullOrEmpty(sub))
+				//				id.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub));
+				//		}
+				//		return Task.CompletedTask;
+				//	}
+				//};
+
 
 				//除錯用
 				// 在 Program.cs 的 builder.Build() 之前放一次：
@@ -225,11 +257,11 @@ namespace tHerdBackend.SharedApi
 			.AddGoogle("Google", options =>
 			{// 3) Google OAuth（把 SignInScheme 指到外部 Cookie）
 				options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-		options.CallbackPath = "/signin-google"; // 例：/auth/external/google-callback
-		//options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
+				options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+				options.CallbackPath = "/signin-google"; // 例：/auth/external/google-callback
+														 //options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
 				options.SignInScheme = IdentityConstants.ExternalScheme; // ★ 重點：外部 Cookie
-		options.SaveTokens = true;
+				options.SaveTokens = true;
 				// options.Scope.Add("profile"); // 預設已含
 				// options.Scope.Add("email");   // 預設已含
 			});
@@ -269,17 +301,17 @@ namespace tHerdBackend.SharedApi
 			//});
 			builder.Services.AddCors(options =>
 			{
-				options.AddPolicy("AllowFrontend",
-					policy => policy
-						.AllowAnyHeader()
-						.AllowAnyMethod()
-						.AllowCredentials()
-						.SetIsOriginAllowed(origin =>
-							origin.StartsWith("http://localhost:5173") ||  // Vue 前台
-							origin.StartsWith("https://localhost:5173") ||
-							origin.StartsWith("https://localhost:7157")    // ✅ 後台 Admin
-						)
-					);
+				options.AddPolicy("AllowFrontend", policy =>
+	policy
+		.WithOrigins(
+			"http://localhost:5173",  // Vue 前台（http）
+			"https://localhost:5173", // Vue 前台（https）
+			"https://localhost:7157"  // Admin 後台
+		)
+		.AllowAnyHeader()
+		.AllowAnyMethod()
+		.AllowCredentials()
+);
 			});
 
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
@@ -444,8 +476,9 @@ namespace tHerdBackend.SharedApi
 			app.MapControllers();
 
 			// === 即時通訊（SignalR Hub） ===
-		
+
 			app.MapHub<tHerdBackend.SharedApi.Hubs.ChatHub>("/chatHub");
+			//app.MapHub<tHerdBackend.SharedApi.Hubs.ChatHub>("/frontHub");
 
 			app.Run();
 
