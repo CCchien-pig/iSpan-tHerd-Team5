@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace tHerdBackend.Share.DTOs.CNT
+﻿namespace tHerdBackend.Share.DTOs.CNT
 {
 	/// <summary>
 	/// CNT 文章列表 DTO - 用於前台「文章列表 / 分類 / 搜尋結果」頁面

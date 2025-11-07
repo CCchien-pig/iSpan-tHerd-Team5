@@ -38,19 +38,21 @@
       <div class="action-buttons p-3">
         <!-- 數量選擇 -->
         <div class="quantity-selector mb-3">
-          <label class="form-label">數量</label>
-          <div class="input-group" style="max-width: 150px">
-            <button class="btn btn-outline-secondary" type="button" @click="decreaseQuantity">
+          <label class="form-label fw-semibold">數量</label>
+          <div class="quantity-box d-flex align-items-center justify-content-between">
+            <button type="button" class="btn-qty" @click="decreaseQuantity">
               <i class="bi bi-dash"></i>
             </button>
+
             <input
               type="number"
-              class="form-control text-center"
               v-model.number="internalQuantity"
               min="1"
+              class="qty-input text-center"
               @change="updateQuantity"
             />
-            <button class="btn btn-outline-secondary" type="button" @click="increaseQuantity">
+
+            <button type="button" class="btn-qty" @click="increaseQuantity">
               <i class="bi bi-plus"></i>
             </button>
           </div>
@@ -65,13 +67,21 @@
     </div>
 
     <!-- ❤️ 收藏 -->
-    <button class="btn btn-outline-secondary mt-3 w-100" @click="$emit('toggle-favorite')">
+    <!-- <button class="btn btn-outline-secondary mt-3 w-100" @click="$emit('toggle-favorite')">
       <i class="bi bi-heart"></i> 加到願望清單
-    </button>
+    </button> -->
+     <button
+   class="btn btn-outline-secondary mt-3 w-100"
+   :disabled="togglingFavorite"
+   @click="$emit('toggle-favorite', productId)" >
+   <i :class="isFavorited ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
+   {{ isFavorited ? '已在願望清單' : '加到願望清單' }}
+ </button>
   </div>
 </template>
 
 <script setup>
+import { tourEmits } from 'element-plus'
 import { ref, watch } from 'vue'
 
 // 接收父層傳入的 props
@@ -92,7 +102,10 @@ const props = defineProps({
   selectedSku: {
     type: Object,
     default: null
-  }
+  },
+  productId: { type: Number, required: true },
+  isFavorited: { type: Boolean, default: false},
+  togglingFavorite: { type: Boolean, default: false } // 父層可傳來避免連點
 })
 
 // 宣告 emits
@@ -146,6 +159,7 @@ const handleAddToCart = () => {
 .product-purchase-card-container {
   position: sticky;
   top: 20px;
+  width: 300px !important;
 }
 
 .product-purchase-card {
@@ -186,4 +200,63 @@ const handleAddToCart = () => {
 .btn-warning:hover {
   background-color: #e57a0d;
 }
+
+/* === 數量選擇器（修正版）=== */
+.quantity-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 160px; /* ⬅ 確保不會太窄 */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+/* ➖ / ➕ 按鈕 */
+.btn-qty {
+  flex: 0 0 auto; /* ⬅ 改成 auto，不要硬壓死寬度 */
+  width: 48px;    /* ⬅ 改用 width 控制，而非 flex basis */
+  height: 48px;
+  background-color: #f3f8f5;
+  border: none;
+  color: #4f7d6f;
+  font-size: 1.4rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-qty:hover {
+  background-color: #d8efe4;
+  color: #2f5b4b;
+}
+
+/* 中間輸入框 */
+.qty-input {
+  flex: 1; /* ⬅ 讓輸入框自然撐開剩餘空間 */
+  min-width: 60px;
+  height: 48px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  background-color: #fff;
+}
+
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qty-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 </style>
