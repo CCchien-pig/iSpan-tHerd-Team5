@@ -403,9 +403,9 @@ export default {
     },
 
     demoFill() {
-      this.receiverName = '測試收件人'
+      this.receiverName = '測試人員2'
       this.receiverPhone = '0912345678'
-      this.receiverAddress = '台北市中正區測試路 1 號'
+      this.receiverAddress = '桃園市中壢區新生路二段421號'
       this.calculateShippingFee()
     },
 
