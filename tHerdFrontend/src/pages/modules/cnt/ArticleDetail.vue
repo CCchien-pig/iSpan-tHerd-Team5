@@ -121,16 +121,15 @@
         </div>
       </div>
     </div>
-    <br>
     <!-- Tags：底部（暫時作搜尋導回文章清單） -->
-    <div v-if="article.tags && article.tags.length" class="mt-4 pt-3 border-top">
-      <h5 class="main-color-green-text mb-2">相關標籤</h5>
+    <div v-if="article.tags && article.tags.length" class="mt-5 pt-4 border-top">
+      <h4 class="main-color-green-text mb-2">相關標籤</h4>
       <div class="d-flex flex-wrap gap-2">
       <router-link
         v-for="t in article.tags"
         :key="t.tagId"
         :to="{ name: 'cnt-tag-products', params: { tagId: t.tagId } }"
-        class="badge bg-light main-color-green-text text-decoration-none p-2"
+        class="badge main-color-green-text text-decoration-none p-1 tag-badge"
       >
         # {{ t.tagName }}
       </router-link>
@@ -966,9 +965,19 @@ function formatDate(d) {
 /* ✅ CTA Card 風格（綠色主題；淡綠陰影或灰色邊框） */
 .cta-card {
   background: #fff;
-  border: 1px solid #e8f4f4;              /* 淡綠邊框 */
+  border: 1px solid #e8f4f4;
   border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0, 112, 120, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04); /* 綠色系淡陰影 */
+  /* 陰影加重：位移、模糊、透明度都往上調 */
+  box-shadow:
+    0 14px 30px rgba(0, 112, 120, 0.28),
+    0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.cta-card:hover {
+  box-shadow:
+    0 18px 40px rgba(0, 112, 120, 0.32),
+    0 6px 16px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .cta-title {
   line-height: 1.35;
@@ -976,13 +985,25 @@ function formatDate(d) {
 .cta-desc {
   line-height: 1.6;
 }
+/* 讓 CTA 按鈕裡的圖示和文字排成一行 */
 .cta-button {
-  border-radius: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;       /* 圖示和文字中間的距離 */
 }
+
+/* 圖示外層 span */
+.cta-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 彩色 IG svg 調整一下尺寸就好，保持在同一行 */
 .cta-icon :deep(svg) {
-  /* 讓彩色 IG 圖標與文字對齊 */
-  vertical-align: -2px;
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
 }
 
 /* RWD 微調 */
@@ -995,5 +1016,13 @@ function formatDate(d) {
 /* 讓原生 #錨點 或 scrollIntoView 也對齊 */
 .article-content :where(h2[id], h3[id]) {
   scroll-margin-top: calc(var(--navbar-height) + 10px);
+}
+
+.tag-badge {
+  font-size: 0.95rem;          /* 字大一點 */
+  padding: 0.35rem 0.6rem;
+
+  /* 比 bg-light 再深一點的綠系底色，想更深可以再調 */
+  background-color: #d1f0e5;   /* 淺綠 */
 }
 </style>
