@@ -41,12 +41,12 @@ export default {
      */
     badgeClass() {
       const badgeMap = {
-        熱銷: 'badge-hot', // 紅色背景
-        新品: 'badge-new', // 綠色背景
-        特價: 'badge-sale', // 黃色背景
-        限量: 'badge-limited', // 紫色背景
+        '特價!': 'badge-danger',        // 🔴 紅色：促銷、特價
+        '只限 tHerd': 'badge-success',  // 🟢 綠色：會員限定
+        '新品搶先購': 'badge-primary',  // 🔵 藍色：新品
+        '好物試用!': 'badge-pink',      // 💖 粉色：試用活動
       }
-      return badgeMap[this.badge] || 'badge-default' // 默認灰色背景
+      return badgeMap[this.badge] || 'badge-secondary' // ⚪ 灰色：預設
     },
   },
 }
@@ -64,24 +64,9 @@ export default {
   color: white;
 }
 
-.badge-hot {
-  background: #dc3545;
-}
-
-.badge-new {
-  background: #28a745;
-}
-
-.badge-sale {
-  background: #ffc107;
-  color: #000;
-}
-
-.badge-limited {
-  background: #6f42c1;
-}
-
-.badge-default {
-  background: #6c757d;
-}
+.badge-danger { background-color: #dc3545; color: white; }   /* 紅 */
+.badge-success { background-color: #28a745; color: white; }  /* 綠 */
+.badge-primary { background-color: #4981d4; color: white; }  /* 藍 */
+.badge-pink { background-color: #f57b56; color: white; }     /* 粉 */
+.badge-secondary { background-color: #6c757d; color: white; }/* 灰 */
 </style>

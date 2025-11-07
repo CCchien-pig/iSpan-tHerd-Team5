@@ -6,7 +6,7 @@
   <div class="product-info">
     <!-- 商品標籤 -->
     <div class="brand-badge mb-3">
-      <span class="badge bg-success">{{ product.badge }}</span>
+      <span class="badge bg-success">{{ product.badgeName }}</span>
     </div>
 
     <!-- 商品標題 -->
@@ -94,7 +94,7 @@
     <div class="product-meta mb-4">
       <ul class="list-unstyled small">
         <!--li><strong>包裝規格：</strong>{{ selectedSpec?.optionName || product.PackageType }}</li-->
-        <li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li>
+        <!--li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li-->
         <li v-if="product.dimensions">
           <strong>約尺寸：</strong>{{ product.weight }}公克，{{ product.dimensions }}
         </li>

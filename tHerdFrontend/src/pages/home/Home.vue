@@ -193,7 +193,7 @@ export default {
       categories: [
         {
           id: 1,
-          name: '維生素與礦物質',
+          name: '維生素',
           description: '支持免疫系統和整體健康',
           icon: 'bi bi-heart-pulse',
         },
@@ -205,7 +205,7 @@ export default {
         },
         {
           id: 3,
-          name: '美容護膚',
+          name: '美容美妝',
           description: '天然有機的美容產品',
           icon: 'bi bi-flower1',
         },
