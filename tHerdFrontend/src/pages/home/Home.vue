@@ -231,7 +231,7 @@ export default {
         {
           id: 2,
           title: '快速配送',
-          description: '訂單滿 NT$1,000 免運費',
+          description: '訂單滿 NT$1,500 免運費',
           icon: 'bi bi-truck',
         },
         {
@@ -242,8 +242,8 @@ export default {
         },
         {
           id: 4,
-          title: '30天退貨',
-          description: '不滿意可於30天內退貨',
+          title: '7天退貨',
+          description: '不滿意可於7天內退貨',
           icon: 'bi bi-arrow-clockwise',
         },
       ],
