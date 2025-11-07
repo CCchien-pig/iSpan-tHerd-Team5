@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace tHerdBackend.Core.DTOs.SUP.Brand
 {
@@ -9,6 +10,14 @@ namespace tHerdBackend.Core.DTOs.SUP.Brand
 		public string BlockType { get; set; }
 		public string AltText { get; set; }
 		public string Caption { get; set; }
-		public bool IsActive { get; set; }
+
+
+		// ✅ 原本這行若是 bool 或 int 改成 string
+		public string? IsActive { get; set; }
+
+		// ✅ 新增這個轉換屬性
+		[JsonIgnore]
+		public bool IsActiveBool =>
+			IsActive?.ToLower() == "true" || IsActive == "1";
 	}
 }

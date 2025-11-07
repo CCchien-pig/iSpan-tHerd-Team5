@@ -273,6 +273,8 @@ ORDER BY bac.[ContentId], bac.[OrderSeq];";
 		public int Order { get; set; }
 	}
 
+		
+	// 取得品牌綜合資訊
 	public async Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId)
 	{
 		var brand = await _db.SupBrands
@@ -284,20 +286,19 @@ ORDER BY bac.[ContentId], bac.[OrderSeq];";
 		if (brand == null)
 			return null;
 
-		// 計算距今天數
-		int daysAgo = (DateTime.Now - brand.CreatedDate).Days;
+		// 取得品牌相關的所有產品ID
+		var productIds = brand.ProdProducts.Select(x => x.ProductId).ToList();
 
-		// 從訂單明細累加該品牌所有產品銷量
-		//先抓該品牌下所有商品 ProductId，再依 OrderItem 中符合商品的 ProductId 做銷量 Qty 加總
-		var productIds = brand.ProdProducts.Select(p => p.ProductId).ToList();
-
-		int totalSalesQty = 0;
-		if (productIds.Any())
+		// 計算所有產品的總銷量
+		int totalSales = 0;
+		if (productIds.Count > 0)
 		{
-			totalSalesQty = await _db.OrdOrderItems
-				.Where(oi => productIds.Contains(oi.ProductId))
-				.SumAsync(oi => (int?)oi.Qty) ?? 0;
+			totalSales = await _db.OrdOrderItems
+				.Where(x => productIds.Contains(x.ProductId))
+				.SumAsync(x => (int?)x.Qty) ?? 0;
 		}
+
+		int daysAgo = (DateTime.Now - brand.CreatedDate).Days;
 
 		return new BrandOverviewDto
 		{
@@ -305,10 +306,150 @@ ORDER BY bac.[ContentId], bac.[OrderSeq];";
 			FavoriteCount = brand.SupBrandFavorites.Count,
 			CreatedDaysAgo = daysAgo,
 			SupplierName = brand.Supplier?.SupplierName ?? "",
-			TotalSalesQty = totalSalesQty
+			TotalSales = totalSales
 		};
 	}
 
+	// 取得品牌銷售Top10排行榜
+	public async Task<List<BrandSalesRankingDto>> GetTopBrandsBySalesAsync(int topN = 10)
+	{
+		// 1) 只以可比較欄位分組彙總：BrandId -> TotalSales
+		var salesAgg = await (
+			from p in _db.ProdProducts
+			join i in _db.OrdOrderItems on p.ProductId equals i.ProductId			
+			group i by p.BrandId into g
+			select new
+			{
+				BrandId = g.Key,
+				TotalSales = g.Sum(x => x.Qty)
+			}
+		)
+		.OrderByDescending(x => x.TotalSales)
+		.Take(topN)
+		.ToListAsync();
+
+		var brandIds = salesAgg.Select(x => x.BrandId).ToList();
+
+		// 2) 取品牌名稱
+		var brands = await _db.SupBrands
+			.Where(b => brandIds.Contains(b.BrandId))
+			.Select(b => new { b.BrandId, b.BrandName })
+			.ToListAsync();
+
+
+		// 3) 取 Logo：限定 FolderId=56、IsActive=1、AltText=BrandName，若同名多張則取最早建立（或最新，依需求）
+		var logoQuery = from f in _db.SysAssetFiles
+						join b in _db.SupBrands on f.AltText equals b.BrandName
+						where f.FolderId == 56 && f.IsActive == true && brandIds.Contains(b.BrandId)
+						select new
+						{
+							b.BrandId,
+							f.FileUrl,
+							f.CreatedDate
+						};
+
+		var logos = await logoQuery
+			.GroupBy(x => x.BrandId)
+			.Select(g => new
+			{
+				BrandId = g.Key,
+				// 取最早建立的那張；若要最新就改 OrderByDescending
+				FileUrl = g.OrderBy(x => x.CreatedDate).Select(x => x.FileUrl).FirstOrDefault()
+			})
+			.ToListAsync();
+
+		// 4) 組裝結果（依銷量排序）
+		var result = salesAgg
+			.Join(brands, s => s.BrandId, b => b.BrandId, (s, b) => new { s, b })
+			.GroupJoin(logos, sb => sb.b.BrandId, l => l.BrandId, (sb, lg) => new { sb, lg = lg.FirstOrDefault() })
+			.Select(x => new BrandSalesRankingDto
+			{
+				BrandId = x.sb.b.BrandId,
+				BrandName = x.sb.b.BrandName,
+				LogoUrl = x.lg?.FileUrl ?? string.Empty,
+				TotalSales = x.sb.s.TotalSales
+			})
+			.OrderByDescending(x => x.TotalSales)
+			.ToList();
+
+		return result;
+	}
+
+
+	public async Task<BrandAccordionContentDto?> GetAccordionByIdAsync(int contentId, CancellationToken ct)
+	{
+		var q = await _db.SupBrandAccordionContents
+			.Where(x => x.ContentId == contentId && x.IsActive)
+			.Select(x => new BrandAccordionContentDto
+			{
+				ContentId = x.ContentId,
+				BrandId = x.BrandId,
+				ContentTitle = x.ContentTitle,
+				Content = x.Content,
+				OrderSeq = x.OrderSeq,
+				ImgId = x.ImgId,
+				IsActive = x.IsActive,
+				Creator = x.Creator,
+				CreatedDate = x.CreatedDate,
+				Reviser = x.Reviser,
+				RevisedDate = x.RevisedDate
+			})
+			.FirstOrDefaultAsync(ct);
+
+		return q;
+	}
+
+	public async Task<BrandArticleDto?> GetArticleByIdAsync(int contentId, CancellationToken ct)
+	{
+		var q = await _db.SupBrandArticles
+			.Where(x => x.ContentId == contentId && x.IsActive)
+			.Select(x => new BrandArticleDto
+			{
+				ContentId = x.ContentId,
+				BrandId = x.BrandId,
+				ImgId = x.ImgId,
+				ContentTitle = x.ContentTitle,
+				Content = x.Content,
+				ContentType = x.ContentType,
+				OrderSeq = x.OrderSeq,
+				IsActive = x.IsActive,
+				PublishDate = x.PublishDate,
+				Creator = x.Creator,
+				CreatedDate = x.CreatedDate,
+				Reviser = x.Reviser,
+				RevisedDate = x.RevisedDate
+			})
+			.FirstOrDefaultAsync(ct);
+
+		return q;
+	}
+
+	public async Task<int?> GetBrandImgIdAsync(int brandId, CancellationToken ct)
+	{
+		return await _db.SupBrands
+			.Where(b => b.BrandId == brandId && b.IsActive)
+			.Select(b => b.ImgId)
+			.FirstOrDefaultAsync(ct);
+	}
+
+	public async Task<BannerDto?> GetAssetFileAsBannerAsync(int fileId, CancellationToken ct)
+	{
+		var f = await _db.SysAssetFiles
+			.Where(x => x.FileId == fileId && x.IsActive)
+			.Select(x => new BannerDto
+			{
+				FileId = x.FileId,
+				FileUrl = x.FileUrl,
+				AltText = x.AltText,
+				Caption = x.Caption,
+				IsExternal = x.IsExternal,
+				IsActive = x.IsActive,
+				FileKey = x.FileKey
+			})
+			.FirstOrDefaultAsync(ct);
+
+		return f;
+	}
 
 
 	#endregion

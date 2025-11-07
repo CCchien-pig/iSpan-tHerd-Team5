@@ -47,6 +47,16 @@ public interface IBrandService
 
 	Task<BrandDetailDto?> GetBrandDetailAsync(int brandId, CancellationToken ct);
 
+	/// <summary>
+	/// 取得品牌銷量Top N 排行
+	/// </summary>
+	Task<List<BrandSalesRankingDto>> GetTopBrandsBySalesAsync(int topN = 10);
+
+
+	Task<BrandAccordionContentDto?> GetAccordionAsync(int brandId, int contentId, CancellationToken ct);
+	Task<BrandArticleDto?> GetArticleAsync(int brandId, int contentId, CancellationToken ct);
+	Task<BannerDto?> GetBannerAsync(int brandId, string? linkUrl, CancellationToken ct);
+
 	#endregion
 
 }

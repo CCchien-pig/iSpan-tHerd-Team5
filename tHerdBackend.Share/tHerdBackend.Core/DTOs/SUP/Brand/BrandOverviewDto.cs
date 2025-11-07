@@ -8,7 +8,7 @@
 
 		public int CreatedDaysAgo { get; set; } // 新增：距今天數
 		public string SupplierName { get; set; }
-		public int TotalSalesQty { get; set; }
+		public int TotalSales { get; set; } // 新增：產品總銷量
 
 	}
 

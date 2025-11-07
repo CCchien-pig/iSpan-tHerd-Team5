@@ -1,4 +1,6 @@
-﻿namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
+﻿using System.Text.Json.Serialization;
+
+namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 {
 	// =======================================================
 	// 1. 屬性 DTOs (Props)
@@ -15,6 +17,19 @@
 		public string? FileUrl { get; set; }
 		public string? LinkUrl { get; set; }
 		public string? AltText { get; set; }
+		public string? Caption { get; set; }
+
+		// ✅ 關鍵：確保能對應 JSON 的 "isActive"
+		[JsonPropertyName("isActive")]
+		public bool IsActive { get; set; }
+
+		// ✅ 同步別名屬性給程式用（讓現有程式碼不用改）
+		[JsonIgnore]
+		public bool ImageIsActive
+		{
+			get => IsActive;
+			set => IsActive = value;
+		}
 	}
 
 	// 專門用於 Accordion 區塊的 Props (範例)
