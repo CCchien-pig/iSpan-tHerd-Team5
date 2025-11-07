@@ -560,7 +560,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 
 
 		/// <summary>
-		/// 取得品牌綜合資訊（商品數、被收藏數、建立時間、供應商名稱）
+		/// 取得品牌綜合資訊（商品數、被收藏數、建立時間->距今天數、供應商名稱、產品總銷量）
 		/// </summary>
 		/// <param name="brandId">品牌 Id</param>
 		/// <returns>品牌資訊</returns>
@@ -579,11 +579,94 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, $"GetBrandOverviewAsync error. brandId={brandId}");
-				return BadRequest(ApiResponse<object>.Fail("系統錯誤，請聯絡管理員"));
+				_logger.LogError(ex, "GetTopBrandsBySales error");
+				return BadRequest(ApiResponse<string>.Fail(ex.Message));
+			}
+
+		}
+
+		/// <summary>
+		/// 取得品牌銷售Top10排行榜
+		/// </summary>
+		[AllowAnonymous]
+		[HttpGet("top-sales")]
+		public async Task<IActionResult> GetTopBrandsBySales()
+		{
+			try
+			{
+				var data = await _service.GetTopBrandsBySalesAsync(10);
+				return Ok(ApiResponse<List<BrandSalesRankingDto>>.Ok(data, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetTopBrandsBySales error");
+				return BadRequest(ApiResponse<string>.Fail(ex.Message));
 			}
 		}
 
+
+		/// <summary>取得單一 Accordion 內容（依 contentId）</summary>
+		[HttpGet("{brandId:int}/accordion/{contentId:int}")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandAccordionContentDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetAccordion(int brandId, int contentId, CancellationToken ct)
+		{
+			try
+			{
+				var dto = await _service.GetAccordionAsync(brandId, contentId, ct);
+				if (dto == null) return NotFound(ApiResponse<object>.Fail("找不到內容或品牌無效"));
+				return Ok(ApiResponse<BrandAccordionContentDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetAccordion failed. brandId={BrandId}, contentId={ContentId}", brandId, contentId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
+
+		/// <summary>取得單一 Article 內容（依 contentId）</summary>
+		[HttpGet("{brandId:int}/article/{contentId:int}")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandArticleDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetArticle(int brandId, int contentId, CancellationToken ct)
+		{
+			try
+			{
+				var dto = await _service.GetArticleAsync(brandId, contentId, ct);
+				if (dto == null) return NotFound(ApiResponse<object>.Fail("找不到內容或品牌無效"));
+				return Ok(ApiResponse<BrandArticleDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetArticle failed. brandId={BrandId}, contentId={ContentId}", brandId, contentId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
+
+		/// <summary>取得品牌 Banner（SUP_Brand.ImgId → SYS_AssetFile.FileUrl），可附 linkUrl</summary>
+		[HttpGet("{brandId:int}/banner")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BannerDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetBrandBanner(int brandId, [FromQuery] string? linkUrl, CancellationToken ct)
+		{
+			try
+			{
+				var dto = await _service.GetBannerAsync(brandId, linkUrl, ct);
+				if (dto == null) return NotFound(ApiResponse<object>.Fail("品牌不存在或無 Banner"));
+				return Ok(ApiResponse<BannerDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetBrandBanner failed. brandId={BrandId}", brandId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
 
 
 		#endregion
