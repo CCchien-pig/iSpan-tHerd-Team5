@@ -35,35 +35,39 @@ namespace tHerdBackend.Services.ORD
         /// </summary>
         public string CreatePaymentForm(string orderId, int totalAmount, string itemName)
         {
-            // 🔍 驗證
             _logger.LogInformation("📋 配置檢查:");
             _logger.LogInformation("  MerchantID: {MerchantID}", _config.MerchantID);
             _logger.LogInformation("  PaymentUrl: {PaymentUrl}", _config.PaymentUrl);
-            _logger.LogInformation("  OrderResultUrl: {OrderResultUrl}", _config.OrderResultUrl);  // ← 檢查這個有沒有值
+            _logger.LogInformation("  OrderResultUrl: {OrderResultUrl}", _config.OrderResultUrl);
             _logger.LogInformation("  ReturnUrl: {ReturnUrl}", _config.ReturnUrl);
 
             var merchantTradeNo = orderId;
             var tradeDate = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-            
+
             var parameters = new SortedDictionary<string, string>
-            {
-                { "MerchantID", _config.MerchantID },
-                { "MerchantTradeNo", merchantTradeNo },
-                { "MerchantTradeDate", tradeDate },
-                { "PaymentType", "aio" },
-                { "TotalAmount", totalAmount.ToString() },
-                { "TradeDesc", "tHerd商城購物" },
-                { "ItemName", itemName },
-                { "ReturnURL", _config.OrderResultUrl },
-                { "ChoosePayment", "Credit" },
-                { "EncryptType", "1" },
-                { "ClientBackURL", _config.ReturnUrl }
-            };
+    {
+        { "MerchantID", _config.MerchantID },
+        { "MerchantTradeNo", merchantTradeNo },
+        { "MerchantTradeDate", tradeDate },
+        { "PaymentType", "aio" },
+        { "TotalAmount", totalAmount.ToString() },
+        { "TradeDesc", "tHerd商城購物" },
+        { "ItemName", itemName },
+        { "ReturnURL", _config.OrderResultUrl },
+        { "ChoosePayment", "Credit" },
+        { "EncryptType", "1" },
+        { "ClientBackURL", _config.ReturnUrl }
+    };
 
             var checkMacValue = GenerateCheckMacValue(parameters);
             parameters.Add("CheckMacValue", checkMacValue);
 
             var formHtml = new StringBuilder();
+            formHtml.AppendLine("<!DOCTYPE html>");
+            formHtml.AppendLine("<html>");
+            formHtml.AppendLine("<head><meta charset='utf-8'><title>跳轉中...</title></head>");
+            formHtml.AppendLine("<body>");
+            formHtml.AppendLine("<h3>正在跳轉至綠界金流，請稍候...</h3>");
             formHtml.AppendLine($"<form id='ecpayForm' method='post' action='{_config.PaymentUrl}'>");
 
             foreach (var param in parameters)
@@ -72,6 +76,13 @@ namespace tHerdBackend.Services.ORD
             }
 
             formHtml.AppendLine("</form>");
+
+            // ✅ 加入自動提交的 JavaScript
+            formHtml.AppendLine("<script>");
+            formHtml.AppendLine("  document.getElementById('ecpayForm').submit();");
+            formHtml.AppendLine("</script>");
+            formHtml.AppendLine("</body>");
+            formHtml.AppendLine("</html>");
 
             _logger.LogInformation($"建立付款表單: MerchantTradeNo={merchantTradeNo}, Amount={totalAmount}");
             return formHtml.ToString();
