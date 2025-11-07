@@ -388,23 +388,39 @@ namespace tHerdBackend.SharedApi
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            
 
-			app.UseCors("AllowAll");
+                        app.UseHttpsRedirection();
 
+            
 
-			// 訪客追蹤：若無 guestId 就建立
-			app.UseSession();
-			app.Use(async (ctx, next) =>
-			{
-				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
-					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
-				await next();
-			});
+            
 
-			app.UseCors("AllowVue");   // 確保這行存在且在 UseAuthorization 之前
-									   // 啟用 JWT 驗證
-			app.UseAuthentication();
+            			// 訪客追蹤：若無 guestId 就建立
+
+            			app.UseSession();
+
+            			app.Use(async (ctx, next) =>
+
+            			{
+
+            				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
+
+            					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
+
+            				await next();
+
+            			});
+
+            
+
+            			app.UseCors("AllowFrontend");   // 確保這行存在且在 UseAuthorization 之前
+
+            								   // 啟用 JWT 驗證
+
+            			app.UseAuthentication();
+
+            
 			app.UseAuthorization();
 
 			app.MapControllers();
