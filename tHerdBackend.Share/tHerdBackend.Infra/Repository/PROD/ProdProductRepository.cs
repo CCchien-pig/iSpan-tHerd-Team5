@@ -661,6 +661,8 @@ namespace tHerdBackend.Infra.Repository.PROD
 			// === SKU處理邏輯 ===
 			foreach (var sku in dto.Skus ?? new())
 			{
+				sku.IsActive = true;
+
 				// 需要新建 SkuCode
 				if (sku.SkuId == 0)
 				{

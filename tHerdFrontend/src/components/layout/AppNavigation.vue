@@ -116,7 +116,10 @@
               <button
                 type="button"
                 class="nav-link fw-medium rounded-pill text-only bg-transparent border-0"
-                :class="{ active: $route.path.startsWith(item.path) }"
+                :class="[
+                  { active: $route.path.startsWith(item.path) },
+                  item.name === '特惠' ? 'text-danger fw-bold' : ''  // 🔹 特惠顯示紅字加粗
+                ]"
                 @click="goStaticMenu(item)"
               >
                 {{ item.name }}
@@ -702,6 +705,10 @@ onBeforeUnmount(() => {
   align-items: center !important;
   padding: 0.5rem 1rem;
   min-height: 52px;
+}
+
+.nav-link.text-danger {
+  color: #dc3545 !important; /* Bootstrap 的紅色 */
 }
 
 .nav-link:hover {
