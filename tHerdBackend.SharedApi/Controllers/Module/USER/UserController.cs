@@ -510,6 +510,231 @@ namespace tHerdBackend.SharedApi.Controllers.Module.USER
 				return NotFound(new { error = ex.Message });
 			}
 		}
+
+		// ======== Wishlist / Favorites for current user ========
+
+		public record FavoriteDto(int ProductId);
+
+		/// <summary>加入願望清單（冪等） POST /api/user/favorites</summary>
+		[HttpPost("favorites")]
+		public async Task<IActionResult> AddFavorite([FromBody] FavoriteDto dto)
+		{
+			if (dto is null || dto.ProductId <= 0)
+				return BadRequest(new { error = "無效的 ProductId" });
+
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+
+				// 可選：確認商品存在且已發佈
+				var prodExists = await _herdDb.ProdProducts
+					.AsNoTracking()
+					.AnyAsync(p => p.ProductId == dto.ProductId && p.IsPublished);
+				if (!prodExists)
+					return NotFound(new { error = "商品不存在或未上架" });
+
+				// 已存在 → 冪等成功
+				var existed = await _herdDb.ProdProductFavorites.FindAsync(dto.ProductId, numberId);
+				if (existed != null)
+					return Ok(new { ok = true, isFavorited = true });
+
+				_herdDb.ProdProductFavorites.Add(new ProdProductFavorite
+				{
+					ProductId = dto.ProductId,
+					UserNumberId = numberId,
+					CreatedDate = DateTime.UtcNow
+				});
+
+				try
+				{
+					await _herdDb.SaveChangesAsync();
+					return Ok(new { ok = true, isFavorited = true });
+				}
+				catch (DbUpdateException)
+				{
+					// 競態下複合鍵衝突 → 視為成功
+					return Ok(new { ok = true, isFavorited = true });
+				}
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
+		/// <summary>移除願望清單（冪等） DELETE /api/user/favorites/{productId}</summary>
+		[HttpDelete("favorites/{productId:int}")]
+		public async Task<IActionResult> RemoveFavorite([FromRoute] int productId)
+		{
+			if (productId <= 0) return BadRequest(new { error = "無效的 ProductId" });
+
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+
+				var row = await _herdDb.ProdProductFavorites.FindAsync(productId, numberId);
+				if (row == null)
+					return Ok(new { ok = true, isFavorited = false });
+
+				_herdDb.ProdProductFavorites.Remove(row);
+				await _herdDb.SaveChangesAsync();
+
+				return Ok(new { ok = true, isFavorited = false });
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
+		/// <summary>切換願望清單（加入/移除） POST /api/user/favorites/toggle</summary>
+		[HttpPost("favorites/toggle")]
+		public async Task<IActionResult> ToggleFavorite([FromBody] FavoriteDto dto)
+		{
+			if (dto is null || dto.ProductId <= 0)
+				return BadRequest(new { error = "無效的 ProductId" });
+
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+
+				var row = await _herdDb.ProdProductFavorites.FindAsync(dto.ProductId, numberId);
+				if (row == null)
+				{
+					// 可選：確認商品存在且已發佈
+					var prodExists = await _herdDb.ProdProducts
+						.AsNoTracking()
+						.AnyAsync(p => p.ProductId == dto.ProductId && p.IsPublished);
+					if (!prodExists)
+						return NotFound(new { error = "商品不存在或未上架" });
+
+					_herdDb.ProdProductFavorites.Add(new ProdProductFavorite
+					{
+						ProductId = dto.ProductId,
+						UserNumberId = numberId,
+						CreatedDate = DateTime.UtcNow
+					});
+
+					await _herdDb.SaveChangesAsync();
+					return Ok(new { ok = true, isFavorited = true });
+				}
+				else
+				{
+					_herdDb.ProdProductFavorites.Remove(row);
+					await _herdDb.SaveChangesAsync();
+					return Ok(new { ok = true, isFavorited = false });
+				}
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
+		/// <summary>我的願望清單（分頁，含商品摘要） GET /api/user/favorites?page=1&pageSize=10</summary>
+		[HttpGet("favorites")]
+		public async Task<IActionResult> GetFavorites([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+		{
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+				page = page <= 0 ? 1 : page;
+				pageSize = pageSize <= 0 ? 10 : pageSize;
+
+				var q = from f in _herdDb.ProdProductFavorites.AsNoTracking()
+						join p in _herdDb.ProdProducts.AsNoTracking()
+							on f.ProductId equals p.ProductId
+						where f.UserNumberId == numberId
+						orderby f.CreatedDate descending
+						select new
+						{
+							productId = p.ProductId,
+							productName = p.ProductName,
+							badge = p.Badge,
+							isPublished = p.IsPublished,
+							createdDate = f.CreatedDate
+							// 若需要主圖/價格，可在此再 join 你的圖片/價格表或視圖
+						};
+
+				var total = await q.CountAsync();
+				var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+				return Ok(new { items, total, page, pageSize });
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
+
+		/// <summary>我的願望清單數量（側欄 badge） GET /api/user/favorites/count</summary>
+		[HttpGet("favorites/count")]
+		public async Task<IActionResult> GetFavoriteCount()
+		{
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+
+				var count = await _herdDb.ProdProductFavorites
+					.AsNoTracking()
+					.Where(f => f.UserNumberId == numberId)
+					.CountAsync();
+
+				return Ok(new { count });
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
+		/// <summary>我的願望清單 ProductId 清單（給商品頁快速畫心） GET /api/user/favorites/ids</summary>
+		[HttpGet("favorites/ids")]
+		public async Task<IActionResult> GetFavoriteIds()
+		{
+			try
+			{
+				var numberId = await GetCurrentUserNumberIdAsync();
+
+				var ids = await _herdDb.ProdProductFavorites
+					.AsNoTracking()
+					.Where(f => f.UserNumberId == numberId)
+					.Select(f => f.ProductId)
+					.ToListAsync();
+
+				return Ok(ids);
+			}
+			catch (UnauthorizedAccessException)
+			{
+				return Unauthorized(new { error = "未登入" });
+			}
+			catch (KeyNotFoundException ex)
+			{
+				return NotFound(new { error = ex.Message });
+			}
+		}
+
 		// =====================
 		// =   Coupon Wallet   =
 		// =====================

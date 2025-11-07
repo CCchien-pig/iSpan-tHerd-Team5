@@ -34,14 +34,17 @@
                 <!-- <label class="label">姓氏 <span class="req">*</span></label> -->
                 <label class="label">姓氏 <span class="req">*</span></label>
                 <input v-model.trim="lastName" class="input"
-       @input="touch('lastName')" @blur="touch('lastName')"
-       :class="{ 'is-invalid': touched.lastName && lastNameError }" />
-<div class="field-error" v-if="touched.lastName && lastNameError">{{ lastNameError }}</div>
-                
+                @input="touch('lastName')" @blur="touch('lastName')"
+                :class="{ 'is-invalid': touched.lastName && lastNameError }" />
+                <div class="field-error" v-if="touched.lastName && lastNameError">{{ lastNameError }}</div>
+                  
               </div>
               <div class="field">
                 <label class="label">名字 <span class="req">*</span></label>
-                <input v-model.trim="firstName" class="input" />
+                <input v-model.trim="firstName" class="input"
+                 @input="touch('firstName')" @blur="touch('firstName')"
+                  :class="{ 'is-invalid': touched.firstName && firstNameError }" />
+                  <div class="field-error" v-if="touched.firstName && firstNameError">{{ firstNameError }}</div>
               </div>
             </div>
 
@@ -49,12 +52,10 @@
             <div class="row">
               <div class="field">
                 <label class="label">Email <span class="req">*</span></label>
-                <input
-                  v-model.trim="email"
-                  type="email"
-                  class="input"
-                  placeholder="you@example.com"
-                />
+                <input v-model.trim="email" type="email" class="input" placeholder="you@example.com"
+               @input="touch('email')" @blur="touch('email')"
+                :class="{ 'is-invalid': touched.email && emailError }" />
+                <div class="field-error" v-if="touched.email && emailError">{{ emailError }}</div>
               </div>
             </div>
 
@@ -62,13 +63,20 @@
             <div class="row">
               <div class="field">
                 <label class="label">密碼 <span class="req">*</span></label>
-                <input
-                  v-model="password"
-                  type="password"
-                  class="input"
-                  placeholder="至少 8 碼，建議含大小寫與數字"
-                  autocomplete="new-password"
-                />
+<input v-model="password" type="password" class="input"
+       placeholder="至少 8 碼，需含大小寫、數字、符號"
+       autocomplete="new-password"
+       @input="touch('password')" @blur="touch('password')"
+       :class="{ 'is-invalid': touched.password && passwordError }" />
+<div class="field-error" v-if="touched.password && passwordError">{{ passwordError }}</div>
+<!-- 可選：即時規則清單（打勾/打叉） -->
+<ul class="pw-hints">
+  <li :class="{ ok: password.length >= 8 }">至少 8 碼</li>
+  <li :class="{ ok: /[A-Z]/.test(password) }">包含大寫</li>
+  <li :class="{ ok: /[a-z]/.test(password) }">包含小寫</li>
+  <li :class="{ ok: /\d/.test(password) }">包含數字</li>
+  <li :class="{ ok: /[^A-Za-z0-9]/.test(password) }">包含符號</li>
+</ul>
               </div>
             </div>
 
@@ -76,13 +84,13 @@
             <div class="row row-2">
               <div class="field">
                 <label class="label">手機號碼 <span class="req">*</span></label>
-                <input
-                  v-model.trim="phoneNumber"
-                  type="tel"
-                  class="input"
-                  placeholder="0900000000"
-                  inputmode="numeric"
-                />
+<input type="text" 
+       pattern="[0-9]*" 
+       maxlength="10" v-model.trim="phoneNumber" class="input" placeholder="0900000000" inputmode="numeric"
+       @input="touch('phoneNumber')" @blur="touch('phoneNumber')"
+       :class="{ 'is-invalid': touched.phoneNumber && phoneError }" />
+<div class="field-error" v-if="touched.phoneNumber && phoneError">{{ phoneError }}</div>
+
               </div>
               <div class="field">
                 <label class="label">使用推薦碼</label>
@@ -95,28 +103,15 @@
               <div class="field">
                 <label class="label d-block">性別 <span class="req">*</span></label>
                 <div class="segmented">
-                  <input
-                    type="radio"
-                    class="segmented-input"
-                    name="gender"
-                    id="gender-male"
-                    value="男"
-                    v-model="gender"
-                    autocomplete="off"
-                  />
-                  <label class="segmented-btn" for="gender-male">男</label>
+  <input type="radio" class="segmented-input" name="gender" id="gender-male" value="男"
+         v-model="gender" autocomplete="off" @change="touch('gender')" />
+  <label class="segmented-btn" for="gender-male">男</label>
 
-                  <input
-                    type="radio"
-                    class="segmented-input"
-                    name="gender"
-                    id="gender-female"
-                    value="女"
-                    v-model="gender"
-                    autocomplete="off"
-                  />
-                  <label class="segmented-btn" for="gender-female">女</label>
-                </div>
+  <input type="radio" class="segmented-input" name="gender" id="gender-female" value="女"
+         v-model="gender" autocomplete="off" @change="touch('gender')" />
+  <label class="segmented-btn" for="gender-female">女</label>
+</div>
+<div class="field-error" v-if="touched.gender && genderError">{{ genderError }}</div>
               </div>
             </div>
 
@@ -132,9 +127,7 @@
 
             <!-- 動作區：主註冊 + 前往登入 + 重寄驗證信 -->
             <div class="actions">
-              <button class="btn btn-primary" :disabled="busy" @click="doRegister">
-                {{ busy ? '送出中…' : '註冊' }}
-              </button>
+              <button class="btn btn-primary" :disabled="busy || !formValid" @click="doRegister" @event="doRegister">{{ busy ? '送出中…' : '註冊' }}</button>
 
               <router-link class="btn btn-ghost" :to="{ name: 'userlogin' }">
                 已有帳號？去登入
@@ -177,6 +170,17 @@
             <li>快速結帳｜多元支付</li>
             <li>訂單追蹤｜即時客服</li>
           </ul>
+          <!-- 一鍵註冊 CTA -->
+<div class="promo-cta">
+  <button
+    class="btn btn-primary w-100"
+    :disabled="busy"
+    @click="quickRegister"
+  >
+    一鍵註冊（測試）
+  </button>
+  <small class="muted">將自動填入測試資料並送出</small>
+</div>
           <div class="promo-badge">
             <div class="stars" aria-label="5 星評價">★★★★★</div>
             <div class="badge-text">超過 100,000 則好評</div>
@@ -188,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,nextTick  } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
 
@@ -264,31 +268,17 @@ const formValid = computed(() =>
 
 const router = useRouter()
 
-function validate() {
-  if (!lastName.value) return '請輸入姓氏'
-  if (!firstName.value) return '請輸入名字'
-  if (!email.value) return '請輸入 Email'
-  if (!/^\S+@\S+\.\S+$/.test(email.value)) return 'Email 格式不正確'
-  if (!password.value || password.value.length < 8) return '密碼請至少 8 碼'
-  if (!phoneNumber.value) return '請輸入手機號碼'
-  if (!/^09\d{8}$/.test(phoneNumber.value)) return '手機號碼格式不正確（例：0900000000）'
-  if (!gender.value) return '請選擇性別'
-  return null
-}
-
-async function doRegister() {
-  msg.value = ''
-  emailVerifyHint.value = ''
-  resendMsg.value = ''
-  canResend.value = false
-  isError.value = false
-
-  const v = validate()
-  if (v) {
-    msg.value = v
-    isError.value = true
-    return
-  }
+// function validate() {
+//   if (!lastName.value) return '請輸入姓氏'
+//   if (!firstName.value) return '請輸入名字'
+//   if (!email.value) return '請輸入 Email'
+//   if (!/^\S+@\S+\.\S+$/.test(email.value)) return 'Email 格式不正確'
+//   if (!password.value || password.value.length < 8) return '密碼請至少 8 碼'
+//   if (!phoneNumber.value) return '請輸入手機號碼'
+//   if (!/^09\d{8}$/.test(phoneNumber.value)) return '手機號碼格式不正確（例：0900000000）'
+//   if (!gender.value) return '請選擇性別'
+//   return null
+// }
 
 // 小工具：標記 touched（純 JS 字串參數）
 function touch(field) {
@@ -358,6 +348,27 @@ async function resendConfirmEmail() {
 
 function goLogin() {
   router.replace({ name: 'userlogin', query: { email: email.value } })
+}
+
+// ✅ 自動填入你指定的註冊資料
+function quickFillRegister() {
+  lastName.value = '測試'
+  firstName.value = '人員10'
+  email.value = '126130@g.nccu.edu.tw'
+  password.value = 'iSpan0919~'
+  phoneNumber.value = '0900000007'
+  usedReferralCode.value = 'REF-C68D52B4'
+  gender.value = gender.value || '男' // 若沒選就維持預設男
+
+  // 讓所有欄位呈現 touched 狀態，立即顯示驗證結果
+  Object.keys(touched.value).forEach(k => (touched.value[k] = true))
+}
+
+// ✅ 一鍵註冊：先填、再送出（沿用你的 doRegister 驗證與 API）
+async function quickRegister() {
+  quickFillRegister()
+  await nextTick() // 等待 v-model 同步、computed 驗證更新
+  // await doRegister()
 }
 </script>
 
@@ -466,4 +477,23 @@ function goLogin() {
 .promo-badge { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; text-align: center; }
 .stars { letter-spacing: 2px; font-size: 18px; color: #f59e0b; }
 .badge-text { font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+.is-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, .12);
+}
+.field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.pw-hints {
+  list-style: none;
+  padding: 6px 0 0;
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+.pw-hints li { margin: 2px 0; }
+.pw-hints li.ok { color: #065f46; } /* 達成規則顯示綠色 */
 </style>

@@ -79,6 +79,38 @@
         </button>
       </div>
 
+      <!-- 快速輸入（只填資料、不觸發登入） -->
+<div class="mb-3 quickfill">
+  <label class="form-label d-block">快速輸入（測試帳號）</label>
+  <div class="d-flex flex-wrap gap-2">
+    <button
+      type="button"
+      class="btn btn-outline-primary btn-sm"
+      :disabled="busy"
+      @click="quickFill('ispan1029@ispan.com','iSpan0919~')"
+    >
+      一般登入 一鍵填入
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-outline-secondary btn-sm"
+      :disabled="busy"
+      @click="quickFill('ispansilver@ispan.com','iSpan0919~')"
+    >
+      白銀會員 一鍵填入
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-outline-warning btn-sm"
+      :disabled="busy"
+      @click="quickFill('ispangold@ispan.com','iSpan0919~')"
+    >
+      黃金會員 一鍵填入
+    </button>
+  </div>
+</div>
       <!-- reCAPTCHA v2 Checkbox -->
       <div class="mb-3">
         <label class="form-label d-block">人機驗證</label>
@@ -238,6 +270,21 @@ const canSubmit = computed(() => {
     !show2fa.value // ← 若已進入 2FA，就不允許再按第一階段「登入」
   )
 })
+
+function quickFill(e, p) {
+  // 只填入欄位，不觸發登入
+  email.value = e;
+  password.value = p;
+
+  // 方便檢查，預設把密碼顯示開啟（可移除）
+  showPassword.value = true;
+
+  // 清掉先前錯誤或提示，避免誤導
+  errMsg.value = '';
+  canResend.value = false;
+  resendMsg.value = '';
+  unlockAtText.value = '';
+}
 
 function loadRecaptchaV2() {
   return new Promise((resolve, reject) => {
@@ -483,5 +530,6 @@ onBeforeUnmount(() => {
 .position-relative hr {
   margin: 1.25rem 0;
 }
+.quickfill .btn { min-width: 190px; }
 </style>
 
