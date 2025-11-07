@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "即時客服 Dashboard";
+}
+
+<div class="p-4">
+    <h3 class="mb-3 text-primary"><i class="fa-solid fa-comments"></i> 即時客服聊天室</h3>
+    <div id="connectionStatus" class="mb-3 text-muted">連線中...</div>
+
+    <!-- 聊天框 -->
+    <div id="chatArea" class="border rounded p-3 bg-white" style="height:400px; overflow-y:auto;">
+    </div>
+
+    <!-- 輸入框 -->
+    <div class="input-group mt-3">
+        <input id="msg" class="form-control" placeholder="輸入訊息..." />
+        <button id="sendBtn" class="btn btn-primary">送出</button>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        const chatId = "chat-demo-001"; // 可用會員ID或訂單號當作聊天室代碼
+        const user = "客服人員";
+        const chatArea = document.getElementById("chatArea");
+        const status = document.getElementById("connectionStatus");
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("https://localhost:7103/chatHub?user=" + encodeURIComponent(user))
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveMessage", (sender, message) => {
+            const div = document.createElement("div");
+            div.innerHTML = `<b>${sender}：</b> ${message}`;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        });
+
+        async function startConnection() {
+            try {
+                await connection.start();
+                status.textContent = "✅ 已連線";
+                await connection.invoke("JoinChat", chatId);
+                console.log("SignalR 已連線至聊天室");
+            } catch (err) {
+                console.error("❌ 連線失敗：", err);
+                status.textContent = "❌ 連線失敗，請檢查 Hub";
+                setTimeout(startConnection, 3000);
+            }
+        }
+
+        document.getElementById("sendBtn").addEventListener("click", async () => {
+            const msg = document.getElementById("msg").value.trim();
+            if (!msg) return;
+            if (connection.state !== signalR.HubConnectionState.Connected) {
+                alert("尚未連線，請稍候再試");
+                return;
+            }
+            await connection.invoke("SendMessage", chatId, user, msg);
+            document.getElementById("msg").value = "";
+        });
+
+        startConnection();
+    </script>
+}

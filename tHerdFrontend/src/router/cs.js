@@ -22,12 +22,25 @@ export default [
     path: '/cs/tickets',
     name: 'TicketList',
     component: () => import('@/pages/modules/cs/TicketList.vue'),
-    meta: { title: '我的工單', requiresAuth: true }
+    meta: { title: '我的工單' ,requiresAuth: true}
   },
   {
     path: '/cs/tickets/:id',
     name: 'TicketDetail',
     component: () => import('@/pages/modules/cs/TicketDetail.vue'),
     meta: { title: '工單詳情', requiresAuth: true }
-  }
+  },
+  {
+  path: '/cs/chat',
+  name: 'CsChat',
+  component: () => import('@/pages/modules/cs/CsChat.vue'),
+  meta: { title: '智能客服' }
+},
+{
+  path: '/cs/live-chat',
+  name: 'LiveChat',
+  component: () => import('@/pages/modules/cs/LiveChat.vue'),
+  meta: { title: '即時聊天室客服' }
+},
+
 ];
