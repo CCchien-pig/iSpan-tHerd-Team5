@@ -1,12 +1,12 @@
 <template>
   <div class="container py-4">
-    <!-- 標題 + 返回文章列表按鈕 -->
+    <!-- 標題 + 返回文章列表按鈕（只有有資料時才出現） -->
     <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 mb-3">
-      <h2 class="main-color-green-text mb-0">我買過的文章</h2>
-      <div class="ms-md-auto">
+      <h2 class="main-color-green-text mb-0 flex-grow-1">我買過的文章</h2>
+      <div v-if="items.length > 0" class="ms-md-auto">
         <router-link
           :to="{ name: 'cnt-articles', query: { scroll: 'list' } }"
-          class="btn btn-sm teal-reflect-button text-white btn-my-articles"
+          class="btn btn-sm btn-outline-main-green btn-my-articles"
         >
           ← 返回文章列表
         </router-link>
@@ -15,17 +15,19 @@
 
     <div v-if="loading" class="text-center py-5 text-muted">載入中…</div>
 
-    <div v-else-if="items.length === 0" class="text-center py-5 text-muted">
+    <!-- 空狀態：只保留中間這顆主按鈕 -->
+    <div v-else-if="items.length === 0" class="text-center py-5 text-muted empty-state">
       <p class="mb-1">目前還沒有購買紀錄</p>
       <router-link
         :to="{ name: 'cnt-articles', query: { scroll: 'list' } }"
-        class="btn teal-reflect-button text-white mt-3"
+        class="btn teal-reflect-button text-white mt-3 px-4"
       >
         去逛逛文章 →
       </router-link>
     </div>
 
     <div v-else class="row g-3">
+      <!-- 下面你的卡片區保持不變 -->
       <div class="col-12 col-md-6" v-for="p in items" :key="p.purchaseId">
         <div class="card h-100 shadow-sm">
           <div class="card-body d-flex flex-column">
@@ -91,11 +93,30 @@ function formatDate(d) {
 }
 </script>
 <style scoped>
+/* 右上角的小膠囊按鈕：次要導覽 */
 .btn-my-articles {
-  /* 加重一點陰影，比較有「實體按鈕」感 */
-  box-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.1),
-    0 6px 12px rgba(0, 0, 0, 0.2);
-  font-weight: 480;
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* 自訂一個「外框綠色」的幽靈按鈕 */
+.btn-outline-main-green {
+  border: 1px solid var(--main-color-green, #007c82);
+  color: var(--main-color-green, #007c82);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.btn-outline-main-green:hover {
+  background-color: rgba(0, 124, 130, 0.06);
+  text-decoration: none;
+}
+
+/* 空狀態區塊收窄一點，視覺上比較聚焦 */
+.empty-state {
+  max-width: 420px;
+  margin: 0 auto;
 }
 </style>
