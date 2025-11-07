@@ -7,7 +7,6 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 	/// </summary>
 	public class OrderListVM
 	{
-
 		/// <summary>
 		/// 訂單列表
 		/// </summary>
@@ -17,7 +16,6 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// 搜尋條件
 		/// </summary>
 		public OrderSearchVM SearchParams { get; set; } = new OrderSearchVM();
-
 
 		/// <summary>
 		/// 分頁資訊
@@ -38,6 +36,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// 配送狀態選項（供下拉選單使用）
 		/// </summary>
 		public IEnumerable<SelectOption> ShippingStatusOptions { get; set; } = new List<SelectOption>();
+
 		/// <summary>
 		/// 付款狀態選項（供下拉選單使用）
 		/// </summary>
@@ -159,6 +158,29 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		public DateTime? RevisedDate { get; set; }
 
 		/// <summary>
+		/// 送達時間（新增）
+		/// </summary>
+		[Display(Name = "送達時間")]
+		[DisplayFormat(DataFormatString = "{0:yyyy-MM-dd HH:mm}")]
+		public DateTime? DeliveredDate { get; set; }
+
+		/// <summary>
+		/// 物流單號（新增）
+		/// </summary>
+		[Display(Name = "物流單號")]
+		public string? TrackingNumber { get; set; }
+
+		/// <summary>
+		/// 是否可申請退換貨（新增）
+		/// </summary>
+		public bool CanReturn { get; set; }
+
+		/// <summary>
+		/// 是否已有退換貨申請（新增）
+		/// </summary>
+		public bool HasRmaRequest { get; set; }
+
+		/// <summary>
 		/// 是否展開明細
 		/// </summary>
 		public bool IsExpanded { get; set; } = false;
@@ -184,36 +206,26 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		public string CouponCode { get; set; }
 
 		/// <summary>
-		/// 付款狀態選項
+		/// 是否對會員可見
 		/// </summary>
-		//public int OrderId { get; set; }
-		//public string OrderNo { get; set; } = "";
-		//public int UserNumberId { get; set; }
-		//public string PaymentStatus { get; set; } = ""; // ORD/04
-		//public string OrderStatusId { get; set; }          // ← 加這行
-		//public string ShippingStatusId { get; set; }
-		//public decimal Subtotal { get; set; }
-		//public decimal DiscountTotal { get; set; }
-		//public decimal ShippingFee { get; set; }
-		//public DateTime CreatedDate { get; set; }
-		//public bool IsVisibleToMember { get; set; }
-		//public decimal Total => Subtotal - DiscountTotal + ShippingFee;
+		public bool IsVisibleToMember { get; set; }
 
-		public List<OrderItemVM> Items { get; set; } = new(); // 若有用展開明細
+		/// <summary>
+		/// 訂單明細（前端使用）
+		/// </summary>
+		public List<OrderItemVM> Items { get; set; } = new();
+	}
 
-        public bool IsVisibleToMember { get; set; }
-
-    }
-
-    /// <summary>
-    /// 訂單項目 ViewModel
-    /// </summary>
-    public class OrderItemVM
+	/// <summary>
+	/// 訂單項目 ViewModel
+	/// </summary>
+	public class OrderItemVM
 	{
 		/// <summary>
-		/// 訂單明細ID
+		/// 訂單ID
 		/// </summary>
 		public int OrderId { get; set; }
+
 		/// <summary>
 		/// 訂單明細ID
 		/// </summary>
@@ -240,6 +252,11 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// </summary>
 		[Display(Name = "規格")]
 		public string SkuSpec { get; set; }
+
+		/// <summary>
+		/// 規格名稱（前端使用，與 SkuSpec 同義）
+		/// </summary>
+		public string SpecName => SkuSpec;
 
 		/// <summary>
 		/// 單價
@@ -341,8 +358,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// 每頁筆數
 		/// </summary>
 		public int PageSize { get; set; } = 10;
-
-    }
+	}
 
 	/// <summary>
 	/// 分頁資訊 ViewModel
