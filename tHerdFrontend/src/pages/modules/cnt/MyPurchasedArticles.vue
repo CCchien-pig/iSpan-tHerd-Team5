@@ -1,6 +1,17 @@
 <template>
   <div class="container py-4">
-    <h2 class="main-color-green-text mb-3">我買過的文章</h2>
+    <!-- 標題 + 返回文章列表按鈕 -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 mb-3">
+      <h2 class="main-color-green-text mb-0">我買過的文章</h2>
+      <div class="ms-md-auto">
+        <router-link
+          :to="{ name: 'cnt-articles', query: { scroll: 'list' } }"
+          class="btn btn-sm teal-reflect-button text-white btn-my-articles"
+        >
+          ← 返回文章列表
+        </router-link>
+      </div>
+    </div>
 
     <div v-if="loading" class="text-center py-5 text-muted">載入中…</div>
 
@@ -79,3 +90,12 @@ function formatDate(d) {
   }
 }
 </script>
+<style scoped>
+.btn-my-articles {
+  /* 加重一點陰影，比較有「實體按鈕」感 */
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.1),
+    0 6px 12px rgba(0, 0, 0, 0.2);
+  font-weight: 480;
+}
+</style>

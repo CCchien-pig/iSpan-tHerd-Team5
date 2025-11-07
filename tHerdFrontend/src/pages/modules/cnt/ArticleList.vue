@@ -2,7 +2,17 @@
   <div class="container py-4">
     <!-- 標題 + 搜尋列 -->
     <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mb-4">
-      <h2 id="article-list-title" class="m-0 main-color-green-text">健康文章</h2>      
+      <div class="d-flex align-items-center flex-wrap gap-2">
+      <h2 id="article-list-title" class="m-0 main-color-green-text">健康文章</h2>
+      <!-- ✅ 只有登入才顯示，功能跟內頁那顆一樣 -->
+      <router-link
+        v-if="isLogin"
+        :to="{ name: 'cnt-my-articles' }"
+        class="btn btn-sm teal-reflect-button text-white ms-md-3 mt-2 mt-md-0"
+      >
+        查看我買過的文章 →
+      </router-link>
+    </div>
       <div class="ms-md-auto w-100" style="max-width:480px;">
         <form @submit.prevent="onSearch">
           <div class="input-group">
@@ -134,10 +144,15 @@
 <script setup>
 import { onMounted, reactive, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import { getArticleList, getArticleCategories } from "@/pages/modules/cnt/api/cntService";
 
 const route = useRoute();
 const router = useRouter();
+
+// ✅ 判斷是否登入：跟 ArticleDetail.vue 一樣寫法
+const auth = useAuthStore();
+const isLogin = computed(() => auth.isAuthenticated);
 
 const state = reactive({
   items: [],

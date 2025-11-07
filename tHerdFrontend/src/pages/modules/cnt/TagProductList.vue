@@ -253,7 +253,8 @@ async function loadProducts() {
         badgeName: mapBadgeName(p),
 
         // 評分＋評價數：後端叫 avgRating / reviewCount or rating / reviews 都兼容
-        avgRating: p.avgRating ?? p.rating ?? 0,
+        // avgRating: p.avgRating ?? p.rating ?? //沒有四捨五入
+        avgRating: Math.floor(Number(p.avgRating ?? p.rating ?? 0) || 0),
         reviewCount: p.reviewCount ?? p.reviews ?? 0,
 
         // 價格：優先用 prod DTO 那種欄位，退一步用 CNT 的 salePrice / price / originalPrice

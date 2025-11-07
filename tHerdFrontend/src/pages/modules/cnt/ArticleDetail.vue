@@ -5,7 +5,7 @@
       <!-- 標題上方操作列 -->
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
       <button
-        class="btn teal-reflect-button text-white btn-my-articles"
+        class="btn btn-sm teal-reflect-button text-white"
         @click="goBack"
       >
         ← 返回文章列表
@@ -15,7 +15,7 @@
       <router-link
         v-if="isLogin"
         :to="{ name: 'cnt-my-articles' }"
-        class="btn teal-reflect-button text-white ms-2 btn-my-articles"
+        class="btn btn-sm teal-reflect-button text-white ms-2"
       >
         查看我買過的文章 →
       </router-link>
@@ -68,8 +68,11 @@
       </transition>
     </div>
 
-    <!-- 內容區（帶付費遮罩） -->
-    <div class="position-relative">
+    <!-- 內容區：只放實際文章（上面預覽，底部用漸層收尾） -->
+    <div
+      class="article-wrapper position-relative"
+      :class="{ 'has-paywall': !canViewFullContent }"
+    >
       <div class="article-content" id="article-body-start" ref="contentRef">
         <!-- 逐塊渲染：richtext / image / cta -->
         <div v-for="(block, index) in displayBlocks" :key="index" class="mb-4">
@@ -85,7 +88,7 @@
             <img :src="absoluteImageUrl(block.content)" class="img-fluid rounded my-3" />
           </div>
 
-          <!-- ✅ CTA Card（卡片款；綠色主題；IG 彩色 Icon；外部/內部自動判斷） -->
+          <!-- ✅ CTA Card -->
           <div v-else-if="block.blockType === 'cta'" class="cta-card p-4 text-center">
             <h4 v-if="ctaPayload(block).title" class="cta-title main-color-green-text mb-2">
               {{ ctaPayload(block).title }}
@@ -95,53 +98,57 @@
             </p>
 
             <button class="btn teal-reflect-button text-white cta-button px-4 py-2" @click="() => openCta(block)">
-              <!-- IG：使用彩色 SVG -->
               <span v-if="ctaType(ctaPayload(block).url) === 'ig'" class="cta-icon" v-html="igIconSvg"></span>
-
-              <!-- 外部連結：box-arrow-up-right；內部/預設：arrow-right -->
               <i
                 v-else
                 class="me-2"
-                :class="ctaType(ctaPayload(block).url) === 'external' ? 'bi bi-box-arrow-up-right' : 'bi bi-arrow-right'"
+                :class="ctaType(ctaPayload(block).url) === 'external'
+                  ? 'bi bi-box-arrow-up-right'
+                  : 'bi bi-arrow-right'"
               ></i>
-
               {{ ctaPayload(block).text || '瞭解更多' }}
             </button>
           </div>
           <!-- ✅ CTA END -->
         </div>
       </div>
+    </div>
 
-      <!-- 遮罩：未解鎖時顯示 -->
-      <div
-        v-if="!canViewFullContent"
-        class="content-mask d-flex flex-column justify-content-center align-items-center text-center p-4"
-      >
-      <!-- 🔒 大鎖 icon -->
-        <div class="mask-lock-icon mb-3">
-          <i class="bi bi-lock-fill"></i>
-        </div>
-        <p class="mb-3 fw-bold">此內容需登入付費解鎖</p>
-        <div class="d-flex gap-2">
-          <!-- 付費遮罩 CTA -->
-          <button
-            v-if="!isLogin"
-            class="btn teal-reflect-button text-white"
-            @click="onLogin"
-          >
-            登入
-          </button>
+    <!-- 🔒 付費卡片：獨立區塊（大鎖 + 登入 + 立即購買），放在內容和標籤中間 -->
+    <div
+          v-if="!canViewFullContent"
+          class="paywall-box my-5 d-flex flex-column justify-content-center align-items-center text-center p-4"
+        >
+          <div class="mask-lock-icon mb-3">
+            <i class="bi bi-lock-fill"></i>
+          </div>
 
-          <button
-            class="btn teal-reflect-button text-white"
-            :disabled="isPurchasing"
-            @click="onPurchase"
-          >
-            {{ isPurchasing ? '建立訂單中…' : '立即購買全文' }}
+          <p v-if="formatArticlePrice()" class="mb-1 text-muted">
+            單篇價格：
+            <span class="fw-bold text-danger">NT$ {{ formatArticlePrice() }}</span>
+          </p>
+
+          <p class="mb-3 fw-bold">此內容需登入付費解鎖</p>
+
+          <div class="d-flex flex-wrap justify-content-center gap-2">
+            <button
+              v-if="!isLogin"
+              class="btn teal-reflect-button text-white"
+              @click="onLogin"
+            >
+              登入
+            </button>
+
+            <button
+              class="btn teal-reflect-button text-white"
+              :disabled="isPurchasing"
+              @click="onPurchase"
+            >
+              {{ purchaseButtonText }}
           </button>
-        </div>
       </div>
     </div>
+
     <!-- Tags：底部（暫時作搜尋導回文章清單） -->
     <div v-if="article.tags && article.tags.length" class="mt-5 pt-4 border-top">
       <h4 class="main-color-green-text mb-2">相關標籤</h4>
@@ -236,6 +243,37 @@ const recommended = ref([]);
 // TOC 狀態
 const toc = ref({ open: false, headings: [], activeId: null });
 let observer = null;
+
+// ⬇️⬇️⬇️ 在這裡貼上（新加的）⬇️⬇️⬇️
+const purchaseButtonText = computed(() => {
+  if (isPurchasing.value) return '建立訂單中…';
+
+  // 後端可能回傳 price 或 Price，兩種都試
+  const raw = article.value?.price ?? article.value?.Price;
+  if (raw == null) return '立即購買全文';
+
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num <= 0) return '立即購買全文';
+
+  const formatted = num.toLocaleString('zh-TW', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
+  return `立即購買全文（NT$${formatted}）`;
+});
+
+function formatArticlePrice() {
+  const raw = article.value?.price ?? article.value?.Price;
+  if (raw == null) return '';
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num <= 0) return '';
+  return num.toLocaleString('zh-TW', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+// ⬆️⬆️⬆️ 新加的結束 ⬆️⬆️⬆️
 
 // === 全域導覽列偏移控制 ===
 let currentNavbarOffset = 80;
@@ -670,6 +708,7 @@ async function loadPage() {
 
   // 3. 從後端拿文章詳情
   const res = await getArticleDetail(pageId);
+  console.log('detail API 回傳', res);   // 👈 這行看一下實際回傳
   if (res) {
     canViewFullContent.value = res.canViewFullContent ?? true;
     if (res.data) {
@@ -964,17 +1003,30 @@ function formatDate(d) {
 .toc-bar .toc-item.active { background:#e9f6f6; }
 
 /* 付費遮罩 */
-.content-mask {
+/* 付費預覽效果：有付費牆時，在內容最下方加一層漸層收尾 */
+.article-wrapper.has-paywall::after {
+  content: "";
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 140px;  /* 想遮多高自己調 */
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0) 10%,
-    rgba(255, 255, 255, 0.92) 40%,
-    rgba(255, 255, 255, 1) 70%
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.92) 45%,
+    rgba(255, 255, 255, 1) 100%
   );
-  backdrop-filter: blur(1px);
-  pointer-events: auto;
+  pointer-events: none; /* 不擋滑鼠操作 */
+}
+
+/* 付費卡片本體（大鎖 + 按鈕那塊） */
+.paywall-box {
+  max-width: 520px;
+  margin: 0 auto;           /* 置中 */
+  border-radius: 20px;
+  background: #e7e7e7;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* 分享 icon 大小微調 */
