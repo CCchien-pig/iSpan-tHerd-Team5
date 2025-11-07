@@ -112,7 +112,7 @@ export default {
 .marquee-content {
   display: inline-block;
   padding-left: 100%;
-  animation: marquee 15s linear forwards;
+  animation: marquee 10s linear infinite;
   transition: color 0.5s ease;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }

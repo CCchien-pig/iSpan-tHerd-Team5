@@ -89,9 +89,9 @@ namespace tHerdBackend.Services.PROD
 					return (false, errorMessage);
 				}
 
-				if (!(sku.ListPrice > sku.UnitPrice && sku.UnitPrice > sku.SalePrice && sku.SalePrice > sku.CostPrice))
+				if (!(sku.ListPrice >= sku.UnitPrice && sku.UnitPrice >= sku.SalePrice))
 				{
-					errorMessage = $"第 {i + 1} 筆 SKU 的價格設定錯誤：必須符合 原價 > 單價 > 優惠價 > 成本價！";
+					errorMessage = $"第 {i + 1} 筆 SKU 的價格設定錯誤：必須符合 原價 >= 單價 >= 優惠價！";
 					return (false, errorMessage);
 				}
 			}

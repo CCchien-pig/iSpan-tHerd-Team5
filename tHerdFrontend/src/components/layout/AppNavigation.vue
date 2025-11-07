@@ -113,13 +113,17 @@
             </li>
             <!-- ✅ 固定項目（品牌A-Z後面） -->
             <li v-for="item in staticMenus" :key="item.path" class="nav-item">
-              <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill text-only"
-                :class="{ active: $route.path.startsWith(item.path) }"
+              <button
+                type="button"
+                class="nav-link fw-medium rounded-pill text-only bg-transparent border-0"
+                :class="[
+                  { active: $route.path.startsWith(item.path) },
+                  item.name === '特惠' ? 'text-danger fw-bold' : ''  // 🔹 特惠顯示紅字加粗
+                ]"
+                @click="goStaticMenu(item)"
               >
                 {{ item.name }}
-              </router-link>
+              </button>
             </li>
           </ul>
 
@@ -225,10 +229,13 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
 import MegaMenu from '@/components/modules/prod/menu/MegaMenu.vue'
+import { useCartStore } from '@/composables/modules/prod/cartStore'
 
 // ==================== 狀態變數 ====================
+const router = useRouter()
 const showMobileMenu = ref(false)
 const showBrands = ref(false)
 const showBrandsInMobile = ref(false)
@@ -237,6 +244,7 @@ const activeMenuId = ref(null)
 const megaMenuData = ref(null)
 const isLoadingMenu = ref(false)
 const loadedMenus = ref({})
+const cartStore = useCartStore()
 
 const navigationItemsWithIcon = [
         { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png', productTypeId: 2785 },
@@ -251,7 +259,7 @@ const navigationItemsWithIcon = [
 
 // 品牌A-Z後的固定連結
 const staticMenus = [
-  { name: '健康主題', path: '/health-topics' },
+  //{ name: '健康主題', path: '/health-topics' },
   { name: '特惠', path: '/specials' },
   { name: '暢銷', path: '/bestsellers' },
   { name: '試用', path: '/trials' },
@@ -259,62 +267,99 @@ const staticMenus = [
   { name: '健康中心', path: '/cnt' },
 ]
 
-// function goCategory(item) {
-//   // 如果點擊不同的分類 → 開啟新的 MegaMenu
-//   if (activeMenuId.value !== item.id) {
-//     activeMenuId.value = item.id
-//     megaMenuData.value = loadedMenus.value[item.id]
-//     return
-//   }
-
-//   // 如果點擊相同的分類 → 關閉 MegaMenu（切換開關效果）
-//   if (activeMenuId.value === item.id) {
-//     activeMenuId.value = null
-//     megaMenuData.value = null
-//   }
-// }
-
 // === 初始化 ===
-onMounted(() => {
+onMounted(async () => {
+  // ① 導覽初始化
   productMenus.value = navigationItemsWithIcon
     .filter(i => i.type === 'pr')
-    .map((item, index) => ({ ...item, id: `menu-${index + 1}` }))
+    .map((item, index) => ({
+      ...item,
+      id: `menu-${index + 1}`,
+      productTypeCode: item.path.replace('/', '')
+    }))
 
-  //preloadMegaMenus() // 一次預載所有資料
+  // ② 更新購物車紅點
+  setTimeout(async () => {
+    await cartStore.refreshCartCount()
+  }, 100)
 })
 
-// ==================== 點擊分類載入 MegaMenu ====================
-async function goCategory(item) {
-  // 若點擊不同分類 → 載入該分類樹狀資料
-  if (activeMenuId.value !== item.id) {
-    activeMenuId.value = item.id
-    await loadMegaMenuByCategory(item)
-    return
+// ==================== 點擊分類載入商品標籤 ====================
+function goStaticMenu(item) {
+  // 特殊處理：點擊「特惠」時轉到商品搜尋頁
+  if (item.path === '/specials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'discount' }
+    })
   }
-
-  // 若點擊相同分類 → 收起
-  if (activeMenuId.value === item.id) {
-    activeMenuId.value = null
-    megaMenuData.value = null
+  else if (item.path === '/bestsellers') {
+    router.push({
+      path: '/prod/products/search',
+      query: { other: 'Hot' }
+    })
+  }
+  else if (item.path === '/trials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'try' }
+    })
+  }
+  else if (item.path === '/new-products') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'new' }
+    })
+  }
+  else {
+    // 其他項目維持原行為
+    router.push(item.path)
   }
 }
 
-// ✅ 動態載入該分類與子分類
+// ==================== 點擊分類載入 MegaMenu ====================
+let lastClickedId = null
+async function goCategory(item) {
+  // 第一次點：打開 MegaMenu
+  if (activeMenuId.value !== item.id) {
+    activeMenuId.value = item.id
+    await loadMegaMenuByCategory(item)
+    lastClickedId = item.id
+    return
+  }
+
+  // 第二次點相同分類 → 直接導向分類搜尋頁
+  if (activeMenuId.value === item.id && lastClickedId === item.id) {
+    router.push({
+      name: 'product-type-search',
+      params: {
+        productTypeCode: item.productTypeCode,
+        productTypeId: item.productTypeId
+      }
+    })
+  }
+}
+
+// 動態載入該分類與子分類
 async function loadMegaMenuByCategory(item) {
   try {
     isLoadingMenu.value = true
     const res = await ProductsApi.getProductCategoriesByTypeId(item.productTypeId)
 
-    const apiData = res.data
+    const apiData = res?.data
     const treeData = Array.isArray(apiData?.data)
       ? apiData.data
       : Array.isArray(apiData)
       ? apiData
       : []
 
-    if (!treeData.length) throw new Error('沒有分類資料')
+    if (!treeData.length) {
+      console.warn('⚠️ 無分類資料', apiData)
+      megaMenuData.value = { columns: [] }
+      return
+    }
 
-    const columns = buildMegaMenu(treeData, item.path)
+    const columns = buildMegaMenu(treeData)
     megaMenuData.value = { columns }
     loadedMenus.value[item.id] = { columns }
   } catch (err) {
@@ -325,51 +370,30 @@ async function loadMegaMenuByCategory(item) {
 }
 
 // ==================== 樹狀資料轉換 ====================
-function buildMegaMenu(treeData, prefixPath = '') {
+function buildMegaMenu(treeData) {
   function buildUrl(item) {
-    const raw = (item.productTypeCode || '').trim()
-    const code = raw ? raw.toLowerCase().replace(/[^a-z0-9\-]/g, '') : `id-${item.productTypeId}`
-    item.url = `/products${prefixPath}/${code}`
-
+    const code = (item.productTypeCode || '').trim().toLowerCase()
+    item.url = `/products/${code || 'id'}-${item.productTypeId}`
     if (Array.isArray(item.children) && item.children.length) {
-      item.children.forEach(c => buildUrl(c))
+      item.children.forEach(buildUrl)
     }
   }
 
-  // 🔹 轉換為多欄結構
   return treeData.map(parent => {
-    buildUrl(parent)
     return {
+      id: parent.productTypeId,
+      productTypeCode: parent.productTypeCode,
       title: parent.productTypeName,
-      url: `${parent.url}-${parent.productTypeId}`,
+      url: `/products/${parent.productTypeCode?.toLowerCase() || ''}-${parent.productTypeId}`,
       items: (parent.children || []).map(child => ({
         id: child.productTypeId,
+        productTypeCode: child.productTypeCode,
         name: child.productTypeName,
-        url: `${child.url}-${child.productTypeId}`,
+        url: `/products/${child.productTypeCode?.toLowerCase() || ''}-${child.productTypeId}`,
       })),
     }
   })
 }
-
-  // 為每個 menu 建構對應 columns
-  productMenus.value.forEach(menu => {
-    const prefix = menu.path.replace('/', '') + '/'
-
-    const columns = treeData.map(parent => {
-      buildUrl(parent, prefix)
-      return {
-        title: parent.productTypeName,
-        url: `${parent.url}-${parent.productTypeId}`, // ✅ 主分類
-        items: (parent.children || []).map(child => ({
-          id: child.productTypeId,
-          name: child.productTypeName,
-          url: `${child.url}-${child.productTypeId}`, // ✅ 子分類
-        })),
-      }
-    })
-
-    loadedMenus.value[menu.id] = { columns }
-  })
 
 // ==================== 關閉 MegaMenu ====================
 let closeTimer = null
@@ -681,6 +705,10 @@ onBeforeUnmount(() => {
   align-items: center !important;
   padding: 0.5rem 1rem;
   min-height: 52px;
+}
+
+.nav-link.text-danger {
+  color: #dc3545 !important; /* Bootstrap 的紅色 */
 }
 
 .nav-link:hover {

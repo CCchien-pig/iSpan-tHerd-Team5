@@ -57,11 +57,11 @@ class productsApi {
         return result
       } else {
         console.warn('⚠️ 購物車摘要查詢失敗:', res.message)
-        return { ItemCount: 0 }
+        return { TotalQty: 0 }
       }
     } catch (err) {
       console.error('🚨 購物車摘要 API 錯誤:', err)
-      return { ItemCount: 0 }
+      return { TotalQty: 0 }
     }
   }
 
@@ -77,10 +77,13 @@ class productsApi {
    * @param {number} params.brandId - 品牌 ID
    * @param {number} params.minPrice - 最小價錢
    * @param {number} params.maxPrice - 最大價錢
-  //  * @param {number} params.attrId - 篩選屬性 ID
+   * @param {number} params.attrId - 篩選屬性 ID
    * @param {string} params.sortBy - 排序方式 (price, rating, date)
    * @param {boolean} params.sortDesc - 降幕
-
+   * @param {boolean} params.IsPublished - 是否發佈
+   * @param {string} params.Badge - 標籤代號
+   * @param {list} params.ProductIdList - 多商品編號
+   * @param {string} params.Other - 其他 EX. 熱銷
    * @returns {Promise} API 回應
    * @example
    * const result = await productsApi.getProductList({
@@ -102,7 +105,10 @@ class productsApi {
       sortBy: 'date',
       sortDesc: false,
       isPublished: true,
-      IsFrontEnd: true
+      isFrontEnd: true,
+      badge: '',
+      productIdList: [],
+      other: ''
     }
 
     const finalParams = { ...defaultParams, ...params }
