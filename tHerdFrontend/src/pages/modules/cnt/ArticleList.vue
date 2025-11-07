@@ -2,7 +2,7 @@
   <div class="container py-4">
     <!-- 標題 + 搜尋列 -->
     <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mb-4">
-      <h2 id="article-list-title" class="m-0 main-color-green-text">健康文章</h2>
+      <h2 id="article-list-title" class="m-0 main-color-green-text">健康文章</h2>      
       <div class="ms-md-auto w-100" style="max-width:480px;">
         <form @submit.prevent="onSearch">
           <div class="input-group">

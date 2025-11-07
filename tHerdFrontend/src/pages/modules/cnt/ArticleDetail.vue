@@ -2,7 +2,24 @@
   <div class="container py-4" v-if="article">
     <!-- 返回列表 + 分享 -->
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <button class="btn teal-reflect-button text-white" @click="goBack">← 返回文章列表</button>
+      <!-- 標題上方操作列 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <button
+        class="btn teal-reflect-button text-white btn-my-articles"
+        @click="goBack"
+      >
+        ← 返回文章列表
+      </button>
+
+      <!-- 只在登入時顯示第二顆，但跟第一顆同一排靠左 -->
+      <router-link
+        v-if="isLogin"
+        :to="{ name: 'cnt-my-articles' }"
+        class="btn teal-reflect-button text-white ms-2 btn-my-articles"
+      >
+        查看我買過的文章 →
+      </router-link>
+    </div>
       <div class="d-flex align-items-center gap-3">
         <span class="text-muted small d-none d-sm-inline">分享：</span>
         <button class="btn btn-sm btn-outline-secondary" @click="shareFacebook" title="分享到 Facebook">
@@ -100,6 +117,10 @@
         v-if="!canViewFullContent"
         class="content-mask d-flex flex-column justify-content-center align-items-center text-center p-4"
       >
+      <!-- 🔒 大鎖 icon -->
+        <div class="mask-lock-icon mb-3">
+          <i class="bi bi-lock-fill"></i>
+        </div>
         <p class="mb-3 fw-bold">此內容需登入付費解鎖</p>
         <div class="d-flex gap-2">
           <!-- 付費遮罩 CTA -->
@@ -785,19 +806,18 @@ const igIconSvg = `
 
 // ===== 付費遮罩 CTA（示範用）=====
 function onLogin() {
-  if (!isLogin.value) {
-    // 真的沒登入才導去登入頁
-    router.push({ name: 'login', query: { returnUrl: route.fullPath } })
-  } else {
-    // 已經登入就提示一下 / 或什麼都不做
-    alert('您已經登入，可以直接購買或閱讀內容')
-  }
+  const returnUrl = route.fullPath || route.path || `/cnt/article/${route.params.id}`
+
+  router.push({
+    name: 'userlogin',  // ✅ 換成真正存在的 route name
+    query: { returnUrl },
+  })
 }
 
 async function onPurchase() {
   // 1) 沒登入先導去登入
   if (!isLogin.value) {
-    router.push({ name: "login", query: { returnUrl: route.fullPath } });
+    router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } });
     return;
   }
 
@@ -1025,4 +1045,18 @@ function formatDate(d) {
   /* 比 bg-light 再深一點的綠系底色，想更深可以再調 */
   background-color: #d1f0e5;   /* 淺綠 */
 }
+
+.mask-lock-icon i {
+  font-size: 2.5rem;
+  color: #f5a623;   /* 金黃色鎖比較明顯 */
+}
+
+.btn-my-articles {
+  /* 加重一點陰影，比較有「實體按鈕」感 */
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.1),
+    0 6px 12px rgba(0, 0, 0, 0.2);
+  font-weight: 480;
+}
+
 </style>

@@ -67,7 +67,6 @@
         <div class="card-shell h-100 rounded-3 border bg-white">
           <ProductCard
             :product="prod"
-            @add-to-cart.stop="addToCart"
           />
         </div>
       </div>
@@ -162,19 +161,35 @@ const page = ref(1);
 const pageSize = ref(24);
 const total = ref(0);
 const totalPages = ref(1);
-// 🔢 新增：輸入頁碼用
+// 輸入頁碼用
 const pageInput = ref(1);
 
-// ⭐ 新增：標籤資訊（名稱 / 種類 / 說明）
+// 標籤資訊
 const tagInfo = ref({
   tagId: 0,
-  tagName: '',
-  tagTypeName: '',
-  description: ''
+  tagName: "",
+  tagTypeName: "",
+  description: "",
 });
-
-// ⭐ 新增：排序狀態
+// 排序
 const sort = ref("default"); // default | price-asc | price-desc
+
+// ✅ 把 CNT / 後端回來的 badge 轉成 ProductBadge 會吃的中文字
+function mapBadgeName(p) {
+  const raw = (p.badgeName || p.badge || "").trim();
+  if (!raw) return "";
+
+  const lower = raw.toLowerCase();
+
+  // 這裡依照你後端實際給的值去對：英文代碼就轉成中文
+  if (["discount", "特價!"].includes(lower)) return "特價!";
+  if (["only", "只限 therd", "只限 therd", "只限 tHerd"].includes(lower)) return "只限 tHerd";
+  if (["new", "新品搶先購"].includes(lower)) return "新品搶先購";
+  if (["try", "好物試用!"].includes(lower)) return "好物試用!";
+
+  // 其他就原樣丟給 ProductBadge，用灰色樣式
+  return raw;
+}
 
 function fixImageUrl(path) {
   if (!path) return "/images/no-image.png";
@@ -188,19 +203,18 @@ function fixImageUrl(path) {
   return `https://localhost:7103${path}`;
 }
 
-// ⭐ 新增：抓「標籤資訊」的 API
+// 取得標籤資訊
 async function loadTagInfo() {
   try {
     const { data } = await axios.get(`/api/cnt/tags/${props.tagId}`);
-    // data 直接就是 TagInfoDto 序列化出來的樣子
     tagInfo.value = data || {};
   } catch (err) {
-    console.error('載入標籤資訊失敗', err);
+    console.error("載入標籤資訊失敗", err);
     tagInfo.value = {
       tagId: 0,
-      tagName: '',
-      tagTypeName: '',
-      description: ''
+      tagName: "",
+      tagTypeName: "",
+      description: "",
     };
   }
 }
@@ -212,7 +226,7 @@ async function loadProducts() {
       params: {
         page: page.value,
         pageSize: pageSize.value,
-        sort: sort.value,     // ⭐ 傳給後端
+        sort: sort.value,
       },
     });
 
@@ -227,20 +241,48 @@ async function loadProducts() {
         p.imageUrl || p.mainImageUrl || p.coverImage || p.image || "";
 
       return {
+        // === ✅ ProductCard 會用到的 key，全部對齊 ===
         productId: p.productId,
-        productName: p.productName,
+        mainSkuId: p.mainSkuId ?? p.productId ?? null,
+
+        productName: p.productName ?? p.name ?? "",
         shortDesc: p.shortDesc || "",
         brandName: p.brandName || "",
-        badge: p.badge || "",
-        avgRating: p.avgRating ?? 0,
-        reviewCount: p.reviewCount ?? 0,
-        salePrice: p.salePrice ?? p.price ?? 0,
-        listPrice: p.listPrice ?? p.originalPrice ?? 0,
+
+        // 徽章：先經過 mapBadgeName，才會吃到紅/綠/藍/粉色樣式
+        badgeName: mapBadgeName(p),
+
+        // 評分＋評價數：後端叫 avgRating / reviewCount or rating / reviews 都兼容
+        avgRating: p.avgRating ?? p.rating ?? 0,
+        reviewCount: p.reviewCount ?? p.reviews ?? 0,
+
+        // 價格：優先用 prod DTO 那種欄位，退一步用 CNT 的 salePrice / price / originalPrice
+        billingPrice:
+        // 1. 後端如果有算好的 BillingPrice 就先用它
+        p.billingPrice ??
+        // 2. 沒有就用優惠價
+        p.salePrice ??
+        // 3. 再沒有就用主商品單價
+        p.unitPrice ??
+        // 4. 全都沒有就用原價
+        p.listPrice ??
+        0,
+
+      listPrice:
+        // 1. 原價
+        p.listPrice ??
+        // 2. 沒有原價就用單價
+        p.unitPrice ??
+        // 3. 再不行用 BillingPrice / SalePrice 當作原價顯示
+        p.billingPrice ??
+        p.salePrice ??
+        0,
         imageUrl: fixImageUrl(imgCandidate),
       };
     });
 
-    // ❌ 這裡就不用再 applySort() 了
+    // 小技巧：如果還是看到 0，可以在這裡 console.log(rawItems[0]) 看後端真正的欄位名稱
+    // console.log("[TagProducts] sample item =", rawItems[0])
   } catch (err) {
     console.error("載入商品失敗", err);
     total.value = 0;
@@ -259,7 +301,6 @@ function onSortChange() {
 function goPage(newPage) {
   if (newPage < 1) return;
   if (newPage > totalPages.value) return;
-
   page.value = newPage;
   loadProducts();
 }
@@ -267,13 +308,11 @@ function goPage(newPage) {
 //手動輸入分頁
 function goPageByInput() {
   let target = Number(pageInput.value);
-
   if (!Number.isFinite(target)) return;
 
   if (target < 1) target = 1;
   if (target > totalPages.value) target = totalPages.value;
 
-  // 如果跟目前頁一樣就不重打 API
   if (target === page.value) {
     pageInput.value = target;
     return;
@@ -287,10 +326,6 @@ function goPageByInput() {
 // 返回文章
 function goBack() {
   router.back();
-}
-
-function addToCart(prod) {
-  console.log("加入購物車:", prod);
 }
 
 // 初次載入：標籤資訊 + 商品列表
