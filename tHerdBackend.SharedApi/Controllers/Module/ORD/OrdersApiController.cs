@@ -51,6 +51,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				shippingFee = o.ShippingFee,
 				totalAmount = o.Subtotal - o.DiscountTotal + o.ShippingFee,
 				createdDate = o.CreatedDate,
+				revisedDate = o.RevisedDate,          
 				deliveredDate = o.DeliveredDate,
 				trackingNumber = o.TrackingNumber,
 				hasRmaRequest = rmaOrderIds.Contains(o.OrderId),
@@ -89,6 +90,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 					orderStatusId = o.OrderStatusId,
 					trackingNumber = o.TrackingNumber,
 					createdDate = o.CreatedDate,
+					revisedDate = o.RevisedDate,     
 					deliveredDate = o.DeliveredDate,
 					canReturn = o.DeliveredDate.HasValue &&
 								EF.Functions.DateDiffDay(o.DeliveredDate.Value, DateTime.Now) <= 7 &&
@@ -106,7 +108,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				{
 					orderItemId = x.i.OrderItemId,
 					productName = x.p.ProductName,
-					specCode = s.SpecCode,
+					specName = s.SpecCode,
 					unitPrice = x.i.UnitPrice,
 					qty = x.i.Qty,
 					subtotal = x.i.UnitPrice * x.i.Qty
@@ -192,10 +194,11 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				.Select(r => new
 				{
 					returnRequestId = r.ReturnRequestId,
+					orderId = r.OrderId,              // ✅ 新增這行
 					rmaId = r.RmaId,
 					orderNo = r.Order.OrderNo,
 					requestType = r.RequestType,
-					refundScope = r.RefundScope,
+					scope = r.RefundScope,            // ✅ 改這行（原本是 refundScope）
 					status = r.Status,
 					reasonText = r.ReasonText,
 					createdDate = r.CreatedDate,
