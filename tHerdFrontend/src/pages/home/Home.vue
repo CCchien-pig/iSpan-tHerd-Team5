@@ -193,7 +193,7 @@ export default {
       categories: [
         {
           id: 1,
-          name: '維生素與礦物質',
+          name: '維生素',
           description: '支持免疫系統和整體健康',
           icon: 'bi bi-heart-pulse',
         },
@@ -205,7 +205,7 @@ export default {
         },
         {
           id: 3,
-          name: '美容護膚',
+          name: '美容美妝',
           description: '天然有機的美容產品',
           icon: 'bi bi-flower1',
         },
@@ -231,7 +231,7 @@ export default {
         {
           id: 2,
           title: '快速配送',
-          description: '訂單滿 NT$1,000 免運費',
+          description: '訂單滿 NT$1,500 免運費',
           icon: 'bi bi-truck',
         },
         {
@@ -242,8 +242,8 @@ export default {
         },
         {
           id: 4,
-          title: '30天退貨',
-          description: '不滿意可於30天內退貨',
+          title: '7天退貨',
+          description: '不滿意可於7天內退貨',
           icon: 'bi bi-arrow-clockwise',
         },
       ],

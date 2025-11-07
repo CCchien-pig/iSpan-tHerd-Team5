@@ -41,6 +41,9 @@
                 :discount-percent="discountPercent"
                 :unit-text="selectedSpec?.UnitText || '件'"
                 :selected-sku="selectedSpec"
+                :product-id="product.productId"
+                :is-favorited="isFavorited"
+                :toggling-favorite="togglingFavorite"
                 v-model:quantity="quantity"
                 @add-to-cart="handleAddToCart"
                 @toggle-favorite="handleToggleFavorite"
@@ -92,6 +95,8 @@ import ProductInfo from '@/components/modules/prod/detail/ProductInfo.vue'
 import ProductPurchaseCard from '@/components/modules/prod/detail/ProductPurchaseCard.vue'
 import ProductTabs from '@/components/modules/prod/detail/ProductTabs.vue'
 import ProductCard from '@/components/modules/prod/card/ProductCard.vue'
+import { http } from '@/api/http'
+import { useAuthStore } from '@/stores/auth'
 
 // 加入購物車
 import { useAddToCart } from '@/composables/modules/prod//useAddToCart'
@@ -100,6 +105,7 @@ const { addToCart } = useAddToCart()
 const route = useRoute()
 const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
+const auth = useAuthStore()
 
 // 狀態管理
 const error = ref(null)
@@ -107,6 +113,13 @@ const product = ref(null)
 const selectedSpec = ref(null)
 const relatedProducts = ref([])
 const quantity = ref(1)
+
+// NEW: 收藏相關本地狀態
+const favoriteIds = ref([])
+const togglingFavorite = ref(false)
+const isFavorited = computed(() =>
+  !!product.value && favoriteIds.value.includes(product.value.productId)
+)
 
 // 麵包屑導航
 const breadcrumbs = computed(() => {
@@ -195,6 +208,19 @@ const loadRelatedProducts = async () => {
   }
 }
 
+// NEW: 讀取目前使用者的收藏 ProductId 清單
+async function loadFavoriteIds() {
+  try {
+    const { data } = await http.get('/user/favorites/ids') // baseURL=/api
+    favoriteIds.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    // 未登入就忽略，不擋頁
+    if (err?.response?.status !== 401) {
+      console.warn('[favorite ids] load failed', err)
+    }
+  }
+}
+
 /**
  * 處理規格選擇
  */
@@ -213,26 +239,67 @@ async function handleAddToCart(selectedSku, qty) {
  * 處理收藏
  */
 const handleToggleFavorite = async () => {
-  try {
-    // TODO: 實作收藏狀態管理
-    const isFavorited = false // 假設目前未收藏
+  if (!product.value) return
+  // 未登入 → 導去登入並帶回跳轉
+  if (!auth?.user) {
+    return router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
+  }
 
-    if (isFavorited) {
-      await ProductsApi.removeFavorite(product.value.productId)
-      toast('已取消收藏', 'info')
-    } else {
-      await ProductsApi.addFavorite({ productId: product.value.productId })
-      toast('已加入我的最愛', 'success')
-    }
+  if (togglingFavorite.value) return
+  togglingFavorite.value = true
+
+  // 樂觀更新
+  const pid = product.value.productId
+  const originallyFavorited = favoriteIds.value.includes(pid)
+  if (originallyFavorited) {
+    favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
+  } else {
+    favoriteIds.value.push(pid)
+  }
+
+  try {
+    const { data } = await http.post('/user/favorites/toggle', { productId: pid })
+    const serverIsFav = !!data?.isFavorited
+    const clientHas = favoriteIds.value.includes(pid)
+    if (serverIsFav && !clientHas) favoriteIds.value.push(pid)
+    if (!serverIsFav && clientHas) favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
+
+    toast(serverIsFav ? '已加入我的最愛' : '已取消收藏', serverIsFav ? 'success' : 'info')
+    // 通知其他頁（例如側欄徽章、我的最愛頁）刷新
+    window.dispatchEvent(new CustomEvent('favorite-changed'))
   } catch (err) {
-    console.error('收藏操作錯誤:', err)
-    showError('操作失敗，請稍後再試')
+    // 還原
+    if (originallyFavorited) {
+      if (!favoriteIds.value.includes(pid)) favoriteIds.value.push(pid)
+    } else {
+      favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
+    }
+
+    if (err?.response?.status === 401) {
+      router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
+    } else {
+      const msg = err?.response?.data?.error || '操作失敗，請稍後再試'
+      showError(msg)
+    }
+  } finally {
+    togglingFavorite.value = false
   }
 }
 
 /**
  * 處理按讚
  */
+
+ async function refreshFavoriteIds () {
+  try {
+    const { data } = await http.get('/user/favorites/ids')
+    favoriteIds.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    // 不影響主流程，失敗就當沒收藏
+    favoriteIds.value = []
+  }
+}
+
 const handleToggleLike = async () => {
   try {
     // TODO: 實作按讚狀態管理
@@ -251,6 +318,8 @@ const handleToggleLike = async () => {
   }
 }
 
+
+
 /**
  * 前往其他商品頁面
  */
@@ -259,6 +328,7 @@ const goToProduct = (productId) => {
   // 重新載入商品資料
   loadProduct()
   loadRelatedProducts()
+  loadFavoriteIds() // NEW：切頁後也更新收藏狀態
   // 滾動到頂部
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -267,6 +337,8 @@ const goToProduct = (productId) => {
 onMounted(() => {
   loadProduct()
   loadRelatedProducts()
+  loadFavoriteIds() // NEW：首次載入時抓使用者收藏清單
+  refreshFavoriteIds()
 })
 </script>
 

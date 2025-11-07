@@ -115,6 +115,7 @@ export default {
           sortDesc: true,
           isPublished: true,
           isFrontEnd: true,
+          Other: 'Hot',
         })
 
         const data = res.data

@@ -17,35 +17,36 @@
 
       <!-- 右側主內容 -->
       <main class="content">
-        <!-- 基本資料卡 -->
+        <!-- 基本資料卡（改用 profile 優先） -->
         <el-card class="base-card" shadow="never">
           <div class="base-card__left">
             <div class="avatar">
-  <svg v-if="!avatarUrl" viewBox="0 0 56 56">
-    <circle cx="28" cy="28" r="28" fill="#FFF"></circle>
-    <path fill="#D8D8D8"
-      d="M28 0c15.464 0 28 12.536 28 28S43.464 56 28 56 0 43.464 0 28 12.536 0 28 0zm-.039 29.647c-13.896 0-21.864 7.56-17.5 12.666 4.365 5.105 10.278 8.443 17.5 8.443 7.223 0 13.136-3.338 17.5-8.443 4.365-5.105-3.603-12.666-17.5-12.666zM27.96 5.56c-4.64 0-8.4 3.898-8.4 8.707 0 4.808 3.76 9.588 8.4 9.588 4.639 0 8.4-4.78 8.4-9.588 0-4.809-3.761-8.707-8.4-8.707z" />
-  </svg>
-  <img v-else :src="avatarUrl" alt="profile" />
-</div>
+              <svg v-if="!avatarUrl" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="28" fill="#FFF"></circle>
+                <path fill="#D8D8D8"
+                  d="M28 0c15.464 0 28 12.536 28 28S43.464 56 28 56 0 43.464 0 28 12.536 0 28 0zm-.039 29.647c-13.896 0-21.864 7.56-17.5 12.666 4.365 5.105 10.278 8.443 17.5 8.443 7.223 0 13.136-3.338 17.5-8.443 4.365-5.105-3.603-12.666-17.5-12.666zM27.96 5.56c-4.64 0-8.4 3.898-8.4 8.707 0 4.808 3.76 9.588 8.4 9.588 4.639 0 8.4-4.78 8.4-9.588 0-4.809-3.761-8.707-8.4-8.707z" />
+              </svg>
+              <img v-else :src="avatarUrl" alt="profile" />
+            </div>
 
-<div class="avatar-actions">
-  <el-button size="small" type="primary" @click="openFileDialog" :loading="uploading" :disabled="uploading">
-    {{ uploading ? '上傳中…' : '上傳/更換大頭貼' }}
-  </el-button>
-  <el-button size="small" type="danger" plain @click="removeAvatar" :disabled="!avatarUrl || removing" :loading="removing">
-    移除
-  </el-button>
-  <input ref="fileInput" class="d-none" type="file" accept="image/*" @change="onFileChange" />
-  <div class="avatar-hint text-muted small">支援圖片檔，最大 5MB。</div>
-</div>
+            <div class="avatar-actions">
+              <el-button size="small" type="primary" @click="openFileDialog" :loading="uploading" :disabled="uploading">
+                {{ uploading ? '上傳中…' : '上傳/更換大頭貼' }}
+              </el-button>
+              <el-button size="small" type="danger" plain @click="removeAvatar" :disabled="!avatarUrl || removing" :loading="removing">
+                移除
+              </el-button>
+              <input ref="fileInput" class="d-none" type="file" accept="image/*" @change="onFileChange" />
+              <div class="avatar-hint text-muted small">支援圖片檔，最大 5MB。</div>
+            </div>
+
             <div class="base-info">
-              <div class="hello">嗨，{{ me.email }}！</div>
+              <div class="hello">嗨，{{ displayEmail }}！</div>
               <div class="joined">用戶加入時間 {{ joinedAtText }}</div>
               <div class="meta">
-                <span>姓名：{{ me.name }}</span>
-                <span>會員編號：#{{ me.userNumberId }}</span>
-                <span>角色：{{ (me.roles || []).join(', ') || '—' }}</span>
+                <span>姓名：{{ displayName }}</span>
+                <span>會員編號：#{{ displayUserNumberId }}</span>
+                <span>角色：{{ displayRoles }}</span>
               </div>
             </div>
           </div>
@@ -88,38 +89,20 @@
 
         <!-- 功能磚 -->
         <div class="feature-grid">
-          <el-card class="feature" shadow="hover"
-         role="button" tabindex="0" @click="todoFeature('訂單')">
+          <el-card class="feature" shadow="hover" role="button" tabindex="0" @click="todoFeature('訂單')">
             <div class="title">訂單</div>
             <div class="desc">跟蹤訂單、申請退貨、重新訂購。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover"
-         role="button" tabindex="0" @click="todoFeature('健康新知')">
+          <el-card class="feature" shadow="hover" role="button" tabindex="0" @click="todoFeature('健康新知')">
             <div class="title">健康新知</div>
             <div class="desc">瞭解最新健康資訊，幫助您更知道該買什麼產品。</div>
           </el-card>
 
-          <el-card class="feature" shadow="hover"
-         role="button" tabindex="0" @click="todoFeature('促銷與優惠')">
+          <el-card class="feature" shadow="hover" role="button" tabindex="0" @click="todoFeature('促銷與優惠')">
             <div class="title">促銷與優惠</div>
             <div class="desc">查看全站優惠，領取活動折扣。</div>
           </el-card>
-
-          <!-- <el-card class="feature" shadow="hover" @click="todoFeature('我的清單')">
-            <div class="title">我的清單</div>
-            <div class="desc">保留喜愛商品，補貨即買。</div>
-          </el-card>
-
-          <el-card class="feature" shadow="hover" @click="todoFeature('聯盟計畫')">
-            <div class="title">聯盟計畫</div>
-            <div class="desc">成為聯盟成員，越分享越賺！</div>
-          </el-card>
-
-          <el-card class="feature" shadow="hover" @click="todoFeature('地址簿')">
-            <div class="title">地址簿</div>
-            <div class="desc">集中管理你的收貨地址。</div>
-          </el-card> -->
         </div>
 
         <!-- 猜你喜歡（容器） -->
@@ -135,8 +118,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch,onMounted } from 'vue'
-
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MyAccountSidebar from '@/components/account/MyAccountSidebar.vue'
@@ -145,18 +127,33 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const auth = useAuthStore()
-const me = computed(() => auth.user || null)
 
-const profile = ref(null)
+// ============= 核心：避免直接用 token 快照 =============
+const me = computed(() => auth.user || null)        // 仍保留 token 快照（授權/備援）
+const profile = ref(null)                           // 權威資料（/user/me/detail）
 const memberRank = ref(null)
 const claiming = ref(false)
+
 const avatarUrl = ref('')
 const uploading = ref(false)
 const removing  = ref(false)
 const fileInput = ref(null)
 
+// 顯示欄位一律以 profile 為優先，沒有再回退 me（token）
+const displayEmail = computed(() => profile.value?.email || me.value?.email || '—')
+const displayName = computed(() => {
+  if (profile.value?.name && profile.value.name.trim()) return profile.value.name
+  const ln = profile.value?.lastName || ''
+  const fn = profile.value?.firstName || ''
+  const combined = `${ln}${fn}`.trim()
+  if (combined) return combined
+  return me.value?.name || '—'
+})
+const displayUserNumberId = computed(() => profile.value?.userNumberId ?? me.value?.userNumberId ?? '—')
+const displayRoles = computed(() => (me.value?.roles || []).join(', ') || '—') // 角色多半仍由 token 提供即可
+
 const joinedAtText = computed(() => {
-  const dt = profile.value && profile.value.createdDate
+  const dt = profile.value && (profile.value.createdDate || profile.value.CreatedDate)
   if (!dt) return '—'
   try {
     const d = new Date(dt)
@@ -168,6 +165,7 @@ const joinedAtText = computed(() => {
   }
 })
 
+// me 有值 → 載入權威資料與等級
 watch(
   () => me.value,
   async (v) => {
@@ -182,57 +180,72 @@ watch(
   { immediate: true }
 )
 
+// ---- API：載入我的詳細資料（權威）並同步 auth.user.name，確保 header/側欄即時更新 ----
 async function loadProfile() {
   try {
-    // 後端可能回 PascalCase，這裡做最小映射 → camelCase
     const { data } = await http.get('/user/me/detail')
 
+    // 最小映射：以 camelCase 為準
     const patched = {
-      // 從 me 帶入既有 camelCase
       id: me.value.id,
-      email: me.value.email,
-      name: me.value.name,
-      userNumberId: me.value.userNumberId,
+      email: data.email ?? data.Email,
+      // 後端若未回統一 name，就組合
+      name: (data.name ?? data.Name) || `${data.LastName ?? data.lastName ?? ''}${data.FirstName ?? data.firstName ?? ''}`.trim(),
+      userNumberId: data.userNumberId ?? data.UserNumberId,
       roles: me.value.roles || [],
-      // 從 API 轉成 camelCase（最小必要欄位）
-      createdDate: data.CreatedDate ?? data.createdDate,
-      memberRankId: data.MemberRankId ?? data.memberRankId,
-      usedReferralCode: data.UsedReferralCode ?? data.usedReferralCode,
-      // 如還有其他欄位要用，再逐一加對應即可
-      phoneNumber: data.PhoneNumber ?? data.phoneNumber,
-      twoFactorEnabled: data.TwoFactorEnabled ?? data.twoFactorEnabled,
-      imgId: data.ImgId ?? data.imgId,
-      gender: data.Gender ?? data.gender,
-      address: data.Address ?? data.address,
-      lastLoginDate: data.LastLoginDate ?? data.lastLoginDate,
-      emailConfirmed: data.EmailConfirmed ?? data.emailConfirmed,
-      isActive: data.IsActive ?? data.isActive
+      createdDate: data.createdDate ?? data.CreatedDate,
+      memberRankId: data.memberRankId ?? data.MemberRankId,
+      usedReferralCode: data.usedReferralCode ?? data.UsedReferralCode,
+      phoneNumber: data.phoneNumber ?? data.PhoneNumber,
+      twoFactorEnabled: data.twoFactorEnabled ?? data.TwoFactorEnabled,
+      imgId: data.imgId ?? data.ImgId,
+      gender: data.gender ?? data.Gender,
+      address: data.address ?? data.Address,
+      lastLoginDate: data.lastLoginDate ?? data.LastLoginDate,
+      emailConfirmed: data.emailConfirmed ?? data.EmailConfirmed,
+      isActive: data.isActive ?? data.IsActive,
+      lastName: data.lastName ?? data.LastName,
+      firstName: data.firstName ?? data.FirstName
     }
 
     profile.value = patched
-    console.debug('[UserMe] profile', profile.value)
+
+    // 關鍵：若顯示姓名改了，立即同步到 auth store（避免 header 仍顯示舊值）
+    if (auth?.setUser && me.value?.name !== patched.name) {
+      auth.setUser({ ...auth.user, name: patched.name })
+    }
+
+    // 如果 token 內沒有 email（少見），同步補上（選擇性）
+    if (auth?.setUser && me.value?.email !== patched.email && patched.email) {
+      auth.setUser({ ...auth.user, email: patched.email })
+    }
+
+    // 載入頭像（第一次讀到 profile 才載）
+    if (!avatarUrl.value) {
+      await loadAvatar()
+    }
+
+    // console.debug('[UserMe] profile', profile.value)
   } catch (e) {
     profile.value = me.value
     console.error('[UserMe] profile FAIL', e?.response?.status, e?.response?.data || e)
   }
 }
 
+// 會員等級
 async function loadMemberRank() {
   try {
     const rankId = profile.value?.memberRankId ?? me.value?.memberRankId
     if (!rankId) return
-
     const { data } = await http.get(`/user/member-ranks/${encodeURIComponent(rankId)}`)
-
-    // 後端 MemberRankDto 也可能是 PascalCase → 映射成 camelCase
     memberRank.value = {
-      memberRankId: data.MemberRankId ?? data.memberRankId,
-      rankName: data.RankName ?? data.rankName,
-      totalSpentForUpgrade: data.TotalSpentForUpgrade ?? data.totalSpentForUpgrade,
-      orderCountForUpgrade: data.OrderCountForUpgrade ?? data.orderCountForUpgrade,
-      rebateRate: data.RebateRate ?? data.rebateRate,
-      rankDescription: data.RankDescription ?? data.rankDescription,
-      isActive: data.IsActive ?? data.isActive
+      memberRankId: data.memberRankId ?? data.MemberRankId,
+      rankName: data.rankName ?? data.RankName,
+      totalSpentForUpgrade: data.totalSpentForUpgrade ?? data.TotalSpentForUpgrade,
+      orderCountForUpgrade: data.orderCountForUpgrade ?? data.OrderCountForUpgrade,
+      rebateRate: data.rebateRate ?? data.RebateRate,
+      rankDescription: data.rankDescription ?? data.RankDescription,
+      isActive: data.isActive ?? data.IsActive
     }
   } catch (e) {
     memberRank.value = null
@@ -240,6 +253,8 @@ async function loadMemberRank() {
   }
 }
 
+// 推薦碼領券
+// const claiming = ref(false)
 async function claimReferralCoupon() {
   if (!profile.value || !profile.value.usedReferralCode) return
   claiming.value = true
@@ -254,60 +269,42 @@ async function claimReferralCoupon() {
   }
 }
 
+// Avatar
 function openFileDialog() {
   if (fileInput.value) fileInput.value.click()
 }
-
 async function loadAvatar() {
   try {
     const { data } = await http.get('/user/avatar')
-    // 後端回 { fileId, fileUrl }；沒圖時 fileUrl = ""
     avatarUrl.value = data && data.fileUrl ? `${data.fileUrl}?v=${Date.now()}` : ''
   } catch (err) {
-    if (err?.response?.status === 401) {
-      console.warn('[UserMe] avatar 401 未登入')
-    } else {
-      console.error('[UserMe] loadAvatar FAIL', err)
-    }
+    if (err?.response?.status !== 401) console.error('[UserMe] loadAvatar FAIL', err)
   }
 }
-
 async function onFileChange(e) {
   const input = e.target
   const file = input?.files?.[0]
   if (!file) return
-
-  // 前端基本檢核（與後端一致）
   if (!file.type?.startsWith('image/')) {
-    ElMessage.error('僅接受圖片檔案')
-    input.value = ''
-    return
+    ElMessage.error('僅接受圖片檔案'); input.value = ''; return
   }
   if (file.size > 5 * 1024 * 1024) {
-    ElMessage.error('檔案過大，請小於 5MB')
-    input.value = ''
-    return
+    ElMessage.error('檔案過大，請小於 5MB'); input.value = ''; return
   }
-
   const form = new FormData()
-  form.append('file', file) // 後端 [FromForm] IFormFile file
-
+  form.append('file', file)
   uploading.value = true
   try {
-    // 切記：不要手動設 Content-Type，讓瀏覽器自己帶 boundary
     const { data } = await http.post('/user/avatar', form)
     avatarUrl.value = data && data.fileUrl ? `${data.fileUrl}?v=${Date.now()}` : ''
     ElMessage.success('大頭貼已更新')
   } catch (err) {
-    const msg = err?.response?.data?.error || '上傳失敗'
-    ElMessage.error(msg)
-    console.error('[UserMe] upload avatar FAIL', err)
+    ElMessage.error(err?.response?.data?.error || '上傳失敗')
   } finally {
     uploading.value = false
-    if (input) input.value = '' // 允許同檔重選
+    if (input) input.value = ''
   }
 }
-
 async function removeAvatar() {
   if (!avatarUrl.value) return
   try {
@@ -316,59 +313,38 @@ async function removeAvatar() {
     avatarUrl.value = ''
     ElMessage.success('已移除大頭貼')
   } catch (err) {
-    const msg = err?.response?.data?.error || '移除失敗'
-    ElMessage.error(msg)
-    console.error('[UserMe] remove avatar FAIL', err)
+    ElMessage.error(err?.response?.data?.error || '移除失敗')
   } finally {
     removing.value = false
   }
 }
 
-// 初次與 me 變動時皆嘗試載入頭像
-onMounted(() => {
-  if (me.value) loadAvatar()
-})
-watch(() => me.value, (v) => {
-  if (v) loadAvatar()
-})
+// 初次與 me 變動時皆嘗試載入頭像（保持原有行為）
+onMounted(() => { if (me.value) loadAvatar() })
+watch(() => me.value, (v) => { if (v) loadAvatar() })
 
-
-// 功能磚暫不導路由：僅提示
-// 功能標籤 → 路由名稱（請依你的實際路由調整）
+// 功能磚
 const featureToRoute = {
   '訂單': 'orders',
   '健康新知': 'cnt-home',
-  '促銷與優惠': 'rewards', // 或 'promotions'（若你有這條路由）
+  '促銷與優惠': 'rewards',
 }
-
-// 保險：避免名稱不存在
-function routeExists(name) {
-  try { return router.hasRoute(name) } catch { return false }
-}
-
-function goByName(name) {
-  router.push(routeExists(name) ? { name } : { name: 'userme' })
-}
-
+function routeExists(name) { try { return router.hasRoute(name) } catch { return false } }
+function goByName(name) { router.push(routeExists(name) ? { name } : { name: 'userme' }) }
 function todoFeature(label) {
   const name = featureToRoute[label]
-  if (name) {
-    goByName(name)
-  } else {
-    ElMessage.info(`「${label}」尚未開通`)
-  }
+  if (name) goByName(name)
+  else ElMessage.info(`「${label}」尚未開通`)
 }
 
-function goHome() {
-  router.push({ name: 'home' })
-}
-
+function goHome() { router.push({ name: 'home' }) }
 async function doLogout() {
   alert('你已成功登出')
   await auth.logout()
   router.replace({ name: 'home' })
 }
 </script>
+
 
 <style scoped>
 .myaccount { max-width: 1200px; }

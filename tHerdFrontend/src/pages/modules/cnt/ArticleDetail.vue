@@ -102,21 +102,34 @@
       >
         <p class="mb-3 fw-bold">此內容需登入付費解鎖</p>
         <div class="d-flex gap-2">
-          <button type="button" class="btn teal-reflect-button text-white" @click="onLogin">登入</button>
-          <button type="button" class="btn btn-outline-secondary" @click="onPurchase">去購買</button>
+          <!-- 付費遮罩 CTA -->
+          <button
+            v-if="!isLogin"
+            class="btn teal-reflect-button text-white"
+            @click="onLogin"
+          >
+            登入
+          </button>
+
+          <button
+            class="btn teal-reflect-button text-white"
+            :disabled="isPurchasing"
+            @click="onPurchase"
+          >
+            {{ isPurchasing ? '建立訂單中…' : '立即購買全文' }}
+          </button>
         </div>
       </div>
     </div>
-
     <!-- Tags：底部（暫時作搜尋導回文章清單） -->
-    <div v-if="article.tags && article.tags.length" class="mt-4 pt-3 border-top">
-      <h5 class="main-color-green-text mb-2">相關標籤</h5>
+    <div v-if="article.tags && article.tags.length" class="mt-5 pt-4 border-top">
+      <h4 class="main-color-green-text mb-2">相關標籤</h4>
       <div class="d-flex flex-wrap gap-2">
       <router-link
         v-for="t in article.tags"
         :key="t.tagId"
         :to="{ name: 'cnt-tag-products', params: { tagId: t.tagId } }"
-        class="badge bg-light main-color-green-text text-decoration-none p-2"
+        class="badge main-color-green-text text-decoration-none p-1 tag-badge"
       >
         # {{ t.tagName }}
       </router-link>
@@ -180,7 +193,16 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getArticleDetail, getArticleList } from "./api/cntService";
+import { useAuthStore } from '@/stores/auth';
+import { getArticleDetail, getArticleList } from "@/pages/modules/cnt/api/cntService";
+
+// 建立購買流程增加
+import cntArticlesApi from '@/pages/modules/cnt/api/cntArticlesApi'
+const auth = useAuthStore()
+const isLogin = computed(() => auth.isAuthenticated)
+const isPurchasing = ref(false)
+const lastPurchase = ref(null)
+// ---------------
 
 const route = useRoute();
 const router = useRouter();
@@ -623,7 +645,7 @@ async function loadPage() {
   }
 
   // 2. 抓目前的 pageId
-  const pageId = route.params.id;
+  const pageId = Number(route.params.id)
 
   // 3. 從後端拿文章詳情
   const res = await getArticleDetail(pageId);
@@ -763,10 +785,59 @@ const igIconSvg = `
 
 // ===== 付費遮罩 CTA（示範用）=====
 function onLogin() {
-  alert("請登入以解鎖內容");
+  if (!isLogin.value) {
+    // 真的沒登入才導去登入頁
+    router.push({ name: 'login', query: { returnUrl: route.fullPath } })
+  } else {
+    // 已經登入就提示一下 / 或什麼都不做
+    alert('您已經登入，可以直接購買或閱讀內容')
+  }
 }
-function onPurchase() {
-  alert("購買流程尚未設計，先以 DB 設定為全免費");
+
+async function onPurchase() {
+  // 1) 沒登入先導去登入
+  if (!isLogin.value) {
+    router.push({ name: "login", query: { returnUrl: route.fullPath } });
+    return;
+  }
+
+  // 2) 防止連點
+  if (isPurchasing.value) return;
+  isPurchasing.value = true;
+
+  try {
+    const pageId = article.value?.pageId || Number(route.params.id);
+
+    // 3) 建立 / 取得訂單（後端會回 PurchaseSummaryDto）
+    const summary = await cntArticlesApi.createPurchase(pageId, "LINEPAY");
+    console.log("建立訂單成功", summary);
+    lastPurchase.value = summary;
+
+    // 4) 取出付款網址（不同命名都試一下）
+    const paymentUrl =
+      summary.paymentUrl ??
+      summary.PaymentUrl ??
+      summary.linePayPaymentUrl ??
+      null;
+
+    if (!paymentUrl) {
+      alert("訂單建立成功，但後端沒有回付款連結，請稍後再試。");
+      return;
+    }
+
+    // 5) 導去 LINE Pay 付款頁
+    window.location.href = paymentUrl;
+  } catch (err) {
+    console.error("購買失敗", err?.response?.status, err);
+    if (err?.response?.status === 401) {
+      alert("登入逾時，請重新登入後再購買");
+      router.push({ name: "login", query: { returnUrl: route.fullPath } });
+    } else {
+      alert("購買失敗，請稍後再試");
+    }
+  } finally {
+    isPurchasing.value = false;
+  }
 }
 
 // utils
@@ -894,9 +965,19 @@ function formatDate(d) {
 /* ✅ CTA Card 風格（綠色主題；淡綠陰影或灰色邊框） */
 .cta-card {
   background: #fff;
-  border: 1px solid #e8f4f4;              /* 淡綠邊框 */
+  border: 1px solid #e8f4f4;
   border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0, 112, 120, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04); /* 綠色系淡陰影 */
+  /* 陰影加重：位移、模糊、透明度都往上調 */
+  box-shadow:
+    0 14px 30px rgba(0, 112, 120, 0.28),
+    0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.cta-card:hover {
+  box-shadow:
+    0 18px 40px rgba(0, 112, 120, 0.32),
+    0 6px 16px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .cta-title {
   line-height: 1.35;
@@ -904,13 +985,25 @@ function formatDate(d) {
 .cta-desc {
   line-height: 1.6;
 }
+/* 讓 CTA 按鈕裡的圖示和文字排成一行 */
 .cta-button {
-  border-radius: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;       /* 圖示和文字中間的距離 */
 }
+
+/* 圖示外層 span */
+.cta-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 彩色 IG svg 調整一下尺寸就好，保持在同一行 */
 .cta-icon :deep(svg) {
-  /* 讓彩色 IG 圖標與文字對齊 */
-  vertical-align: -2px;
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
 }
 
 /* RWD 微調 */
@@ -923,5 +1016,13 @@ function formatDate(d) {
 /* 讓原生 #錨點 或 scrollIntoView 也對齊 */
 .article-content :where(h2[id], h3[id]) {
   scroll-margin-top: calc(var(--navbar-height) + 10px);
+}
+
+.tag-badge {
+  font-size: 0.95rem;          /* 字大一點 */
+  padding: 0.35rem 0.6rem;
+
+  /* 比 bg-light 再深一點的綠系底色，想更深可以再調 */
+  background-color: #d1f0e5;   /* 淺綠 */
 }
 </style>

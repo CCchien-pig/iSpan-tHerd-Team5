@@ -158,10 +158,15 @@ public partial class ProdProductDetailDto : ProdProductDto
     [Display(Name = "商品標籤")]
     public override string Badge { get; set; } = string.Empty;
 
-	/// <summary>
-	/// 分類敘述
-	/// </summary>
-	public override List<string> ProductTypeDesc { get; set; }
+    /// <summary>
+    /// 商品狀態標籤
+    /// </summary>
+    public override string BadgeName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 分類敘述
+    /// </summary>
+    public override List<string> ProductTypeDesc { get; set; }
 
     /// <summary>
     /// 分類敘述

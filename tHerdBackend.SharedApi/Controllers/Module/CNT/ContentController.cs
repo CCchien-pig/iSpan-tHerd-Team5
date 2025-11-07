@@ -2,6 +2,8 @@
 using System.Security.Claims;
 using System.Threading.Tasks;
 using tHerdBackend.Core.Interfaces.CNT;
+using tHerdBackend.Infra.Models;
+using System.Linq;
 using tHerdBackend.Services.CNT;
 
 namespace tHerdBackend.SharedApi.Controllers.Module.CNT
@@ -16,10 +18,11 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 	public class ContentController : ControllerBase
 	{
 		private readonly IContentService _svc;
-
-		public ContentController(IContentService svc)
+		private readonly tHerdDBContext _db;   // ★ 新增
+		public ContentController(IContentService svc, tHerdDBContext db)
 		{
 			_svc = svc;
+			_db = db;
 		}
 
 		/// <summary>
@@ -121,14 +124,26 @@ namespace tHerdBackend.SharedApi.Controllers.Module.CNT
 		/// 嘗試從 JWT Token Claims 取得使用者編號（UserNumberId）
 		/// 若找不到則回傳 null（代表訪客或未登入）
 		/// </summary>
-		private static int? TryGetUserNumberIdFromClaims(ClaimsPrincipal user)
+		// 嘗試從 JWT 取得 UserNumberId，失敗就回傳 null（代表訪客）
+		private int? TryGetUserNumberIdFromClaims(ClaimsPrincipal user)
 		{
-			var claim = user.FindFirst("user_number_id")
-					 ?? user.FindFirst("sub")
-					 ?? user.FindFirst("uid")
-					 ?? user.FindFirst(ClaimTypes.NameIdentifier);
+			// 1) 如果 token 裡本來就有 user_number_id，就直接用
+			var numClaim = user.FindFirst("user_number_id");
+			if (numClaim != null && int.TryParse(numClaim.Value, out var numId))
+			{
+				return numId;
+			}
 
-			return (claim != null && int.TryParse(claim.Value, out var id)) ? id : (int?)null;
+			// 2) 否則用 Identity 的 NameIdentifier 找 AspNetUsers.UserNumberId
+			var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId))
+			{
+				// 沒登入 / 沒 claim → 訪客
+				return null;
+			}
+
+			var userEntity = _db.AspNetUsers.FirstOrDefault(u => u.Id == userId);
+			return userEntity?.UserNumberId; // 找不到就 null
 		}
 	}
 }
