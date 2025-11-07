@@ -99,22 +99,37 @@
           </div>
 
           <label class="fw-bold mb-2">優惠券代碼</label>
-          <div class="input-group mb-4">
+          <div class="input-group mb-2">
             <input 
               type="text" 
               class="form-control" 
               v-model="couponCode" 
               placeholder="請輸入優惠券"
-              :disabled="isCheckingOut || !canCheckout"
+              :disabled="isCheckingOut || !canCheckout || isFindingBestCoupon"
             />
             <button 
               class="btn teal-reflect-button" 
               @click="applyCoupon"
-              :disabled="isCheckingOut || !canCheckout || !couponCode"
+              :disabled="isCheckingOut || !canCheckout || !couponCode || isFindingBestCoupon"
             >
               套用
             </button>
           </div>
+
+          <!-- 🔥 自動找最優惠券按鈕 -->
+          <button 
+            class="btn btn-outline-success w-100 mb-4" 
+            @click="applyBestCoupon"
+            :disabled="isCheckingOut || !canCheckout || isFindingBestCoupon"
+          >
+            <span v-if="!isFindingBestCoupon">
+              <i class="bi bi-lightning-charge"></i> 自動套用最優惠券
+            </span>
+            <span v-else>
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              計算中...
+            </span>
+          </button>
 
           <hr />
           
@@ -140,11 +155,21 @@
             <span>-NT$ {{ promotionDiscount.toLocaleString() }}</span>
           </div>
 
-          <div class="summary-row">
+          <div class="summary-row" style="margin-bottom: 0;">
             <span>運費</span>
-            <span v-if="shippingFee === 0 && subtotal >= 1500" class="text-success">免運</span>
+            <span v-if="shippingFee === 0 && amountAfterCoupon >= 1500" class="text-success">免運</span>
             <span v-else-if="shippingFee === 0">計算中...</span>
             <span v-else>NT$ {{ shippingFee.toLocaleString() }}</span>
+          </div>
+
+          <!-- 🔥 免運提示（緊接在運費後） -->
+          <div v-if="amountAfterCoupon > 0 && amountAfterCoupon < 1500" class="free-shipping-hint mt-2 mb-3">
+            <i class="bi bi-truck"></i>
+            再購買 <strong class="text-danger">NT$ {{ (1500 - amountAfterCoupon).toLocaleString() }}</strong> 即可免運
+          </div>
+          <div v-else-if="amountAfterCoupon >= 1500" class="free-shipping-achieved mt-2 mb-3">
+            <i class="bi bi-check-circle-fill"></i>
+            已達免運門檻
           </div>
 
           <hr />
@@ -156,7 +181,7 @@
             </h3>
           </div>
 
-          <!-- 🔥 物流選擇（對應實際資料表） -->
+          <!-- 物流選擇 -->
           <div class="mt-4">
             <label class="fw-bold mb-2">配送方式</label>
             <select 
@@ -251,6 +276,7 @@ export default {
     return {
       couponCode: '',
       isCheckingOut: false,
+      isFindingBestCoupon: false,
       receiverName: '',
       receiverPhone: '',
       receiverAddress: '',
@@ -259,7 +285,7 @@ export default {
       canCheckout: true,
       invalidCount: 0,
       shippingFee: 0,
-      selectedLogisticsId: 1000  // 🔥 預設：宅配到府
+      selectedLogisticsId: 1000
     }
   },
   computed: {
@@ -282,6 +308,10 @@ export default {
       if (!this.promotionResult) return 0
       const discount = this.promotionResult.discounts?.[0]
       return discount?.discountAmount || 0
+    },
+    // 🔥 新增：扣除優惠券後的金額
+    amountAfterCoupon() {
+      return this.subtotal - this.promotionDiscount
     },
     finalTotal() {
       return Math.max(0, this.subtotal - this.promotionDiscount + this.shippingFee)
@@ -306,8 +336,11 @@ export default {
       }
     },
 
+    // 🔥 修正：用扣除優惠券後的金額判斷免運
     async calculateShippingFee() {
-      if (this.subtotal >= 1500) {
+      const amountAfterCoupon = this.subtotal - this.promotionDiscount
+      
+      if (amountAfterCoupon >= 1500) {
         this.shippingFee = 0
         return
       }
@@ -342,55 +375,78 @@ export default {
       }
     },
 
-    async calculatePromotion() {
-      if (!this.couponCode || this.cartItems.length === 0) {
-        this.promotionResult = null
-        return
+    async validateCoupon(couponCode, showAlert = true) {
+      if (!couponCode || this.cartItems.length === 0) {
+        return { isValid: false, data: null }
       }
 
       try {
         const auth = useAuthStore()
         
         if (!auth?.accessToken) {
-          alert('❌ 請先登入會員才能使用優惠券')
-          return
+          if (showAlert) alert('❌ 請先登入會員才能使用優惠券')
+          return { isValid: false, data: null }
         }
 
         const userNumberId = auth.user?.userNumberId || auth.userNumberId
 
         if (!userNumberId || userNumberId <= 0) {
-          alert('❌ 無法取得會員資訊，請重新登入')
-          this.$router.push({ name: 'userlogin', query: { returnUrl: this.$route.fullPath } })
-          return
+          if (showAlert) {
+            alert('❌ 無法取得會員資訊，請重新登入')
+            this.$router.push({ name: 'userlogin', query: { returnUrl: this.$route.fullPath } })
+          }
+          return { isValid: false, data: null }
         }
 
         const payload = {
           userNumberId: userNumberId,
           subtotal: this.subtotal,
-          couponId: this.couponCode
+          couponId: couponCode
         }
 
         const res = await http.post('/promotion/calculate', payload)
 
         if (res?.data?.success && res.data.data?.discounts?.length > 0) {
-          this.promotionResult = res.data.data
-          alert('✅ 優惠券套用成功')
+          return { isValid: true, data: res.data.data }
         } else {
-          this.promotionResult = null
-          const msg = res?.data?.message || '不符合優惠券使用規定'
-          alert('❌ ' + msg)
+          if (showAlert) {
+            const msg = res?.data?.message || '不符合優惠券使用規定'
+            alert('❌ ' + msg)
+          }
+          return { isValid: false, data: null }
         }
       } catch (err) {
-        console.error('計算促銷失敗:', err)
-        this.promotionResult = null
-        const errorMsg = err?.response?.data?.message || err?.message || '優惠券驗證失敗'
-        alert('❌ ' + errorMsg)
+        console.error('驗證優惠券失敗:', err)
+        if (showAlert) {
+          const errorMsg = err?.response?.data?.message || err?.message || '優惠券驗證失敗'
+          alert('❌ ' + errorMsg)
+        }
+        return { isValid: false, data: null }
       }
     },
 
     async revalidatePromotion() {
-      if (this.couponCode && this.promotionResult) {
-        await this.calculatePromotion()
+      if (!this.couponCode || !this.promotionResult) {
+        return
+      }
+
+      console.log('🔍 重新驗證優惠券:', this.couponCode)
+      
+      const savedCouponCode = this.couponCode
+      const result = await this.validateCoupon(this.couponCode, false)
+      
+      if (result.isValid) {
+        console.log('✅ 優惠券仍然有效')
+        this.promotionResult = result.data
+        // 🔥 優惠券變動後重新計算運費
+        await this.calculateShippingFee()
+      } else {
+        console.log('❌ 優惠券已失效，清空並通知')
+        this.couponCode = ''
+        this.promotionResult = null
+        // 🔥 優惠券清空後重新計算運費
+        await this.calculateShippingFee()
+        alert(`⚠️ 優惠券「${savedCouponCode}」已取消使用\n原因：不符合優惠券使用條件`)
       }
     },
 
@@ -399,7 +455,113 @@ export default {
         alert('請輸入優惠券代碼')
         return
       }
-      await this.calculatePromotion()
+      
+      const result = await this.validateCoupon(this.couponCode, true)
+      
+      if (result.isValid) {
+        this.promotionResult = result.data
+        // 🔥 套用優惠券後重新計算運費
+        await this.calculateShippingFee()
+        alert('✅ 優惠券套用成功')
+      } else {
+        this.couponCode = ''
+        this.promotionResult = null
+      }
+    },
+
+    async findBestCoupon() {
+      try {
+        const auth = useAuthStore()
+        
+        if (!auth?.accessToken) {
+          console.warn('未登入，無法查詢優惠券')
+          return null
+        }
+
+        if (this.cartItems.length === 0 || this.subtotal <= 0) {
+          console.warn('購物車為空或金額為0，無法計算優惠券')
+          return null
+        }
+
+        const userNumberId = auth.user?.userNumberId || auth.userNumberId
+        if (!userNumberId || userNumberId <= 0) {
+          console.warn('無法取得會員ID')
+          return null
+        }
+
+        const walletRes = await http.get('/user/coupons/wallet?onlyUsable=true&pageSize=100')
+        const availableCoupons = walletRes?.data?.items || []
+        
+        if (availableCoupons.length === 0) {
+          console.log('目前沒有可用的優惠券')
+          return null
+        }
+
+        console.log(`找到 ${availableCoupons.length} 張可用優惠券，開始計算...`)
+
+        const results = []
+        
+        for (const item of availableCoupons) {
+          if (!item.isUsable || !item.coupon?.couponCode) continue
+          
+          const result = await this.validateCoupon(item.coupon.couponCode, false)
+          
+          if (result.isValid) {
+            const discount = result.data.discounts[0]
+            results.push({
+              couponCode: item.coupon.couponCode,
+              couponName: item.coupon.couponName || item.coupon.couponCode,
+              discountAmount: discount.discountAmount || 0,
+              promotionResult: result.data
+            })
+          }
+        }
+
+        if (results.length === 0) {
+          console.log('沒有優惠券符合使用條件')
+          return null
+        }
+
+        results.sort((a, b) => b.discountAmount - a.discountAmount)
+        const best = results[0]
+        
+        console.log(`最優惠券: ${best.couponName}, 折扣: NT$ ${best.discountAmount}`)
+        
+        return best
+
+      } catch (err) {
+        console.error('查詢最優惠券失敗:', err)
+        return null
+      }
+    },
+
+    async applyBestCoupon() {
+      this.isFindingBestCoupon = true
+      
+      try {
+        const best = await this.findBestCoupon()
+        
+        if (!best) {
+          this.couponCode = ''
+          this.promotionResult = null
+          alert('❌ 目前沒有可用的優惠券或無符合條件的優惠券')
+          return
+        }
+        
+        this.couponCode = best.couponCode
+        this.promotionResult = best.promotionResult
+        // 🔥 套用優惠券後重新計算運費
+        await this.calculateShippingFee()
+        
+        alert(`✅ 已自動套用最優惠券：${best.couponName}\n折扣金額：NT$ ${best.discountAmount.toLocaleString()}`)
+      } catch (err) {
+        console.error('套用最優惠券失敗:', err)
+        this.couponCode = ''
+        this.promotionResult = null
+        alert('❌ 套用最優惠券失敗')
+      } finally {
+        this.isFindingBestCoupon = false
+      }
     },
 
     demoFill() {
@@ -441,11 +603,7 @@ export default {
         await http.delete(`/ord/cart/remove/${i.cartItemId}`)
         await this.loadCart()
         
-        if (this.couponCode && this.promotionResult) {
-          await this.revalidatePromotion()
-        } else {
-          this.promotionResult = null
-        }
+        await this.revalidatePromotion()
         
         alert('✅ 已移除商品')
       } catch (err) {
@@ -473,7 +631,6 @@ export default {
       try {
         const validItems = this.cartItems.filter(i => i.isValid)
         
-        // 🔥 確保 logisticsId 是數字
         const payload = {
           cartItems: validItems.map(i => ({
             productId: i.productId,
@@ -486,8 +643,8 @@ export default {
           receiverPhone: this.receiverPhone,
           receiverAddress: this.receiverAddress,
           couponCode: this.couponCode || null,
-          logisticsId: Number(this.selectedLogisticsId),  // 🔥 確保是數字
-          shippingFee: Number(this.shippingFee)           // 🔥 確保是數字
+          logisticsId: Number(this.selectedLogisticsId),
+          shippingFee: Number(this.shippingFee)
         }
 
         console.log('=== 結帳 Payload ===')
@@ -555,6 +712,40 @@ export default {
 .circle-btn:disabled{background:#ccc;cursor:not-allowed;opacity:.6}
 .qty-input{width:56px;height:42px;text-align:center;border:1.5px solid #ccc;border-radius:8px;font-weight:700;font-size:1.1rem;background:#fff}
 .summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:1.05rem}
+
+/* 🔥 免運提示樣式 */
+.free-shipping-hint {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: #856404;
+  text-align: center;
+}
+
+.free-shipping-hint i {
+  margin-right: 6px;
+  font-size: 1rem;
+}
+
+.free-shipping-achieved {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border: 1px solid #28a745;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: #155724;
+  text-align: center;
+  font-weight: 600;
+}
+
+.free-shipping-achieved i {
+  margin-right: 6px;
+  font-size: 1rem;
+  color: #28a745;
+}
+
 .teal-reflect-button{background:linear-gradient(135deg,#007083 0%,#00a0b8 100%);color:white;border:none;transition:all .3s ease;font-weight:600}
 .teal-reflect-button:hover:not(:disabled){background:linear-gradient(135deg,#00586a 0%,#008a9f 100%);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,112,131,.3)}
 .teal-reflect-button:disabled{background:#ccc;cursor:not-allowed;transform:none;opacity:.6}
