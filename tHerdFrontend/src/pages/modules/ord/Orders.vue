@@ -6,12 +6,12 @@
     
     <ul class="nav nav-tabs justify-content-center mb-4 border-0">
       <li class="nav-item">
-        <a class="nav-link fs-4 px-4" :class="{active: activeTab === 'orders'}" @click="activeTab = 'orders'" href="#" style="cursor: pointer;">
+        <a class="nav-link fs-5 px-4" :class="{active: activeTab === 'orders'}" @click="activeTab = 'orders'" href="#" style="cursor: pointer;">
           <i class="bi bi-box-seam me-2"></i>我的訂單
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link fs-4 px-4" :class="{active: activeTab === 'rma'}" @click="activeTab = 'rma'; loadRmaList()" href="#" style="cursor: pointer;">
+        <a class="nav-link fs-5 px-4" :class="{active: activeTab === 'rma'}" @click="activeTab = 'rma'; loadRmaList()" href="#" style="cursor: pointer;">
           <i class="bi bi-arrow-return-left me-2"></i>退換貨申請
         </a>
       </li>
@@ -25,7 +25,7 @@
         </div>
       </div>
       
-      <div v-else-if="orders.length === 0" class="alert alert-info text-center fs-4">
+      <div v-else-if="orders.length === 0" class="alert alert-info text-center fs-5">
         <i class="bi bi-info-circle me-2"></i>目前沒有訂單
       </div>
       
@@ -37,43 +37,43 @@
                 <div class="col-md-7">
                   <h3 class="mb-3 fw-bold main-color-green-text">訂單號碼: {{ order.orderNo }}</h3>
                   
-                  <div class="mb-2 fs-5">
+                  <div class="mb-2 fs-6">
                     <i class="bi bi-calendar3 me-2 text-muted"></i>
                     <span class="text-muted">訂購日期: {{ formatDate(order.createdDate) }}</span>
                   </div>
                   
-                  <div class="mb-3 fs-4">
+                  <div class="mb-3 fs-5">
                     <i class="bi bi-currency-dollar me-2 text-muted"></i>
                     <span>總金額: </span>
                     <strong class="main-color-green-text">NT$ {{ order.totalAmount.toLocaleString() }}</strong>
                   </div>
                   
-                  <div v-if="order.trackingNumber" class="text-muted fs-6">
+                  <div v-if="order.trackingNumber" class="text-muted" style="font-size: 0.9rem;">
                     <i class="bi bi-truck me-2"></i>物流單號: {{ order.trackingNumber }}
                   </div>
                 </div>
                 
                 <div class="col-md-5">
                   <div class="d-flex flex-column gap-2 align-items-stretch">
-                    <button class="btn teal-reflect-button fs-4" @click="viewDetail(order.orderId)">
+                    <button class="btn teal-reflect-button fs-5" @click="viewDetail(order.orderId)">
                       <i class="bi bi-eye me-2"></i>查看詳情
                     </button>
                     
                     <button 
                       v-if="order.canReturn && !order.hasRmaRequest" 
-                      class="btn orange-submit-btn fs-4"
+                      class="btn orange-submit-btn fs-5"
                       @click="openRmaModal(order)">
                       <i class="bi bi-arrow-return-left me-2"></i>申請退換貨
                     </button>
                     
                     <button 
                       v-else-if="order.hasRmaRequest" 
-                      class="btn silver-reflect-button fs-4" 
+                      class="btn silver-reflect-button fs-5" 
                       @click="goToRmaDetail(order.orderId)">
                       <i class="bi bi-check-circle me-2"></i>已申請退換貨
                     </button>
                     
-                    <div v-if="order.canReturn && !order.hasRmaRequest && order.deliveredDate" class="text-center mt-1 fs-4 fw-semibold" style="color: #856404;">
+                    <div v-if="order.canReturn && !order.hasRmaRequest && order.deliveredDate" class="text-center mt-1 fs-5 fw-semibold" style="color: #856404;">
                       <i class="bi bi-clock-history me-1"></i>{{ getReturnDaysLeft(order.deliveredDate) }}
                     </div>
                   </div>
@@ -126,8 +126,8 @@
         </div>
       </div>
       
-      <div v-else-if="rmaList.length === 0" class="alert alert-info text-center fs-4 py-4">
-        <i class="bi bi-info-circle me-2 fs-3"></i>
+      <div v-else-if="rmaList.length === 0" class="alert alert-info text-center fs-5 py-4">
+        <i class="bi bi-info-circle me-2 fs-4"></i>
         <div class="mt-2">目前沒有退換貨申請</div>
       </div>
       
@@ -141,12 +141,12 @@
             <div class="card-body p-4">
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                  <h3 class="mb-2 fw-bold main-color-green-text fs-3">申請單號: {{ rma.returnRequestId }}</h3>
-                  <p class="mb-0 text-muted fs-4">
+                  <h3 class="mb-2 fw-bold main-color-green-text fs-4">申請單號: {{ rma.returnRequestId }}</h3>
+                  <p class="mb-0 text-muted fs-5">
                     <i class="bi bi-receipt me-2"></i>訂單號碼: {{ rma.orderNo }}
                   </p>
                 </div>
-                <span :class="getRmaStatusClass(rma.status)" class="px-4 py-2 fs-4 fw-bold rounded-pill">
+                <span :class="getRmaStatusClass(rma.status)" class="px-4 py-2 fs-5 fw-bold rounded-pill">
                   {{ getRmaStatusText(rma.status) }}
                 </span>
               </div>
@@ -154,27 +154,27 @@
               <div class="bg-light p-4 rounded-3">
                 <div class="row mb-3">
                   <div class="col-md-6">
-                    <p class="mb-0 fs-4">
+                    <p class="mb-0 fs-5">
                       <i class="bi bi-tag me-2"></i>申請類型: 
                       <span :class="rma.requestType === 'refund' ? 'text-danger' : 'text-primary'" class="fw-bold">
                         {{ getRmaTypeText(rma.requestType) }}
                       </span>
-                      <span class="ms-2 badge bg-secondary fs-5">{{ rma.scope === 'full' ? '整筆訂單' : '部分商品' }}</span>
+                      <span class="ms-2 badge bg-secondary fs-6">{{ rma.scope === 'full' ? '整筆訂單' : '部分商品' }}</span>
                     </p>
                   </div>
                   <div class="col-md-6 text-end">
-                    <p class="mb-0 text-muted fs-5">
+                    <p class="mb-0 text-muted fs-6">
                       <i class="bi bi-clock me-2"></i>申請時間: {{ formatDate(rma.createdDate) }}
                     </p>
                   </div>
                 </div>
                 
                 <div class="mb-0">
-                  <p class="fw-bold mb-2 fs-4"><i class="bi bi-chat-left-text me-2"></i>申請原因:</p>
-                  <p class="mb-0 ps-3 fs-5" style="line-height: 1.6;">{{ rma.reasonText }}</p>
+                  <p class="fw-bold mb-2 fs-5"><i class="bi bi-chat-left-text me-2"></i>申請原因:</p>
+                  <p class="mb-0 ps-3 fs-6" style="line-height: 1.6;">{{ rma.reasonText }}</p>
                 </div>
                 
-                <div v-if="rma.reviewComment" class="alert alert-warning mt-3 mb-0 fs-5 border-warning" style="border-width: 2px;">
+                <div v-if="rma.reviewComment" class="alert alert-warning mt-3 mb-0 fs-6 border-warning" style="border-width: 2px;">
                   <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>審核意見:</strong> {{ rma.reviewComment }}
                 </div>
               </div>
@@ -230,28 +230,28 @@
               
               <!-- 訂單狀態 - 白底 -->
               <div class="mb-4 p-4 rounded" style="background-color: white;">
-                <h4 class="mb-3 main-color-green-text fw-bold fs-3"><i class="bi bi-info-circle me-2"></i>訂單狀態</h4>
+                <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-info-circle me-2"></i>訂單狀態</h4>
                 <div class="row">
                   <div class="col-md-4 mb-2">
-                    <p class="mb-0 fs-4">
+                    <p class="mb-0 fs-5">
                       <strong>付款狀態: </strong>
-                      <span :class="getPaymentStatusClass(orderDetail.order.paymentStatus)" class="px-3 py-2 fs-5">
+                      <span :class="getPaymentStatusClass(orderDetail.order.paymentStatus)" class="px-3 py-2 fs-6">
                         {{ getPaymentStatusText(orderDetail.order.paymentStatus) }}
                       </span>
                     </p>
                   </div>
                   <div class="col-md-4 mb-2">
-                    <p class="mb-0 fs-4">
+                    <p class="mb-0 fs-5">
                       <strong>配送狀態: </strong>
-                      <span :class="getShippingStatusClass(orderDetail.order.shippingStatusId)" class="px-3 py-2 fs-5">
+                      <span :class="getShippingStatusClass(orderDetail.order.shippingStatusId)" class="px-3 py-2 fs-6">
                         {{ getShippingStatusText(orderDetail.order.shippingStatusId) }}
                       </span>
                     </p>
                   </div>
                   <div class="col-md-4 mb-2">
-                    <p class="mb-0 fs-4">
+                    <p class="mb-0 fs-5">
                       <strong>訂單狀態: </strong>
-                      <span :class="getOrderStatusClass(orderDetail.order.orderStatusId)" class="px-3 py-2 fs-5">
+                      <span :class="getOrderStatusClass(orderDetail.order.orderStatusId)" class="px-3 py-2 fs-6">
                         {{ getOrderStatusText(orderDetail.order.orderStatusId) }}
                       </span>
                     </p>
@@ -261,7 +261,7 @@
               
               <!-- 訂單時間軸 - 灰底 -->
               <div class="mb-4 p-4 rounded" style="background-color: #e9ecef;">
-                <h4 class="mb-3 main-color-green-text fw-bold fs-3"><i class="bi bi-truck me-2"></i>物流進度</h4>
+                <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-truck me-2"></i>物流進度</h4>
                 <div class="order-timeline">
                   <div 
                     v-for="(step, index) in timelineSteps" 
@@ -272,8 +272,8 @@
                       <i :class="step.icon"></i>
                     </div>
                     <div class="timeline-content">
-                      <div class="timeline-title fs-5">{{ step.title }}</div>
-                      <div v-if="step.date" class="timeline-date fs-6">{{ step.date }}</div>
+                      <div class="timeline-title fs-6">{{ step.title }}</div>
+                      <div v-if="step.date" class="timeline-date" style="font-size: 0.85rem;">{{ step.date }}</div>
                     </div>
                     <div v-if="index < timelineSteps.length - 1" class="timeline-line"></div>
                   </div>
@@ -282,44 +282,47 @@
               
               <!-- 收件資訊 - 白底 -->
               <div class="mb-4 p-4 rounded" style="background-color: white;">
-                <h4 class="mb-3 main-color-green-text fw-bold fs-3"><i class="bi bi-person-circle me-2"></i>收件資訊</h4>
+                <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-person-circle me-2"></i>收件資訊</h4>
                 <div class="row">
                   <div class="col-md-6 mb-3">
-                    <p class="mb-0 fs-5"><strong>姓名:</strong> {{ orderDetail.order.receiverName }}</p>
+                    <p class="mb-0 fs-6"><strong>姓名:</strong> {{ orderDetail.order.receiverName }}</p>
                   </div>
                   <div class="col-md-6 mb-3">
-                    <p class="mb-0 fs-5"><strong>電話:</strong> {{ orderDetail.order.receiverPhone }}</p>
+                    <p class="mb-0 fs-6"><strong>電話:</strong> {{ orderDetail.order.receiverPhone }}</p>
                   </div>
-                  <div class="col-12 mb-3">
-                    <p class="mb-0 fs-5"><strong>地址:</strong> {{ orderDetail.order.receiverAddress }}</p>
+                  <div class="col-md-6 mb-3">
+                    <p class="mb-0 fs-6"><strong>配送方式:</strong> {{ getLogisticsName(orderDetail.order.logisticsId) }}</p>
                   </div>
-                  <div v-if="orderDetail.order.trackingNumber" class="col-12">
-                    <p class="mb-0 fs-5"><strong>物流單號:</strong> {{ orderDetail.order.trackingNumber }}</p>
+                  <div v-if="orderDetail.order.trackingNumber" class="col-md-6 mb-3">
+                    <p class="mb-0 fs-6"><strong>物流單號:</strong> {{ orderDetail.order.trackingNumber }}</p>
+                  </div>
+                  <div class="col-12">
+                    <p class="mb-0 fs-6"><strong>地址:</strong> {{ orderDetail.order.receiverAddress }}</p>
                   </div>
                 </div>
               </div>
               
               <!-- 訂購商品 - 灰底 -->
               <div class="mb-4 p-4 rounded" style="background-color: #e9ecef;">
-                <h4 class="mb-3 main-color-green-text fw-bold fs-3"><i class="bi bi-box me-2"></i>訂購商品</h4>
+                <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-box me-2"></i>訂購商品</h4>
                 <div class="table-responsive">
                   <table class="table table-hover clean-table" style="background-color: white;">
                     <thead style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
                       <tr>
-                        <th class="fs-5" style="width: 38.1%;">商品</th>
-                        <th class="fs-5" style="width: 9.52%;">規格</th>
-                        <th class="text-end fs-5" style="width: 19.05%;">單價</th>
-                        <th class="text-center fs-5" style="width: 9.52%;">數量</th>
-                        <th class="text-end fs-5" style="width: 23.81%;">小計</th>
+                        <th class="fs-6" style="width: 38.1%;">商品</th>
+                        <th class="fs-6" style="width: 9.52%;">規格</th>
+                        <th class="text-end fs-6" style="width: 19.05%;">單價</th>
+                        <th class="text-center fs-6" style="width: 9.52%;">數量</th>
+                        <th class="text-end fs-6" style="width: 23.81%;">小計</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="item in orderDetail.items" :key="item.orderItemId">
-                        <td class="fs-5">{{ item.productName }}</td>
-                        <td class="text-muted fs-5">{{ item.specName || '-' }}</td>
-                        <td class="text-end fs-5">NT$ {{ item.unitPrice.toLocaleString() }}</td>
-                        <td class="text-center fs-5">{{ item.qty }}</td>
-                        <td class="text-end fs-5">NT$ {{ (item.unitPrice * item.qty).toLocaleString() }}</td>
+                        <td class="fs-6">{{ item.productName }}</td>
+                        <td class="text-muted fs-6">{{ item.specName || '-' }}</td>
+                        <td class="text-end fs-6">NT$ {{ item.unitPrice.toLocaleString() }}</td>
+                        <td class="text-center fs-6">{{ item.qty }}</td>
+                        <td class="text-end fs-6">NT$ {{ (item.unitPrice * item.qty).toLocaleString() }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -328,23 +331,23 @@
               
               <!-- 金額明細 - 白底 -->
               <div class="mb-3 p-4 rounded" style="background-color: white;">
-                <h4 class="mb-3 main-color-green-text fw-bold fs-3"><i class="bi bi-calculator me-2"></i>金額明細</h4>
+                <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-calculator me-2"></i>金額明細</h4>
                 <div class="row">
                   <div class="col-md-6 offset-md-6">
-                    <div class="d-flex justify-content-between mb-3 fs-4">
+                    <div class="d-flex justify-content-between mb-3 fs-5">
                       <span>小計:</span>
                       <span>NT$ {{ orderDetail.order.subtotal.toLocaleString() }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-3 fs-4">
+                    <div class="d-flex justify-content-between mb-3 fs-5">
                       <span>運費:</span>
                       <span>NT$ {{ orderDetail.order.shippingFee.toLocaleString() }}</span>
                     </div>
-                    <div v-if="orderDetail.order.discountTotal > 0" class="d-flex justify-content-between mb-3 text-danger fs-4">
+                    <div v-if="orderDetail.order.discountTotal > 0" class="d-flex justify-content-between mb-3 text-danger fs-5">
                       <span>折扣:</span>
                       <span>- NT$ {{ orderDetail.order.discountTotal.toLocaleString() }}</span>
                     </div>
                     <hr class="my-3">
-                    <div class="d-flex justify-content-between fs-3">
+                    <div class="d-flex justify-content-between fs-4">
                       <strong>總金額:</strong>
                       <strong class="main-color-green-text">NT$ {{ orderDetail.order.totalAmount.toLocaleString() }}</strong>
                     </div>
@@ -362,52 +365,52 @@
       <div class="modal-dialog modal-xl">
         <div class="modal-content">
           <div class="modal-header orange-submit-bg py-3">
-            <h3 class="modal-title text-dark fw-bold fs-3"><i class="bi bi-arrow-return-left me-2"></i>申請退換貨</h3>
+            <h3 class="modal-title text-dark fw-bold fs-4"><i class="bi bi-arrow-return-left me-2"></i>申請退換貨</h3>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body p-4">
             <div v-if="selectedOrder">
               <div class="alert alert-info mb-4 py-3">
-                <p class="mb-0 fs-5"><i class="bi bi-info-circle me-2"></i>訂單號碼: <strong>{{ selectedOrder.orderNo }}</strong></p>
+                <p class="mb-0 fs-6"><i class="bi bi-info-circle me-2"></i>訂單號碼: <strong>{{ selectedOrder.orderNo }}</strong></p>
               </div>
               
               <div class="mb-4">
-                <label class="form-label fw-bold mb-3 fs-4">申請類型 *</label>
+                <label class="form-label fw-bold mb-3 fs-5">申請類型 *</label>
                 <div class="d-flex gap-4">
                   <div class="form-check">
                     <input class="form-check-input" type="radio" value="refund" v-model="rmaForm.requestType" id="typeRefund" style="width: 1.3rem; height: 1.3rem;">
-                    <label class="form-check-label ms-2 fs-4" for="typeRefund">退款</label>
+                    <label class="form-check-label ms-2 fs-5" for="typeRefund">退款</label>
                   </div>
                   <div class="form-check">
                     <input class="form-check-input" type="radio" value="reship" v-model="rmaForm.requestType" id="typeReship" style="width: 1.3rem; height: 1.3rem;">
-                    <label class="form-check-label ms-2 fs-4" for="typeReship">補寄</label>
+                    <label class="form-check-label ms-2 fs-5" for="typeReship">補寄</label>
                   </div>
                 </div>
               </div>
               
               <div class="mb-4">
-                <label class="form-label fw-bold mb-3 fs-4">退換範圍 *</label>
+                <label class="form-label fw-bold mb-3 fs-5">退換範圍 *</label>
                 <div class="d-flex gap-4">
                   <div class="form-check">
                     <input class="form-check-input" type="radio" value="full" v-model="rmaForm.scope" id="scopeFull" style="width: 1.3rem; height: 1.3rem;">
-                    <label class="form-check-label ms-2 fs-4" for="scopeFull">整筆訂單</label>
+                    <label class="form-check-label ms-2 fs-5" for="scopeFull">整筆訂單</label>
                   </div>
                   <div class="form-check">
                     <input class="form-check-input" type="radio" value="partial" v-model="rmaForm.scope" id="scopePartial" style="width: 1.3rem; height: 1.3rem;">
-                    <label class="form-check-label ms-2 fs-4" for="scopePartial">部分商品</label>
+                    <label class="form-check-label ms-2 fs-5" for="scopePartial">部分商品</label>
                   </div>
                 </div>
               </div>
               
               <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                  <label class="form-label fw-bold mb-0 fs-4">原因說明 *</label>
-                  <button type="button" class="btn btn-outline-secondary px-3 py-2 fs-5" @click="fillDemoReason">
+                  <label class="form-label fw-bold mb-0 fs-5">原因說明 *</label>
+                  <button type="button" class="btn btn-outline-secondary px-3 py-2 fs-6" @click="fillDemoReason">
                     <i class="bi bi-file-text me-1"></i>填入範例
                   </button>
                 </div>
                 <textarea 
-                  class="form-control fs-4" 
+                  class="form-control fs-5" 
                   v-model="rmaForm.reasonText" 
                   rows="5" 
                   placeholder="請詳細說明退換貨原因..."
@@ -415,7 +418,7 @@
               </div>
               
               <div class="mb-4">
-                <label class="form-label fw-bold mb-3 fs-4">上傳照片（選填）</label>
+                <label class="form-label fw-bold mb-3 fs-5">上傳照片（選填）</label>
                 <div class="photo-upload-area border rounded p-3">
                   <input 
                     type="file" 
@@ -426,7 +429,7 @@
                     class="d-none">
                   <button 
                     type="button" 
-                    class="btn btn-outline-secondary w-100 py-2 fs-5"
+                    class="btn btn-outline-secondary w-100 py-2 fs-6"
                     @click="$refs.photoInput.click()">
                     <i class="bi bi-camera me-2"></i>選擇照片
                   </button>
@@ -448,8 +451,8 @@
               </div>
               
               <div class="d-flex justify-content-end gap-3 mt-4">
-                <button type="button" class="btn btn-secondary px-4 py-2 fs-5" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn orange-submit-btn px-4 py-2 fs-5 fw-bold" @click="submitRma">
+                <button type="button" class="btn btn-secondary px-4 py-2 fs-6" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn orange-submit-btn px-4 py-2 fs-6 fw-bold" @click="submitRma">
                   <i class="bi bi-send me-2"></i>提交申請
                 </button>
               </div>
@@ -600,28 +603,20 @@ export default {
       }
     },
     async goToRmaDetail(orderId) {
-      // 切換到退換貨頁籤
       this.activeTab = 'rma';
-      
-      // 載入退換貨列表
       await this.loadRmaList();
-      
-      // 找到對應訂單的退換貨申請
       const rmaIndex = this.rmaList.findIndex(rma => rma.orderId === orderId);
       
       if (rmaIndex !== -1) {
-        // 計算在第幾頁
         const targetPage = Math.floor(rmaIndex / this.rmaPageSize) + 1;
         this.rmaCurrentPage = targetPage;
         this.pageInputRma = targetPage;
         
-        // 等待渲染完成後滾動到該項目
         this.$nextTick(() => {
           const rma = this.rmaList[rmaIndex];
           const element = this.$refs['rma-' + rma.returnRequestId];
           if (element && element[0]) {
             element[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // 高亮效果
             this.highlightRmaId = rma.returnRequestId;
             setTimeout(() => {
               this.highlightRmaId = null;
@@ -658,7 +653,7 @@ export default {
       modal.show();
     },
     fillDemoReason() {
-      this.rmaForm.reasonText = '商品收到時發現外包裝破損，內部商品有明顯瑕疵，與網站上描述不符。希望能退款或換貨處理，謝謝。';
+      this.rmaForm.reasonText = '商品收到時發現外包裝破損,內部商品有明顯瑕疵,與網站上描述不符。希望能退款或換貨處理,謝謝。';
     },
     handlePhotoUpload(event) {
       const files = event.target.files;
@@ -727,6 +722,16 @@ export default {
       const daysLeft = 7 - diffDays;
       if (daysLeft <= 0) return '退換貨期限已過';
       return `還有 ${daysLeft} 天可申請退換貨`;
+    },
+    getLogisticsName(logisticsId) {
+      const map = {
+        1000: '宅配到府（順豐速運）',
+        1001: '低溫宅配（黑貓宅急便）',
+        1002: '超商店到店（7-ELEVEN）',
+        1003: 'i郵箱（中華郵政）',
+        1004: '掛號包裹（中華郵政）'
+      };
+      return map[logisticsId] || '宅配到府';
     },
     getPaymentStatusText(status) {
       const map = {
@@ -902,7 +907,6 @@ export default {
   box-shadow: 0 8px 25px rgba(0, 112, 131, 0.25) !important;
 }
 
-/* 頁碼輸入框樣式 */
 .page-input {
   border: 2px solid #dee2e6;
   font-weight: 600;
@@ -913,7 +917,6 @@ export default {
   box-shadow: 0 0 0 0.2rem rgba(0, 112, 131, 0.25);
 }
 
-/* 清爽表格樣式 */
 .clean-table {
   border-collapse: collapse;
 }
@@ -940,7 +943,6 @@ export default {
   background-color: #f8f9fa;
 }
 
-/* 訂單時間軸樣式 */
 .order-timeline {
   display: flex;
   justify-content: space-between;
@@ -1022,7 +1024,6 @@ export default {
   background-color: rgb(0, 112, 131);
 }
 
-/* 響應式調整 */
 @media (max-width: 768px) {
   .order-timeline {
     flex-direction: column;
