@@ -52,6 +52,14 @@ namespace tHerdBackend.SharedApi
 
             var builder = WebApplication.CreateBuilder(args);
 
+            // ✅ 測試：印出 ECPay 設定
+            var ecpayConfig = builder.Configuration.GetSection("ECPay");
+            Console.WriteLine("=== ECPay 設定檢查 ===");
+            Console.WriteLine($"MerchantID: {ecpayConfig["MerchantID"]}");
+            Console.WriteLine($"HashKey: {ecpayConfig["HashKey"]}");
+            Console.WriteLine($"PaymentUrl: {ecpayConfig["PaymentUrl"]}");
+            Console.WriteLine("=====================");
+
             builder.Host.ConfigureAppConfiguration((context, config) =>
             {
                 if (context.HostingEnvironment.IsDevelopment())
@@ -286,28 +294,26 @@ namespace tHerdBackend.SharedApi
             builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
 
 
-			// === 讀取綠界設定值 ===
-			//builder.Services.Configure<ECPaySettings>(
-			//builder.Configuration.GetSection("ECPay"));
-			//builder.Services.AddScoped<SharedECPayService>();
+            // === 綠界設定 ===
+            // 1. 金流設定 (SharedApi 使用的 ECPaySettings)
+            builder.Services.Configure<ECPaySettings>(
+                builder.Configuration.GetSection("ECPay"));
+            builder.Services.AddScoped<SharedECPayService>();
 
-			// 1. 舊有的金流設定 (ECPaySettings) -> 改讀取 "ECPay:Payment" 子區塊
-			builder.Services.Configure<ECPaySettings>(
-				builder.Configuration.GetSection("ECPay:Payment"));
-			builder.Services.AddScoped<SharedECPayService>();
+            // 2. 金流設定 (Services/ORD 使用的 ECPayConfigDTO)
+            builder.Services.Configure<ECPayConfigDTO>(
+                builder.Configuration.GetSection("ECPay"));
 
-			// 2. 新增的物流設定 (ECPayLogisticsConfig) -> 讀取 "ECPay:Logistics" 子區塊
-			builder.Services.Configure<ECPayLogisticsConfig>(
-				builder.Configuration.GetSection("ECPay:Logistics"));
-			builder.Services.AddScoped<ECPayLogisticsService>();
+            // 3. 物流設定 (ECPayLogisticsConfig)
+            builder.Services.Configure<ECPayLogisticsConfig>(
+                builder.Configuration.GetSection("ECPay:Logistics"));
+            builder.Services.AddScoped<ECPayLogisticsService>();
 
-			//builder.Services.AddScoped<ECPayService>();
+            // 4. 訂單計算服務
+            builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
 
-			// === 訂單計算服務 ===
-			builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
-
-			// 註冊 Cloudinary 為 Singleton
-			var cloudinary = new Cloudinary(account);
+            // 註冊 Cloudinary 為 Singleton
+            var cloudinary = new Cloudinary(account);
 			builder.Services.AddSingleton(cloudinary);
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();

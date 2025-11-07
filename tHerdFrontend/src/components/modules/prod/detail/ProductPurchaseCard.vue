@@ -67,13 +67,21 @@
     </div>
 
     <!-- ❤️ 收藏 -->
-    <button class="btn btn-outline-secondary mt-3 w-100" @click="$emit('toggle-favorite')">
+    <!-- <button class="btn btn-outline-secondary mt-3 w-100" @click="$emit('toggle-favorite')">
       <i class="bi bi-heart"></i> 加到願望清單
-    </button>
+    </button> -->
+     <button
+   class="btn btn-outline-secondary mt-3 w-100"
+   :disabled="togglingFavorite"
+   @click="$emit('toggle-favorite', productId)" >
+   <i :class="isFavorited ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
+   {{ isFavorited ? '已在願望清單' : '加到願望清單' }}
+ </button>
   </div>
 </template>
 
 <script setup>
+import { tourEmits } from 'element-plus'
 import { ref, watch } from 'vue'
 
 // 接收父層傳入的 props
@@ -94,7 +102,10 @@ const props = defineProps({
   selectedSku: {
     type: Object,
     default: null
-  }
+  },
+  productId: { type: Number, required: true },
+  isFavorited: { type: Boolean, default: false},
+  togglingFavorite: { type: Boolean, default: false } // 父層可傳來避免連點
 })
 
 // 宣告 emits

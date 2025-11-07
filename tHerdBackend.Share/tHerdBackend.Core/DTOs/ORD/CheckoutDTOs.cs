@@ -18,6 +18,8 @@ namespace tHerdBackend.Core.DTOs.ORD
         public string? ReceiverPhone { get; set; }
         public string? ReceiverAddress { get; set; }
         public string? CouponCode { get; set; }
+        public int LogisticsId { get; set; }
+        public decimal ShippingFee { get; set; }
     }
 
     /// <summary>

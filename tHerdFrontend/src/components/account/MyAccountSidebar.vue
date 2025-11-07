@@ -22,8 +22,8 @@
         <li><router-link class="accountsettings" :to="safeTo('account')">帳號資訊</router-link></li>
         <!-- <li><router-link class="accountsettings" :to="{ name: 'account' }">帳號資訊</router-link></li> -->
         <!-- <li><router-link class="addressbook" :to="safeTo('addressbook')">地址簿</router-link></li>
-        <li><router-link class="payment" :to="safeTo('payments')">付款方式</router-link></li>
-        <li><router-link class="lists" :to="safeTo('wishlist')">我的清單</router-link></li> -->
+        <li><router-link class="payment" :to="safeTo('payments')">付款方式</router-link></li>-->
+        <li><router-link class="lists" :to="safeTo('user-favorites')">我的最愛</router-link></li> 
       </ul>
     </div>
 
