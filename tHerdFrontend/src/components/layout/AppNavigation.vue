@@ -43,7 +43,7 @@
               </button>
             </li>
 
-            <li class="nav-divider mx-3"></li>
+            <li class="nav-divider d-none d-lg-block" aria-hidden="true"></li>
 
             <!-- 品牌 A-Z -->
             <li
@@ -317,10 +317,11 @@ function goStaticMenu(item) {
   }
 }
 
-// ==================== 點擊分類載入 MegaMenu ====================
+// ===== 點擊分類載入 MegaMenu / 或直接導向結果頁 =====
 let lastClickedId = null
+
 async function goCategory(item) {
-  // 第一次點：打開 MegaMenu
+  // 第一次點：打開 MegaMenu（僅載入，不導頁）
   if (activeMenuId.value !== item.id) {
     activeMenuId.value = item.id
     await loadMegaMenuByCategory(item)
@@ -328,14 +329,28 @@ async function goCategory(item) {
     return
   }
 
-  // 第二次點相同分類 → 直接導向分類搜尋頁
+  // 第二次點：同一個分類 -> 直接導向「分類搜尋結果頁」
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
+    const code = String(item.productTypeCode || '').trim().toLowerCase()
+    const id = Number(item.productTypeId) || null
+    if (!id) {
+      console.warn('⚠️ 缺少 productTypeId，無法導向分類搜尋頁。', item)
+      return
+    }
+
+    // slug: <code>-<id>，例如 "supplements-2785"
+    const slug = code ? `${code}-${id}` : String(id)
+
+    // title 來源優先順序：導覽名稱 > 後端回傳的分類名稱
+    const title = item.name || item.productTypeName || ''
+
+    // 關閉 MegaMenu 再導頁，避免殘影
+    activeMenuId.value = null
+    megaMenuData.value = null
+
     router.push({
-      name: 'product-type-search',
-      params: {
-        productTypeCode: item.productTypeCode,
-        productTypeId: item.productTypeId
-      }
+      path: `/products/${slug}`,
+      query: { title }
     })
   }
 }
@@ -883,6 +898,15 @@ onBeforeUnmount(() => {
   max-width: 1200px;
   margin: 0 auto;
   transition: all 0.3s ease;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #dee2e6; /* Bootstrap 灰色邊界 */
+  margin: 0 1rem;
+  align-self: center;
+  opacity: 0.6;
 }
 
 /* 📱 響應式 */

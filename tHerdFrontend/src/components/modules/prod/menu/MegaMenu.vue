@@ -19,7 +19,7 @@
           >
             <h4>
               <router-link
-                :to="col.url"
+                :to="{ path: col.url, query: { title: col.title } }"
                 class="brand-link fw-bold"
                 @click="$emit('close')"
               >
@@ -30,7 +30,7 @@
             <ul class="link-row">
               <li v-for="item in col.items" :key="item.id" class="link-item">
                 <router-link
-                  :to="item.url"
+                  :to="{ path: item.url, query: { title: item.name } }"
                   class="brand-link"
                   @click="$emit('close')"
                 >

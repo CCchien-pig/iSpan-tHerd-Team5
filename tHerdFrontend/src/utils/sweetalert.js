@@ -99,7 +99,7 @@ export const confirm = (message, title = '確認操作') => {
 export const toast = (message, icon = 'success', timer = 3000) => {
   const Toast = Swal.mixin({
     toast: true,
-    position: 'top-end',
+    position: 'bottom-end',
     showConfirmButton: false,
     timer: timer,
     timerProgressBar: true,

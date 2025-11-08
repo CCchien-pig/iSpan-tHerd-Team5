@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using tHerdBackend.Core.DTOs.PROD;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Infra.Repository.PROD.Builders
 {
@@ -18,18 +17,24 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
 			if (query.ProductId.HasValue)
 				sql.Append(" AND p.ProductId = @ProductId");
 
-			// 🔹 多欄位模糊搜尋（商品名 + 品牌名 + 分類名）
+			// 多欄位模糊搜尋（商品名 + 品牌名 + 分類名）
 
 			if (!string.IsNullOrWhiteSpace(query.Keyword))
 			{
 				sql.Append(@"
 					AND (
-						p.ProductName LIKE CONCAT('%', @Keyword, '%')
-						OR s.BrandName LIKE CONCAT('%', @Keyword, '%')
-						OR cp.ProductTypePath LIKE CONCAT('%', @Keyword, '%')
+						p.ProductName LIKE CONCAT('%', @Keyword, '%') 
+						OR s.BrandName LIKE CONCAT('%', @Keyword, '%') 
+						OR cp.ProductTypePath LIKE CONCAT('%', @Keyword, '%') 
 					)
 				");
-			}
+
+                // 若 Keyword 是數字，加入 ProductId 精確比對
+                if (int.TryParse(query.Keyword, out _))
+                {
+                    sql.Append(" OR p.ProductId = @Keyword ");
+                }
+            }
 
 			if (query.BrandId.HasValue)
 				sql.Append(" AND p.BrandId = @BrandId");
@@ -53,22 +58,36 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
                 sql.Append(" AND p.ProductId IN @ProductIdList");
         }
 
-		/// <summary>
-		/// 組合排序子句（支援 SortBy + SortDesc）
-		/// </summary>
-		public static string BuildOrderClause(ProductFrontFilterQueryDto query)
+        /// <summary>
+        /// 組合排序子句（支援 SortBy + SortDesc + 熱銷順位）
+        /// </summary>
+        public static string BuildOrderClause(ProductFrontFilterQueryDto query)
 		{
 			var sb = new StringBuilder(" ORDER BY ");
 
 			var direction = query.SortDesc ? "DESC" : "ASC";
 
-			// 🔹 根據 SortBy 決定排序欄位
-			switch (query.SortBy?.ToLower())
+            // 熱銷商品：直接依 RankNo 排序（JOIN HotRank hr）
+            if (query.Other == "Hot")
+            {
+                sb.Append(" MIN(hr.RankNo) ASC ");
+                return sb.ToString();
+            }
+
+            // 根據 SortBy 決定排序欄位
+            switch (query.SortBy?.ToLower())
 			{
-				case "price":
-				case "unitprice":
-					sb.Append($"ps.UnitPrice {direction}");
-					break;
+                case "price":
+                case "unitprice":
+                case "billingprice":
+                    sb.Append($@"
+							COALESCE(
+								NULLIF(ps.SalePrice, 0),
+								NULLIF(ps.UnitPrice, 0),
+								NULLIF(ps.ListPrice, 0)
+							) {direction}
+						");
+                    break;
 
 				case "name":
 				case "productname":

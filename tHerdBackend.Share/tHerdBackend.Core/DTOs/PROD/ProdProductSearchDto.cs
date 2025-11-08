@@ -55,5 +55,10 @@
         /// 星星平均
         /// </summary>
         public virtual int? AvgRating { get; set; }
+
+        /// <summary>
+        /// 分類名稱
+        /// </summary>
+        public virtual string? ProductTypeName { get; set; }
     }
 }
