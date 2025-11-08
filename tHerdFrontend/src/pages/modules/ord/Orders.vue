@@ -334,25 +334,34 @@
                 <h4 class="mb-3 main-color-green-text fw-bold fs-4"><i class="bi bi-calculator me-2"></i>金額明細</h4>
                 <div class="row">
                   <div class="col-md-6 offset-md-6">
+                    <!-- 小計 -->
                     <div class="d-flex justify-content-between mb-3 fs-5">
                       <span>小計:</span>
                       <span>NT$ {{ orderDetail.order.subtotal.toLocaleString() }}</span>
                     </div>
+                    
+                    <!-- 優惠金額 -->
+                    <div class="d-flex justify-content-between mb-3 fs-5 text-success">
+                      <span>優惠金額:</span>
+                      <span>-NT$ {{ orderDetail.order.discountTotal.toLocaleString() }}</span>
+                    </div>
+                    
+                    <!-- 運費 -->
                     <div class="d-flex justify-content-between mb-3 fs-5">
                       <span>運費:</span>
                       <span>NT$ {{ orderDetail.order.shippingFee.toLocaleString() }}</span>
                     </div>
-                    <div v-if="orderDetail.order.discountTotal > 0" class="d-flex justify-content-between mb-3 text-danger fs-5">
-                      <span>折扣:</span>
-                      <span>- NT$ {{ orderDetail.order.discountTotal.toLocaleString() }}</span>
-                    </div>
+                    
                     <hr class="my-3">
+                    
+                    <!-- 總金額 -->
                     <div class="d-flex justify-content-between fs-4">
                       <strong>總金額:</strong>
                       <strong class="main-color-green-text">NT$ {{ orderDetail.order.totalAmount.toLocaleString() }}</strong>
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -461,7 +470,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
@@ -589,6 +597,20 @@ export default {
         console.error('載入訂單詳情失敗:', err);
         alert('載入詳情失敗');
       }
+    },
+    // 計算商品原價
+    calculateOriginalPrice(orderDetail) {
+      if (!orderDetail || !orderDetail.items) return 0;
+      return orderDetail.items.reduce((total, item) => {
+        return total + (item.unitPrice * item.qty);
+      }, 0);
+    },
+    
+    // 計算商品優惠金額
+    calculateProductDiscount(orderDetail) {
+      const originalPrice = this.calculateOriginalPrice(orderDetail);
+      const subtotal = orderDetail.order.subtotal;
+      return Math.max(0, originalPrice - subtotal);
     },
     async loadRmaList() {
       this.rmaLoading = true;
