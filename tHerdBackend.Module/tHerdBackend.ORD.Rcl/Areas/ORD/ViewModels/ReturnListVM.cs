@@ -87,5 +87,6 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ViewModels
 		/// 第一筆商品數量
 		/// </summary>
 		public int Qty { get; set; }
-	}
+        public string Reason { get; internal set; }
+    }
 }
