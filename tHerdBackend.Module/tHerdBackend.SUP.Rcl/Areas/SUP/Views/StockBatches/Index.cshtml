@@ -390,7 +390,7 @@
                 movementTypeSelect.empty().append('<option value="">請選異動類型</option>');
                 types.forEach(t => movementTypeSelect.append(`<option value="${t.value}">${t.text}</option>`));
                 // 加入其他庫存操作
-                // [{ value: 'Sale', text: '銷售出庫' }, { value: 'Return', text: '退貨入庫' }, { value: 'Expire', text: '到期報廢' }]
+                // [{ value: 'Sale', text: '銷售出庫(模擬測試)' }, { value: 'Return', text: '退貨入庫(模擬測試)' }, { value: 'Expire', text: '到期報廢(模擬測試)' }]
                 //     .forEach(t => movementTypeSelect.append(`<option value="${t.value}">${t.text}</option>`));
 
                 if(isEdit){
@@ -655,7 +655,7 @@
                 scrollY: "500px",
                 scrollCollapse: true,
                 colReorder: true,
-                order: [[1, 'asc']], // 預設依品牌名升冪排序
+                order: [[1, 'asc']],
                 columnDefs: [
                     { targets: '_all', type: 'string' }
                 ],

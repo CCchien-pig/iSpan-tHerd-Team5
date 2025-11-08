@@ -53,7 +53,9 @@ public class AssetsController : ControllerBase
 				File = dto.File,
 				AltText = dto.AltText,
 				Caption = dto.Caption,
-				IsActive = dto.IsActiveBool
+				//IsActive = dto.IsActiveBool
+				IsActive = true
+
 			};
 
 			var uploadDto = new AssetFileUploadDto
@@ -125,7 +127,9 @@ public class AssetsController : ControllerBase
 						File = formFile,
 						AltText = dto.AltText,
 						Caption = dto.Caption,
-						IsActive = dto.IsActiveBool
+						//IsActive = dto.IsActiveBool
+						IsActive = true
+
 					}
 				}
 			};

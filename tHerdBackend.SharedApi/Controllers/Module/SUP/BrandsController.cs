@@ -615,8 +615,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		{
 			try
 			{
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
 				var dto = await _service.GetAccordionAsync(brandId, contentId, ct);
-				if (dto == null) return NotFound(ApiResponse<object>.Fail("找不到內容或品牌無效"));
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("找不到該 Accordion 內容"));
+
 				return Ok(ApiResponse<BrandAccordionContentDto>.Ok(dto, ""));
 			}
 			catch (Exception ex)
@@ -636,8 +641,13 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		{
 			try
 			{
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
 				var dto = await _service.GetArticleAsync(brandId, contentId, ct);
-				if (dto == null) return NotFound(ApiResponse<object>.Fail("找不到內容或品牌無效"));
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("找不到該文章內容"));
+
 				return Ok(ApiResponse<BrandArticleDto>.Ok(dto, ""));
 			}
 			catch (Exception ex)
@@ -657,8 +667,16 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		{
 			try
 			{
+				// 先檢查品牌是否存在
+				var brandExists = await _service.CheckBrandExistsAsync(brandId);
+				if (!brandExists)
+					return NotFound(ApiResponse<object>.Fail("找不到該品牌"));
+
+				// 再查 Banner
 				var dto = await _service.GetBannerAsync(brandId, linkUrl, ct);
-				if (dto == null) return NotFound(ApiResponse<object>.Fail("品牌不存在或無 Banner"));
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("該品牌目前沒有 Banner"));
+
 				return Ok(ApiResponse<BannerDto>.Ok(dto, ""));
 			}
 			catch (Exception ex)

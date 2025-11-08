@@ -19,12 +19,12 @@ namespace tHerdBackend.Core.DTOs.SUP.BrandLayout
 		public string? AltText { get; set; }
 		public string? Caption { get; set; }
 
-		// ✅ 關鍵：確保能對應 JSON 的 "isActive"
+
+		// ✅ 同時支援 isActive 與 imageIsActive（任一存在皆可映射）
 		[JsonPropertyName("isActive")]
 		public bool IsActive { get; set; }
 
-		// ✅ 同步別名屬性給程式用（讓現有程式碼不用改）
-		[JsonIgnore]
+		[JsonPropertyName("imageIsActive")]
 		public bool ImageIsActive
 		{
 			get => IsActive;

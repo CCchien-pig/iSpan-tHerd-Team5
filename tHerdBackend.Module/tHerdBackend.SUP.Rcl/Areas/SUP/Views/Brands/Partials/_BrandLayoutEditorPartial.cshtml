@@ -139,7 +139,7 @@
                             </p>
                             <div class="mt-2">
                                 <button v-if="block.type === 'Article' && block.props.fileUrl" class="btn btn-sm btn-outline-primary me-2" @@click="insertImageIntoEditor(block)">插入至文章</button>
-                                <button class="btn btn-sm btn-outline-danger" type="button" @@click="removeBlockImage(block)">移除圖片</button>
+                                <button class="btn btn-sm btn-outline-danger" type="button" @@click="removeBlockImage(block)">清空</button>
                             </div>
                             
                         </div>
@@ -160,11 +160,11 @@
                             </div>
                         </div>
 
-                        <div class="form-check form-switch mb-3" style="margin-left: 5px;">
+                        @* <div class="form-check form-switch mb-3" style="margin-left: 5px;">
                             <input class="form-check-input" type="checkbox" role="switch" :id="'image-active-switch-' + block.id" v-model="block.props.imageIsActive"
                                    @@change="handleSwitchChange($event.target.checked, '此圖片')">
                             <label class="form-check-label" :for="'image-active-switch-' + block.id">啟用此圖片</label>
-                        </div>
+                        </div> *@
 
                         @* 只有在還沒有圖片時，才顯示「選擇」和「上傳」按鈕 *@
                         <div v-if="!block.props.fileUrl">
@@ -172,7 +172,7 @@
                                 @* --- 選項 A：從現有媒體庫選擇 --- *@
                                 <div class="d-grid gap-2 mb-3">
                                     <button class="btn text-white" type="button" @@click="openMediaBrowser(block)" style="background-color:rgb(0,112,131)">
-                                        <i class="fa-solid fa-photo-film me-2"></i>選擇現有圖片 (從媒體庫)
+                                        <i class="fa-solid fa-photo-film me-2"></i>選擇 Cloudinary 已上傳圖片
                                     </button>
                                 </div>
 
@@ -540,8 +540,9 @@
                     if (block.type.toLowerCase() === 'banner') {
                         if (block.props.isActive !== undefined) {
                             // 後端帶回的 isActive 對應圖片開關狀態
-                            block.props.imageIsActive = block.props.isActive;
-                            console.log(`🧩 載入 Banner FileId=${block.props.fileId}, imageIsActive=${block.props.imageIsActive}`);
+                            block.props.imageIsActive = true;
+                            // block.props.imageIsActive = block.props.isActive;
+                            // console.log(`🧩 載入 Banner FileId=${block.props.fileId}, imageIsActive=${block.props.imageIsActive}`);
                         } else {
                             // 沒有值時預設開啟（避免 null 狀況）
                             block.props.imageIsActive = true;
@@ -742,6 +743,8 @@
                 tinymce.triggerSave(); // 此時 cleanBlocks 應該已含最新 props.content
                 // 儲存版面配置
                 const saveLayout = async () => {
+                    // console.log("🧩 即將送出:", JSON.stringify(blocks.value, null, 2));
+
                     if (!layoutVersion.value) { Swal.fire('錯誤', '請輸入版型版本號。', 'warning'); return; }
                     const validationError = validateBlocks(blocks.value);
                     if (validationError) { Swal.fire('驗證失敗', validationError, 'warning'); return; }
@@ -916,21 +919,28 @@
                             res = await apiService.uploadImageUrl(payload);
                         }
 
+                        // 🧩 上傳成功後 Log
+                        console.log("🧩 upload result:", res);
+                        console.log("🧩 寫入前 block.props.fileId=", block.props.fileId);
+
                         if (!res || !res.location || !res.fileId) throw new Error('後端未返回有效的圖片資訊。');
 
-                        // --- 通用成功處理 ---
-                        // 1. 更新 block 的 props
-                        if (!res || !res.location || !res.fileId) throw new Error('後端未返回有效的圖片資訊。');
-
-                        // --- 通用成功處理 ---
+                        // --- Vue 響應式更新 props ---
                         if (block.type.toLowerCase() === 'banner') {
-                            block.props.fileId = res.fileId;
-                            console.log(`🧩 上傳完成，block.type=${block.type}, 寫入 fileId=${res.fileId}`);
+                            block.props = {
+                                ...block.props,
+                                fileId: res.fileId,
+                                fileUrl: res.location
+                            };
                         } else {
-                            block.props.imgId = res.fileId;
+                            block.props = {
+                                ...block.props,
+                                imgId: res.fileId,
+                                fileUrl: res.location
+                            };
                         }
-                        block.props.fileUrl = res.location;
 
+                        console.log(`🧩 Banner 區塊已更新 FileId=${res.fileId}`);
 
                         // 2. 清理所有暫存狀態
                         pendingUpload.value = null;
@@ -997,7 +1007,7 @@
                         // 【語法修正】將 '_' 改為 '+'
                         const editorToDestroy = tinymce.get('editor-' + oldInfo.id);
                         if (editorToDestroy) {
-                            console.log(`銷毀 TinyMCE: #editor-${oldInfo.id}`);                            
+                            // console.log(`銷毀 TinyMCE: #editor-${oldInfo.id}`);                            
                             const html = editorToDestroy.getContent();
                             const idx = blocks.value.findIndex(b => b.id === oldInfo.id);
                             if (idx !== -1) blocks.value[idx].props.content = html;  // 保存離開前的內容
@@ -1012,7 +1022,7 @@
                         nextTick(() => {
                             // 【語法修正】將 '_' 改為 '+'
                             const editorId = 'editor-' + newInfo.id;
-                            console.log(`初始化 TinyMCE: #${editorId}`);
+                            // console.log(`初始化 TinyMCE: #${editorId}`);
                             tinymce.init({
                                 selector: '#' + editorId,
                                 plugins: 'lists link image table code help wordcount template',
@@ -1073,26 +1083,39 @@
                                         title: 'Article 樣板',
                                         description: '說明：插入 Article 樣板。',
                                         content: `
-                                            <header class="mb-2">
-                                                <h2>居家訓練入門：有效安排與補給建議</h2>
-                                                <p class="text-muted">在家也能系統化鍛鍊，用最少器材完成全身訓練。</p>
-                                            </header>
-                                            <section class="mb-3">
-                                                <h3>核心原則</h3>
-                                                <p>以自體重量、啞鈴或壺鈴為主，規劃推、拉、腿與核心動作，每週 3–4 天循環，逐步增加組數或時間以漸進超負荷。</p>
-                                            </section>
-                                            <section class="mb-3">
-                                                <h3>示範日程</h3>
-                                                <ul>
-                                                    <li>上肢推：伏地挺身、過頂推舉、三頭伸展，各 3 組。</li>
-                                                    <li>上肢拉：划船、面拉、二頭彎舉，各 3 組。</li>
-                                                    <li>下肢與核心：深蹲、髖推、平板撐，各 3 組。</li>
-                                                </ul>
-                                            </section>
-                                            <section>
-                                                <h3>補給建議</h3>
-                                                <p>以蛋白質與水分補充為優先，依訓練強度與個人狀況搭配碳水與電解質；如需提升表現，於安全前提下評估咖啡因或肌酸的運用。</p>
-                                            </section>
+                                        <header class="mb-2">
+                                        <h2>居家訓練入門：</h2>
+                                        <div class="two-column-container">
+                                        <div class="column"><header class="mb-2">
+                                        <h2>有效安排與補給建議</h2>
+                                        <p class="text-muted">在家也能系統化鍛鍊，用最少器材完成全身訓練。</p>
+                                        </header>
+                                        <section class="mb-3">
+                                        <h3>核心原則</h3>
+                                        <p>以自體重量、啞鈴或壺鈴為主，規劃推、拉、腿與核心動作，每週 3&ndash;4 天循環，逐步增加組數或時間以漸進超負荷。</p>
+                                        </section>
+                                        <section class="mb-3">
+                                        <h3>示範日程</h3>
+                                        <ul>
+                                        <li>上肢推：伏地挺身、過頂推舉、三頭伸展，各 3 組。</li>
+                                        <li>上肢拉：划船、面拉、二頭彎舉，各 3 組。</li>
+                                        <li>下肢與核心：深蹲、髖推、平板撐，各 3 組。</li>
+                                        </ul>
+                                        </section>
+                                        <section>
+                                        <h3>補給建議</h3>
+                                        <p>以蛋白質與水分補充為優先，依訓練強度與個人狀況搭配碳水與電解質；如需提升表現，於安全前提下評估咖啡因或肌酸的運用。</p>
+                                        </section>
+                                        </div>
+                                        <div class="column">
+                                        <p>&nbsp;</p>
+                                        <h2>這是右邊</h2>
+                                        </br>
+                                        </div>
+                                        </div>
+                                        <h2>這是下方</h2>
+                                        </br>
+                                        </header>
                                         `
                                     }
                                 ],
@@ -1139,7 +1162,7 @@
                             });
                         });
                     }
-                    console.log('已掛載 plugins:', tinymce.PluginManager);
+                    // console.log('已掛載 plugins:', tinymce.PluginManager);
                 });
 
                 // =====================================================================
@@ -1329,7 +1352,7 @@
             const app = createApp(App);
             window.currentLayoutVueApp = app; // 保存 app 物件（而非 mount 回傳值）
             app.mount('#brand-layout-editor-app');
-            console.log("新的 Vue 實例已建立並掛載。");
+            // console.log("新的 Vue 實例已建立並掛載。");
 
         } else {
             console.error("Vue 掛載失敗：找不到 DOM 元素 #brand-layout-editor-app");
