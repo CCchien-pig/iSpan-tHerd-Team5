@@ -6,52 +6,59 @@
 -->
 <template>
   <div class="container py-5">
-    <!-- 🖼️ 動態 Banner 圖 -->
-    <div v-if="bannerInfo" class="mb-4 text-center">
-      <img
-        :src="bannerInfo.image"
-        :alt="bannerInfo.title"
-        class="img-fluid rounded-3 shadow-sm"
-        style="max-height: 220px; object-fit: cover; width: 100%;"
-      />
-    </div>
-
-    <!-- 🏷 頁面標題 -->
-    <h2 class="fw-bold mb-4 text-left">
-      {{ keyword?.length > 0 ? keyword : pageTitle }}
-    </h2>
-
-    <!-- 結果統計列 -->
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-      <div class="text-muted small">
-        共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項
-        <!--template v-if="keyword">：「<strong>{{  }}</strong>」</!--template>
-        < <template v-else-if="productTypeName">：分類：<strong>{{ productTypeName }}</strong></template> >
-        <template-- v-else></template-->
+    <div class="row">
+      <!-- 🧭 側邊篩選欄 -->
+      <div class="col-12 col-md-3 col-lg-2 mb-4 mb-md-0">
+        <ProductSidebar @filter-change="onFilterChange" />
       </div>
 
-      <div class="d-flex align-items-center mt-2 mt-md-0">
-        <label class="me-2 text-muted small">排序方式</label>
-        <!-- 新版排序元件 -->
-        <SortingSelect
-          v-model:sortBy="sortBy"
-          v-model:sortDesc="sortDesc"
-          @change="reloadProducts"
+      <!-- 🖼️ 動態 Banner 圖 -->
+      <div v-if="bannerInfo" class="mb-4 text-center">
+        <img
+          :src="bannerInfo.image"
+          :alt="bannerInfo.title"
+          class="img-fluid rounded-3 shadow-sm"
+          style="max-height: 220px; object-fit: cover; width: 100%;"
         />
       </div>
-    </div>
+
+      <!-- 🏷 頁面標題 -->
+      <h2 class="fw-bold mb-4 text-left">
+        {{ keyword?.length > 0 ? keyword : pageTitle }}
+      </h2>
+
+      <!-- 結果統計列 -->
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+        <div class="text-muted small">
+          共 {{ totalCount }} 項結果中的第 {{ startIndex }}–{{ endIndex }} 項
+          <!--template v-if="keyword">：「<strong>{{  }}</strong>」</!--template>
+          < <template v-else-if="productTypeName">：分類：<strong>{{ productTypeName }}</strong></template> >
+          <template-- v-else></template-->
+        </div>
+
+        <div class="d-flex align-items-center mt-2 mt-md-0">
+          <label class="me-2 text-muted small">排序方式</label>
+          <!-- 新版排序元件 -->
+          <SortingSelect
+            v-model:sortBy="sortBy"
+            v-model:sortDesc="sortDesc"
+            @change="reloadProducts"
+          />
+        </div>
+      </div>
 
       <!-- 🧩 商品列表 : 查詢結果 -->
-    <ProductList
-      :key="pageIndex + '_' + (keyword || productTypeId || 'all')"
-      :title="'搜尋結果'"
-      :products="products"
-      :total-count="totalCount"
-      :page-size="pageSize"
-      :page-index="pageIndex"
-      @page-change="page => searchProducts(page)"
-      @add-to-cart="addToCart"
-    />
+      <ProductList
+        :key="pageIndex + '_' + (keyword || productTypeId || 'all')"
+        :title="'搜尋結果'"
+        :products="products"
+        :total-count="totalCount"
+        :page-size="pageSize"
+        :page-index="pageIndex"
+        @page-change="page => searchProducts(page)"
+        @add-to-cart="addToCart"
+      />
+    </div>
   </div>
 </template>
 
@@ -62,6 +69,7 @@ import { useLoading } from "@/composables/useLoading"
 import ProductsApi from "@/api/modules/prod/ProductsApi"
 import ProductList from "@/components/modules/prod/list/ProductList.vue"
 import SortingSelect from "@/components/modules/prod/tool/SortingSelect.vue"
+import ProductSidebar from '@/components/modules/prod/productFilters/ProductSidebar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,14 +181,21 @@ async function searchProducts(page = 1) {
     const otherQuery = (route.query.other ?? "").toString().trim()
 
     const query = {
-      pageIndex: page,
-      pageSize: pageSize.value,
+      pageIndex: 1,
+      pageSize: 40,
+      keyword: keyword.value,
+      productTypeId: productTypeId.value,
+      brandIds: filters.value.brandIds,          // ⬅ 多品牌
+      minPrice: filters.value.priceRange.min,
+      maxPrice: filters.value.priceRange.max,
       sortBy: sortBy.value,
       sortDesc: sortDesc.value,
       isPublished: true,
       isFrontEnd: true,
-      badge: badgeQuery,
-      other: otherQuery,
+      badge: route.query.badge ?? "",
+      other: route.query.other ?? "",
+      rating: filters.value.rating,
+      attributeFilters: filters.value.attributeFilters // ⬅ 多屬性
     }
 
     if (keyword.value) query.keyword = keyword.value

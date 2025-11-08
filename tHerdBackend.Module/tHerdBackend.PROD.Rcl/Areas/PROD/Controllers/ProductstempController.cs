@@ -30,7 +30,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
 			// await LoadTypeFromCSV(); // 匯入圖片產品類別
 
-			// await LoadIngredientFromCSV();
+			await LoadIngredientFromCSV();
 
             var products = await _db.ProdProducts.ToListAsync(ct);
 
@@ -51,13 +51,13 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
         public async Task LoadIngredientFromCSV()
         {
-			var index = "36";
+			var index = "35-2";
 
-			int numStart = 15060 - 1000; // 商品ID起始偏移量
+			int numStart = 14882 - 1000; // 商品ID起始偏移量
 
-            string ingredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_Ingredient\{index}PROD_Ingredient.csv";
+            string ingredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_Ingredient\PROD_Ingredient_{index}.csv";
 
-            string productIngredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductIngredient\{index}PROD_ProductIngredient.csv";
+            string productIngredientPath = @$"D:\iSpanProj\爬蟲-20251030T180251Z-1-001\爬蟲\PROD_ProductIngredient\PROD_ProductIngredient_{index}.csv";
 
             if (!System.IO.File.Exists(productIngredientPath) || !System.IO.File.Exists(ingredientPath))
             {
@@ -73,7 +73,10 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                 while (!reader2.EndOfStream)
                 {
                     var line = reader2.ReadLine();
-                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        break;
+                    }
 
                     var parts = line.Split(',', StringSplitOptions.TrimEntries);
                     if (parts.Length < 2) continue;
@@ -112,9 +115,11 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                         .Select(x => (int?)x.OrderSeq)
                         .MaxAsync() ?? 0;
 
-					var existProdIngredient = _db.ProdProductIngredients.Where(a => a.ProductId == productId && a.IngredientId == ingredientId);
+                    var existProdIngredient = await _db.ProdProductIngredients
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(a => a.ProductId == productId && a.IngredientId == ingredientId);
 
-					if (existProdIngredient == null) {
+                    if (existProdIngredient == null) {
                         // 取得
                         var newProdIngredient = new ProdProductIngredient
                         {
@@ -129,9 +134,9 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
 
                         _db.ProdProductIngredients.Add(newProdIngredient);
                     }
-                }
 
-                await _db.SaveChangesAsync();
+                    await _db.SaveChangesAsync();
+                }
                 Console.WriteLine("✅ 商品成分匯入完成");
             }
 
@@ -145,7 +150,7 @@ namespace tHerdBackend.PROD.Rcl.Areas.PROD.Controllers
                     while (!reader1.EndOfStream)
                     {
                         var line = reader1.ReadLine();
-                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        if (string.IsNullOrWhiteSpace(line)) break;
 
                         var parts = line.Split(',', StringSplitOptions.TrimEntries);
                         if (parts.Length < 1) continue;

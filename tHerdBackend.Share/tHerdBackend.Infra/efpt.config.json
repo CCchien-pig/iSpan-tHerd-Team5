@@ -356,6 +356,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[SUP_OrderLogistics]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[SUP_StockBatch]",
          "ObjectType": 0
       },

@@ -71,27 +71,37 @@
       <!-- 成分資訊 -->
       <div class="tab-pane fade" id="ingredients" role="tabpanel">
         <div class="p-4">
-          <h4>成分資訊</h4>
-          <table
-            class="table table-bordered"
-            v-if="product.ingredients && product.ingredients.length > 0"
-          >
-            <thead>
-              <tr>
-                <th>成分名稱</th>
-                <th>含量 (mg)</th>
-                <th>備註</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="ingredient in product.ingredients" :key="ingredient.ingredientName">
-                <td>{{ ingredient.ingredientName }}</td>
-                <td>{{ ingredient.percentage }}</td>
-                <td>{{ ingredient.note || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="text-muted">暫無成分資訊</p>
+          <h4 class="mb-3">成分資訊</h4>
+
+          <div class="table-container">
+            <table
+              class="table table-bordered align-middle text-center"
+              v-if="product.ingredients && product.ingredients.length > 0"
+            >
+              <thead class="table-light">
+                <tr>
+                  <th>成分名稱</th>
+                  <th>含量 / 百分比</th>
+                  <th>別名</th>
+                  <th>說明 / 備註</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="ing in product.ingredients" :key="ing.ingredientId">
+                  <td><strong>{{ ing.ingredientName }}</strong></td>
+                  <td><span v-if="ing.percentage">{{ ing.percentage }} mg</span><span v-else>-</span></td>
+                  <td>{{ ing.alias || '-' }}</td>
+                  <td>
+                    <span v-if="ing.note">{{ ing.note }}</span>
+                    <span v-else-if="ing.description">{{ ing.description }}</span>
+                    <span v-else>-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p v-else class="text-muted mb-0">暫無成分資訊</p>
+          </div>
         </div>
       </div>
 
@@ -100,23 +110,29 @@
         <div class="p-4">
           <h4>商品屬性</h4>
           <table
-            class="table table-bordered"
+            class="table table-bordered align-middle text-center"
             v-if="product.attributes && product.attributes.length > 0"
           >
-            <thead>
+            <thead class="table-light">
               <tr>
-                <th>屬性</th>
+                <th>屬性名稱</th>
                 <th>內容</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="attr in product.attributes" :key="attr.attributeName">
-                <td>{{ attr.attributeName }}</td>
-                <td>{{ attr.optionName }}</td>
+              <tr v-for="attr in product.attributes" :key="attr.attributeId">
+                <td><strong>{{ attr.attributeName }}</strong></td>
+                <td>
+                  <!-- 若有選項名稱則顯示選項，否則顯示屬性值 -->
+                  <span v-if="attr.optionName">{{ attr.optionName }}</span>
+                  <span v-else-if="attr.attributeValue">{{ attr.attributeValue }}</span>
+                  <span v-else class="text-muted">—</span>
+                </td>
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-muted">暫無屬性資訊</p>
+
+          <p v-else class="text-muted mb-0">暫無屬性資訊</p>
         </div>
       </div>
 
@@ -217,5 +233,32 @@ defineProps({
 .table th {
   background-color: #f5f5f5;
   font-weight: 600;
+}
+
+/* 成分表格滾動與凍結表頭 */
+.table-container {
+  max-height: 400px;        /* 表格最大高度，可依需求調整 */
+  overflow-y: auto;         /* 啟用垂直滾動 */
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+/* Sticky 表頭效果 */
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f8f9fa; /* 保持與 table-light 一致 */
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 調整滾動條樣式（選擇性） */
+.table-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
 }
 </style>

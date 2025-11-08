@@ -132,4 +132,6 @@ public partial class OrdOrder
     public virtual ICollection<OrdShipping> OrdShippings { get; set; } = new List<OrdShipping>();
 
     public virtual OrdPaymentConfig PaymentConfig { get; set; }
+
+    public virtual SupOrderLogistic SupOrderLogistic { get; set; }
 }

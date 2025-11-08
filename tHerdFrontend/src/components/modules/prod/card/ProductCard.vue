@@ -231,8 +231,15 @@ async function handleAddToCart() {
   font-size: 0.85rem;
   line-height: 1.2rem;
   color: #333;
-  min-height: 2.4rem; /* 兩行固定高度 */
+  min-height: 2.4rem; /* 保留原設定 */
   overflow: hidden;
+
+  /* 🔹 兩行省略關鍵寫法 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;        /* 限制顯示 2 行 */
+  -webkit-box-orient: vertical; /* 垂直排列內容 */
+  text-overflow: ellipsis;
+  white-space: normal;          /* 要取消 nowrap 才能多行 */
 }
 
 .rating {
