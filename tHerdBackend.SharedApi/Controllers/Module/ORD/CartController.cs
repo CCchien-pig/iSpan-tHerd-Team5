@@ -49,8 +49,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
             _cartRepository = cartRepository;
             _currentUser = currentUser;
             _userManager = userManager;
-            _httpClient = httpClientFactory.CreateClient();
-            _current = current;
+            _httpClient = httpClientFactory.CreateClient("InternalApi");
+			_current = current;
         }
 
         // ---------------------------
@@ -494,23 +494,105 @@ namespace tHerdBackend.SharedApi.Controllers.Module.ORD
                     });
                 }
 
-                // 6) 優惠
-                if (!string.IsNullOrEmpty(calculation.AppliedCouponCode))
-                {
-                    _context.OrdOrderAdjustments.Add(new OrdOrderAdjustment
-                    {
-                        OrderId = order.OrderId,
-                        Kind = "coupon",
-                        Scope = "order",
-                        Code = calculation.AppliedCouponCode,
-                        Method = "fixed",
-                        AdjustmentAmount = -calculation.Discount,
-                        CreatedDate = DateTime.Now,
-                        RevisedDate = DateTime.Now
-                    });
-                }
+				// 6) 優惠（先找出 CouponId，避免觸發 CK）
+				var appliedCode = calculation.AppliedCouponCode?.Trim();
+				var sentCode = request.CouponCode?.Trim();
+				var codeForAdjustment = !string.IsNullOrWhiteSpace(appliedCode) ? appliedCode
+									: (!string.IsNullOrWhiteSpace(sentCode) && calculation.Discount > 0 ? sentCode : null);
+				if (!string.IsNullOrWhiteSpace(codeForAdjustment) && calculation.Discount > 0)
+				{
+					int? couponId = null;
 
-                await _context.SaveChangesAsync();
+					if (request.CouponWalletId.HasValue)
+					{
+						var walletForAdj = await _context.UserCouponWallets
+							.AsNoTracking()
+							.SingleOrDefaultAsync(w => w.CouponWalletId == request.CouponWalletId.Value
+													&& w.UserNumberId == auth.UserNumberId);
+						couponId = walletForAdj?.CouponId;
+					}
+
+					if (!couponId.HasValue)
+					{
+						var couponRow = await _context.MktCoupons
+							.AsNoTracking()
+							.SingleOrDefaultAsync(c => c.CouponCode == codeForAdjustment);
+						couponId = couponRow?.CouponId;
+					}
+
+					if (!couponId.HasValue)
+					{
+						await transaction.RollbackAsync();
+						return Ok(new { success = false, message = "找不到對應的優惠券（CouponId），無法建立折扣調整。" });
+					}
+
+					_context.OrdOrderAdjustments.Add(new OrdOrderAdjustment
+					{
+						OrderId = order.OrderId,
+						Kind = "coupon",
+						Scope = "order",
+						CouponId = couponId,
+						Code = codeForAdjustment,
+						Method = "fixed",
+						DiscountRate = null,
+						AdjustmentAmount = -calculation.Discount,
+						CreatedDate = DateTime.Now,
+						RevisedDate = DateTime.Now
+					});
+
+					await _context.SaveChangesAsync();
+				}
+
+				// 6.5) DEMO：僅在「前端有帶券」且「計算結果真的套用」時，才核銷錢
+
+				// 必須同時滿足：
+				// 1) 計算結果有套用券 (appliedCode != null 且 Discount > 0)
+				// 2) 前端有送上券（walletId 或 couponCode）
+				// 3) 若前端送了 couponCode，需與 appliedCode 一致（避免自動亂套）
+				if (!string.IsNullOrEmpty(appliedCode) &&
+					calculation.Discount > 0 &&
+					(request.CouponWalletId.HasValue || !string.IsNullOrWhiteSpace(sentCode)) &&
+					(string.IsNullOrWhiteSpace(sentCode) ||
+					 string.Equals(appliedCode, sentCode, StringComparison.OrdinalIgnoreCase)))
+				{
+					var now = DateTime.Now;
+					UserCouponWallet? wallet = null;
+
+					// 優先：用 walletId 精準核銷（最安全）
+					if (request.CouponWalletId.HasValue)
+					{
+						wallet = await _context.UserCouponWallets
+							.SingleOrDefaultAsync(w =>
+								w.CouponWalletId == request.CouponWalletId.Value &&
+								w.UserNumberId == auth.UserNumberId &&
+								w.Status == "unuse");
+					}
+
+					// 若沒帶 walletId，才用 code 找本會員第一張未使用的同 code 券
+					if (wallet is null && !string.IsNullOrWhiteSpace(appliedCode))
+					{
+						wallet = await (from w in _context.UserCouponWallets
+										join c in _context.MktCoupons on w.CouponId equals c.CouponId
+										where w.UserNumberId == auth.UserNumberId
+											  && w.Status == "unuse"
+											  && c.CouponCode == appliedCode
+										orderby w.ClaimedDate ascending
+										select w).FirstOrDefaultAsync();
+					}
+
+					if (wallet != null)
+					{
+						wallet.Status = "used";
+						wallet.UsedDate = now;
+						_context.UserCouponWallets.Update(wallet);
+
+						// DEMO（可選）：同步扣券庫存
+						// var coupon = await _context.MktCoupons.SingleOrDefaultAsync(c => c.CouponId == wallet.CouponId);
+						// if (coupon != null && coupon.LeftQty > 0) coupon.LeftQty -= 1;
+
+						await _context.SaveChangesAsync();
+					}
+				}
 
                 // 7) 清空會員購物車
                 await _context.Database.ExecuteSqlRawAsync(@"
@@ -571,7 +653,8 @@ WHERE c.UserNumberId = {0}", auth.UserNumberId);
         public string? CouponCode { get; set; }
         public int LogisticsId { get; set; }
         public decimal ShippingFee { get; set; }
-    }
+		public int? CouponWalletId { get; set; }
+	}
 
     /// <summary>結帳購物車項目</summary>
     public class CheckoutCartItemDto

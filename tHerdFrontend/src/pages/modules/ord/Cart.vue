@@ -172,6 +172,16 @@
             已達免運門檻
           </div>
 
+          <!-- 🔔 最接近可用的優惠券提示 -->
+          <div v-if="nearestCouponHint" class="coupon-nearly-hint mt-2 mb-3">
+            <i class="bi bi-lightbulb"></i>
+            再買 <strong>NT$ {{ nearestCouponHint.gap.toLocaleString() }}</strong>
+            可用 <strong>{{ nearestCouponHint.couponName }}</strong> 優惠券
+            <span v-if="nearestCouponHint.threshold" class="text-muted small">
+              （門檻 NT$ {{ nearestCouponHint.threshold.toLocaleString() }}）
+            </span>
+          </div>
+
           <hr />
           
           <div class="summary-row align-items-center">
@@ -285,7 +295,8 @@ export default {
       canCheckout: true,
       invalidCount: 0,
       shippingFee: 0,
-      selectedLogisticsId: 1000
+      selectedLogisticsId: 1000,
+      nearestCouponHint: null
     }
   },
   computed: {
@@ -375,8 +386,11 @@ export default {
       }
     },
 
-    async validateCoupon(couponCode, showAlert = true) {
-      if (!couponCode || this.cartItems.length === 0) {
+    async validateCoupon(couponInput, showAlert = true) {
+      const code = typeof couponInput === 'string'
+          ? couponInput
+          : (couponInput?.couponCode ?? couponInput?.couponId ?? '')
+      if (!code || this.cartItems.length === 0) {
         return { isValid: false, data: null }
       }
 
@@ -401,20 +415,37 @@ export default {
         const payload = {
           userNumberId: userNumberId,
           subtotal: this.subtotal,
-          couponId: couponCode
+          couponId: code
         }
 
-        const res = await http.post('/promotion/calculate', payload)
+        // const res = await http.post('/promotion/calculate', payload)
 
-        if (res?.data?.success && res.data.data?.discounts?.length > 0) {
-          return { isValid: true, data: res.data.data }
-        } else {
-          if (showAlert) {
-            const msg = res?.data?.message || '不符合優惠券使用規定'
-            alert('❌ ' + msg)
-          }
-          return { isValid: false, data: null }
-        }
+        // if (res?.data?.success && res.data.data?.discounts?.length > 0) {
+        //   return { isValid: true, data: res.data.data }
+        // } else {
+        //   if (showAlert) {
+        //     const msg = res?.data?.message || '不符合優惠券使用規定'
+        //     alert('❌ ' + msg)
+        //   }
+        //   return { isValid: false, data: null }
+        // }
+          const res = await http.post('/promotion/calculate', payload)
+  // 成功：有折扣
+  if (res?.data?.success && res.data.data?.discounts?.length > 0) {
+    return { isValid: true, data: res.data.data, reason: null }
+  }
+  // 失敗：解析原因（如：未達滿額 800 元）
+  const msg = res?.data?.message || '不符合優惠券使用規定'
+  // 嘗試抓門檻金額
+  let reason = { code: 'unknown', message: msg }
+  const m = msg.match(/未達滿額\s*(\d+)\s*元/)
+  if (m) {
+    const threshold = Number(m[1])
+    const gap = Math.max(0, threshold - this.subtotal)
+    reason = { code: 'min_spend_not_met', message: msg, threshold, gap }
+  }
+  if (showAlert) alert('❌ ' + msg)
+  return { isValid: false, data: null, reason }
       } catch (err) {
         console.error('驗證優惠券失敗:', err)
         if (showAlert) {
@@ -500,60 +531,99 @@ export default {
         console.log(`找到 ${availableCoupons.length} 張可用優惠券，開始計算...`)
 
         const results = []
+        const applicable = []  // 可立即使用
+        const nearly = []      // 差門檻（gap 最小者）
         
         for (const item of availableCoupons) {
           if (!item.isUsable || !item.coupon?.couponCode) continue
           
-          const result = await this.validateCoupon(item.coupon.couponCode, false)
+           const result = await this.validateCoupon(
+            { couponId: item.coupon.couponId, couponCode: item.coupon.couponCode },
+            false)
           
-          if (result.isValid) {
-            const discount = result.data.discounts[0]
-            results.push({
-              couponCode: item.coupon.couponCode,
-              couponName: item.coupon.couponName || item.coupon.couponCode,
-              discountAmount: discount.discountAmount || 0,
-              promotionResult: result.data
-            })
-          }
-        }
-
-        if (results.length === 0) {
-          console.log('沒有優惠券符合使用條件')
-          return null
-        }
-
-        results.sort((a, b) => b.discountAmount - a.discountAmount)
-        const best = results[0]
-        
-        console.log(`最優惠券: ${best.couponName}, 折扣: NT$ ${best.discountAmount}`)
-        
-        return best
-
-      } catch (err) {
-        console.error('查詢最優惠券失敗:', err)
-        return null
+            if (result.isValid) {
+        const discount = result.data.discounts[0]
+       applicable.push({
+        couponWalletId: item.couponWalletId,
+          couponId: item.coupon.couponId,
+          couponCode: item.coupon.couponCode,
+          couponName: item.coupon.couponName || item.coupon.couponCode,
+          discountAmount: discount.discountAmount || 0,
+          promotionResult: result.data
+        })
+     } else if (result?.reason?.code === 'min_spend_not_met') {
+       nearly.push({
+         couponId: item.coupon.couponId,
+         couponCode: item.coupon.couponCode,
+         couponName: item.coupon.couponName || item.coupon.couponCode,
+         threshold: result.reason.threshold,
+         gap: result.reason.gap
+       })
+      } else {
+        console.warn('[coupon not applicable]', {
+          couponId: item.coupon.couponId,
+          couponCode: item.coupon.couponCode
+        })
       }
+    }
+
+      if (applicable.length > 0) {
+     applicable.sort((a, b) => b.discountAmount - a.discountAmount)
+     const best = applicable[0]
+     console.log(`最優惠券: ${best.couponName}, 折扣: NT$ ${best.discountAmount}`)
+     this.nearestCouponHint = null
+     return { type: 'applicable', best, applicable, nearly }
+   }
+   if (nearly.length > 0) {
+     nearly.sort((a, b) => a.gap - b.gap) // 差最少的最先
+     const closest = nearly[0]
+     console.log(`尚未達門檻，距離最接近券：${closest.couponName}，還差 NT$${closest.gap}`)
+     this.nearestCouponHint = {
+       couponName: closest.couponName,
+       threshold: closest.threshold,
+       gap: closest.gap,
+       couponCode: closest.couponCode
+     }
+     return { type: 'nearly', closest, applicable, nearly }
+   }
+   console.log('沒有優惠券符合使用條件')
+   this.nearestCouponHint = null
+   return { type: 'none' }
+  } catch (err) {
+    console.error('查詢最優惠券失敗:', err)
+   return { type: 'error', error: err }
+  }
     },
 
     async applyBestCoupon() {
       this.isFindingBestCoupon = true
       
       try {
-        const best = await this.findBestCoupon()
+        const pick = await this.findBestCoupon()
         
-        if (!best) {
+        if (!pick || pick.type === 'none' || pick.type === 'error') {
           this.couponCode = ''
           this.promotionResult = null
           alert('❌ 目前沒有可用的優惠券或無符合條件的優惠券')
           return
         }
         
-        this.couponCode = best.couponCode
-        this.promotionResult = best.promotionResult
-        // 🔥 套用優惠券後重新計算運費
-        await this.calculateShippingFee()
-        
-        alert(`✅ 已自動套用最優惠券：${best.couponName}\n折扣金額：NT$ ${best.discountAmount.toLocaleString()}`)
+        if (pick.type === 'applicable') {
+     const best = pick.best
+     this.couponCode = best.couponCode
+     this.appliedCouponWalletId = best.couponWalletId
+     this.promotionResult = best.promotionResult
+     await this.calculateShippingFee()
+     alert(`✅ 已自動套用最優惠券：${best.couponName}\n折扣金額：NT$ ${best.discountAmount.toLocaleString()}`)
+     this.nearestCouponHint = null
+     return
+   }
+   if (pick.type === 'nearly') {
+     const c = pick.closest
+     // 不套用，只提示差額與門檻
+     alert(`⚠️ 目前未達門檻\n最接近可用的優惠券：${c.couponName}\n門檻：NT$ ${c.threshold.toLocaleString()}\n還差：NT$ ${c.gap.toLocaleString()}\n\n小提醒：再加購即可使用此券！`)
+     return
+   }
       } catch (err) {
         console.error('套用最優惠券失敗:', err)
         this.couponCode = ''
@@ -643,6 +713,7 @@ export default {
           receiverPhone: this.receiverPhone,
           receiverAddress: this.receiverAddress,
           couponCode: this.couponCode || null,
+          couponWalletId: this.appliedCouponWalletId || null,
           logisticsId: Number(this.selectedLogisticsId),
           shippingFee: Number(this.shippingFee)
         }
@@ -744,6 +815,22 @@ export default {
   margin-right: 6px;
   font-size: 1rem;
   color: #28a745;
+}
+
+/*最接近可用券提示 */
+.coupon-nearly-hint {
+  background: linear-gradient(135deg, #e8f4ff 0%, #e0f0ff 100%);
+  border: 1px solid #86b7fe;
+ border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: #0d6efd;
+  text-align: center;
+  font-weight: 600;
+}
+.coupon-nearly-hint i {
+  margin-right: 6px;
+  font-size: 1rem;
 }
 
 .teal-reflect-button{background:linear-gradient(135deg,#007083 0%,#00a0b8 100%);color:white;border:none;transition:all .3s ease;font-weight:600}
