@@ -256,6 +256,7 @@ namespace tHerdBackend.SharedApi
 				o.IdleTimeout = TimeSpan.FromDays(7);
 				o.Cookie.HttpOnly = true;
 				o.Cookie.SameSite = SameSiteMode.Lax;
+				o.Cookie.IsEssential = true;
 			});
 
 			//// 允許 CORS
@@ -285,6 +286,13 @@ namespace tHerdBackend.SharedApi
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
 			builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+			// 註冊 InternalApi HttpClient
+			builder.Services.AddHttpClient("InternalApi", client =>
+			{
+				client.BaseAddress = new Uri("https://localhost:7103"); // 換成你實際後端 BaseUrl
+																		// client.DefaultRequestHeaders.Add("X-Internal", "true"); // 需要可加
+			});
+
 			//前台圖片上傳註冊
 			builder.Services.AddScoped<ISysAssetFileRepository, SysAssetFileRepository>();
 
@@ -313,15 +321,6 @@ namespace tHerdBackend.SharedApi
 				cloudinaryConfig.ApiKey,
 				cloudinaryConfig.ApiSecret
 			);
-
-            // === 註冊 Session ===
-            builder.Services.AddDistributedMemoryCache();
-            builder.Services.AddSession(options =>
-            {
-                options.IdleTimeout = TimeSpan.FromDays(7);
-                options.Cookie.HttpOnly = true;
-                options.Cookie.IsEssential = true;
-            });
 
             // === 註冊 ShoppingCartRepository ===
             builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
@@ -415,9 +414,6 @@ namespace tHerdBackend.SharedApi
             
 
             			// 訪客追蹤：若無 guestId 就建立
-
-            			app.UseSession();
-
             			app.Use(async (ctx, next) =>
 
             			{
