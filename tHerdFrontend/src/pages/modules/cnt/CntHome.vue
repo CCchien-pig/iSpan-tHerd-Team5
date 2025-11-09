@@ -5,8 +5,8 @@
       <div class="hero-overlay"></div>
       <div class="container position-relative">
         <h1 class="display-5 fw-bold main-color-white-text">健康 × 資訊分析平台</h1>
-        <p class="lead mb-4 main-color-white-text">探索健康知識，打造科學飲食生活</p>
-        <p class="mx-auto main-color-white-text" style="max-width: 680px;">
+        <p class="lead mb-4 main-color-white-text fw-bold">探索健康知識，打造科學飲食生活</p>
+        <p class="mx-auto main-color-white-text fw-bold" style="max-width: 680px;">
           本平台整合健康文章與營養資料，結合視覺化圖表與內容知識，幫助你理解食材營養，建立更智慧的飲食選擇。
         </p>
         <!-- <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
