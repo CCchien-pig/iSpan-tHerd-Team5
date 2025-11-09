@@ -20,7 +20,13 @@
       </div>
 
       <!-- 固定第一排 Banner -->
-      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-1" />
+      <BrandBanner
+        v-if="vm.bannerUrl"
+        :url="vm.bannerUrl"
+        :alt="vm.brandName"
+        :link-url="layoutBlocks.find((b) => b.type === 'Banner')?.data?.linkUrl"
+        :main-color="vm.mainColor"
+      />
 
       <!-- 固定第二排 分類按鈕 -->
       <BrandButtons
@@ -176,15 +182,20 @@ const fetchActiveLayout = async (brandId) => {
     const layoutItems = JSON.parse(res.data.layoutJson)
     const promises = layoutItems.map(async (block) => {
       switch (block.type) {
+        case 'Banner': {
+          // 🟢 Banner 不需額外 API，只要保留 linkUrl
+          // console.log('[Banner Block]', block)
+          return { type: 'Banner', data: { linkUrl: block.linkUrl } }
+        }
         case 'Accordion': {
           const a = await axios.get(`/api/sup/Brands/${brandId}/accordion/${block.contentId}`)
-          console.log('[Accordion API raw]', a.data)
+          // console.log('[Accordion API raw]', a.data)
           // 🟢 直接解構成正確格式
           return { type: 'Accordion', data: a.data.data }
         }
         case 'Article': {
           const a = await axios.get(`/api/sup/Brands/${brandId}/article/${block.contentId}`)
-          console.log('[Article API raw]', a.data)
+          // console.log('[Article API raw]', a.data)
           return { type: 'Article', data: a.data.data }
         }
         default:
@@ -193,7 +204,7 @@ const fetchActiveLayout = async (brandId) => {
     })
 
     layoutBlocks.value = (await Promise.all(promises)).filter(Boolean)
-    console.log('[Layout Blocks Final]', layoutBlocks.value)
+    // console.log('[Layout Blocks Final]', layoutBlocks.value)
   } catch (e) {
     if (e?.response?.status !== 404) console.error('[BrandDetail] fetchActiveLayout failed', e)
     layoutBlocks.value = []
