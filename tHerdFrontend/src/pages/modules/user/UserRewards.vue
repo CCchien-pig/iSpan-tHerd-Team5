@@ -38,7 +38,7 @@
             <el-select v-model="filters.status" placeholder="全部狀態" clearable @change="onFilterChange" style="width: 180px">
               <el-option label="全部" value="" />
               <el-option label="未使用" value="unuse" />
-              <el-option label="已使用" value="Used" />
+              <el-option label="已使用" value="used" />
               <el-option label="已過期" value="Expired" />
             </el-select>
 
@@ -79,7 +79,7 @@
                     :disabled="!row.isUsable"
                     @click="goUse(row)"
                   >
-                    {{ row.isUsable ? '去使用' : '不可用' }}
+                    {{ row.isUsable ? '可使用' : '不可用' }}
                   </el-button>
                 </template>
               </TicketCoupon>
@@ -113,7 +113,8 @@ import TicketCoupon from '@/components/coupon/TicketCoupon.vue' // ← 路徑依
 // 狀態→顯示文字
 function statusLabel(s) {
   if (s === 'Active') return '有效'
-  if (s === 'Used') return '已使用'
+  if (s === 'used') return '已使用'
+  if (s === 'unuse') return '未使用'
   if (s === 'Expired') return '已過期'
   return s || '全部'
 }
