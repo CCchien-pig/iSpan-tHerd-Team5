@@ -10,15 +10,26 @@
         <div
           v-for="(b, idx) in looped"
           :key="`${b.brandId}-${idx}`"
-          class="brand-item"
+          class="brand-item relative"
           :style="{ width: `${cardWidth}px`, flexBasis: `${cardWidth}px` }"
         >
+          <!-- 計算原始名次（避免重複顯示） -->
+          <template v-if="brands.length">
+            <div class="rank-icon" v-if="idx % brands.length < 3">
+              <Crown v-if="idx % brands.length === 0" class="w-6 h-6 text-yellow-400" />
+              <Trophy v-else-if="idx % brands.length === 1" class="w-6 h-6 text-gray-400" />
+              <Medal v-else class="w-6 h-6 text-amber-600" />
+            </div>
+            <div v-else class="rank-num">{{ (idx % brands.length) + 1 }}</div>
+          </template>
+
           <router-link :to="toBrandSlug(b.brandName, b.brandId)" class="brand-link">
             <img
               class="brand-logo"
               :src="b.logoUrl || fallbackLogo"
               :alt="b.brandName"
               loading="lazy"
+              @error="onImgError"
             />
             <div class="brand-name">{{ b.brandName }}</div>
           </router-link>
@@ -38,11 +49,10 @@
 import axios from 'axios'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { toBrandSlug } from '@/utils/supSlugify'
+import { Crown, Trophy, Medal } from 'lucide-vue-next'
 
 const props = defineProps({
-  // 自動播放間隔(毫秒)
   interval: { type: Number, default: 3000 },
-  // 每次移動幾個
   stepCount: { type: Number, default: 1 },
 })
 
@@ -54,23 +64,23 @@ const timer = ref(null)
 
 // 動畫控制
 const offset = ref(0)
-const noTransition = ref(false) // 控制是否關閉動畫(用於瞬間回彈)
-const isAnimating = ref(false) // 防止快速點擊
+const noTransition = ref(false)
+const isAnimating = ref(false)
 
 // 響應式設定
-const cardWidth = ref(160) // 單張卡片寬度
-const visibleCount = ref(6) // 一屏顯示幾張
-const gapX = 16 // 卡片左右 margin 總和 (margin: 0 8px => 8+8=16)
+const cardWidth = ref(160)
+const visibleCount = ref(6)
+const gapX = 16
 
-const fallbackLogo = '/assets/brand-fallback.svg'
+const fallbackLogo = '/homePageIcon/tHerd-header.png'
+function onImgError(e) {
+  e.target.src = fallbackLogo
+}
 
-// 讓資料無縫：複製一份接在後面 [A,B,C] => [A,B,C, A,B,C]
+// 無縫資料複製
 const looped = computed(() => [...brands.value, ...brands.value])
-
-// 計算單一卡片佔據的總寬度 (含間距)
 const itemTotalWidth = computed(() => cardWidth.value + gapX)
 
-// 響應式計算：依據螢幕寬度決定卡片大小與顯示數量
 const recalc = () => {
   const w = window.innerWidth
   if (w >= 1200) {
@@ -86,11 +96,9 @@ const recalc = () => {
     cardWidth.value = 140
     visibleCount.value = 3
   } else {
-    // 手機版小一點，讓使用者看到旁邊還有東西
     cardWidth.value = 130
     visibleCount.value = 2
   }
-  // 視窗改變時重置位置，避免錯位
   resetPosition()
 }
 
@@ -102,8 +110,6 @@ async function fetchTopBrands() {
     if (res.data?.success) {
       brands.value = Array.isArray(res.data.data) ? res.data.data.slice(0, 10) : []
     } else {
-      // error.value = res.data?.message || '讀取失敗'
-      // 測試用假資料 (若 API 失敗時可測試畫面)
       brands.value = [
         { brandId: 1, brandName: 'Optimum Nutrition', logoUrl: '' },
         { brandId: 2, brandName: 'MuscleTech', logoUrl: '' },
@@ -123,7 +129,6 @@ async function fetchTopBrands() {
 
 function play() {
   stop()
-  // 只有當品牌數量大於一屏顯示數量時才自動輪播
   if (brands.value.length > visibleCount.value) {
     timer.value = setInterval(() => {
       slide(props.stepCount)
@@ -144,9 +149,8 @@ function stop() {
 
 function step(dir) {
   if (isAnimating.value) return
-  pause() // 手動操作時先暫停自動播放
+  pause()
   slide(dir > 0 ? props.stepCount : -props.stepCount)
-  // 操作完後若滑鼠還在區域內，因為有 @mouseleave="play"，移出時會自動恢復播放
 }
 
 function resetPosition() {
@@ -159,45 +163,27 @@ function resetPosition() {
 
 function slide(n) {
   if (brands.value.length === 0) return
-
-  // 鎖定動畫狀態
   isAnimating.value = true
-
-  // 計算單次移動距離
   const dx = itemTotalWidth.value * n
-  // 計算回繞點：原始資料的總長度
   const maxOffset = itemTotalWidth.value * brands.value.length
-
   offset.value += dx
 
-  // 動畫結束後的檢查點 (0.4s 後)
   setTimeout(() => {
-    // 右向前進：如果超過一半(原始長度)，瞬間跳回前面
     if (offset.value >= maxOffset) {
       noTransition.value = true
-      // 減去 maxOffset，無縫接回第一組的對應位置
       offset.value -= maxOffset
-      // 強制瀏覽器重繪後再開啟動畫
       nextTick(() => {
-        // 這裡用一個微小延遲確保 no-transition 生效
-        setTimeout(() => {
-          noTransition.value = false
-        }, 50)
+        setTimeout(() => (noTransition.value = false), 50)
       })
-    }
-    // 左向後退：如果小於 0，瞬間跳到後面
-    else if (offset.value < 0) {
+    } else if (offset.value < 0) {
       noTransition.value = true
       offset.value += maxOffset
       nextTick(() => {
-        setTimeout(() => {
-          noTransition.value = false
-        }, 50)
+        setTimeout(() => (noTransition.value = false), 50)
       })
     }
-
     isAnimating.value = false
-  }, 500) // 略大於 CSS transition 時間 (0.4s)
+  }, 500)
 }
 
 onMounted(async () => {
@@ -219,16 +205,10 @@ onBeforeUnmount(() => {
   padding: 24px 0;
   position: relative;
 }
-.section-title {
-  text-align: center;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
 .carousel-viewport {
   position: relative;
   overflow: hidden;
   width: 100%;
-  /* 增加一點內距避免陰影被切掉 */
   padding: 10px 0;
 }
 .carousel-track {
@@ -237,16 +217,14 @@ onBeforeUnmount(() => {
   will-change: transform;
   transition: transform 0.4s ease-in-out;
 }
-/* 瞬間移動時關閉動畫 */
 .carousel-track.no-transition {
   transition: none !important;
 }
-
 .brand-item {
-  /* 寬度由 JS 動態控制 */
   flex-shrink: 0;
-  margin: 0 8px; /* 左右各 8px，總間距 16px (對應 gapX) */
+  margin: 0 8px;
   text-align: center;
+  position: relative;
 }
 .brand-link {
   text-decoration: none;
@@ -263,12 +241,10 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(0, 112, 131, 0.15);
   transform: translateY(-3px);
 }
-
 .brand-logo {
   width: 100%;
   height: 64px;
   object-fit: contain;
-  /* 預設一點點灰階，hover 時變彩色 */
   filter: grayscale(30%);
   opacity: 0.9;
   transition: all 0.3s ease;
@@ -287,7 +263,30 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
 }
 
-/* 控制按鈕優化 */
+/* 🏅 名次徽章區 */
+.rank-icon,
+.rank-num {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rank-num {
+  background-color: rgba(90, 199, 213, 0.599);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+}
+
+/* 控制按鈕 */
 .ctrl {
   position: absolute;
   top: 50%;
@@ -301,15 +300,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   font-size: 24px;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0; /* 預設隱藏 */
+  opacity: 0;
   transition: all 0.3s ease;
   z-index: 2;
 }
-/* 滑鼠移入 viewport 才顯示按鈕 */
 .carousel-viewport:hover .ctrl {
   opacity: 1;
 }
@@ -323,7 +320,6 @@ onBeforeUnmount(() => {
 .ctrl.next {
   right: 10px;
 }
-
 .hint {
   text-align: center;
   margin-top: 8px;

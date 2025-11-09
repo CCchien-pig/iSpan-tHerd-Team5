@@ -26,7 +26,11 @@
     @* 新增區塊按鈕 *@
     <div id="component-palette" class="mb-3">
         @* 在點擊時傳入 $event 物件 *@
-        <button @@click="addBlock('Banner', $event)" class="btn btn-sm btn-outline-primary me-2">新增 Banner</button>
+        <button @@click="addBlock('Banner', $event)"
+                class="btn btn-sm btn-outline-primary me-2"
+                :disabled="blocks.some(b => b.type === 'Banner')">
+            新增 Banner
+        </button>
         <button @@click="addBlock('Accordion', $event)" class="btn btn-sm btn-outline-info me-2">新增 Accordion</button>
         <button @@click="addBlock('Article', $event)" class="btn btn-sm btn-outline-warning me-2">新增 Article</button>
         @* TODO: 加入 FeaturedProducts 和 Video 區塊按鈕 *@
@@ -42,7 +46,10 @@
     </div>
 
     <div id="layout-blocks-container">
-        <div v-for="(block, index) in blocks" :key="block.id" class="draggable-block card mb-2">
+        <div v-for="(block, index) in blocks"
+             :key="block.id"
+             class="draggable-block card mb-2"
+             :class="{ 'sortable-item': block.type !== 'Banner' }">
 
             @* ========================================================================== *@
             @* 1. 區塊 Header (Block Header) - 負責展開/收合整個編輯區                     *@
@@ -451,7 +458,7 @@
                     };
                 case 'Accordion':
                     return {
-                        contentId: 0, contentTitle: '', content: '', isActive: true,
+                        contentId: 0, contentTitle: brandName + '摺疊內容', content: '', isActive: true,
                         imgId: null, fileUrl: '',
                         imageAltText: brandName,
                         imageCaption: `${brandName}_Accordion_${dateString}`,
@@ -610,39 +617,65 @@
                     const el = document.getElementById('layout-blocks-container');
                     if (el) {
                         Sortable.create(el, {
-                            animation: 150, handle: '.block-header',
+                            animation: 150,
+                            handle: '.block-header',      // 只能抓 header 拖
+                            draggable: '.sortable-item',  // 只有這類別能拖
                             onEnd: (evt) => {
                                 const { oldIndex, newIndex } = evt;
-                                if (oldIndex !== newIndex) {
-                                    const [movedItem] = blocks.value.splice(oldIndex, 1);
-                                    blocks.value.splice(newIndex, 0, movedItem);
+                            if (oldIndex === newIndex) return;
+
+                            const [moved] = blocks.value.splice(oldIndex, 1);
+                            blocks.value.splice(newIndex, 0, moved);
+
+                            // 🔒 確保 Banner 永遠置頂（避免其他項目被拖到 Banner 之上）
+                            const bannerIdx = blocks.value.findIndex(b => b.type === 'Banner');
+                                if (bannerIdx > 0) {
+                                    const [banner] = blocks.value.splice(bannerIdx, 1);
+                                    blocks.value.unshift(banner);
                                 }
                             }
                         });
+
                     }
                 };
 
                 // 輔助函式
                 const addBlock = (type, event) => {
-                    const newBlock = {
-                        id: 'id-' + Date.now()+ Math.floor(Math.random() * 10000), // 唯一 ID
-                        type: type,
-                        // 將 brandName.value 作為參數傳遞
-                        props: createProps(type, brandName.value)
-                    };
-                    blocks.value.push(newBlock);
-                    editingId.value = newBlock.id;
+                    if (type === 'Banner') {
+                        const hasBanner = blocks.value.some(b => b.type === 'Banner');
+                        if (hasBanner) {
+                            Swal.fire('提示', '版面中已存在 Banner，無法再新增。', 'info');
+                            return;
+                        }
 
-                    // 在新增區塊後，讓被點擊的按鈕失去焦點
-                    if (event && event.target) {
-                        event.target.blur();
+                        const newBanner = {
+                                id: 'id-' + Date.now() + Math.floor(Math.random() * 10000),
+                                type: 'Banner',
+                                props: createProps('Banner', brandName.value)
+                            };
+                            blocks.value.unshift(newBanner);
+                            editingId.value = newBanner.id;
+                        } else {
+                        const newBlock = {
+                            id: 'id-' + Date.now() + Math.floor(Math.random() * 10000),
+                            type: type,
+                            props: createProps(type, brandName.value)
+                        };
+                        blocks.value.push(newBlock);
+                        editingId.value = newBlock.id;
+
+                        if (event && event.target) {
+                            event.target.blur();
+                        }
+
+                        nextTick(() => {
+                            const container = document.getElementById('layout-blocks-container');
+                            if (container) container.scrollTop = container.scrollHeight;
+                        });
                     }
-
-                    nextTick(() => {
-                        const container = document.getElementById('layout-blocks-container');
-                        if (container) container.scrollTop = container.scrollHeight;
-                    });
                 };
+
+
                 const handleSwitchChange = (isActive, itemName) => Swal.fire({ toast: true, position: 'center', icon: isActive ? 'success' : 'info', title: `${itemName} 已${isActive ? '啟用' : '停用'}`, showConfirmButton: false, timer: 1500 });
                 // 移除圖片時，清除所有相關狀態
                 const removeBlockImage = (block) => {
@@ -675,7 +708,8 @@
                         title: '圖片已移除',
                         showConfirmButton: false,
                         timer: 1500 // 顯示 1.5 秒後自動消失
-                    });                };
+                    });                
+                };
                 const removeBlock = (id) => {
                     Swal.fire({ title: '確定移除此區塊嗎？', icon: 'warning', showCancelButton: true, confirmButtonText: '確定移除' })
                         .then((result) => {
@@ -824,6 +858,7 @@
                                 await apiService.activateLayout(resJson.layoutId);
                                 await Swal.fire('啟用成功', '新版本已儲存並在前台生效。', 'success');
                             }
+
                         }
 
                         // 無論結果如何，都重新載入版本列表
@@ -1035,88 +1070,193 @@
                                 },
                                 content_css: '@Url.Content("~/_content/tHerdBackend.SUP.Rcl/css/supstylesheet.css")',
                                 // 3. 定義可用的模板
+                                // ✅ 每個模板都使用函式返回字串，確保各自獨立
                                 templates: [
                                     {
-                                        title: '左右雙欄佈局',
-                                        description: '說明：建立一個響應式的左右分區，用於圖文排版。',
-                                        content: `
-                                            <div class="two-column-container">
-                                                <div class="column">
-                                                    <p>這裡是<strong>左邊</strong>的內容...</p>
-                                                </div>
-                                                <div class="column">
-                                                    <p>這裡是<em>右邊</em>的內容...</p>
-                                                </div>
-                                            </div>
-                                        `
-                                    },
-                                    {
-                                        title: '提示框 (Info Box)',
-                                        description: '說明：插入一個藍色的提示框。',
-                                        content: `
-                                            <div style="border:1px solid #bde5f8; background-color:#f0faff; padding:15px; border-radius:5px;">
-                                                <p>請在此輸入提示內容...</p>
-                                            </div>
-                                            </br>
-                                        `
-                                    },
-                                    {
-                                        title: 'Accordion 樣板',
-                                        description: '說明：插入Accordion 樣板。',
-                                        content: `
-                                            <div class="accordion-item">
-                                              品質值得信賴
-                                              <div id="collapseQuality" class="accordion-collapse collapse show" aria-labelledby="headingQuality" data-bs-parent="#qualityAccordion">
-                                                <div class="accordion-body">
-                                                  <ul class="mb-0">
-                                                    <li>優質成分：我們與全球各地的製造商攜手合作，採購特高品質的原料。</li>
-                                                    <li>科學：我們的產品由業界知名的營養科學家提供協作，並參考新近同行評審研究。</li>
-                                                    <li>透明度：我們公開披露與討論產品的製作方法與材料來源。</li>
-                                                    <li>信任：我們致力於贏得顧客信任，讓他們放心把健康託付給我們。</li>
-                                                  </ul>
-                                                </div>
-                                              </div>
-                                            </div>
-                                        `
-                                    },
-                                    {
-                                        title: 'Article 樣板',
-                                        description: '說明：插入 Article 樣板。',
-                                        content: `
-                                        <header class="mb-2">
-                                        <h2>居家訓練入門：</h2>
+                                    title: '插入 左右雙欄佈局',
+                                    description: '建立一個響應式左右分區，用於圖文排版。',
+                                    content: (() => `
                                         <div class="two-column-container">
-                                        <div class="column"><header class="mb-2">
-                                        <h2>有效安排與補給建議</h2>
-                                        <p class="text-muted">在家也能系統化鍛鍊，用最少器材完成全身訓練。</p>
-                                        </header>
-                                        <section class="mb-3">
-                                        <h3>核心原則</h3>
-                                        <p>以自體重量、啞鈴或壺鈴為主，規劃推、拉、腿與核心動作，每週 3&ndash;4 天循環，逐步增加組數或時間以漸進超負荷。</p>
-                                        </section>
-                                        <section class="mb-3">
-                                        <h3>示範日程</h3>
-                                        <ul>
-                                        <li>上肢推：伏地挺身、過頂推舉、三頭伸展，各 3 組。</li>
-                                        <li>上肢拉：划船、面拉、二頭彎舉，各 3 組。</li>
-                                        <li>下肢與核心：深蹲、髖推、平板撐，各 3 組。</li>
-                                        </ul>
-                                        </section>
-                                        <section>
-                                        <h3>補給建議</h3>
-                                        <p>以蛋白質與水分補充為優先，依訓練強度與個人狀況搭配碳水與電解質；如需提升表現，於安全前提下評估咖啡因或肌酸的運用。</p>
-                                        </section>
+                                        <div class="column">
+                                            <p>這裡是<strong>左邊</strong>的內容...</p>
                                         </div>
                                         <div class="column">
-                                        <p>&nbsp;</p>
-                                        <h2>這是右邊</h2>
-                                        </br>
+                                            <p>這裡是<em>右邊</em>的內容...</p>
                                         </div>
                                         </div>
-                                        <h2>這是下方</h2>
-                                        </br>
+                                    `)()
+                                    },
+                                    {
+                                    title: '插入 提示框 (Info Box)',
+                                    description: '插入一個藍色提示框。',
+                                    content: (() => `
+                                        <div style="border:1px solid #bde5f8; background-color:#f0faff; padding:15px; border-radius:5px;">
+                                        <p>請在此輸入提示內容...</p>
+                                        </div><br/>
+                                    `)()
+                                    },
+                                    {
+                                    title: '插入 Accordion 樣板',
+                                    description: 'Accordion 摺疊區範本。',
+                                    content: (() => `
+                                        <div class="accordion-item">
+                                        品質值得信賴
+                                        <div id="collapseQuality" class="accordion-collapse collapse show" aria-labelledby="headingQuality" data-bs-parent="#qualityAccordion">
+                                            <div class="accordion-body">
+                                            <ul class="mb-0">
+                                                <li>優質成分：我們與全球各地的製造商攜手合作，採購高品質原料。</li>
+                                                <li>科學：產品由業界營養科學家提供協作，參考新近研究。</li>
+                                                <li>透明度：公開討論製作方法與材料來源。</li>
+                                                <li>信任：致力於贏得顧客信任。</li>
+                                            </ul>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    `)()
+                                    },
+                                    {
+                                    title: '插入 Article 樣板1',
+                                    description: '居家訓練入門文章範本。',
+                                    content: (() => `
+                                    <header class="mb-2">
+                                        <header class="mb-2"></header>
+                                        <header class="mb-2">
+                                          <header class="mb-2">
+                                            <header class="mb-2">
+                                              <h1 style="text-align: center">居家訓練入門：</h1>
+                                              <div class="two-column-container">
+                                                <div class="column">
+                                                  <h2
+                                                    id="1757526966153"
+                                                    class="bggle--heading text--1633011465882 margin_vertical--small no--margin-horizontal no--padding-vertical no--padding-horizontal margin-top_none bggle_title bggle--block text__left"
+                                                  >
+                                                    <span dir="auto">在家進行全身運動計劃</span>
+                                                  </h2>
+                                                  <div
+                                                    id="1757526982812"
+                                                    class="bggle--block bggle_text margin_vertical--small margin-top_none"
+                                                  >
+                                                    <p>
+                                                      <span dir="auto"
+                                                        >堅持健身不一定需要設備齊全的健身房。只需幾個簡單的動作和少量器械，您就可以在家中舒適地進行全身鍛煉。</span
+                                                      >
+                                                    </p>
+                                                    <p>
+                                                      <span dir="auto"
+                                                        >這套全身運動計畫旨在鍛鍊所有主要肌群，增強力量，提高耐力，並讓您保持活力充沛。無論您是健身新手還是希望保持運動成果，這些運動計畫都可以輕鬆調整，以適應您的水平和時間安排。</span
+                                                      >
+                                                    </p>
+                                                  </div>
+                                                  <h3>核心原則</h3>
+                                                  <ul>
+                                                    <li>以自體重量、啞鈴或壺鈴為主。</li>
+                                                    <li>規劃推、拉、腿與核心動作。</li>
+                                                    <li>每週 3&ndash;4 天循環，漸進增加強度。</li>
+                                                  </ul>
+                                                </div>
+                                                <div class="column">
+                                                  <p>&nbsp;</p>
+                                                  <img
+                                                    style="
+                                                      max-width: 100%;
+                                                      height: auto;
+                                                      display: block;
+                                                      margin-left: auto;
+                                                      margin-right: auto;
+                                                    "
+                                                    src="https://res.cloudinary.com/ds3ilenyk/image/upload/v1762572395/SUP/Article/20251108_032526_30b0c912ac714eae96904f45a61b5b70.png"
+                                                    alt="pexels 南瓜"
+                                                    width="600"
+                                                  />
+                                                  <p>&nbsp;</p>
+                                                </div>
+                                              </div>
+                                              <h3 style="text-align: center">補給建議</h3>
+                                              <p style="text-align: center">以蛋白質與水分補充為優先，可依訓練強度搭配碳水與電解質。</p>
+                                            </header>
+                                            <p>&nbsp;</p>
+                                          </header>
                                         </header>
-                                        `
+                                      </header>
+                                    `)()
+                                    },
+                                    {
+                                    title: '插入 Article 樣板2',
+                                    description: '免疫健康主題文章樣板。',
+                                    content: (() => `
+                                    <header class="mb-2">
+                                        <h2 style="text-align: center">免疫健康的流感季節套裝：7 種維生素必需品</h2>
+                                        <div class="two-column-container">
+                                          <div class="column">
+                                            <p>&nbsp;</p>
+                                            <p>當著涼和流感季節到來時，降低感染風險並加強免疫系統非常重要。</p>
+                                            <h3>維生素與礦物質</h3>
+                                            <ul>
+                                              <li>
+                                                維生素 A 對於維持皮膚和粘膜至關重要，它們可以作為防止感染的首個防禦。
+                                                它對白血球功能也很重要，並加強免疫系統的活動，包括胸腺功能，抗腫瘤和抗體反應。
+                                              </li>
+                                              <li>
+                                                維生素 B，尤其是 B1，B6 和 B12，是製造抗疾病的抗體所需的。 此外，維生素 B
+                                                對正常細胞分裂至關重要。 因此，低水平的維生素 B 會降低您身體產生新白細胞的能力。
+                                              </li>
+                                              <li>
+                                                維生素 C
+                                                啟動白血球以攻擊入侵者，提高抗體水平，幫助胸腺荷爾蒙分泌，並加強人體的抗病毒化合物干擾素。
+                                                在感染或壓力期間，您對維生素 C 的需求會增加。
+                                              </li>
+                                              <li>
+                                                維生素 D3 對於防止病毒或細菌上呼吸道感染至關重要。
+                                                它提高機體能力，並可以降低這些感染的頻率。 許多健康專家建議每天服用 2,000-5,000 IU
+                                                維生素 D3，除了維生素中的維生素 D3，以幫助免疫功能。
+                                              </li>
+                                              <li>
+                                                鋅在免疫功能中起著重要作用。
+                                                當鋅低時，白細胞數量下降，胸腺荷爾蒙水平下降，酶活性降低，某些白細胞功能停止。
+                                              </li>
+                                              <li>selenium 參與保護胸腺的抗氧機制。 鈉含量低的人機體抵抗能力下降，抗體水平降低。</li>
+                                            </ul>
+                                          </div>
+                                          <div class="column">
+                                            <p>&nbsp;</p>
+                                            <p>
+                                              <img
+                                                style="
+                                                  max-width: 100%;
+                                                  height: 316px;
+                                                  display: block;
+                                                  margin-left: auto;
+                                                  margin-right: auto;
+                                                "
+                                                src="https://res.cloudinary.com/ds3ilenyk/image/upload/v1761675200/Brand/ContentEditor/20251028_181255_a2c33e92cf8344adb63c11e10b55f82f.jpg"
+                                                alt="orange"
+                                                width="211"
+                                              />
+                                            </p>
+                                            <p>&nbsp;</p>
+                                            <p>
+                                              在美國國家健康和營養檢查調查 (NHANES)
+                                              的特新分析中，發現對免疫系統的許多重要營養素攝入不足，例如維生素 D3（95％），維生素
+                                              E（84%），維生素 C（46%），維生素 A（45%）和鋅（15%）。
+                                            </p>
+                                            <p>為了確保您為著涼和流感季節做好準備，請準備這些必需品。</p>
+                                          </div>
+                                        </div>
+                                        <p style="text-align: center">
+                                          <strong
+                                            ><a
+                                              class="ytp-share-panel-link ytp-no-contextmenu"
+                                              title="iherb"
+                                              href="https://youtu.be/Nl-EdmvdPLI"
+                                              target="_blank"
+                                              rel="noopener"
+                                              aria-label="null"
+                                              >免疫健康的流感季節 Youtube</a
+                                            ></strong
+                                          >
+                                        </p>
+                                      </header>
+                                    `)()
                                     }
                                 ],
                                 branding: false,
@@ -1127,6 +1267,16 @@
                                     editor.ui.registry.addMenuItem('showAdvTemplate', {
                                       text: '插入範例版型',
                                       onAction: function() { editor.execCommand('mceAdvTemplate'); }
+                                    });
+
+                                    // ✅ 攔截模板插入，確保複製的是新字串
+                                    editor.on('ExecCommand', (e) => {
+                                        if (e.command === 'mceInsertTemplate' && typeof e.value === 'string') {
+                                            // 攔截但不重複插入
+                                            const cleanClone = e.value.toString();
+                                            e.value = cleanClone;  // 只更新傳入值，交給 TinyMCE 自行插入
+                                            // ❌ 不再呼叫 editor.insertContent()
+                                        }
                                     });
 
                                     // Bootstrap 焦點修正
@@ -1144,6 +1294,7 @@
                                         editor.focus();
                                     });
 
+                                    // 【內容同步與初始化】
                                     editor.on('change keyup undo redo input', () => {
                                         const html = editor.getContent();                 // 取當前內容
                                         const id = newInfo.id;
@@ -1403,5 +1554,5 @@
         cursor: pointer;
         user-select: none; /* 防止點擊時選取到文字 */
     }
-
+    
 </style>

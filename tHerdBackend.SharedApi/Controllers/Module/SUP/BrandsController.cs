@@ -218,7 +218,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			{
 				var layout = await _layoutService.GetActiveLayoutAsync(brandId);
 				if (layout == null)
-					return NotFound(new { success = false, message = "該品牌目前沒有任何啟用中的版面設定。" });
+				{
+					return Ok(new
+					{
+						success = true,
+						message = "目前沒有啟用中的版面設定。",
+						orderedBlocks = new string[0]
+					});
+				}
 
 				return Ok(layout);
 			}
@@ -605,6 +612,7 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 		}
 
 
+		#region 取單一區塊內容
 		/// <summary>取得單一 Accordion 內容（依 contentId）</summary>
 		[HttpGet("{brandId:int}/accordion/{contentId:int}")]
 		[AllowAnonymous]
@@ -686,6 +694,8 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+
+		#endregion
 
 		#endregion
 

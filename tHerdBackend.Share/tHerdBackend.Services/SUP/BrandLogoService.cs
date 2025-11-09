@@ -26,16 +26,15 @@ public sealed class BrandLogoService : IBrandLogoService
 		// 以 AltText 建立簡單 map（可擴充正規化）
 		// key 使用正規化後字串，value 為 FileUrl
 		var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var a in _cache!)
+		foreach (var g in _cache!
+			.Where(a => !string.IsNullOrWhiteSpace(a.FileUrl))
+			.GroupBy(a => Normalize(a.AltText)))
 		{
-			var key = Normalize(a.AltText);
-			if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(a.FileUrl))
-			{
-				// 只保留最新
-				if (!map.ContainsKey(key) || map[key] != a.FileUrl!)
-					map[key] = a.FileUrl!;
-			}
+			// 保留最新一筆
+			var latest = g.OrderByDescending(x => x.CreatedDate).First();
+			map[g.Key] = latest.FileUrl!;
 		}
+
 		return map;
 	}
 
@@ -46,15 +45,16 @@ public sealed class BrandLogoService : IBrandLogoService
 		var nameKey = Normalize(brandName);
 		var codeKey = Normalize(brandCode ?? "");
 
-		// 完整匹配
+		// ✅ 改這裡：不再直接用 ToDictionary()，避免重複 Key
 		var dict = _cache!
 			.Where(a => !string.IsNullOrWhiteSpace(a.FileUrl))
-			.ToDictionary(a => Normalize(a.AltText), a => a.FileUrl!, StringComparer.OrdinalIgnoreCase);
+			.GroupBy(a => Normalize(a.AltText))
+			.ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.CreatedDate).First().FileUrl!, StringComparer.OrdinalIgnoreCase);
 
 		if (dict.TryGetValue(nameKey, out var url)) return url;
 		if (!string.IsNullOrEmpty(codeKey) && dict.TryGetValue(codeKey, out url)) return url;
 
-		// 模糊包含
+		// 模糊包含（保留原邏輯）
 		var hit = _cache!
 			.Where(a => !string.IsNullOrWhiteSpace(a.FileUrl))
 			.OrderByDescending(a => a.CreatedDate)
