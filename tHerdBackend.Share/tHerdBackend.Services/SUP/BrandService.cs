@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.SUP.Brand;
 using tHerdBackend.Core.Interfaces.SUP;
@@ -109,6 +110,49 @@ public class BrandService : IBrandService
 			// OrderedBlocks = new() { "Banner", "Buttons", "Accordion" } // 未實作 LayoutConfig 前的預設
 		};
 	}
+
+	public Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId)
+	{
+		return _repo.GetBrandOverviewAsync(brandId);
+	}
+
+	public Task<List<BrandSalesRankingDto>> GetTopBrandsBySalesAsync(int topN = 10)
+    {
+        return _repo.GetTopBrandsBySalesAsync(topN);
+    }
+
+
+	public async Task<BrandAccordionContentDto?> GetAccordionAsync(int brandId, int contentId, CancellationToken ct)
+	{
+		var (id, _, _) = await _repo.GetBrandAsync(brandId, ct);
+		if (id == 0) return null;
+		return await _repo.GetAccordionByIdAsync(contentId, ct);
+	}
+
+	public async Task<BrandArticleDto?> GetArticleAsync(int brandId, int contentId, CancellationToken ct)
+	{
+		var (id, _, _) = await _repo.GetBrandAsync(brandId, ct);
+		if (id == 0) return null;
+		return await _repo.GetArticleByIdAsync(contentId, ct);
+	}
+
+	public async Task<BannerDto?> GetBannerAsync(int brandId, string? linkUrl, CancellationToken ct)
+	{
+		var (id, _, _) = await _repo.GetBrandAsync(brandId, ct);
+		if (id == 0) return null;
+
+		var imgId = await _repo.GetBrandImgIdAsync(brandId, ct);
+		if (!imgId.HasValue) return null;
+
+		var dto = await _repo.GetAssetFileAsBannerAsync(imgId.Value, ct);
+		if (dto == null) return null;
+
+		dto.BrandId = brandId;
+		dto.LinkUrl = linkUrl; // 若 layout block 指定 linkUrl，就從 Controller 帶入
+		dto.ContentTitle = "Brand Banner";
+		return dto;
+	}
+
 
 	#endregion
 

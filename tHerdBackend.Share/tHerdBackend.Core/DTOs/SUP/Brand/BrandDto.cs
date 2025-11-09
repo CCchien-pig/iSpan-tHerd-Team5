@@ -108,5 +108,7 @@ namespace tHerdBackend.Core.DTOs.SUP.Brand
 		[Display(Name = "最後異動時間")]
 		[DisplayFormat(DataFormatString = "{0:yyyy/MM/dd tt hh:mm:ss}", ApplyFormatInEditMode = true)]
 		public DateTime? RevisedDate { get; set; }
+
+		public int? ImgId { get; set; }
 	}
 }

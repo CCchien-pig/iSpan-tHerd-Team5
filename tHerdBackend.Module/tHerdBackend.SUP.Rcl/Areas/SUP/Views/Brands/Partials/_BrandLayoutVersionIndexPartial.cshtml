@@ -50,16 +50,16 @@
 
                         <tr class="@isCurrent" data-layout-id="@layout.LayoutId">
                             <td class="@statusClass">@statusText</td>
-                            
+
                             <td>
                                 @(layout.LayoutVersion ?? "未命名版本") 
                                 <span class="text-muted small">(ID: @layout.LayoutId)</span>
                             </td>
-                            
+
                             <td>@(layout.RevisedDate?.ToString("yyyy/MM/dd HH:mm") ?? layout.CreatedDate.ToString("yyyy/MM/dd HH:mm"))</td>
-                            
+
                             @* <td>@(layout.Reviser)</td> 假設 Reviser/Creator ID 在 View 中有對應的名稱查找 *@
-                            
+
                             <td>
                                 @* 編輯按鈕：依靠 Index.cshtml 的事件委派 *@
                                 <button class="btn btn-sm btn-outline-info edit-layout-btn me-2"  
