@@ -216,7 +216,7 @@ featuredOpen: false,
       quickActions: [
   {
     text: '追蹤我的訂單',
-    to: '/orders/track',
+    to: '/orders',
     svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M3 7h13l3 5v5h-3"></path>
             <circle cx="7.5" cy="18.5" r="1.5"></circle>
@@ -225,7 +225,7 @@ featuredOpen: false,
   },
   {
     text: '修改或取消訂單',
-    to: '/orders/manage',
+    to: '/orders',
     svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <rect x="3" y="3" width="18" height="14" rx="2"></rect>
             <path d="M3 9h18"></path>
@@ -233,7 +233,7 @@ featuredOpen: false,
   },
   {
     text: '忘記密碼',
-    to: '/account/forgot',
+    to: '/user/forgot',
     svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <rect x="3" y="11" width="18" height="10" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -241,7 +241,7 @@ featuredOpen: false,
   },
   {
     text: '客服服務',
-    to: '/cs/faq',
+    to: '/cs/ticket',
     svg: `<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M21 15a4 4 0 0 1-4 4h-3l-4 3v-3H7a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
           </svg>`

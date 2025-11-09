@@ -1,0 +1,122 @@
+<template>
+  <div class="container py-4">
+    <!-- 標題 + 返回文章列表按鈕（只有有資料時才出現） -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 mb-3">
+      <h2 class="main-color-green-text mb-0 flex-grow-1">我買過的文章</h2>
+      <div v-if="items.length > 0" class="ms-md-auto">
+        <router-link
+          :to="{ name: 'cnt-articles', query: { scroll: 'list' } }"
+          class="btn btn-sm btn-outline-main-green btn-my-articles"
+        >
+          ← 返回文章列表
+        </router-link>
+      </div>
+    </div>
+
+    <div v-if="loading" class="text-center py-5 text-muted">載入中…</div>
+
+    <!-- 空狀態：只保留中間這顆主按鈕 -->
+    <div v-else-if="items.length === 0" class="text-center py-5 text-muted empty-state">
+      <p class="mb-1">目前還沒有購買紀錄</p>
+      <router-link
+        :to="{ name: 'cnt-articles', query: { scroll: 'list' } }"
+        class="btn teal-reflect-button text-white mt-3 px-4"
+      >
+        去逛逛文章 →
+      </router-link>
+    </div>
+
+    <div v-else class="row g-3">
+      <!-- 下面你的卡片區保持不變 -->
+      <div class="col-12 col-md-6" v-for="p in items" :key="p.purchaseId">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge bg-light main-color-green-text">
+                {{ p.categoryName || '文章' }}
+              </span>
+              <small class="text-muted">
+                購買日期：{{ formatDate(p.purchasedDate) }}
+              </small>
+            </div>
+
+            <h5 class="main-color-green-text mb-2">{{ p.title }}</h5>
+
+            <p class="mb-1">
+              單篇價格：
+              <strong class="text-danger">{{ p.unitPrice.toFixed(0) }}</strong> 元
+            </p>
+
+            <div class="mt-auto d-flex justify-content-end">
+              <router-link
+                :to="{ name: 'cnt-article-detail', params: { id: p.pageId }, query: { scroll: 'body' } }"
+                class="btn btn-sm teal-reflect-button text-white"
+              >
+                前往閱讀 →
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from "vue";
+import cntArticlesApi from './api/cntArticlesApi'
+
+const loading = ref(false);
+const items = ref([]);
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    const data = await cntArticlesApi.getMyPurchasedArticles();
+    items.value = Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("取得購買文章列表失敗", err);
+    items.value = [];
+  } finally {
+    loading.value = false;
+  }
+});
+
+function formatDate(d) {
+  try {
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return "";
+    return dt.toLocaleDateString();
+  } catch {
+    return "";
+  }
+}
+</script>
+<style scoped>
+/* 右上角的小膠囊按鈕：次要導覽 */
+.btn-my-articles {
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* 自訂一個「外框綠色」的幽靈按鈕 */
+.btn-outline-main-green {
+  border: 1px solid var(--main-color-green, #007c82);
+  color: var(--main-color-green, #007c82);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.btn-outline-main-green:hover {
+  background-color: rgba(0, 124, 130, 0.06);
+  text-decoration: none;
+}
+
+/* 空狀態區塊收窄一點，視覺上比較聚焦 */
+.empty-state {
+  max-width: 420px;
+  margin: 0 auto;
+}
+</style>

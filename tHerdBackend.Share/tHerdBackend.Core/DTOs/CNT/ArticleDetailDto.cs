@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using tHerdBackend.Core.DTOs.CNT;
+﻿using tHerdBackend.Core.DTOs.CNT;
 
 namespace tHerdBackend.Share.DTOs.CNT
 {
@@ -35,6 +33,9 @@ namespace tHerdBackend.Share.DTOs.CNT
 
 		/// <summary>免費預覽長度（字數）</summary>
 		public int PreviewLength { get; set; }
+
+		/// <summary>🔸 新增：單篇文章價格（對應 CNT_Page.Price）/// </summary>
+		public decimal? Price { get; set; }
 
 		/// <summary>標籤清單（顯示、導購用）</summary>
 		public List<ArticleTagDto> Tags { get; set; } = new();

@@ -36,7 +36,10 @@ namespace tHerdBackend.Core.DTOs.PROD
 		public bool SortDesc { get; set; } = false; // 是否倒序
 		public bool? IsPublished { get; set; }      // 是否發佈
 		public bool? IsFrontEnd { get; set; }       // 是否來自前端
+        public string? Badge { get; set; }          // 標籤代號
+		public List<int>? ProductIdList { get; set; }// 多商品查詢
+		public string? Other { get; set; }          // 熱銷 : Hot
 
-		public int? ProductId { get; set; }
+        public int? ProductId { get; set; }
 	}
 }

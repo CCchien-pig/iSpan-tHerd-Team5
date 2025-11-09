@@ -1,4 +1,5 @@
 ﻿using CloudinaryDotNet;
+using DocumentFormat.OpenXml.Presentation;
 using Microsoft.AspNetCore.Authentication;           // AuthenticationBuilder 擴充
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;    // AddGoogle 擴充方法所在組件
@@ -51,6 +52,14 @@ namespace tHerdBackend.SharedApi
         {
 
             var builder = WebApplication.CreateBuilder(args);
+
+            // ✅ 測試：印出 ECPay 設定
+            var ecpayConfig = builder.Configuration.GetSection("ECPay");
+            Console.WriteLine("=== ECPay 設定檢查 ===");
+            Console.WriteLine($"MerchantID: {ecpayConfig["MerchantID"]}");
+            Console.WriteLine($"HashKey: {ecpayConfig["HashKey"]}");
+            Console.WriteLine($"PaymentUrl: {ecpayConfig["PaymentUrl"]}");
+            Console.WriteLine("=====================");
 
             builder.Host.ConfigureAppConfiguration((context, config) =>
             {
@@ -107,6 +116,9 @@ namespace tHerdBackend.SharedApi
 			// 註冊寄信服務
 			builder.Services.AddTransient<IEmailSender, EmailSender>();
 
+			// === 即時通訊（SignalR） ===
+			builder.Services.AddSignalR();
+
 			builder.Services.ConfigureExternalCookie(options =>
 			{
 				options.Cookie.Name = ".ExternalAuth.Temp";
@@ -128,6 +140,21 @@ namespace tHerdBackend.SharedApi
 			})
 			.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
+				options.Events = new JwtBearerEvents
+				{
+					// ✅ 新增這段，只給 SignalR 用（不會影響現有會員 API）
+					OnMessageReceived = context =>
+					{
+						var accessToken = context.Request.Query["access_token"];
+						var path = context.HttpContext.Request.Path;
+						if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+						{
+							context.Token = accessToken;
+						}
+						return Task.CompletedTask;
+					}
+				};
+
 				options.MapInboundClaims = false; // 不要把標準 JWT claim 亂映射
 
 				var cfg = builder.Configuration.GetSection("Jwt");
@@ -231,14 +258,28 @@ namespace tHerdBackend.SharedApi
 				o.Cookie.SameSite = SameSiteMode.Lax;
 			});
 
-			// 允許 CORS
+			//// 允許 CORS
+			//builder.Services.AddCors(options =>
+			//{
+			//	options.AddPolicy("AllowAll",
+			//		policy => policy
+			//			.AllowAnyOrigin()
+			//			.AllowAnyMethod()
+			//			.AllowAnyHeader());
+			//});
 			builder.Services.AddCors(options =>
 			{
-				options.AddPolicy("AllowAll",
+				options.AddPolicy("AllowFrontend",
 					policy => policy
-						.AllowAnyOrigin()
+						.AllowAnyHeader()
 						.AllowAnyMethod()
-						.AllowAnyHeader());
+						.AllowCredentials()
+						.SetIsOriginAllowed(origin =>
+							origin.StartsWith("http://localhost:5173") ||  // Vue 前台
+							origin.StartsWith("https://localhost:5173") ||
+							origin.StartsWith("https://localhost:7157")    // ✅ 後台 Admin
+						)
+					);
 			});
 
 			// 前台依賴註冊Identity，註冊 CurrentUser 本體（不要掛 ICurrentUser）
@@ -286,28 +327,26 @@ namespace tHerdBackend.SharedApi
             builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
 
 
-			// === 讀取綠界設定值 ===
-			//builder.Services.Configure<ECPaySettings>(
-			//builder.Configuration.GetSection("ECPay"));
-			//builder.Services.AddScoped<SharedECPayService>();
+            // === 綠界設定 ===
+            // 1. 金流設定 (SharedApi 使用的 ECPaySettings)
+            builder.Services.Configure<ECPaySettings>(
+                builder.Configuration.GetSection("ECPay"));
+            builder.Services.AddScoped<SharedECPayService>();
 
-			// 1. 舊有的金流設定 (ECPaySettings) -> 改讀取 "ECPay:Payment" 子區塊
-			builder.Services.Configure<ECPaySettings>(
-				builder.Configuration.GetSection("ECPay:Payment"));
-			builder.Services.AddScoped<SharedECPayService>();
+            // 2. 金流設定 (Services/ORD 使用的 ECPayConfigDTO)
+            builder.Services.Configure<ECPayConfigDTO>(
+                builder.Configuration.GetSection("ECPay"));
 
-			// 2. 新增的物流設定 (ECPayLogisticsConfig) -> 讀取 "ECPay:Logistics" 子區塊
-			builder.Services.Configure<ECPayLogisticsConfig>(
-				builder.Configuration.GetSection("ECPay:Logistics"));
-			builder.Services.AddScoped<ECPayLogisticsService>();
+            // 3. 物流設定 (ECPayLogisticsConfig)
+            builder.Services.Configure<ECPayLogisticsConfig>(
+                builder.Configuration.GetSection("ECPay:Logistics"));
+            builder.Services.AddScoped<ECPayLogisticsService>();
 
-			//builder.Services.AddScoped<ECPayService>();
+            // 4. 訂單計算服務
+            builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
 
-			// === 訂單計算服務 ===
-			builder.Services.AddScoped<IOrderCalculationService, OrderCalculationService>();
-
-			// 註冊 Cloudinary 為 Singleton
-			var cloudinary = new Cloudinary(account);
+            // 註冊 Cloudinary 為 Singleton
+            var cloudinary = new Cloudinary(account);
 			builder.Services.AddSingleton(cloudinary);
 
 			builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
@@ -367,28 +406,48 @@ namespace tHerdBackend.SharedApi
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            
 
-			app.UseCors("AllowAll");
+                        app.UseHttpsRedirection();
 
+            
 
-			// 訪客追蹤：若無 guestId 就建立
-			app.UseSession();
-			app.Use(async (ctx, next) =>
-			{
-				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
-					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
-				await next();
-			});
+            
 
-		
-			// 啟用 JWT 驗證
-			app.UseAuthentication();
+            			// 訪客追蹤：若無 guestId 就建立
+
+            			app.UseSession();
+
+            			app.Use(async (ctx, next) =>
+
+            			{
+
+            				if (string.IsNullOrEmpty(ctx.Session.GetString("guestId")))
+
+            					ctx.Session.SetString("guestId", Guid.NewGuid().ToString("N"));
+
+            				await next();
+
+            			});
+
+            
+
+            			app.UseCors("AllowFrontend");   // 確保這行存在且在 UseAuthorization 之前
+
+            								   // 啟用 JWT 驗證
+
+            			app.UseAuthentication();
+
+            
 			app.UseAuthorization();
 
 			app.MapControllers();
 
-            app.Run();
+			// === 即時通訊（SignalR Hub） ===
+		
+			app.MapHub<tHerdBackend.SharedApi.Hubs.ChatHub>("/chatHub");
+
+			app.Run();
 
         }
     }

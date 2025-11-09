@@ -43,7 +43,7 @@
               </button>
             </li>
 
-            <li class="nav-divider mx-3"></li>
+            <li class="nav-divider d-none d-lg-block" aria-hidden="true"></li>
 
             <!-- 品牌 A-Z -->
             <li
@@ -113,13 +113,17 @@
             </li>
             <!-- ✅ 固定項目（品牌A-Z後面） -->
             <li v-for="item in staticMenus" :key="item.path" class="nav-item">
-              <router-link
-                :to="item.path"
-                class="nav-link fw-medium rounded-pill text-only"
-                :class="{ active: $route.path.startsWith(item.path) }"
+              <button
+                type="button"
+                class="nav-link fw-medium rounded-pill text-only bg-transparent border-0"
+                :class="[
+                  { active: $route.path.startsWith(item.path) },
+                  item.name === '特惠' ? 'text-danger fw-bold' : ''  // 🔹 特惠顯示紅字加粗
+                ]"
+                @click="goStaticMenu(item)"
               >
                 {{ item.name }}
-              </router-link>
+              </button>
             </li>
           </ul>
 
@@ -228,10 +232,10 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
 import MegaMenu from '@/components/modules/prod/menu/MegaMenu.vue'
-
-const router = useRouter()
+import { useCartStore } from '@/composables/modules/prod/cartStore'
 
 // ==================== 狀態變數 ====================
+const router = useRouter()
 const showMobileMenu = ref(false)
 const showBrands = ref(false)
 const showBrandsInMobile = ref(false)
@@ -240,6 +244,7 @@ const activeMenuId = ref(null)
 const megaMenuData = ref(null)
 const isLoadingMenu = ref(false)
 const loadedMenus = ref({})
+const cartStore = useCartStore()
 
 const navigationItemsWithIcon = [
         { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png', productTypeId: 2785 },
@@ -254,7 +259,7 @@ const navigationItemsWithIcon = [
 
 // 品牌A-Z後的固定連結
 const staticMenus = [
-  { name: '健康主題', path: '/health-topics' },
+  //{ name: '健康主題', path: '/health-topics' },
   { name: '特惠', path: '/specials' },
   { name: '暢銷', path: '/bestsellers' },
   { name: '試用', path: '/trials' },
@@ -263,19 +268,60 @@ const staticMenus = [
 ]
 
 // === 初始化 ===
-onMounted(() => {
+onMounted(async () => {
+  // ① 導覽初始化
   productMenus.value = navigationItemsWithIcon
     .filter(i => i.type === 'pr')
     .map((item, index) => ({
       ...item,
       id: `menu-${index + 1}`,
-      productTypeCode: item.path.replace('/', '') // 加上 code
+      productTypeCode: item.path.replace('/', '')
     }))
+
+  // ② 更新購物車紅點
+  setTimeout(async () => {
+    await cartStore.refreshCartCount()
+  }, 100)
 })
 
-// ==================== 點擊分類載入 MegaMenu ====================
+// ==================== 點擊分類載入商品標籤 ====================
+function goStaticMenu(item) {
+  // 特殊處理：點擊「特惠」時轉到商品搜尋頁
+  if (item.path === '/specials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'discount' }
+    })
+  }
+  else if (item.path === '/bestsellers') {
+    router.push({
+      path: '/prod/products/search',
+      query: { other: 'Hot' }
+    })
+  }
+  else if (item.path === '/trials') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'try' }
+    })
+  }
+  else if (item.path === '/new-products') {
+    router.push({
+      path: '/prod/products/search',
+      query: { badge: 'new' }
+    })
+  }
+  else {
+    // 其他項目維持原行為
+    router.push(item.path)
+  }
+}
+
+// ===== 點擊分類載入 MegaMenu / 或直接導向結果頁 =====
 let lastClickedId = null
+
 async function goCategory(item) {
+  // 第一次點：打開 MegaMenu（僅載入，不導頁）
   if (activeMenuId.value !== item.id) {
     activeMenuId.value = item.id
     await loadMegaMenuByCategory(item)
@@ -283,14 +329,28 @@ async function goCategory(item) {
     return
   }
 
-  // 第二次點相同分類 → 直接跳轉到分類搜尋頁
+  // 第二次點：同一個分類 -> 直接導向「分類搜尋結果頁」
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
+    const code = String(item.productTypeCode || '').trim().toLowerCase()
+    const id = Number(item.productTypeId) || null
+    if (!id) {
+      console.warn('⚠️ 缺少 productTypeId，無法導向分類搜尋頁。', item)
+      return
+    }
+
+    // slug: <code>-<id>，例如 "supplements-2785"
+    const slug = code ? `${code}-${id}` : String(id)
+
+    // title 來源優先順序：導覽名稱 > 後端回傳的分類名稱
+    const title = item.name || item.productTypeName || ''
+
+    // 關閉 MegaMenu 再導頁，避免殘影
+    activeMenuId.value = null
+    megaMenuData.value = null
+
     router.push({
-      name: 'product-type-search',
-      params: {
-        productTypeCode: item.productTypeCode,
-        productTypeId: item.productTypeId
-      }
+      path: `/products/${slug}`,
+      query: { title }
     })
   }
 }
@@ -299,9 +359,7 @@ async function goCategory(item) {
 async function loadMegaMenuByCategory(item) {
   try {
     isLoadingMenu.value = true
-    console.log('🔍 請求分類資料：', item.productTypeId)
     const res = await ProductsApi.getProductCategoriesByTypeId(item.productTypeId)
-    console.log('✅ 回傳資料：', res.data)
 
     const apiData = res?.data
     const treeData = Array.isArray(apiData?.data)
@@ -319,12 +377,10 @@ async function loadMegaMenuByCategory(item) {
     const columns = buildMegaMenu(treeData)
     megaMenuData.value = { columns }
     loadedMenus.value[item.id] = { columns }
-    console.log('✅ 轉換後 columns:', columns)
   } catch (err) {
     console.error(`❌ 無法載入 ${item.name} 的分類資料：`, err)
   } finally {
     isLoadingMenu.value = false
-    console.log('finally 結束 isLoadingMenu:', isLoadingMenu.value)
   }
 }
 
@@ -666,6 +722,10 @@ onBeforeUnmount(() => {
   min-height: 52px;
 }
 
+.nav-link.text-danger {
+  color: #dc3545 !important; /* Bootstrap 的紅色 */
+}
+
 .nav-link:hover {
   background-color: #e8f5e8;
   color: rgb(0, 112, 131) !important;
@@ -838,6 +898,15 @@ onBeforeUnmount(() => {
   max-width: 1200px;
   margin: 0 auto;
   transition: all 0.3s ease;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #dee2e6; /* Bootstrap 灰色邊界 */
+  margin: 0 1rem;
+  align-self: center;
+  opacity: 0.6;
 }
 
 /* 📱 響應式 */

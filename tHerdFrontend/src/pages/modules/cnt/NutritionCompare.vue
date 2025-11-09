@@ -1105,4 +1105,22 @@ function getGroupStyle(category, index) {
   box-shadow: 0 0 8px rgba(180,180,180,0.6);
 }
 
+/* 拿掉 Bootstrap 預設為了負 margin 留出的 padding */
+.form-check.form-switch {
+  padding-left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* 不要負 margin，開關整條都看得到 */
+.form-check.form-switch .form-check-input {
+  margin-left: 0;
+}
+
+/* 確保打開時圓點真的跑到最右邊 */
+.form-check.form-switch .form-check-input:checked {
+  background-position: right center;
+}
+
 </style>

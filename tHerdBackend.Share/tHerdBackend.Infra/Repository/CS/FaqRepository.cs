@@ -130,6 +130,25 @@ ORDER BY OrderSeq, CategoryId;";
 			return rows.ToList();
 		}
 
+		// === ChatService 使用 ===
+		public async Task<FaqSearchDto?> SearchByKeywordAsync(string keyword)
+		{
+			const string sql = @"
+DECLARE @kw NVARCHAR(100) = @Q;
+SELECT TOP 1
+    f.FaqId, f.Title, f.AnswerHtml, f.CategoryId, c.CategoryName,
+    Score =
+        (CASE WHEN f.Title      LIKE '%'+@kw+'%' THEN 10 ELSE 0 END) +
+        (CASE WHEN f.AnswerHtml LIKE '%'+@kw+'%' THEN  4 ELSE 0 END)
+FROM CS_Faq f
+JOIN CS_FaqCategory c ON c.CategoryId = f.CategoryId AND c.IsActive = 1
+WHERE f.IsActive = 1
+  AND (f.Title LIKE '%'+@kw+'%' OR f.AnswerHtml LIKE '%'+@kw+'%')
+ORDER BY Score DESC, f.OrderSeq, f.FaqId;";
+
+			using var cn = new SqlConnection(_connStr);
+			return await cn.QueryFirstOrDefaultAsync<FaqSearchDto>(sql, new { Q = keyword });
+		}
 
 
 	}

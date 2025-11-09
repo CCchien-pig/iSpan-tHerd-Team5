@@ -71,11 +71,15 @@
                     <!-- 預設值暫存（不會被提交） -->
                     <input type="hidden" id="hiddenContentDefault" value="這是預設內容" />
                     <input type="hidden" id="hiddenButtonTextDefault" value="了解更多" />
-                    <input type="hidden" id="hiddenButtonLinkDefault" value="/shop" />
+                    <input type="hidden" id="hiddenButtonLinkDefault" value="#" />
 
                     <div class="text-end">
                         <button type="submit" class="btn btn-teal">儲存</button>
+                        <button type="button" id="btnDemoFill" class="btn btn-outline-secondary">
+                            一鍵填入（Demo）
+                        </button>
                     </div>
+                    
                 </form>
             </div>
         </div>
@@ -83,6 +87,24 @@
 </div>
 
 <script>
+      // === 💡 Demo 一鍵填入 ===
+    $('#btnDemoFill').on('click', () => {
+      $('[name="Title"]').val('tHerd週年慶');
+      $('[name="Content"]').val('越買越划算，週年慶最懂你！');
+      $('[name="ButtonText"]').val('馬上選購');
+      $('[name="ButtonLink"]').val('#');
+
+      // 自動填入今日日期為開始日
+      const today = new Date().toISOString().split('T')[0];
+      $('#startDateInput').val(today);
+
+      Swal.fire({
+        icon: 'success',
+        title: '已自動填入範例資料',
+        timer: 1000,
+        showConfirmButton: false
+      });
+    });
     // === 🧠 動態欄位控制 ===
     function updateAdFields() {
         const type = $('#adTypeSelect').val();

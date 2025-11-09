@@ -17,6 +17,8 @@
 
         public virtual string Badge { get; set; } = string.Empty;
 
+        public virtual string BadgeName { get; set; } = string.Empty;
+
         public virtual int MainSkuId { get; set; } = 0;
 
         public virtual string ImageUrl { get; set; } = string.Empty;
@@ -43,5 +45,20 @@
     => prices.FirstOrDefault(p => p.HasValue && p.Value > 0);
 
         public decimal? BillingPrice => FirstPositive(SalePrice, UnitPrice, ListPrice);
+
+        /// <summary>
+        /// 評價數
+        /// </summary>
+        public virtual int? ReviewCount { get; set; }
+
+        /// <summary>
+        /// 星星平均
+        /// </summary>
+        public virtual int? AvgRating { get; set; }
+
+        /// <summary>
+        /// 分類名稱
+        /// </summary>
+        public virtual string? ProductTypeName { get; set; }
     }
 }
