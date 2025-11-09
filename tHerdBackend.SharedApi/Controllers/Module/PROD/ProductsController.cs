@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.PROD.ord;
+using tHerdBackend.Core.DTOs.PROD.sup;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.ValueObjects;
 
@@ -130,6 +131,63 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
                 var result = await _service.GetCartSummaryAsync(userNumberId, sessionId, ct);
 
                 return Ok(ApiResponse<dynamic>.Ok(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 取得所有啟用品牌（前台用）
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("get-brands-all")]
+        public async Task<IActionResult> GetBrandsAll()
+        {
+            try
+            {
+                var result = await _service.GetBrandsAll();
+                return Ok(ApiResponse<List<SupBrandsDto>>.Ok(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 搜尋品牌名稱（關鍵字）
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("search-brands")]
+        public async Task<IActionResult> SearchBrands([FromQuery] string keyword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(keyword))
+                    return BadRequest(ApiResponse<string>.Fail("搜尋關鍵字不可為空"));
+
+                var result = await _service.SearchBrands(keyword);
+                return Ok(ApiResponse<List<SupBrandsDto>>.Ok(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"伺服器錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 取得屬性
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("get-att")]
+        public async Task<IActionResult> GetFilterAttributes(CancellationToken ct = default)
+        {
+            try
+            {
+                var result = await _service.GetFilterAttributesAsync(ct);
+                return Ok(ApiResponse<List<AttributeWithOptionsDto>>.Ok(result));
             }
             catch (Exception ex)
             {

@@ -1,98 +1,139 @@
 <template>
-  <aside class="product-sidebar p-3 border-end bg-light">
-    <h5 class="fw-bold mb-3">篩選條件</h5>
+  <aside class="product-sidebar" :style="{ top: topOffset + 'px' }">
+    <!-- 🔹 滾動區：只包含篩選項目 -->
+    <div class="sidebar-scroll">
+      <h5 class="fw-bold mb-3">篩選條件</h5>
 
-    <!-- 子組件 -->
-    <BrandFilter v-model:selected="filters.brandIds" />
-    <PriceFilter v-model:range="filters.priceRange" />
-    <RatingFilter v-model:rating="filters.rating" />
+      <BrandFilter v-model="filters.brandIds" />
+      <PriceFilter v-model="filters.priceRange" />
+      <RatingFilter v-model="filters.rating" />
 
-    <hr />
-    <!-- 商品屬性篩選：動態生成 -->
-    <div v-for="attr in attributes" :key="attr.attributeId" class="mb-3">
-      <h6 class="fw-bold">{{ attr.attributeName }}</h6>
-      <div class="d-flex flex-wrap gap-2">
-        <button
-          v-for="opt in attr.options"
-          :key="opt.optionName"
-          class="btn btn-sm"
-          :class="{
-            'btn-success': isSelected(attr.attributeName, opt.optionName),
-            'btn-outline-secondary': !isSelected(attr.attributeName, opt.optionName)
-          }"
-          @click="toggleOption(attr.attributeName, opt.optionName)"
-        >
-          {{ opt.optionName }}
-        </button>
-      </div>
+      <hr />
+
+      <AttributeFilterAccordion
+        v-model="filters.attributeFilters"
+        :attributes="attributes"
+      />
     </div>
 
-    <div class="mt-4 d-flex justify-content-between">
+    <!-- 🔹 固定底部：重設／套用按鈕 -->
+    <div class="sidebar-footer d-flex justify-content-between p-2 border-top bg-white">
       <button class="btn btn-outline-secondary btn-sm" @click="resetFilters">重設</button>
-      <button class="btn btn-success btn-sm" @click="$emit('filter-change', filters)">套用</button>
+      <button class="btn btn-success btn-sm" @click="applyFilters">套用</button>
     </div>
   </aside>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import BrandFilter from './sub/BrandFilter.vue'
 import PriceFilter from './sub/PriceFilter.vue'
 import RatingFilter from './sub/RatingFilter.vue'
+import AttributeFilterAccordion from './sub/AttributeFilterAccordion.vue'
+import ProductsApi from '@/api/modules/prod/ProductsApi'
 
-// 模擬後端載入屬性清單 (可改成 API)
-const attributes = ref([
-  {
-    attributeId: 1000,
-    attributeName: '功效',
-    options: [{ optionName: '保濕' }, { optionName: '抗老' }, { optionName: '美白' }]
-  },
-  {
-    attributeId: 1001,
-    attributeName: '性別',
-    options: [{ optionName: '女性' }, { optionName: '男性' }, { optionName: '不限' }]
-  },
-  {
-    attributeId: 1002,
-    attributeName: '年齡層',
-    options: [{ optionName: '18–25歲' }, { optionName: '26–40歲' }, { optionName: '41–60歲' }]
-  }
-])
+const props = defineProps({
+  resetKey: Number  // ✅ 外部傳進來的重設觸發值
+})
+
+const emit = defineEmits(['filter-change'])
 
 const filters = ref({
   brandIds: [],
-  priceRange: { min: 0, max: 0 },
-  rating: 0,
+  priceRange: { min: null, max: null },
+  rating: [],
   attributeFilters: []
 })
 
-function isSelected(attrName, optionName) {
-  const f = filters.value.attributeFilters.find(f => f.name === attrName)
-  return f && f.optionNames.includes(optionName)
-}
+watch(() => props.resetKey, (newVal, oldVal) => {
+  if (newVal === undefined || newVal === oldVal) return
+    filters.value.brandIds = []
+    filters.value.priceRange = { min: null, max: null }
+    filters.value.rating = []
+    filters.value.attributeFilters = []
 
-function toggleOption(attrName, optionName) {
-  let f = filters.value.attributeFilters.find(f => f.name === attrName)
-  if (!f) {
-    f = { name: attrName, optionNames: [] }
-    filters.value.attributeFilters.push(f)
-  }
-  const idx = f.optionNames.indexOf(optionName)
-  if (idx > -1) f.optionNames.splice(idx, 1)
-  else f.optionNames.push(optionName)
-}
+  // 🔥 重設後立即通知父層重新查詢
+  emit('filter-change', { ...filters.value })
+})
 
+// 🔁 重設篩選條件
 function resetFilters() {
-  filters.value = { brandIds: [], priceRange: { min: 0, max: 0 }, rating: 0, attributeFilters: [] }
+  filters.value.brandIds = []
+  filters.value.priceRange = { min: null, max: null }
+  filters.value.rating = []
+  filters.value.attributeFilters = []
+  emit('filter-change', { ...filters.value })
+}
+
+const attributes = ref([])
+const topOffset = ref(300)
+
+onMounted(async () => {
+  try {
+    const res = await ProductsApi.getFilterAttributes()
+    attributes.value = Array.isArray(res) ? res : []
+  } catch (err) {
+    console.error('❌ 載入屬性資料失敗:', err)
+  }
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+function handleScroll() {
+  const scrollY = window.scrollY
+  topOffset.value = scrollY > 200 ? 100 : 300
+}
+
+function applyFilters() {
+  emit('filter-change', { ...filters.value })
 }
 </script>
 
 <style scoped>
 .product-sidebar {
-  width: 260px;
-  min-height: 100%;
+  position: fixed;
+  left: 0;
+  width: 300px;
+  height: calc(100vh - 100px);
+  background: #fff;
+  border-right: 1px solid #dee2e6;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  flex-direction: column; /* ✅ 上下分佈 */
+  transition: top 0.4s ease;
+  z-index: 1000;
 }
-.btn-sm {
-  border-radius: 20px;
+
+/* 🔹 可捲動區域 */
+.sidebar-scroll {
+  flex: 1; /* 讓它自動填滿可用空間 */
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* 🔹 固定底部按鈕區 */
+.sidebar-footer {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
+  padding: 0.75rem;
+}
+
+/* ✅ 自訂滾輪 */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
 }
 </style>
