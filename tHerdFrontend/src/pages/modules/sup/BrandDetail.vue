@@ -6,8 +6,21 @@
         <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
       </header>
 
+      <!-- 🔸 折扣活動條 -->
+      <div
+        v-if="discountInfo"
+        class="discount-bar text-center py-2 px-3 fw-semibold"
+        :style="barStyle"
+      >
+        <span class="me-2"> {{ displayRate }} 特惠中 </span>
+        <span v-if="discountInfo.endDate">
+          至 {{ new Date(discountInfo.endDate).toLocaleDateString() }}
+        </span>
+        <template v-if="discountInfo.note"> ｜{{ discountInfo.note }} </template>
+      </div>
+
       <!-- 固定第一排 Banner -->
-      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-3" />
+      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-1" />
 
       <!-- 固定第二排 分類按鈕 -->
       <BrandButtons
@@ -86,11 +99,11 @@
       <div v-if="loading" class="text-muted">載入中…</div>
       <div v-else-if="!loading && !vm.brandName" class="text-muted">查無品牌資料</div>
     </div>
-  </section>  
+  </section>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { Vibrant } from 'node-vibrant/browser'
@@ -110,6 +123,8 @@ const route = useRoute()
 const loading = ref(false)
 const imagesRight = ref([])
 const layoutBlocks = ref([])
+
+const discountInfo = ref(null)
 
 const DEFAULT_RGB = { r: 0, g: 147, b: 171 }
 const vm = ref({
@@ -235,6 +250,8 @@ const fetchDetail = async () => {
   } finally {
     loading.value = false
   }
+
+  await fetchBrandDiscount(vm.value.brandId)
 }
 
 // 商品清單
@@ -289,6 +306,45 @@ onMounted(() => {
   fetchDetail()
   fetchBrandProducts(1)
 })
+
+// 動態折扣文字（0.95 → 95折，0.9 → 9折）
+const displayRate = computed(() => {
+  const rate = discountInfo.value?.discountRate
+  if (!rate || rate >= 1) return ''
+  const val = rate * 10
+  // 若為整數（0.9），顯示「9折」；否則顯示「95折」
+  return Number.isInteger(val) ? `${val}折` : `${Math.round(val * 10)}折`
+})
+
+// 動態樣式
+const barStyle = computed(() => {
+  const { r, g, b } = vm.value.mainColor
+  const luma = getLuma({ r, g, b })
+  const textColor = luma > 150 ? '#222' : `rgb(${r}, ${g}, ${b})`
+  return {
+    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.1)`,
+    color: textColor,
+    border: `1px solid rgba(${r}, ${g}, ${b}, 0.3)`,
+    borderRadius: '4px',
+    marginBottom: '12px',
+    fontSize: '0.95rem',
+  }
+})
+
+async function fetchBrandDiscount(brandId) {
+  try {
+    const res = await axios.get(`/api/sup/Brands/discount/bybrand/${brandId}`)
+    const data = res?.data?.data
+    if (data && data.discountRate) {
+      discountInfo.value = data
+    } else {
+      discountInfo.value = null
+    }
+  } catch (err) {
+    console.error('[BrandDetail] fetchBrandDiscount error =', err)
+    discountInfo.value = null
+  }
+}
 
 watch(
   () => route.fullPath,
@@ -351,5 +407,14 @@ const onFilter = (btn) => {
 .btn-toggle:hover {
   background-color: rgb(77, 180, 193);
   color: rgb(248, 249, 250);
+}
+
+.discount-bar {
+  background-color: #f8efe2;
+  color: #d9480f;
+  border: 1px solid #ffe8cc;
+  border-radius: 4px;
+  /* margin-bottom: 12px; */
+  font-size: 0.95rem;
 }
 </style>
