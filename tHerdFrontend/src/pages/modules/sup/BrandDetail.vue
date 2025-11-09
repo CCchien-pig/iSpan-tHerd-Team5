@@ -1,17 +1,4 @@
-<!-- 先以預設順序渲染；
-未來後端若回傳 orderedBlocks，就能依序渲染切換版位而不動骨架。 -->
-
 <!-- src/pages/modules/sup/BrandDetail.vue -->
-<!--
-依 getBrandDetail 取回 Banner、Buttons、Accordions。
-版面：
-1) BrandBanner：顯示 Banner。
-2) BrandButtons：顯示分類按鈕（背景取主色；hover 反轉）。
-3) BrandMoreCard：了解更多卡片（左文群組、右圖；無圖時左側滿版）。
----
-4) ProductList：產品清單卡片
--->
-
 <template>
   <section class="container py-3">
     <div class="content-wrap">
@@ -19,56 +6,93 @@
         <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
       </header>
 
-      <!-- Banner -->
-      <BrandBanner v-if="vm.bannerUrl" :url="vm.bannerUrl" :alt="vm.brandName" class="mb-2" />
+      <!-- 🔸 折扣活動條 -->
+      <div
+        v-if="discountInfo"
+        class="discount-bar text-center py-2 px-3 fw-semibold"
+        :style="barStyle"
+      >
+        <span class="me-2"> {{ displayRate }} 特惠中 </span>
+        <span v-if="discountInfo.endDate">
+          至 {{ new Date(discountInfo.endDate).toLocaleDateString() }}
+        </span>
+        <template v-if="discountInfo.note"> ｜{{ discountInfo.note }} </template>
+      </div>
 
-      <!-- 分類按鈕（有資料才顯示） -->
+      <!-- 固定第一排 Banner -->
+      <BrandBanner
+        v-if="vm.bannerUrl"
+        :url="vm.bannerUrl"
+        :alt="vm.brandName"
+        :link-url="layoutBlocks.find((b) => b.type === 'Banner')?.data?.linkUrl"
+        :main-color="vm.mainColor"
+      />
+
+      <!-- 固定第二排 分類按鈕 -->
       <BrandButtons
         v-if="vm.buttons?.length"
-        class="mb-2"
+        class="mb-3"
         :buttons="vm.buttons"
         :bg-rgb="vm.mainColor"
         @tap="onFilter"
       />
 
-      <!-- 了解更多（有 Accordion 才顯示）-->
-      <!-- 未展開：分隔線 + 中央按鈕 -->
-      <div v-if="vm.accordions?.length && !moreOpen" class="my-4">
+      <!-- 🟢 了解更多按鈕：只在未展開時顯示 -->
+      <div v-if="!moreOpen" class="my-4">
         <div class="split-line anchor-to-top" ref="moreAnchor">
-          <button
-            class="btn btn-sm"
-            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
-            @click="openMore"
-          >
+          <button class="btn btn-sm btn-toggle" @click="openMore">
             了解更多關於 {{ vm.brandName || '品牌' }}
           </button>
         </div>
       </div>
 
-      <!-- 展開卡片 -->
-      <BrandMoreCard
-        v-if="vm.accordions?.length && moreOpen"
-        class="mb-2 pt-3"
-        :groups="vm.accordions"
-        :images-right="imagesRight"
-        :accent-rgb="vm.mainColor"
-        :alt-text="vm.brandName"
-      />
+      <!-- 🟣 展開內容 -->
+      <transition name="fade">
+        <div v-show="moreOpen" class="mb-4 pt-3">
+          <!-- 固定第一個 BrandInfo -->
+          <BrandInfo
+            v-if="vm.brandId"
+            ref="infoSection"
+            :brand-id="vm.brandId"
+            class="mb-3"
+            v-model:brandInfoAvailable="vm.brandInfoAvailable"
+          />
 
-      <!-- 展開：下方分隔線 + 中央關閉按鈕 -->
-      <div v-if="vm.accordions?.length && moreOpen" class="my-3">
-        <div class="split-line">
-          <button
-            class="btn btn-sm"
-            :style="{ backgroundColor: 'rgb(0,112,131)', color: 'rgb(248,249,250)' }"
-            @click="closeMoreAndScrollToTop"
-          >
-            關閉
-          </button>
+          <!-- 若有 Layout 設定 -->
+          <template v-if="layoutBlocks.length">
+            <section
+              v-for="blk in layoutBlocks"
+              :key="`${blk.type}-${blk.data?.contentId}`"
+              class="mb-4"
+            >
+              <BrandAccordionBlock
+                v-if="blk.type === 'Accordion'"
+                :content="blk.data"
+                :accent-rgb="vm.mainColor"
+              />
+              <BrandArticleBlock v-else-if="blk.type === 'Article'" :content="blk.data" />
+            </section>
+          </template>
+
+          <!-- 若無 Layout 設定 -->
+          <template v-else>
+            <BrandMoreCard
+              v-if="Array.isArray(vm.accordions) && vm.accordions.length"
+              :groups="vm.accordions"
+              :images-right="imagesRight"
+              :accent-rgb="vm.mainColor"
+              :alt-text="vm.brandName"
+            />
+          </template>
+
+          <!-- ✅ 關閉按鈕：移至展開內容底部 -->
+          <div class="split-line mt-4">
+            <button class="btn btn-sm btn-toggle" @click="closeMoreAndScrollToTop">關閉</button>
+          </div>
         </div>
-      </div>
+      </transition>
 
-      <!-- 品牌產品列表，放在banner下方 -->
+      <!-- 固定最後一排 商品清單 -->
       <ProductList
         :products="products"
         :totalCount="totalCount"
@@ -85,27 +109,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
 import axios from 'axios'
 import { Vibrant } from 'node-vibrant/browser'
+import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
 
 // 子元件
 import BrandBanner from '@/components/modules/sup/brands/BrandBanner.vue'
 import BrandButtons from '@/components/modules/sup/brands/BrandButtons.vue'
+import BrandInfo from '@/components/modules/sup/brands/BrandInfo.vue'
+import BrandAccordionBlock from '@/components/modules/sup/brands/BrandAccordionBlock.vue'
+import BrandArticleBlock from '@/components/modules/sup/brands/BrandArticleBlock.vue'
 import BrandMoreCard from '@/components/modules/sup/brands/BrandMoreCard.vue'
 import ProductList from '@/components/modules/prod/list/ProductList.vue'
 
-// 容器頁狀態
+// === 狀態 ===
 const route = useRoute()
 const loading = ref(false)
-const moreOpen = ref(false)
-const moreAnchor = ref(null)
-
 const imagesRight = ref([])
+const layoutBlocks = ref([])
 
-// 預設主色
+const discountInfo = ref(null)
+
 const DEFAULT_RGB = { r: 0, g: 147, b: 171 }
 const vm = ref({
   brandId: 0,
@@ -114,17 +140,16 @@ const vm = ref({
   buttons: [],
   accordions: [],
   mainColor: { ...DEFAULT_RGB },
+  brandInfoAvailable: true,
 })
 
-// 產品列表狀態與分頁
 const products = ref([])
 const totalCount = ref(0)
 const currentPage = ref(1)
 const pageSize = 40
 
+// 色彩分析
 const getLuma = ({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-// 以入口最大色近似「最大面積色」，排除過亮/過暗色
 async function extractDominantByPopulation(imgUrl, fallback = { ...DEFAULT_RGB }) {
   try {
     if (!imgUrl) return fallback
@@ -145,30 +170,48 @@ async function extractDominantByPopulation(imgUrl, fallback = { ...DEFAULT_RGB }
   }
 }
 
-/* 進入新頁或路由切換時，重置狀態，避免顏色殘留 */
-function resetStateForNewPage() {
-  loading.value = false
-  moreOpen.value = false
-  imagesRight.value = []
-  vm.value = {
-    brandId: 0,
-    brandName: '',
-    bannerUrl: '',
-    buttons: [],
-    accordions: [],
-    mainColor: { ...DEFAULT_RGB },
+// 取得 layout 設定與對應內容
+const fetchActiveLayout = async (brandId) => {
+  try {
+    const res = await axios.get(`/api/sup/Brands/${brandId}/layout/active`)
+    if (!res?.data?.layoutJson) {
+      layoutBlocks.value = []
+      return
+    }
+
+    const layoutItems = JSON.parse(res.data.layoutJson)
+    const promises = layoutItems.map(async (block) => {
+      switch (block.type) {
+        case 'Banner': {
+          // 🟢 Banner 不需額外 API，只要保留 linkUrl
+          // console.log('[Banner Block]', block)
+          return { type: 'Banner', data: { linkUrl: block.linkUrl } }
+        }
+        case 'Accordion': {
+          const a = await axios.get(`/api/sup/Brands/${brandId}/accordion/${block.contentId}`)
+          // console.log('[Accordion API raw]', a.data)
+          // 🟢 直接解構成正確格式
+          return { type: 'Accordion', data: a.data.data }
+        }
+        case 'Article': {
+          const a = await axios.get(`/api/sup/Brands/${brandId}/article/${block.contentId}`)
+          // console.log('[Article API raw]', a.data)
+          return { type: 'Article', data: a.data.data }
+        }
+        default:
+          return null
+      }
+    })
+
+    layoutBlocks.value = (await Promise.all(promises)).filter(Boolean)
+    // console.log('[Layout Blocks Final]', layoutBlocks.value)
+  } catch (e) {
+    if (e?.response?.status !== 404) console.error('[BrandDetail] fetchActiveLayout failed', e)
+    layoutBlocks.value = []
   }
-  products.value = []
-  totalCount.value = 0
-  currentPage.value = 1
 }
 
-/* 依路由 query 控制展開 */
-const syncExpandFromRoute = () => {
-  moreOpen.value = String(route.query.expand || '') === '1'
-}
-
-// 取得品牌詳情及Banner等資料
+// 品牌詳情
 const fetchDetail = async () => {
   loading.value = true
   try {
@@ -181,9 +224,6 @@ const fetchDetail = async () => {
       vm.value.brandId = id
       return
     }
-
-    // 先重置主色，避免使用上一頁的顏色先行渲染
-    vm.value.mainColor = { ...DEFAULT_RGB }
 
     const buttons = Array.isArray(data.buttons)
       ? [...data.buttons].sort((a, b) => a.order - b.order)
@@ -202,42 +242,35 @@ const fetchDetail = async () => {
       buttons,
       accordions: acc,
       mainColor: { ...DEFAULT_RGB },
+      brandInfoAvailable: true,
     }
 
-    // 重新偵測本頁 Banner 主色（每頁都跑一次）
     const detected = await extractDominantByPopulation(vm.value.bannerUrl, DEFAULT_RGB)
     vm.value.mainColor = detected
 
-    // 載右側圖
     const imgsRes = await getBrandContentImages(vm.value.brandId, {
       folderId: 8,
       altText: vm.value.brandName,
     })
     const urls = imgsRes?.data?.data?.urls
     imagesRight.value = Array.isArray(urls) ? urls : []
+
+    await fetchActiveLayout(vm.value.brandId)
   } catch (err) {
     console.error('[BrandDetail] fetchDetail error =', err)
   } finally {
     loading.value = false
   }
+
+  await fetchBrandDiscount(vm.value.brandId)
 }
 
-/**
- * 取得品牌產品清單(依品牌id分頁查詢)
- * 使用/api/prod/Products/search API
- */
+// 商品清單
 const fetchBrandProducts = async (page = 1) => {
-  loading.value = true
   try {
     const brandId = Number(route.params.brandId)
     if (!brandId) return
-
-    const filter = {
-      BrandId: brandId,
-      PageIndex: page,
-      PageSize: pageSize,
-    }
-
+    const filter = { BrandId: brandId, PageIndex: page, PageSize: pageSize }
     const resp = await axios.post('/api/prod/Products/search', filter)
     if (resp.data && resp.data.data) {
       products.value = resp.data.data.items || []
@@ -246,28 +279,28 @@ const fetchBrandProducts = async (page = 1) => {
     } else {
       products.value = []
       totalCount.value = 0
-      currentPage.value = 1
     }
   } catch (err) {
     console.error('[BrandDetail] fetchBrandProducts error =', err)
-    products.value = []
-    totalCount.value = 0
-  } finally {
-    loading.value = false
   }
 }
 
-// 分頁切換事件
-const onPageChange = (page) => {
-  fetchBrandProducts(page)
-}
+const moreAnchor = ref(null)
+const infoSection = ref(null)
+const moreOpen = ref(false)
 
-// 打開了解更多
-const openMore = () => {
+// 開啟了解更多：展開後自動滾到 BrandInfo 區域上緣
+const openMore = async () => {
   moreOpen.value = true
+  await nextTick()
+  // 讓畫面滑動至 infoSection 或按鈕上緣
+  const target = infoSection.value?.$el || moreAnchor.value
+  if (target) {
+    const top = target.getBoundingClientRect().top + window.scrollY - 80 // 🔹可微調
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
 }
-
-// 關閉了解更多並滾動到目標位置
+// 關閉並滑回「了解更多」按鈕位置
 const closeMoreAndScrollToTop = async () => {
   moreOpen.value = false
   await nextTick()
@@ -276,29 +309,64 @@ const closeMoreAndScrollToTop = async () => {
   }
 }
 
-// 頁面進入時初始化資料
+// 分頁切換
+const onPageChange = (page) => fetchBrandProducts(page)
+
+// 初始化
 onMounted(() => {
-  resetStateForNewPage()
-  syncExpandFromRoute()
   fetchDetail()
   fetchBrandProducts(1)
 })
 
-// 監聽路由切換，重新加載品牌資料與產品清單
+// 動態折扣文字（0.95 → 95折，0.9 → 9折）
+const displayRate = computed(() => {
+  const rate = discountInfo.value?.discountRate
+  if (!rate || rate >= 1) return ''
+  const val = rate * 10
+  // 若為整數（0.9），顯示「9折」；否則顯示「95折」
+  return Number.isInteger(val) ? `${val}折` : `${Math.round(val * 10)}折`
+})
+
+// 動態樣式
+const barStyle = computed(() => {
+  const { r, g, b } = vm.value.mainColor
+  const luma = getLuma({ r, g, b })
+  const textColor = luma > 150 ? '#222' : `rgb(${r}, ${g}, ${b})`
+  return {
+    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.1)`,
+    color: textColor,
+    border: `1px solid rgba(${r}, ${g}, ${b}, 0.3)`,
+    borderRadius: '4px',
+    marginBottom: '12px',
+    fontSize: '0.95rem',
+  }
+})
+
+async function fetchBrandDiscount(brandId) {
+  try {
+    const res = await axios.get(`/api/sup/Brands/discount/bybrand/${brandId}`)
+    const data = res?.data?.data
+    if (data && data.discountRate) {
+      discountInfo.value = data
+    } else {
+      discountInfo.value = null
+    }
+  } catch (err) {
+    console.error('[BrandDetail] fetchBrandDiscount error =', err)
+    discountInfo.value = null
+  }
+}
+
 watch(
   () => route.fullPath,
   () => {
-    resetStateForNewPage()
-    syncExpandFromRoute()
+    moreOpen.value = false // ✅ 切換品牌自動收合展開區
     fetchDetail()
     fetchBrandProducts(1)
   },
 )
 
-// 點擊分類按鈕（依需求導頁或查詢）
 const onFilter = (btn) => {
-  // TODO:分類導向功能待實作
-  // router.push({ name: 'ProductList', query: { brandId: vm.value.brandId, typeId: btn.id } })}
   console.log('[BrandDetail] click filter btn =', btn)
 }
 </script>
@@ -307,22 +375,16 @@ const onFilter = (btn) => {
 .anchor-to-top {
   scroll-margin-top: 80px;
 }
-
-/* 內容寬度與左右留白：大螢幕保留舒適邊距 */
 .content-wrap {
-  max-width: 1200px; /* 可調：1140~1320 */
+  max-width: 1200px;
   margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding: 0 1rem;
 }
 @media (min-width: 1400px) {
   .content-wrap {
-    padding-left: 2rem;
-    padding-right: 2rem;
+    padding: 0 2rem;
   }
 }
-
-/* 中央分隔線：按鈕置中，左右延伸 */
 .split-line {
   display: flex;
   align-items: center;
@@ -336,14 +398,34 @@ const onFilter = (btn) => {
   height: 1px;
   background-color: #e9ecef;
 }
-
-/* 展開動畫（保留） */
+.bg-soft {
+  background-color: #f8f9fa;
+}
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.3s ease;
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.btn-toggle {
+  background-color: rgb(0, 112, 131);
+  color: rgb(248, 249, 250);
+  transition: background-color 0.2s ease;
+}
+.btn-toggle:hover {
+  background-color: rgb(77, 180, 193);
+  color: rgb(248, 249, 250);
+}
+
+.discount-bar {
+  background-color: #f8efe2;
+  color: #d9480f;
+  border: 1px solid #ffe8cc;
+  border-radius: 4px;
+  /* margin-bottom: 12px; */
+  font-size: 0.95rem;
 }
 </style>

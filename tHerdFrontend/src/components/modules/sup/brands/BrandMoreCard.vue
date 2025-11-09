@@ -39,13 +39,20 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   groups: { type: Array, default: () => [] }, // [{ contentKey, items:[{ title, body, order }] }]
   imagesRight: { type: Array, default: () => [] }, // string[]
   accentRgb: { type: Object, default: () => ({ r: 0, g: 147, b: 171 }) },
   altText: { type: String, default: '' },
 })
-const accentColor = `rgb(${props.accentRgb.r}, ${props.accentRgb.g}, ${props.accentRgb.b})`
+
+// ✅ reactive 計算顏色（會隨父層 vm.mainColor 更新）
+const accentColor = computed(() => {
+  const { r, g, b } = props.accentRgb
+  return `rgb(${r}, ${g}, ${b})`
+})
 </script>
 
 <style scoped>

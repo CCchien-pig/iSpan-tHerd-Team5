@@ -66,6 +66,19 @@
             <router-link :to="toBrandSlug(b.brandName, b.brandId)" class="brand-text-link">
               {{ b.brandName }}
             </router-link>
+
+            <!-- 折扣標籤 -->
+            <span
+              v-if="discountMap[b.brandId]"
+              class="discount-tag"
+              :style="{
+                backgroundColor: 'rgba(0,147,171,0.1)',
+                color: '#007083',
+                border: '1px solid #007083',
+              }"
+            >
+              {{ getDiscountLabel(discountMap[b.brandId].discountRate) }}
+            </span>
           </li>
         </ul>
       </div>
@@ -193,9 +206,30 @@ const buildMapAndEmit = async () => {
   emit('mounted-anchors', map)
 }
 
+const discountMap = ref({})
+
+async function fetchAllDiscounts() {
+  try {
+    const res = await axios.get('/api/sup/Brands/discounts')
+    const list = res?.data?.data ?? []
+    discountMap.value = Object.fromEntries(
+      list.filter((d) => d.discountRate && d.discountRate < 1).map((d) => [d.brandId, d]),
+    )
+  } catch (err) {
+    console.error('載入品牌折扣失敗', err)
+  }
+}
+
+function getDiscountLabel(rate) {
+  if (!rate || rate >= 1) return ''
+  const val = rate * 10
+  return Number.isInteger(val) ? `${val}折` : `${Math.round(val * 10)}折`
+}
+
 onMounted(() => {
   buildMapAndEmit()
   loadFavorites()
+  fetchAllDiscounts()
 })
 
 watch(() => props.groups, buildMapAndEmit)
@@ -225,9 +259,10 @@ watch(() => props.groups, buildMapAndEmit)
 }
 .brand-text-link {
   display: inline-block;
-  padding: 6px 4px;
+  padding: 6px 10px 6px 6px;
   color: #007083;
   text-decoration: none;
+  white-space: nowrap; /* 🚫 不換行 */
   font-size: 18px;
   font-weight: 700;
 }
@@ -243,6 +278,7 @@ watch(() => props.groups, buildMapAndEmit)
   align-items: center;
   gap: 8px;
   padding: 6px 0;
+  /* margin-right:5px; */
 }
 .fav-btn {
   width: 28px;
@@ -292,5 +328,16 @@ watch(() => props.groups, buildMapAndEmit)
   padding: 2rem 0;
   font-size: 1.2rem;
   color: #666;
+}
+
+.discount-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  /* margin-left: 6px; */
+  border-radius: 6px;
+  display: inline-block;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 </style>

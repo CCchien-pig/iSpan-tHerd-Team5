@@ -78,6 +78,7 @@ public class LogisticsRateService : ILogisticsRateService
             SELECT LogisticsRateId, LogisticsId, WeightMin, WeightMax, ShippingFee, IsActive
             FROM SUP_LogisticsRate
             WHERE LogisticsId = @LogisticsId
+			ORDER BY WeightMin ASC
         ";
 
 		var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);

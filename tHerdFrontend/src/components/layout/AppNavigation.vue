@@ -118,7 +118,7 @@
                 class="nav-link fw-medium rounded-pill text-only bg-transparent border-0"
                 :class="[
                   { active: $route.path.startsWith(item.path) },
-                  item.name === '特惠' ? 'text-danger fw-bold' : ''  // 🔹 特惠顯示紅字加粗
+                  item.name === '特惠' ? 'text-danger fw-bold' : '', // 🔹 特惠顯示紅字加粗
                 ]"
                 @click="goStaticMenu(item)"
               >
@@ -136,7 +136,7 @@
             @mouseleave="closeMegaMenu"
             @close="closeMegaMenu"
           />
-          
+
           <!-- 📱 手機版側邊選單 -->
           <transition name="slide">
             <div v-if="showMobileMenu" class="mobile-menu">
@@ -247,15 +247,57 @@ const loadedMenus = ref({})
 const cartStore = useCartStore()
 
 const navigationItemsWithIcon = [
-        { name: '補充劑', type: 'pr', path: '/supplements', icon: '/homePageIcon/supplement.png', productTypeId: 2785 },
-        { name: '運動營養', type: 'pr', path: '/sports-nutrition', icon: '/homePageIcon/sport.png', productTypeId: 1143 },
-        { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png', productTypeId: 2786 },
-        { name: '美容美妝', type: 'pr', path: '/beauty', icon: '/homePageIcon/makeup.png', productTypeId: 1410 },
-        { name: '食品百貨', type: 'pr', path: '/grocery', icon: '/homePageIcon/food.png', productTypeId: 1225 },
-        { name: '健康家居', type: 'pr', path: '/healthy-home', icon: '/homePageIcon/health.png', productTypeId: 1160 },
-        { name: '嬰童用品', type: 'pr', path: '/baby-kids', icon: '/homePageIcon/baby.png', productTypeId: 1204 },
-        { name: '寵物用品', type: 'pr', path: '/pet-supplies', icon: '/homePageIcon/pet.png', productTypeId: 1007 },
-      ]
+  {
+    name: '補充劑',
+    type: 'pr',
+    path: '/supplements',
+    icon: '/homePageIcon/supplement.png',
+    productTypeId: 2785,
+  },
+  {
+    name: '運動營養',
+    type: 'pr',
+    path: '/sports-nutrition',
+    icon: '/homePageIcon/sport.png',
+    productTypeId: 1143,
+  },
+  { name: '沐浴', type: 'pr', path: '/bath', icon: '/homePageIcon/bath.png', productTypeId: 2786 },
+  {
+    name: '美容美妝',
+    type: 'pr',
+    path: '/beauty',
+    icon: '/homePageIcon/makeup.png',
+    productTypeId: 1410,
+  },
+  {
+    name: '食品百貨',
+    type: 'pr',
+    path: '/grocery',
+    icon: '/homePageIcon/food.png',
+    productTypeId: 1225,
+  },
+  {
+    name: '健康家居',
+    type: 'pr',
+    path: '/healthy-home',
+    icon: '/homePageIcon/health.png',
+    productTypeId: 1160,
+  },
+  {
+    name: '嬰童用品',
+    type: 'pr',
+    path: '/baby-kids',
+    icon: '/homePageIcon/baby.png',
+    productTypeId: 1204,
+  },
+  {
+    name: '寵物用品',
+    type: 'pr',
+    path: '/pet-supplies',
+    icon: '/homePageIcon/pet.png',
+    productTypeId: 1007,
+  },
+]
 
 // 品牌A-Z後的固定連結
 const staticMenus = [
@@ -271,11 +313,11 @@ const staticMenus = [
 onMounted(async () => {
   // ① 導覽初始化
   productMenus.value = navigationItemsWithIcon
-    .filter(i => i.type === 'pr')
+    .filter((i) => i.type === 'pr')
     .map((item, index) => ({
       ...item,
       id: `menu-${index + 1}`,
-      productTypeCode: item.path.replace('/', '')
+      productTypeCode: item.path.replace('/', ''),
     }))
 
   // ② 更新購物車紅點
@@ -290,28 +332,24 @@ function goStaticMenu(item) {
   if (item.path === '/specials') {
     router.push({
       path: '/prod/products/search',
-      query: { badge: 'discount' }
+      query: { badge: 'discount' },
     })
-  }
-  else if (item.path === '/bestsellers') {
+  } else if (item.path === '/bestsellers') {
     router.push({
       path: '/prod/products/search',
-      query: { other: 'Hot' }
+      query: { other: 'Hot' },
     })
-  }
-  else if (item.path === '/trials') {
+  } else if (item.path === '/trials') {
     router.push({
       path: '/prod/products/search',
-      query: { badge: 'try' }
+      query: { badge: 'try' },
     })
-  }
-  else if (item.path === '/new-products') {
+  } else if (item.path === '/new-products') {
     router.push({
       path: '/prod/products/search',
-      query: { badge: 'new' }
+      query: { badge: 'new' },
     })
-  }
-  else {
+  } else {
     // 其他項目維持原行為
     router.push(item.path)
   }
@@ -331,7 +369,9 @@ async function goCategory(item) {
 
   // 第二次點：同一個分類 -> 直接導向「分類搜尋結果頁」
   if (activeMenuId.value === item.id && lastClickedId === item.id) {
-    const code = String(item.productTypeCode || '').trim().toLowerCase()
+    const code = String(item.productTypeCode || '')
+      .trim()
+      .toLowerCase()
     const id = Number(item.productTypeId) || null
     if (!id) {
       console.warn('⚠️ 缺少 productTypeId，無法導向分類搜尋頁。', item)
@@ -350,7 +390,7 @@ async function goCategory(item) {
 
     router.push({
       path: `/products/${slug}`,
-      query: { title }
+      query: { title },
     })
   }
 }
@@ -365,8 +405,8 @@ async function loadMegaMenuByCategory(item) {
     const treeData = Array.isArray(apiData?.data)
       ? apiData.data
       : Array.isArray(apiData)
-      ? apiData
-      : []
+        ? apiData
+        : []
 
     if (!treeData.length) {
       console.warn('⚠️ 無分類資料', apiData)
@@ -394,13 +434,13 @@ function buildMegaMenu(treeData) {
     }
   }
 
-  return treeData.map(parent => {
+  return treeData.map((parent) => {
     return {
       id: parent.productTypeId,
       productTypeCode: parent.productTypeCode,
       title: parent.productTypeName,
       url: `/products/${parent.productTypeCode?.toLowerCase() || ''}-${parent.productTypeId}`,
-      items: (parent.children || []).map(child => ({
+      items: (parent.children || []).map((child) => ({
         id: child.productTypeId,
         productTypeCode: child.productTypeCode,
         name: child.productTypeName,
@@ -426,7 +466,7 @@ function clearCloseTimer() {
 // 品牌清單
 const brandGroups = [
   [
-    { brandId: 1002, brandName: 'Animal' },
+    { brandId: 1001, brandName: 'Allmax' },
     { brandId: 1005, brandName: 'Bioschwartz' },
     { brandId: 1008, brandName: 'Codeage' },
     { brandId: 1010, brandName: 'Dr. Mercola' },
@@ -441,7 +481,7 @@ const brandGroups = [
   ],
   [
     { brandId: 1027, brandName: 'Jarrow formulas' },
-    { brandId: 1035, brandName: 'Lake Avenue Nutrition' },
+    { brandId: 1034, brandName: 'Life-flo' },
     { brandId: 1038, brandName: 'Mild By Nature' },
     { brandId: 1039, brandName: 'Natural Factors' },
     { brandId: 1042, brandName: 'Optimum Nutrition' },
@@ -456,8 +496,8 @@ const brandGroups = [
 ]
 
 const recommendedBrands = [
+  { name: 'Animal', url: '/brands/allmax-1002' },
   { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
-  { name: 'Garden Of Life', url: '/brands/garden-of-life-1019' },
   { name: 'Life Extension', url: '/brands/life-extension-1033' },
 ]
 
@@ -778,7 +818,7 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translateX(-50%) translateY(0px);
   z-index: 9999;
-  
+
   background: #fff;
   border-radius: 8px;
   width: 100%;
@@ -788,12 +828,14 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-top: 3px solid rgb(77, 180, 193);
   pointer-events: auto;
-  transition: opacity 0.35s ease, transform 0.35s ease; /* 只針對透明與位移做動畫 */
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease; /* 只針對透明與位移做動畫 */
 }
 
 /* 當顯示時 */
 .mega-menu.show,
-.mega-menu[style*="display: block"] {
+.mega-menu[style*='display: block'] {
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
 }
