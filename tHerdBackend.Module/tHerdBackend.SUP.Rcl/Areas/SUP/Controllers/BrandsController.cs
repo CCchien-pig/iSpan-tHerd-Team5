@@ -105,8 +105,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			// 3:「依折扣狀態」先分『0進行中→1尚未開始→2已結束→3其他非折扣→4尚未設定』再依折扣率排序
 			query = sortColumnIndex switch
 			{
-				0 => sortDirection == "asc"
-					? query.OrderBy(x => x.RevisedDate ?? x.CreatedDate)
+				0 => sortDirection == "desc"
+					? query.OrderBy(x => x.RevisedDate ?? x.CreatedDate) 
 					: query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
 				1 => sortDirection == "asc" ? query.OrderBy(x => x.BrandName) : query.OrderByDescending(x => x.BrandName),
 				2 => sortDirection == "asc" ? query.OrderBy(x => x.SupplierName) : query.OrderByDescending(x => x.SupplierName),
@@ -127,7 +127,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 					).ThenByDescending(x => x.DiscountRate),
 				4 => sortDirection == "asc" ? query.OrderBy(x => x.IsFeatured) : query.OrderByDescending(x => x.IsFeatured),
 				5 => sortDirection == "asc" ? query.OrderBy(x => x.IsActive) : query.OrderByDescending(x => x.IsActive),
-				_ => query.OrderByDescending(x => x.RevisedDate ?? x.CreatedDate),
+				_ => query.OrderByDescending(x => x.BrandName),
 			};
 
 			// 分頁 + 折扣狀態計算
@@ -948,51 +948,106 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 			return PartialView("~/Areas/SUP/Views/Brands/Partials/_BrandLayoutEditorPartial.cshtml", layoutModel);
 		}
 
-		// 【新增輔助函式】將重複的組合 (Hydrate) 邏輯提取出來
+		// 【修正版】HydrateBlocksFromJson
+		// 說明：從 LayoutJson 反序列化後，針對 Banner 區塊自動回填圖片的啟用狀態 (IsActive)
+		// 讓前端編輯器能正確顯示「開關狀態」。
 		private async Task<List<BaseLayoutBlockDto>> HydrateBlocksFromJson(string layoutJson)
 		{
 			var hydratedBlocks = new List<BaseLayoutBlockDto>();
-			if (string.IsNullOrWhiteSpace(layoutJson)) return hydratedBlocks;
+			if (string.IsNullOrWhiteSpace(layoutJson))
+				return hydratedBlocks;
 
+			// 使用 camelCase 規則進行反序列化
 			var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 			var skeletonBlocks = JsonSerializer.Deserialize<List<BrandLayoutSkeletonBlockDto>>(layoutJson, jsonOptions)
 				?? new List<BrandLayoutSkeletonBlockDto>();
 
 			foreach (var blockSkeleton in skeletonBlocks)
 			{
-				if (blockSkeleton == null || string.IsNullOrEmpty(blockSkeleton.Type) || blockSkeleton.ContentId <= 0) continue;
+				if (blockSkeleton == null || string.IsNullOrEmpty(blockSkeleton.Type) || blockSkeleton.ContentId <= 0)
+					continue;
 
 				var uniqueId = $"{blockSkeleton.Type}-{blockSkeleton.ContentId}-{Guid.NewGuid().ToString("N").Substring(0, 4)}";
 				BaseLayoutBlockDto newBlock = null;
 
 				switch (blockSkeleton.Type.ToLower())
 				{
+					// =============================
+					// 🟢 Banner 區塊
+					// =============================
 					case "banner":
 						var bannerContent = await _contentService.GetContentByIdAsync<BannerDto>(blockSkeleton.ContentId);
 						if (bannerContent != null)
 						{
-							// 【核心修正點】將骨架中的 linkUrl 寫回 Props DTO
+							// 保留原 LinkUrl（因為骨架可能有額外資料）
 							bannerContent.LinkUrl = blockSkeleton.LinkUrl;
 
-							hydratedBlocks.Add(new BaseLayoutBlockDto
+							// 🟢 同步圖片啟用狀態 (IsActive)
+							if (bannerContent.FileId > 0)
+							{
+								var asset = await _context.SysAssetFiles
+									.AsNoTracking()
+									.FirstOrDefaultAsync(f => f.FileId == bannerContent.FileId);
+
+								if (asset != null)
+								{
+									bannerContent.IsActive = asset.IsActive;
+									Console.WriteLine($"[DEBUG] Hydrate Banner FileId={asset.FileId}, IsActive={asset.IsActive}");
+								}
+							}
+
+
+							newBlock = new BaseLayoutBlockDto
 							{
 								Id = uniqueId,
 								Type = "Banner",
 								Props = bannerContent
-							});
+							};
 						}
 						break;
+
+					// =============================
+					// Accordion 區塊
+					// =============================
 					case "accordion":
 						var accordionContent = await _contentService.GetContentByIdAsync<BrandAccordionContentDto>(blockSkeleton.ContentId);
-						if (accordionContent != null) newBlock = new BaseLayoutBlockDto { Id = uniqueId, Type = "Accordion", Props = accordionContent };
+						if (accordionContent != null)
+						{
+							newBlock = new BaseLayoutBlockDto
+							{
+								Id = uniqueId,
+								Type = "Accordion",
+								Props = accordionContent
+							};
+						}
 						break;
+
+					// =============================
+					// Article 區塊
+					// =============================
 					case "article":
 						var articleContent = await _contentService.GetContentByIdAsync<BrandArticleDto>(blockSkeleton.ContentId);
-						if (articleContent != null) newBlock = new BaseLayoutBlockDto { Id = uniqueId, Type = "Article", Props = articleContent };
+						if (articleContent != null)
+						{
+							newBlock = new BaseLayoutBlockDto
+							{
+								Id = uniqueId,
+								Type = "Article",
+								Props = articleContent
+							};
+						}
+						break;
+
+					// =============================
+					// 其他類型 (預留)
+					// =============================
+					default:
+						Console.WriteLine($"[DEBUG] 未支援的區塊類型: {blockSkeleton.Type}");
 						break;
 				}
 
-				if (newBlock != null) hydratedBlocks.Add(newBlock);
+				if (newBlock != null)
+					hydratedBlocks.Add(newBlock);
 			}
 
 			return hydratedBlocks;
@@ -1043,6 +1098,7 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 
 		/// <summary>
 		/// 處理版面編輯器表單提交，儲存 LayoutJson
+		/// --並同步更新 SUP_Brand.ImgId（來自 Banner FileId）
 		/// POST /SUP/Brands/SaveLayout
 		/// </summary>
 		[HttpPost]
@@ -1051,6 +1107,8 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 		{
 			try
 			{
+				Console.WriteLine($"[DEBUG] FullLayoutJson 原始資料: {JsonSerializer.Serialize(dto.FullLayoutJson)}");
+
 				// 1. 模型驗證 
 				if (!ModelState.IsValid)
 				{
@@ -1095,7 +1153,115 @@ namespace tHerdBackend.SUP.Rcl.Areas.SUP.Controllers
 				int finalLayoutId = await _layoutService.SaveHybridLayoutAsync(dto, reviserId);
 				// 啟用邏輯現在可以安全地放在交易之外
 
-				// 4. 成功回傳
+				// ✅【新增】自動同步 Banner FileId → SUP_Brand.ImgId
+				try
+				{
+					var layoutBlocks = dto.FullLayoutJson;
+					if (layoutBlocks == null)
+					{
+						Console.WriteLine("[DEBUG] layoutBlocks 為 null");
+					}
+
+					// 找出 Banner 區塊
+					var bannerBlock = layoutBlocks?
+						.FirstOrDefault(b => b.Type.Equals("Banner", StringComparison.OrdinalIgnoreCase));
+
+					if (bannerBlock == null)
+					{
+						Console.WriteLine("[DEBUG] 沒找到 Banner 區塊");
+					}
+
+					if (bannerBlock != null)
+					{
+						BannerPropsDto? bannerProps = null;
+
+						// ✅ 統一處理 imageIsActive / isActive 的同步
+						if (bannerBlock.Props is JsonElement propsElement)
+						{
+							var jsonText = propsElement.GetRawText();
+
+							// ✅ 正確順序：先統一 imageIsActive，再處理 isActive
+							// 因為若先換 isActive，會覆蓋掉 imageIsActive=false
+							jsonText = jsonText
+								.Replace("\"imageIsActive\"", "\"ImageIsActive\"")
+								.Replace("\"isActive\"", "\"ImageIsActive\"");
+
+							var jsonOptions = new JsonSerializerOptions
+							{
+								PropertyNameCaseInsensitive = true
+							};
+
+							bannerProps = JsonSerializer.Deserialize<BannerPropsDto>(jsonText, jsonOptions);
+
+							// 🟢 同步兩個屬性
+							if (bannerProps != null)
+							{
+								bannerProps.IsActive = bannerProps.ImageIsActive;
+							}
+
+							Console.WriteLine($"[DEBUG] 最終解析 Props: FileId={bannerProps?.FileId}, ImageIsActive={bannerProps?.ImageIsActive}");
+						}
+						else
+						{
+							// 若 Props 不是 JsonElement，使用一般反序列化
+							bannerProps = JsonSerializer.Deserialize<BannerPropsDto>(
+								JsonSerializer.Serialize(bannerBlock.Props),
+								new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+							);
+
+							if (bannerProps != null)
+							{
+								bannerProps.IsActive = bannerProps.ImageIsActive;
+							}
+						}
+
+						Console.WriteLine($"[DEBUG] bannerProps.FileId={bannerProps?.FileId}, ImageIsActive={bannerProps?.ImageIsActive}");
+
+						if (bannerProps?.FileId.HasValue == true)
+						{
+							var brand = await _context.SupBrands.FirstOrDefaultAsync(b => b.BrandId == dto.BrandId);
+							if (brand != null)
+							{
+								brand.ImgId = bannerProps.FileId;
+								_context.SupBrands.Update(brand);
+								await _context.SaveChangesAsync();
+
+								// 🟢 同步更新 SYS_AssetFile 的啟用狀態
+								var asset = await _context.SysAssetFiles
+									.Where(f => f.FileId == bannerProps.FileId)
+									.FirstOrDefaultAsync();
+
+								if (asset != null)
+								{
+									// 🟢 改版：不再依前端傳入，統一啟用圖片
+									asset.IsActive = true;
+									_context.Entry(asset).Property(a => a.IsActive).IsModified = true;
+									await _context.SaveChangesAsync();
+									Console.WriteLine($"[DEBUG] Banner FileId={asset.FileId} 已強制啟用 (IsActive=true)");
+								}
+								else
+								{
+									Console.WriteLine($"[DEBUG] 找不到 FileId={bannerProps.FileId} 對應的 SYS_AssetFile");
+								}
+							}
+						}
+						else
+						{
+							Console.WriteLine("[DEBUG] BannerPropsDto.FileId 為 null，跳過同步。");
+						}
+					}
+				}
+				catch (Exception syncEx)
+				{
+					Console.Error.WriteLine($"[SaveLayout] 同步 Banner FileId 到 SUP_Brand 失敗: {syncEx}");
+				}
+
+
+				// TODO:存完才會有fildid
+				// ============================================================
+
+
+				// 5. 成功回傳
 				// 從資料庫取出剛儲存的 Layout，判斷是否為啟用中版本
 				var layout = await _context.SupBrandLayoutConfigs
 					.AsNoTracking()
