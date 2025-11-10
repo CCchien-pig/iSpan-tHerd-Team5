@@ -239,4 +239,12 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 主商品優惠價
     /// </summary>
     public override decimal? SalePrice { get; set; }
+
+	/// <summary>
+	/// 結帳單價
+	/// </summary>
+	private static decimal? FirstPositive(params decimal?[] prices)
+=> prices.FirstOrDefault(p => p.HasValue && p.Value > 0);
+
+	public decimal? BillingPrice => FirstPositive(SalePrice, UnitPrice, ListPrice);
 }

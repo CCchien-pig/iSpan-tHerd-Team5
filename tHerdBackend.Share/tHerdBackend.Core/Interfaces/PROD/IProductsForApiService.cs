@@ -19,5 +19,11 @@ namespace tHerdBackend.Core.Interfaces.PROD
         Task<List<SupBrandsDto>> SearchBrands(string keyword);
 
         Task<List<AttributeWithOptionsDto>> GetFilterAttributesAsync(CancellationToken ct = default);
-    }
+
+        Task<(bool IsLiked, string Message)> ToggleLikeAsync(int userNumberId, int productId, CancellationToken ct = default);
+
+        Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
+
+		Task<object> GetProductStats(int productId);
+	}
 }

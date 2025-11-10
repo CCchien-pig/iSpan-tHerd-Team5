@@ -5,7 +5,6 @@ using tHerdBackend.Core.DTOs.PROD.sup;
 using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace tHerdBackend.Services.PROD.API
 {
@@ -195,5 +194,44 @@ namespace tHerdBackend.Services.PROD.API
                 throw;
             }
         }
-    }
+
+		public async Task<(bool IsLiked, string Message)> ToggleLikeAsync(int productId, int userNumberId, CancellationToken ct = default)
+		{
+			try
+			{
+				return await _repo.ToggleLikeAsync(productId, userNumberId, ct);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+
+		public async Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			try
+			{
+				return await _repo.HasUserLikedProductAsync(userNumberId, productId, ct);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+
+		public async Task<object> GetProductStats(int productId)
+		{
+			try
+			{
+				return await _repo.GetProductStats(productId);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+	}
 }
