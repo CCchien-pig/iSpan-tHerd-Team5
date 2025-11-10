@@ -5,18 +5,10 @@
       <div class="hero-overlay"></div>
       <div class="container position-relative">
         <h1 class="display-5 fw-bold main-color-white-text">健康 × 資訊分析平台</h1>
-        <p class="lead mb-4 main-color-white-text">探索健康知識，打造科學飲食生活</p>
-        <p class="mx-auto main-color-white-text" style="max-width: 680px;">
+        <p class="lead mb-4 main-color-white-text fw-bold">探索健康知識，打造科學飲食生活</p>
+        <p class="mx-auto main-color-white-text fw-bold" style="max-width: 680px;">
           本平台整合健康文章與營養資料，結合視覺化圖表與內容知識，幫助你理解食材營養，建立更智慧的飲食選擇。
         </p>
-        <!-- <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
-          <button class="btn teal-reflect-button btn-hero-teal" @click="scrollTo('articles')" title="前往健康文章精選">
-            開始閱讀文章
-          </button>
-          <button class="btn silver-reflect-button btn-hero-silver" @click="scrollTo('nutrition')" title="前往營養分析介紹">
-            進入營養分析
-          </button>
-        </div> -->
       </div>
     </section>
 
@@ -122,12 +114,6 @@ import { getArticleList } from './api/cntService'
 
 const loading = ref(false)
 const articles = ref([])
-
-//給中間的進入文章跟營養分析用的按鈕20251023拔除
-// function scrollTo(sectionId) {
-//   const el = document.getElementById(sectionId)
-//   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-// }
 
 const coverPool = [
   '/images/CntFolder/cover00.png','/images/CntFolder/cover01.png','/images/CntFolder/cover02.png',
