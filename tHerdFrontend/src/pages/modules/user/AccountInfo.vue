@@ -58,7 +58,7 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button type="primary" :loading="saving" @click="saveProfile">儲存變更</el-button>
+                  <el-button  :loading="saving" class="teal-reflect-button" @click="saveProfile">儲存變更</el-button>
                 </el-form-item>
               </el-form>
             </div>
@@ -83,7 +83,7 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button type="primary" :loading="changing" @click="changePassword">變更密碼</el-button>
+                  <el-button class="teal-reflect-button" :loading="changing" @click="changePassword">變更密碼</el-button>
                 </el-form-item>
               </el-form>
             </div>
@@ -334,3 +334,4 @@ onMounted(loadDetail)
   .content { max-height: none; overflow: visible; }
 }
 </style>
+<style src="@/assets/main.css"></style>
