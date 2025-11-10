@@ -293,17 +293,6 @@ namespace tHerdBackend.Admin
 				var roleMgr = services.GetRequiredService<RoleManager<ApplicationRole>>();
 				var cfg = builder.Configuration;
 
-				// 1️⃣ 建立角色
-				var roles = new[] { "SuperAdmin", "Admin", "Manager" };
-				foreach (var role in roles)
-				{
-					if (!await roleMgr.RoleExistsAsync(role))
-					{
-						await roleMgr.CreateAsync(new ApplicationRole { Name = role });
-						Console.WriteLine($"✅ Created role: {role}");
-					}
-				}
-
 				// 2️⃣ 建立超級管理員帳號
 				var email = cfg["SuperAdminAccount"];
 				var password = cfg["SuperAdminPassword"];
@@ -320,7 +309,7 @@ namespace tHerdBackend.Admin
 						FirstName = "管理員",
 						UserNumberId = 1,
 						IsActive = true,
-						CreatedDate = DateTime.UtcNow,
+						CreatedDate = DateTime.Now,
 					};
 					var result = await userMgr.CreateAsync(superAdmin, password);
 					if (result.Succeeded)
@@ -336,9 +325,9 @@ namespace tHerdBackend.Admin
 				else
 				{
 					Console.WriteLine($"ℹ️ SuperAdmin already exists: {email}");
-					if (!await userMgr.IsInRoleAsync(superAdmin, "SuperAdmin"))
+					if (!await userMgr.IsInRoleAsync(superAdmin, "超級管理員"))
 					{
-						await userMgr.AddToRoleAsync(superAdmin, "SuperAdmin");
+						await userMgr.AddToRoleAsync(superAdmin, "超級管理員");
 						Console.WriteLine($"✅ Re-added SuperAdmin role to existing user");
 					}
 				}
