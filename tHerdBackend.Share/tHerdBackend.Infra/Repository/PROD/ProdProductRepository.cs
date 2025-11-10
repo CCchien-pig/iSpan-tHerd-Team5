@@ -1,6 +1,7 @@
 ﻿//using CsvHelper;
 using Dapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text;
@@ -10,6 +11,7 @@ using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Models;
+using tHerdBackend.Core.ValueObjects;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
@@ -1134,6 +1136,18 @@ namespace tHerdBackend.Infra.Repository.PROD
 			{
 				if (needDispose) conn.Dispose();
 			}
+		}
+
+		public async Task<object> GetProductStats(int productId)
+		{
+			var favoriteCount = await _db.ProdProductFavorites.CountAsync(f => f.ProductId == productId);
+			var likeCount = await _db.ProdProductLikes.CountAsync(l => l.ProductId == productId);
+
+			return new
+			{
+				favoriteCount,
+				likeCount
+			};
 		}
 	}
 }

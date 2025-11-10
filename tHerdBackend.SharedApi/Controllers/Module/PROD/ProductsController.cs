@@ -288,5 +288,17 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
 
 			return numberId;
 		}
+
+        /// <summary>
+        /// 取得目前最新產品收藏及按讚數
+        /// </summary>
+        /// <param name="productId"></param>
+        /// <returns></returns>
+		[HttpGet("stats/{productId}")]
+		public async Task<IActionResult> GetProductStats(int productId)
+		{
+			var stats = await _service.GetProductStats(productId);
+			return Ok(new ApiResponse(stats)); // ApiResponse 會包成 { success, data, message }
+		}
 	}
 }

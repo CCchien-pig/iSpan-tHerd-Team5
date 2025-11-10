@@ -23,5 +23,7 @@ namespace tHerdBackend.Core.Interfaces.PROD
         Task<(bool IsLiked, string Message)> ToggleLikeAsync(int userNumberId, int productId, CancellationToken ct = default);
 
         Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
+
+		Task<object> GetProductStats(int productId);
 	}
 }

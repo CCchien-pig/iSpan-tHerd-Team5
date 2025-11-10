@@ -68,22 +68,24 @@
     <div class="d-flex gap-2 mt-3">
       <!-- ❤️ 收藏按鈕 -->
       <button
-        class="btn btn-outline-secondary flex-fill"
+        class="btn btn-outline-secondary flex-fill d-flex justify-content-center align-items-center gap-2"
         :disabled="togglingFavorite"
         @click="$emit('toggle-favorite', productId)"
       >
         <i :class="isFavorited ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
-        {{ isFavorited ? '已在願望清單' : '加到願望清單' }}
+        <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
+        <small class="text-muted">({{ favoriteCount }})</small>
       </button>
 
       <!-- 👍 按讚按鈕 -->
       <button
-        class="btn btn-outline-primary flex-fill"
+        class="btn btn-outline-primary flex-fill d-flex justify-content-center align-items-center gap-2"
         :disabled="togglingLike"
         @click="$emit('toggle-like', productId)"
       >
         <i :class="isLiked ? 'bi bi-hand-thumbs-up-fill text-primary' : 'bi bi-hand-thumbs-up'"></i>
-        {{ isLiked ? '已按讚' : '按讚' }}
+        <span>{{ isLiked ? '已按讚' : '按讚' }}</span>
+        <small class="text-muted">({{ likeCount }})</small>
       </button>
     </div>
   </div>
@@ -111,9 +113,10 @@ const props = defineProps({
   selectedSku: { type: Object, default: null },
   productId: { type: Number, required: true },
   isFavorited: { type: Boolean, default: false },
-  togglingFavorite: { type: Boolean, default: false },
+  favoriteCount: { type: Number, default: 0 }, // ❤️ 收藏數
   isLiked: { type: Boolean, default: false },
-  togglingLike: { type: Boolean, default: false }
+  togglingLike: { type: Boolean, default: false },
+  likeCount: { type: Number, default: 0 } // 👍 按讚數
 })
 
 // 數量內部綁定
