@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <el-card shadow="never">
+        <el-card shadow="never" class="card">
           <!-- 載入狀態 -->
           <div v-if="loading" class="mt-2">
             <el-skeleton animated :rows="5" />
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.user-favorites-page .layout {
+/* .user-favorites-page .layout {
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 16px;
@@ -365,5 +365,87 @@ onBeforeUnmount(() => {
   margin-bottom: 8px;
 }
 .breadcrumb a { color: inherit; }
-.breadcrumb span::before { content: '>'; margin: 0 6px; color: #c0c4cc; }
+.breadcrumb span::before { content: '>'; margin: 0 6px; color: #c0c4cc; } */
+/* ===== 外層容器與麵包屑：對齊 UserMe（寬 1200、breadcrumb 位移） ===== */
+.user-favorites-page { max-width: 1200px; }
+.breadcrumb {
+  display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px;
+  transform: translateX(100px);
+}
+.breadcrumb a { color:#4183c4; }
+
+/* ===== 版面：與 UserMe 相同（300px + 1fr，gap 20）＋ 固定高度提供區域滾動 ===== */
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: calc(100vh - 160px);  /* 固定高度容器，內容才滾得起來 */
+}
+
+/* ===== Sidebar：與 UserMe 相同（右移 2/3 gap）、等高 ===== */
+.sidebar {
+  min-width: 0;
+  min-height: 0;               /* 讓 Grid 子項可縮，避免擠掉滾動 */
+  display: flex;               /* 讓內部 .myaccount-sidebar 吃滿高度 */
+  transform: translateX(100px);
+}
+.sidebar :deep(.myaccount-sidebar) {
+  height: 100%;
+}
+
+/* ===== 右側內容：區域滾動（只滾主內容，不滾整頁） ===== */
+.content {
+  min-width: 0;
+  min-height: 0;               /* Grid 子項滾動關鍵 */
+  height: 100%;
+  overflow: auto;
+  padding-right: 4px;          /* 捲軸避免壓文字 */
+}
+
+/* ===== 標題與工具列：字級與色票一致 ===== */
+.title {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+}
+.tools { display:flex; align-items:center; gap:8px; }
+.w-64 { width: 16rem; }
+.w-28 { width: 7rem; }
+
+/* ===== 卡片：沿用青綠邊線樣式（和 UserMe 同色） ===== */
+.card {
+  border: 1px solid rgb(77, 180, 193);
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* ===== 表格內元素顏色／連結樣式 ===== */
+.fav-table .dot {
+  display:inline-block; width:8px; height:8px; border-radius:999px; background:#f56c6c;
+}
+.fav-table .dot.off { background:#c0c4cc; }
+
+.link { cursor:pointer; color:#4183c4; }
+.link:hover { text-decoration: underline; }
+
+.empty-list {
+  padding: 28px 0;
+  color: #4a5568;
+  display:flex; align-items:center; gap:8px; justify-content:center;
+}
+
+/* 分頁區塊 */
+.pager { display:flex; justify-content:center; margin-top:14px; }
+
+/* ===== RWD：手機改單欄，移除位移與區域滾動（與 UserMe 一致） ===== */
+@media (max-width: 992px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; height: auto; }
+  .sidebar { transform: none; }
+  .content { height: auto; overflow: visible; }
+}
 </style>
