@@ -90,7 +90,7 @@
       </div>
 
       <!-- 快搜 + 全選/清空 -->
-      <div class="row g-2 align-items-center mb-2">
+      <!-- <div class="row g-2 align-items-center mb-2">
         <div class="col-md-6">
           <input
             v-model.trim="state.analyteKeyword"
@@ -104,8 +104,41 @@
           <button class="btn silver-reflect-button btn-sm text-dark px-3 me-2" @click="selectAllAnalytes">全選目前篩選</button>
           <button class="btn silver-reflect-button btn-sm text-dark px-3" @click="ui.selectedAnalyteIds = []">清空</button>
         </div>
-      </div>
+      </div> -->
+      <!-- 快搜 + 全選/清空 -->
+      <div class="row g-2 align-items-center mb-2">
+        <div class="col-md-6">
+          <input
+            v-model.trim="state.analyteKeyword"
+            type="search"
+            class="form-control border-main-color-green"
+            placeholder="搜尋營養素（中英文皆可）…"
+            @input="filterAnalytes"
+          />
+        </div>
+        <div class="col-md-6 text-md-end">
+          <!-- 👇 DEMO 一鍵帶入：放在最左邊 -->
+          <button
+            class="btn teal-reflect-button btn-sm text-white px-3 me-2"
+            @click="applyDemo"
+          >
+            DEMO 一鍵帶入
+          </button>
 
+          <button
+            class="btn silver-reflect-button btn-sm text-dark px-3 me-2"
+            @click="selectAllAnalytes"
+          >
+            全選目前篩選
+          </button>
+          <button
+            class="btn silver-reflect-button btn-sm text-dark px-3"
+            @click="ui.selectedAnalyteIds = []"
+          >
+            清空
+          </button>
+        </div>
+      </div>
       <!-- 群組（可摺疊） -->
       <div class="d-flex flex-column">
         <div
@@ -337,6 +370,36 @@ const fmtNumber = (n, unit) => {
     return name === 'P/M/S'
   }
 
+  // ⭐ DEMO 用預設選項（名字請換成你實際資料庫的名稱）
+// 這些是「已選食材」那一排要出現的
+const DEMO_SAMPLE_NAMES = [
+  '三節翅(土雞) (Chicken: whole wings, wild; Chicken: three joint wings, wild)',
+  '三節翅(肉雞) (Chicken: whole wings, feed; Chicken: three joint wings, feed)',
+  '三節翅平均值',
+  '中脂調味乳(多穀類) (Reduced fat flavored composite and recombined milk: cereal flavor)',
+  '中脂調味乳(巧克力) (Reduced fat flavored composite and recombined milk: chocolate flavor)',
+  '中脂調味乳(果汁) (Low-fat flavored composite and recombined milk: low fat, fruit flavor)',
+  // ...看你要幾個，最多 6 個
+]
+
+// 這些是「要勾選的營養素」按鈕
+const DEMO_ANALYTE_NAMES = [
+  // 一般成分
+  '水分',
+  '熱量',
+  '粗脂肪',
+  '粗蛋白',
+  '總碳水化合物',
+  // 礦物質
+  '磷',
+  '鈉',
+  '鉀',
+  '鈣',
+  '鐵',
+  '鋅',
+  '鎂',
+]
+
 // 如果之前已選過 P/M/S，自動剔除
   watch(() => ui.selectedAnalyteIds.slice(), (ids) => {
     const getAnalyteById = (id) => {
@@ -401,6 +464,35 @@ async function loadAnalytes() {
   } catch (e) {
     console.error('載入營養素失敗', e)
   }
+}
+// DEMO用
+/* ---------- DEMO 一鍵帶入 ---------- */
+async function applyDemo() {
+  if (!ui.allSamples.length || !ui.analyteOptions.length) {
+    // 保險一點，確保資料都有載好
+    await Promise.all([loadSamples(), loadAnalytes()])
+  }
+
+  // 1) 食材：從全部食材中找出 DEMO 想用的那幾個
+  ui.compareList = ui.allSamples.filter(s =>
+    DEMO_SAMPLE_NAMES.includes(s.sampleName)
+  ).slice(0, 6) // 最多 6 種
+
+  // 2) 營養素：從全部營養素中找出 DEMO 想勾的那些
+  ui.selectedAnalyteIds = ui.analyteOptions
+    .filter(a => DEMO_ANALYTE_NAMES.includes(a.analyteName))
+    .map(a => a.analyteId)
+
+  // 3) 清掉關鍵字，讓群組恢復正常顯示
+  state.analyteKeyword = ''
+  filterAnalytes()
+
+  // 4) 展開預設群組，確保「一般成分 / 礦物質」有打開
+  ui.collapsedGroups.clear()
+  expandDefaults()
+
+  // 5) 直接幫你按「開始比較」（如果你想要需要再按一次，就把這行註解掉）
+  fetchCompare()
 }
 
 /* ----------------------- analyte 群組處理 ----------------------- */
