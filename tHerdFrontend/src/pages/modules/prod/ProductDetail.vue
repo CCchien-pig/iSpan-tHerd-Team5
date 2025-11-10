@@ -107,7 +107,6 @@ const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
 const auth = useAuthStore()
 
-// 狀態管理
 const error = ref(null)
 const product = ref(null)
 const selectedSpec = ref(null)
@@ -240,11 +239,7 @@ async function loadFavoriteIds() {
     const { data } = await http.get('/user/favorites/ids') // baseURL=/api
     favoriteIds.value = Array.isArray(data) ? data : []
   } catch (err) {
-    // 未登入就忽略，不擋頁
-    if (err?.response?.status !== 401) {
-      console.warn('[favorite ids] load failed', err)
-    }
-  }
+    if (err?.response?.status !== 401) console.warn('[favorite ids] load failed', err)
 }
 
 /**
@@ -261,86 +256,28 @@ async function handleAddToCart(selectedSku, qty) {
   await addToCart(product.value, selectedSku, qty)
 }
 
-/**
- * 處理收藏
- */
+/* ❤️ 收藏 */
 const handleToggleFavorite = async () => {
   if (!product.value) return
-  // 未登入 → 導去登入並帶回跳轉
-  if (!auth?.user) {
-    return router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
-  }
-
+  if (!auth?.user) return router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
   if (togglingFavorite.value) return
-  togglingFavorite.value = true
 
-  // 樂觀更新
+  togglingFavorite.value = true
   const pid = product.value.productId
   const originallyFavorited = favoriteIds.value.includes(pid)
-  if (originallyFavorited) {
-    favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
-  } else {
-    favoriteIds.value.push(pid)
-  }
+
+  favoriteIds.value = originallyFavorited
+    ? favoriteIds.value.filter(id => id !== pid)
+    : [...favoriteIds.value, pid]
 
   try {
     const { data } = await http.post('/user/favorites/toggle', { productId: pid })
-    const serverIsFav = !!data?.isFavorited
-    const clientHas = favoriteIds.value.includes(pid)
-    if (serverIsFav && !clientHas) favoriteIds.value.push(pid)
-    if (!serverIsFav && clientHas) favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
-
-    toast(serverIsFav ? '已加入我的最愛' : '已取消收藏', serverIsFav ? 'success' : 'info')
-    // 通知其他頁（例如側欄徽章、我的最愛頁）刷新
+    toast(data?.isFavorited ? '已加入我的最愛' : '已取消收藏', data?.isFavorited ? 'success' : 'info')
     window.dispatchEvent(new CustomEvent('favorite-changed'))
-  } catch (err) {
-    // 還原
-    if (originallyFavorited) {
-      if (!favoriteIds.value.includes(pid)) favoriteIds.value.push(pid)
-    } else {
-      favoriteIds.value = favoriteIds.value.filter(id => id !== pid)
-    }
-
-    if (err?.response?.status === 401) {
-      router.push({ name: 'userlogin', query: { returnUrl: route.fullPath } })
-    } else {
-      const msg = err?.response?.data?.error || '操作失敗，請稍後再試'
-      showError(msg)
-    }
+  } catch {
+    showError('操作失敗，請稍後再試')
   } finally {
     togglingFavorite.value = false
-  }
-}
-
-/**
- * 處理按讚
- */
-
- async function refreshFavoriteIds () {
-  try {
-    const { data } = await http.get('/user/favorites/ids')
-    favoriteIds.value = Array.isArray(data) ? data : []
-  } catch (e) {
-    // 不影響主流程，失敗就當沒收藏
-    favoriteIds.value = []
-  }
-}
-
-const handleToggleLike = async () => {
-  try {
-    // TODO: 實作按讚狀態管理
-    const isLiked = false // 假設目前未按讚
-
-    if (isLiked) {
-      await ProductsApi.unlikeProduct(product.value.productId)
-      toast('已取消按讚', 'info')
-    } else {
-      await ProductsApi.likeProduct({ productId: product.value.productId })
-      toast('已按讚', 'success')
-    }
-  } catch (err) {
-    console.error('按讚操作錯誤:', err)
-    showError('操作失敗，請稍後再試')
   }
 }
 
@@ -362,9 +299,7 @@ const goToProduct = (productId) => {
 // 生命週期
 onMounted(() => {
   loadProduct()
-  loadRelatedProducts()
-  loadFavoriteIds() // NEW：首次載入時抓使用者收藏清單
-  refreshFavoriteIds()
+  loadFavoriteIds()
 })
 </script>
 
