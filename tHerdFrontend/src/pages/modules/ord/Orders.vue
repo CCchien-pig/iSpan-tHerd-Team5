@@ -60,20 +60,22 @@
                     </button>
                     
                     <button 
-                      v-if="order.canReturn && !order.hasRmaRequest" 
+                      v-if="order.canReturn" 
                       class="btn orange-submit-btn fs-5"
                       @click="openRmaModal(order)">
                       <i class="bi bi-arrow-return-left me-2"></i>申請退換貨
                     </button>
-                    
+
                     <button 
-                      v-else-if="order.hasRmaRequest" 
+                      v-if="order.hasRmaRequest" 
                       class="btn silver-reflect-button fs-5" 
                       @click="goToRmaDetail(order.orderId)">
                       <i class="bi bi-check-circle me-2"></i>已申請退換貨
                     </button>
-                    
-                    <div v-if="order.canReturn && !order.hasRmaRequest && order.deliveredDate" class="text-center mt-1 fs-5 fw-semibold" style="color: #856404;">
+
+                    <div v-if="order.deliveredDate && !order.hasRmaRequest" 
+                        class="text-center mt-1 fs-5 fw-semibold" 
+                        :style="order.canReturn ? 'color: #856404;' : 'color: #dc3545;'">
                       <i class="bi bi-clock-history me-1"></i>{{ getReturnDaysLeft(order.deliveredDate) }}
                     </div>
                   </div>

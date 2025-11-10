@@ -56,7 +56,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				trackingNumber = o.TrackingNumber,
 				hasRmaRequest = rmaOrderIds.Contains(o.OrderId),
 				canReturn = o.DeliveredDate.HasValue &&
-							(DateTime.Now - o.DeliveredDate.Value).Days <= 7 &&
+							(DateTime.Now - o.DeliveredDate.Value).TotalDays <= 7 &&
 							!rmaOrderIds.Contains(o.OrderId)
 			});
 
@@ -137,7 +137,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 			if (!order.DeliveredDate.HasValue)
 				throw new ArgumentException("訂單尚未送達");
 
-			var daysSinceDelivery = (DateTime.Now - order.DeliveredDate.Value).Days;
+			var daysSinceDelivery = (DateTime.Now - order.DeliveredDate.Value).TotalDays;
 			if (daysSinceDelivery > 7)
 				throw new ArgumentException("已超過7天鑑賞期");
 
