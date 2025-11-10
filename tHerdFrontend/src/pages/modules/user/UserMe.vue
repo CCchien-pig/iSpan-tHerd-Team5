@@ -106,12 +106,12 @@
         </div>
 
         <!-- 猜你喜歡（容器） -->
-        <section class="recommend">
+        <!-- <section class="recommend">
           <h2>猜你喜歡</h2>
           <div class="carousel-placeholder">
             （此處保留你的輪播元件位，之後可接資料）
           </div>
-        </section>
+        </section> -->
       </main>
     </div>
   </div>
@@ -348,53 +348,103 @@ async function doLogout() {
 
 <style scoped>
 .myaccount { max-width: 1200px; }
-.breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px; }
-.breadcrumb a { color:#4183c4; }
-.layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
-.sidebar { min-width: 0; }
+
+/* ===== 版面：維持原寬與位置；只把 sidebar 視覺往右推約 13px ===== */
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px; /* 保持不變，確保主內容位置/寬度不動 */
+}
+.sidebar {
+  min-width: 0;
+  display: flex;          /* 使內部 myaccount-sidebar 能 height:100% */
+  transform: translateX(100px);  /* ← 把 sidebar 往右移 2/3 的原間距（20px * 2/3 ≈ 13） */
+}
+.sidebar :deep(.myaccount-sidebar) {
+  height: 100%;           /* 搭配子元件的 height:100%，等高主內容 */
+}
 .content { min-width: 0; }
 
-.base-card { display:flex; align-items:center; justify-content:space-between; padding:16px; }
+/* ===== 色票與線條：與 Sidebar 一致 ===== */
+:root {}
+/* 可重用的色票（在 scoped 內直接用顏色，避免 :root 滲漏） */
+.base-card,
+.referral-card,
+.feature {
+  border: 1px solid rgb(77, 180, 193);
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* 基本資料卡視覺微調 */
+.base-card {
+  display:flex; align-items:center; justify-content:space-between; padding:16px;
+  /* 內側左緣加入與 sidebar active 類似的細線意象（更淡一點） */
+  box-shadow: inset 3px 0 0 0 rgba(0, 112, 131, 0.2);
+}
 .base-card__left { display:flex; align-items:center; gap:16px; }
-.avatar { width:98px; height:98px; border-radius:50%; overflow:hidden; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
+
+/* 頭像邊框與底色呼應側欄 */
+.avatar {
+  width:98px; height:98px; border-radius:50%; overflow:hidden;
+  background: rgba(77, 180, 193, 0.06);
+  border: 1px solid rgba(77, 180, 193, 0.35);
+  display:flex; align-items:center; justify-content:center;
+}
 .avatar img { width:98px; height:98px; object-fit:cover; border-radius:50%; }
-.base-info .hello { font-weight:600; margin-bottom:4px; }
-.base-info .joined { font-size:12px; color:#666; margin-bottom:6px; }
+
+/* 文字色階與側欄一致 */
+.base-info .hello { font-weight:600; margin-bottom:4px; color:#2c3e50; }
+.base-info .joined { font-size:12px; color:#4a5568; margin-bottom:6px; }
 .base-info .meta { display:flex; gap:14px; flex-wrap: wrap; font-size:14px; color:#333; }
 
+/* 推薦卡：沿用淺青底與虛線邊 */
 .referral-card { margin-top:16px; }
 .referral-card__header { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; }
-.referral-card .title { font-weight:700; }
+.referral-card .title { font-weight:700; color:#2c3e50; }
 .referral-card .desc { color:#333; }
 .rank-name { font-weight:600; }
 .rebate { color:#418a3b; }
 
 .referral-card__body { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-.code-box { background:#f7faf7; border:1px solid #e2efe2; border-radius:8px; padding:12px 16px; min-width: 260px; }
-.code-box .label { font-size:12px; color:#666; }
-.code-box .code { font-size:20px; font-weight:700; margin-top:4px; letter-spacing:1px; }
+.code-box {
+  background: rgba(77, 180, 193, 0.06);
+  border: 1px dashed rgba(77, 180, 193, 0.5);
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 260px;
+}
+.code-box .label { font-size:12px; color:#4a5568; }
+.code-box .code { font-size:20px; font-weight:700; margin-top:4px; letter-spacing:1px; color:#2c3e50; }
 .claim { display:flex; align-items:center; gap:12px; }
 
+/* 功能磚：hover 與側欄 hover 呼應 */
 .feature-grid { margin-top:20px; display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
-.feature { cursor:pointer; }
-.feature .title { font-weight:700; margin-bottom:6px; }
-.feature .desc { color:#555; font-size:14px; }
-
-.recommend { margin-top:28px; }
-.carousel-placeholder { background:#fafafa; border:1px dashed #ddd; padding:24px; text-align:center; color:#999; }
-
-@media (max-width: 992px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { order:2; }
-  .content { order:1; }
-}
-
-.avatar-actions { display:flex; align-items:center; gap:8px; margin-left:4px; }
-.avatar-hint { margin-top:6px; }
-.feature {
-  cursor: pointer;
-  transition: transform .12s ease, box-shadow .12s ease;
+.feature { cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease; }
+.feature .title { font-weight:700; margin-bottom:6px; color:#2c3e50; }
+.feature .desc { color:#4a5568; font-size:14px; }
+.feature:hover {
+  background-color: rgba(77, 180, 193, 0.08);
+  border-color: rgba(77, 180, 193, 0.35);
+  transform: translateY(-1px);
 }
 .feature:focus { outline: 2px solid #409eff; }
-.feature:hover { transform: translateY(-1px); }
+
+/* 其他原樣式沿用 */
+.breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px;transform: translateX(100px); }
+.breadcrumb a { color:#4183c4; }
+
+/* 猜你喜歡容器（若日後開啟），沿用側欄的淡底與虛線 */
+.carousel-placeholder {
+  background: rgba(77, 180, 193, 0.06);
+  border: 1px dashed rgba(77, 180, 193, 0.35);
+  padding:24px; text-align:center; color:#4a5568;
+}
+
+/* RWD：維持你原本行為（行動裝置改單欄），並移除位移避免壓到內容 */
+@media (max-width: 992px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  .sidebar { order:2; transform: none; }
+  .content { order:1; }
+}
 </style>
