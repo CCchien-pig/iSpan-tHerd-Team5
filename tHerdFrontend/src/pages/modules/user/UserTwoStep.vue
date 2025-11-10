@@ -1,7 +1,7 @@
 <!-- /src/pages/modules/user/UserTwoStep.vue -->
 <template>
   <div class="container py-4" style="max-width:720px">
-    <h2 class="mb-2">兩步驗證</h2>
+    <h2 class="mb-2" style="font-weight:bold">兩步驗證</h2>
     <p class="text-muted">使用驗證器 App（Google Authenticator / 1Password / Microsoft Authenticator 等）產生 6 位數驗證碼。</p>
 
     <div class="card p-3 mb-3">
@@ -20,7 +20,7 @@
           <a :href="authenticatorUri" target="_blank">以支援的驗證器開啟（otpauth URI）</a>
         </div>
         <div class="small text-muted">Issuer：{{ issuerHint }}</div>
-      </div>
+      </div>  
     </div>
 
     <div class="card p-3 mb-3">
