@@ -31,7 +31,7 @@
       <!-- 固定第二排 分類按鈕 -->
       <BrandButtons
         v-if="vm.buttons?.length"
-        class="mb-3"
+        class="mb-3 mt-1"
         :buttons="vm.buttons"
         :bg-rgb="vm.mainColor"
         @tap="onFilter"
@@ -70,7 +70,11 @@
                 :content="blk.data"
                 :accent-rgb="vm.mainColor"
               />
-              <BrandArticleBlock v-else-if="blk.type === 'Article'" :content="blk.data" />
+              <BrandArticleBlock
+                v-else-if="blk.type === 'Article'"
+                :content="blk.data"
+                :accent-rgb="vm.mainColor"
+              />
             </section>
           </template>
 
