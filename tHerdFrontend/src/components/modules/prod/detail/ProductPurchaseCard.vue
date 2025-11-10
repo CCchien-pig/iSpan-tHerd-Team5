@@ -1,6 +1,6 @@
 <!--
   ProductPurchaseCard.vue - 商品購買卡片組件
-  功能：顯示價格、數量選擇、加入購物車等購買相關功能
+  功能：顯示價格、數量選擇、加入購物車、收藏與按讚功能
 -->
 <template>
   <div class="product-purchase-card-container">
@@ -11,9 +11,7 @@
           <h4 class="text-danger fw-bold mb-0">
             NT${{ formatPrice(currentPrice) }}
           </h4>
-          <span v-if="unitText" class="small text-muted mt-1">
-             / {{ unitText }}
-          </span>
+          <span v-if="unitText" class="small text-muted mt-1">/ {{ unitText }}</span>
 
           <!-- 折扣徽章 -->
           <span v-if="hasDiscount" class="badge bg-danger small">
@@ -29,7 +27,7 @@
 
           <!-- 單價提示 -->
           <span v-if="unitText && hasDiscount" class="small text-muted mt-1">
-             / {{ unitText }}
+            / {{ unitText }}
           </span>
         </div>
       </div>
@@ -66,23 +64,41 @@
       </div>
     </div>
 
-    <!-- ❤️ 收藏 -->
-    <!-- <button class="btn btn-outline-secondary mt-3 w-100" @click="$emit('toggle-favorite')">
-      <i class="bi bi-heart"></i> 加到願望清單
-    </button> -->
-     <button
-   class="btn btn-outline-secondary mt-3 w-100"
-   :disabled="togglingFavorite"
-   @click="$emit('toggle-favorite', productId)" >
-   <i :class="isFavorited ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
-   {{ isFavorited ? '已在願望清單' : '加到願望清單' }}
- </button>
+    <!-- ❤️ 收藏 & 👍 按讚 -->
+    <div class="d-flex gap-2 mt-3">
+      <!-- ❤️ 收藏按鈕 -->
+      <button
+        class="btn btn-outline-secondary flex-fill"
+        :disabled="togglingFavorite"
+        @click="$emit('toggle-favorite', productId)"
+      >
+        <i :class="isFavorited ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
+        {{ isFavorited ? '已在願望清單' : '加到願望清單' }}
+      </button>
+
+      <!-- 👍 按讚按鈕 -->
+      <button
+        class="btn btn-outline-primary flex-fill"
+        :disabled="togglingLike"
+        @click="$emit('toggle-like', productId)"
+      >
+        <i :class="isLiked ? 'bi bi-hand-thumbs-up-fill text-primary' : 'bi bi-hand-thumbs-up'"></i>
+        {{ isLiked ? '已按讚' : '按讚' }}
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { tourEmits } from 'element-plus'
-import { ref, watch } from 'vue'
+// ✅ 宣告 emits
+const emit = defineEmits([
+  'add-to-cart',
+  'toggle-favorite',
+  'toggle-like',
+  'update:quantity'
+])
+
+import { ref, watch, onMounted } from 'vue'
 
 // 接收父層傳入的 props
 const props = defineProps({
@@ -90,26 +106,15 @@ const props = defineProps({
   originalPrice: Number,
   hasDiscount: Boolean,
   discountPercent: Number,
-  quantity: {
-    type: Number,
-    default: 1,
-  },
-  unitText: {
-    type: String,
-    default: '', // 例如「瓶」、「包」、「盒」
-  },
-  // 新增：接收父層傳入的已選規格（selectedSpec / selectedSku）
-  selectedSku: {
-    type: Object,
-    default: null
-  },
+  quantity: { type: Number, default: 1 },
+  unitText: { type: String, default: '' },
+  selectedSku: { type: Object, default: null },
   productId: { type: Number, required: true },
-  isFavorited: { type: Boolean, default: false},
-  togglingFavorite: { type: Boolean, default: false } // 父層可傳來避免連點
+  isFavorited: { type: Boolean, default: false },
+  togglingFavorite: { type: Boolean, default: false },
+  isLiked: { type: Boolean, default: false },
+  togglingLike: { type: Boolean, default: false }
 })
-
-// 宣告 emits
-const emit = defineEmits(['add-to-cart', 'toggle-favorite', 'toggle-like', 'update:quantity'])
 
 // 數量內部綁定
 const internalQuantity = ref(props.quantity)
@@ -127,6 +132,7 @@ const formatPrice = (price) => {
   return price.toLocaleString('zh-TW', { minimumFractionDigits: 0 })
 }
 
+// 增減數量
 const increaseQuantity = () => {
   internalQuantity.value++
   updateQuantity()
@@ -139,13 +145,12 @@ const decreaseQuantity = () => {
   }
 }
 
-
 const updateQuantity = () => {
   if (internalQuantity.value < 1) internalQuantity.value = 1
   emit('update:quantity', internalQuantity.value)
 }
 
-// ✅ 正確 emit
+// ✅ 加入購物車事件
 const handleAddToCart = () => {
   if (!props.selectedSku) {
     console.warn('請選擇規格')
@@ -207,7 +212,7 @@ const handleAddToCart = () => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-width: 160px; /* ⬅ 確保不會太窄 */
+  min-width: 160px;
   border: 1px solid #ccc;
   border-radius: 6px;
   overflow: hidden;
@@ -216,8 +221,8 @@ const handleAddToCart = () => {
 
 /* ➖ / ➕ 按鈕 */
 .btn-qty {
-  flex: 0 0 auto; /* ⬅ 改成 auto，不要硬壓死寬度 */
-  width: 48px;    /* ⬅ 改用 width 控制，而非 flex basis */
+  flex: 0 0 auto;
+  width: 48px;
   height: 48px;
   background-color: #f3f8f5;
   border: none;
@@ -238,7 +243,7 @@ const handleAddToCart = () => {
 
 /* 中間輸入框 */
 .qty-input {
-  flex: 1; /* ⬅ 讓輸入框自然撐開剩餘空間 */
+  flex: 1;
   min-width: 60px;
   height: 48px;
   border: none;
@@ -259,4 +264,40 @@ const handleAddToCart = () => {
   box-shadow: none;
 }
 
+/* 💙 按讚按鈕樣式 */
+.btn-outline-primary {
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+/* 收藏 + 按讚 按鈕區塊 */
+.d-flex.gap-2.mt-3 button {
+  height: 48px;
+  font-weight: 500;
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-outline-primary {
+  color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: white;
+}
 </style>

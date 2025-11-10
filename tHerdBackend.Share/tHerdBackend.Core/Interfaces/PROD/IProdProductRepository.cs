@@ -24,7 +24,12 @@ namespace tHerdBackend.Core.Interfaces.Products
 
         Task<List<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);
 
-		//Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
+        //Task<string> CheckUniqulByBarcodeAsync(List<string> barcodes, CancellationToken ct = default); // 檢查條碼是否重複
+
+        Task<(bool IsLiked, string Message)> ToggleLikeAsync(int userNumberId, int productId, CancellationToken ct = default);
+
+        Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
+
 	}
 
 	// 簡化的查詢模型與分頁結果

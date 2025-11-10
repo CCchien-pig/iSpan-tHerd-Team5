@@ -195,5 +195,31 @@ namespace tHerdBackend.Services.PROD.API
                 throw;
             }
         }
-    }
+
+		public async Task<(bool IsLiked, string Message)> ToggleLikeAsync(int productId, int userNumberId, CancellationToken ct = default)
+		{
+			try
+			{
+				return await _repo.ToggleLikeAsync(productId, userNumberId, ct);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+
+		public async Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			try
+			{
+				return await _repo.HasUserLikedProductAsync(userNumberId, productId, ct);
+			}
+			catch (Exception ex)
+			{
+				ErrorHandler.HandleErrorMsg(ex);
+				throw;
+			}
+		}
+	}
 }

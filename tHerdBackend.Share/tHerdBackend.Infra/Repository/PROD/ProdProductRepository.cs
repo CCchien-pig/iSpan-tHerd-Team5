@@ -1075,5 +1075,65 @@ namespace tHerdBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-    }
+
+		/// <summary>
+		/// 按讚或取消讚（由 API 傳入使用者ID）
+		/// </summary>
+		public async Task<(bool IsLiked, string Message)> ToggleLikeAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			if (productId <= 0 || userNumberId <= 0)
+				throw new ArgumentException("商品 ID 或 使用者 ID 錯誤");
+
+			var (conn, _, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				// 檢查是否已經按讚過
+				var exists = await conn.ExecuteScalarAsync<bool>(
+					"SELECT COUNT(1) FROM PROD_ProductLike WHERE ProductId = @ProductId AND UserNumberId = @UserId",
+					new { ProductId = productId, UserId = userNumberId });
+
+				if (exists)
+				{
+					await conn.ExecuteAsync(
+						"DELETE FROM PROD_ProductLike WHERE ProductId = @ProductId AND UserNumberId = @UserId",
+						new { ProductId = productId, UserId = userNumberId });
+					return (false, "已取消按讚");
+				}
+				else
+				{
+					await conn.ExecuteAsync(
+						"INSERT INTO PROD_ProductLike (ProductId, UserNumberId) VALUES (@ProductId, @UserId)",
+						new { ProductId = productId, UserId = userNumberId });
+					return (true, "已按讚");
+				}
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		/// <summary>
+		/// 檢查使用者是否對指定商品按讚過
+		/// </summary>
+		public async Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			if (userNumberId <= 0 || productId <= 0)
+				return false;
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var sql = @"SELECT COUNT(1) 
+                    FROM PROD_ProductLike 
+                    WHERE ProductId = @ProductId AND UserNumberId = @UserId";
+				var count = await conn.ExecuteScalarAsync<int>(sql, new { ProductId = productId, UserId = userNumberId }, tx);
+				return count > 0;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+	}
 }
