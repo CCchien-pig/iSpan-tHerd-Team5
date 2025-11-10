@@ -99,7 +99,9 @@
           </div>
 
           <label class="fw-bold mb-2">優惠券代碼</label>
-          <div class="input-group mb-2">
+          
+          <!-- 🔥 修改：優惠券輸入區 -->
+          <div v-if="!couponCode || !promotionResult" class="input-group mb-2">
             <input 
               type="text" 
               class="form-control" 
@@ -114,6 +116,29 @@
             >
               套用
             </button>
+          </div>
+
+          <!-- 🔥 新增：已套用優惠券顯示 -->
+          <div v-else class="applied-coupon-box mb-2">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-ticket-perforated-fill text-success me-2" style="font-size: 1.3rem;"></i>
+                  <div>
+                    <div class="fw-bold" style="font-size: 0.95rem;">已套用優惠券</div>
+                    <div class="text-muted" style="font-size: 0.85rem;">{{ couponCode }}</div>
+                  </div>
+                </div>
+              </div>
+              <button 
+                class="btn btn-sm btn-outline-danger"
+                @click="removeCoupon"
+                :disabled="isCheckingOut"
+                title="取消使用此優惠券"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
           </div>
 
           <!-- 🔥 自動找最優惠券按鈕 -->
@@ -308,7 +333,7 @@
           
           <div v-else-if="amountAfterCoupon >= 1500" class="free-shipping-achieved mt-2 mb-3">
             <i class="bi bi-check-circle-fill me-2"></i>
-            已達免運門檻！恭喜省下運費
+            已達免運門檻！
           </div>
 
           <hr />
@@ -635,6 +660,25 @@ export default {
       }
     },
 
+    // 🔥 新增：取消使用優惠券
+    async removeCoupon() {
+      if (!this.couponCode) return
+      
+      const confirmed = confirm('確定要取消使用此優惠券嗎？')
+      if (!confirmed) return
+      
+      console.log('🗑️ 取消使用優惠券:', this.couponCode)
+      
+      this.couponCode = ''
+      this.promotionResult = null
+      this.appliedCouponWalletId = null
+      
+      await this.calculateShippingFee()
+      await this.updateCouponHint()
+      
+      alert('✅ 已取消使用優惠券')
+    },
+
     async applyAvailableCoupon(couponHint) {
       this.couponCode = couponHint.couponCode
       this.appliedCouponWalletId = couponHint.couponWalletId
@@ -872,7 +916,7 @@ export default {
             `最接近可用的優惠券：${c.couponName}\n` +
             `折扣金額：NT$ ${c.discountAmount.toLocaleString()}\n` +
             `使用門檻：NT$ ${c.threshold.toLocaleString()}\n\n` +
-            `💡 再加購：NT$ ${c.gap.toLocaleString()} 即可使用此券\n` 
+            `💡 再加購：NT$ ${c.gap.toLocaleString()} 即可使用此券\n`
           )
           return
         }
@@ -896,7 +940,7 @@ export default {
               `折扣金額：NT$ ${c.discountAmount.toLocaleString()}\n` +
               `可多省：NT$ ${(c.discountAmount - this.promotionDiscount).toLocaleString()}\n` +
               `使用門檻：NT$ ${c.threshold.toLocaleString()}\n\n` +
-              `💡 再加購：NT$ ${gap.toLocaleString()} 即可使用此券\n` 
+              `💡 再加購：NT$ ${gap.toLocaleString()} 即可使用此券\n`
             )
           }
           return
@@ -1055,6 +1099,22 @@ export default {
 .circle-btn:disabled{background:#ccc;cursor:not-allowed;opacity:.6}
 .qty-input{width:56px;height:42px;text-align:center;border:1.5px solid #ccc;border-radius:8px;font-weight:700;font-size:1.1rem;background:#fff}
 .summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:1.1rem}
+
+/* 🔥 新增：已套用優惠券顯示框 */
+.applied-coupon-box {
+  background: linear-gradient(135deg, 
+    rgba(40, 167, 69, 0.08) 0%, 
+    rgba(34, 139, 58, 0.12) 100%);
+  border: 2px solid rgba(40, 167, 69, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: all 0.3s ease;
+}
+
+.applied-coupon-box:hover {
+  border-color: rgba(40, 167, 69, 0.5);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+}
 
 .coupon-nearly-hint {
   background: linear-gradient(135deg, 
@@ -1232,10 +1292,9 @@ export default {
   margin-right: 4px;
 }
 
-
 .coupon-tag-available {
   display: inline-block;
-  background: #1e7e34; 
+  background: #1e7e34;
   color: white;
   padding: 7px 16px;
   border-radius: 20px;
