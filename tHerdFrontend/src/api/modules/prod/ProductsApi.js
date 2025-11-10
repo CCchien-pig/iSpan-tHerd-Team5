@@ -17,7 +17,40 @@ import { useCartStore } from '@/composables/modules/prod/cartStore'
 class productsApi {
   path = '/prod'
 
-    // ==================== 購物車 ====================
+  // ==================== 品牌相關 ====================
+
+  /**
+   * 取得所有啟用品牌清單
+   * 對應後端：GET /api/prod/brands/get-brands-all
+   * @returns {Promise<Object[]>} 品牌列表 [{id, name, code, discountRate, ...}]
+   */
+  async getBrandList() {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/get-brands-all`)
+      return res.data // ✅ 回傳 { success, data, message }
+    } catch (error) {
+      console.error('❌ 取得品牌清單失敗:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 搜尋品牌（支援前端搜尋框）
+   * 對應後端：GET /api/prod/brands/search-brands?keyword=xxx
+   * @param {string} keyword 關鍵字
+   * @returns {Promise<Object[]>} 篩選後品牌
+   */
+  async searchBrand(keyword) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/search-brands?keyword=${encodeURIComponent(keyword)}`)
+      return res.data
+    } catch (error) {
+      console.error('❌ 搜尋品牌失敗:', error)
+      throw error
+    }
+  }
+
+  // ==================== 購物車 ====================
 
   /**
    * 加入購物車 + 立即刷新購物車數量
@@ -156,13 +189,20 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   // ==================== 屬性與成分 ====================
 
   /**
-   * 查詢商品屬性清單
-   * @returns {Promise} API 回應，包含所有屬性分類（功效、性別、年齡等）
-   * @example
-   * const result = await productsApi.getAttributes()
+   * 查詢商品屬性清單（含屬性與選項）
+   * 對應後端：GET /api/prod/Products/get-att
+   * @returns {Promise<Object[]>} 屬性列表 [{attributeId, attributeName, options: [{optionName, ...}]}]
    */
-  async getAttributes() {
-    return await baseApi.get(`${this.path}/attributes`)
+  async getFilterAttributes() {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/get-att`)
+      // 若後端回傳格式為 ApiResponse<T>
+      // 例如 { success: true, data: [...] }，則回傳 data
+      return res?.data?.data || res?.data
+    } catch (error) {
+      console.error('❌ 取得屬性清單失敗:', error)
+      throw error
+    }
   }
 
   /**

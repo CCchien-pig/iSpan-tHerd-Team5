@@ -180,6 +180,10 @@ public partial class ProdProductDetailDto : ProdProductDto
 
 	public List<ProductImageDto>? Images { get; set; } = new();
 
+    public List<ProductIngredientDto>? Ingredients { get; set; } = new();
+
+    public List<ProductAttributeDto>? Attributes { get; set; } = new();
+
     /// <summary>
     /// 計算總數
     /// </summary>

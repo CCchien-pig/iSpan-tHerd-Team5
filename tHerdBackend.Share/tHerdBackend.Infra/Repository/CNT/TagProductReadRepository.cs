@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using tHerdBackend.Core.Interfaces.CNT;
 using tHerdBackend.Infra.Models;
+using System.Data;
+using Dapper;
+
 
 namespace tHerdBackend.Infra.Repository.CNT
 {
@@ -145,6 +145,7 @@ namespace tHerdBackend.Infra.Repository.CNT
 		}
 
 		// 4. 取評價：平均星等、評論數
+		//    👉 直接從 PROD_Product 的 AvgRating / ReviewCount 讀出來
 		public async Task<Dictionary<int, (decimal? Avg, int? Count)>>
 			GetReviewMapAsync(IEnumerable<int> productIds)
 		{
@@ -157,27 +158,51 @@ namespace tHerdBackend.Infra.Repository.CNT
 				return new Dictionary<int, (decimal?, int?)>();
 			}
 
-			// 你的 ProdProductReview model 有：
-			//   ProductId, Rating (byte), IsApproved(bool)
-			//
-			// 我們合理只統計已審核 (IsApproved = true) 的評論，
-			// 這樣星等比較像真的對外顯示的分數。
-			var data = await _db.ProdProductReviews
-				.Where(r => pidList.Contains(r.ProductId)
-							&& r.IsApproved == true)
-				.GroupBy(r => r.ProductId)
-				.Select(g => new
-				{
-					ProductId = g.Key,
-					Avg = g.Average(x => (decimal?)x.Rating),
-					Cnt = g.Count()
-				})
-				.ToListAsync();
+			const string sql = @"
+					SELECT ProductId, AvgRating, ReviewCount
+					FROM PROD_Product
+					WHERE ProductId IN @Ids;
+				";
 
-			return data.ToDictionary(
-				x => x.ProductId,
-				x => ((decimal?)x.Avg, (int?)x.Cnt)
-			);
+			// 從 EF 的 DbContext 拿同一條連線出來給 Dapper 用
+			var conn = _db.Database.GetDbConnection();
+			var needClose = conn.State != ConnectionState.Open;
+
+			try
+			{
+				if (needClose)
+				{
+					await conn.OpenAsync();
+				}
+
+				// 用 Dapper 把資料撈回來
+				var rows = await conn.QueryAsync<ProductRatingRow>(
+					sql,
+					new { Ids = pidList }
+				);
+
+				// 轉成 productId -> (Avg, Count) 的字典
+				return rows.ToDictionary(
+					x => x.ProductId,
+					x => (x.AvgRating, x.ReviewCount)
+				);
+			}
+			finally
+			{
+				// 如果原本是關閉狀態，就幫它關回去
+				if (needClose && conn.State == ConnectionState.Open)
+				{
+					conn.Close();
+				}
+			}
+		}
+
+		// 給 Dapper 用的小 DTO（只在這個 Repository 裡用）
+		private sealed class ProductRatingRow
+		{
+			public int ProductId { get; set; }
+			public decimal? AvgRating { get; set; }
+			public int? ReviewCount { get; set; }
 		}
 	}
 }

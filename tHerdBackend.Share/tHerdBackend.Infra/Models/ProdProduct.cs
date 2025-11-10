@@ -95,6 +95,16 @@ public partial class ProdProduct
     /// </summary>
     public int? MainSkuId { get; set; }
 
+    /// <summary>
+    /// 星星平均
+    /// </summary>
+    public decimal? AvgRating { get; set; }
+
+    /// <summary>
+    /// 評價總數
+    /// </summary>
+    public int? ReviewCount { get; set; }
+
     public virtual SupBrand Brand { get; set; }
 
     public virtual ICollection<CntProductTag> CntProductTags { get; set; } = new List<CntProductTag>();

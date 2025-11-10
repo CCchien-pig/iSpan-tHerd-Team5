@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace tHerdBackend.Core.DTOs
 {
@@ -18,6 +19,12 @@ namespace tHerdBackend.Core.DTOs
 
 		public string Caption { get; set; }
 
-		public bool IsActive { get; set; } = true;
+
+		public string? IsActive { get; set; }  // 因為前端傳的 IsActive 是字串，改為 string
+
+		// ✅ 新增這個轉換屬性
+		[JsonIgnore]
+		public bool IsActiveBool =>
+			IsActive?.ToLower() == "true" || IsActive == "1";
 	}
 }

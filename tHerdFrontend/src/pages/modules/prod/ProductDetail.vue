@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoading } from '@/composables/useLoading'
 import ProductsApi from '@/api/modules/prod/ProductsApi'
@@ -125,10 +125,19 @@ const isFavorited = computed(() =>
 const breadcrumbs = computed(() => {
   if (!product.value) return []
 
+  // 將品牌名稱轉 slug（例如空白換成連字號）
+  const slug = product.value.brandName
+    ? product.value.brandName.replace(/\s+/g, '-')
+    : 'brand'
+
   return [
     { name: '首頁', path: '/' },
     { name: '品牌 A-Z', path: '/brands' },
-    { name: product.value.brandName || 'California Gold Nutrition', path: '#' },
+    {
+      name: product.value.brandName || 'California Gold Nutrition',
+      // 導向品牌詳細頁
+      path: `/brands/${slug}-${product.value.brandId}`,
+    },
     { name: product.value.productName, path: null },
   ]
 })
@@ -207,6 +216,23 @@ const loadRelatedProducts = async () => {
     console.error('載入相關商品錯誤:', err)
   }
 }
+
+watch(
+  () => route.params.id,
+  async (newId) => {
+    // ⚠️ 清空舊商品資料與狀態
+    product.value = null
+    selectedSpec.value = null
+    quantity.value = 1
+
+    // 🔄 重新載入新商品資料
+    await loadProduct()
+    await loadRelatedProducts()
+    await loadFavoriteIds()
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+)
 
 // NEW: 讀取目前使用者的收藏 ProductId 清單
 async function loadFavoriteIds() {

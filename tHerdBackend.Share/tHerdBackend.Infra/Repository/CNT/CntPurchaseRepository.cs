@@ -47,7 +47,7 @@ namespace tHerdBackend.Infra.Repository.CNT
 				PaymentMethod = paymentMethod,
 				PaymentStatus = "PENDING",
 				Currency = "TWD",
-				CreatedDate = DateTime.UtcNow
+				CreatedDate = DateTime.Now
 			};
 
 			await _db.CntPurchases.AddAsync(entity, ct);
@@ -72,7 +72,7 @@ namespace tHerdBackend.Infra.Repository.CNT
 			entity.IsPaid = isPaid;
 			entity.PaymentStatus = paymentStatus;
 			entity.GatewayTransactionId = gatewayTransactionId;
-			entity.RevisedDate = DateTime.UtcNow;
+			entity.RevisedDate = DateTime.Now;
 
 			await _db.SaveChangesAsync(ct);
 		}

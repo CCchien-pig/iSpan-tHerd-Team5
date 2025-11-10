@@ -3,24 +3,17 @@
   <div class="container py-4">
     <!-- 標題與副標題（iHerb 風格） -->
     <div class="mb-3 text-center">
-      <h2 class="mb-1">登入tHerd</h2>
+      <!-- <h2 class="mb-1">登入tHerd</h2> -->
+       <a href="/" class="navbar-brand text-white text-decoration-none d-inline-block">
+    <img src="/homePageIcon/tHerd-header.png" alt="tHerd Logo" class="img-fluid" style="max-height:50px;"></a>
       <p class="text-muted mb-0">
         請輸入您的電子郵件以開始使用。如果您已有帳戶，我們將為您找到。
       </p>
-      <a
-        id="accessibility-link"
-        href="https://www.iherb.com/info/accessibility"
-        target="_blank"
-        class="small d-inline-block mt-2"
-      >
-        點擊以閱讀我們的無障礙聲明
-      </a>
     </div>
 
     <div class="card p-3 p-md-4">
       <!-- 帳號（email） -->
-      <div class="mb-3">
-        <label class="form-label" for="username-input">電子郵件</label>
+      <div class="form-floating mb-3">
         <input
           v-model.trim="email"
           id="username-input"
@@ -31,31 +24,34 @@
           placeholder="you@example.com"
           :disabled="busy"
         />
+        <label class="form-label" for="username-input">電子郵件</label>
         <div class="form-text">請使用有效的電子郵件地址</div>
       </div>
 
       <!-- 密碼 -->
       <div class="mb-3">
-        <label class="form-label" for="password-input">密碼</label>
-        <div class="input-group">
-          <input
-            v-model="password"
-            id="password-input"
-            :type="showPassword ? 'text' : 'password'"
-            class="form-control"
-            placeholder="請輸入密碼"
-            autocomplete="current-password"
-            :disabled="busy"
-          />
-          <button
-            class="btn btn-outline-secondary"
-            type="button"
-            @click="showPassword = !showPassword"
-            :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
-          >
-            <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </button>
-        </div>
+        <div class="form-floating position-relative mb-3">
+  <input
+    v-model="password"
+    id="password-input"
+    :type="showPassword ? 'text' : 'password'"
+    class="form-control pe-5"
+    placeholder=" "                  
+    autocomplete="current-password"
+    :disabled="busy"
+    required
+  />
+  <label for="password-input">輸入密碼</label>
+
+  <button
+    type="button"
+    class="btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+    @click="showPassword = !showPassword"
+    :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
+  >
+    <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+  </button>
+</div>
         <div class="form-text">至少 8 個字元，建議包含大小寫與數字</div>
       </div>
 
@@ -137,11 +133,11 @@
       <div class="d-grid gap-2">
         <button
           id="auth-continue-button"
-          class="btn btn-success"
+          class="btn main-color-green"
           :disabled="busy || !canSubmit"
           @click="doLogin"
         >
-          {{ busy ? '登入中…' : '登入' }}
+          <span class="main-color-white-text">{{ busy ? '登入中…' : '登入' }}</span>
         </button>
 
         <router-link class="btn btn-link" :to="{ name: 'userregister' }">
@@ -211,7 +207,7 @@
 
     <!-- 版權（可移到全站 Footer） -->
     <div class="text-center text-muted small mt-4">
-      © Copyright 1997-2025 iHerb, LLC. All rights reserved.
+      © Copyright 2025 tHerd, LLC. All rights reserved.
     </div>
   </div>
 </template>

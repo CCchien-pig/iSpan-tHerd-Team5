@@ -151,23 +151,31 @@ OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 			try
 			{
 				const string mainSql = @"
-SELECT 
-    p.PageId, p.Title, p.PublishedDate, p.PageTypeId,
-    p.IsPaidContent, ISNULL(p.PreviewLength,150) AS PreviewLength,
-    s.SeoSlug AS Slug, s.SeoTitle, s.SeoDesc
-FROM CNT_Page p
-LEFT JOIN SYS_SeoMeta s ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
-WHERE p.PageId = @PageId AND p.IsDeleted = 0;";
+					SELECT 
+						p.PageId,
+						p.Title,
+						p.PublishedDate,
+						p.PageTypeId,
+						p.IsPaidContent,
+						ISNULL(p.PreviewLength,150) AS PreviewLength,
+						p.Price,                                    -- 🔸 新增
+						s.SeoSlug AS Slug,
+						s.SeoTitle,
+						s.SeoDesc
+					FROM CNT_Page p
+					LEFT JOIN SYS_SeoMeta s ON s.SeoId = p.SeoId AND s.RefTable = 'CNT_Page'
+					WHERE p.PageId = @PageId AND p.IsDeleted = 0;";
+
 				var main = await conn.QueryFirstOrDefaultAsync(mainSql, new { PageId = pageId }, tx);
 				if (main == null) return null;
 
 				const string tagSql = @"
-SELECT t.TagId,
-       t.TagName
-FROM CNT_PageTag pt
-JOIN CNT_Tag t ON t.TagId = pt.TagId
-WHERE pt.PageId = @PageId
-ORDER BY t.TagName;";
+					SELECT t.TagId,
+						   t.TagName
+					FROM CNT_PageTag pt
+					JOIN CNT_Tag t ON t.TagId = pt.TagId
+					WHERE pt.PageId = @PageId
+					ORDER BY t.TagName;";
 				var tagRows = (await conn.QueryAsync<ArticleTagDto>(
 					tagSql,
 					new { PageId = pageId },
@@ -178,9 +186,9 @@ ORDER BY t.TagName;";
 				if ((bool)main.IsPaidContent && userNumberId.HasValue)
 				{
 					const string paidSql = @"
-SELECT TOP 1 1 
-FROM CNT_Purchase 
-WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
+						SELECT TOP 1 1 
+						FROM CNT_Purchase 
+						WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
 					hasPurchased = await conn.ExecuteScalarAsync<int?>(paidSql, new { PageId = pageId, Uid = userNumberId.Value }, tx) == 1;
 				}
 
@@ -195,6 +203,7 @@ WHERE PageId=@PageId AND UserNumberId=@Uid AND IsPaid=1;";
 					IsPaidContent = main.IsPaidContent,
 					HasPurchased = hasPurchased,
 					PreviewLength = (int)main.PreviewLength,
+					Price = (decimal?)main.Price,
 					Tags = tagRows,
 					// ★ 關鍵：把 PageTypeId 塞進 DTO，給 Service 作推薦使用
 					PageTypeId = (int)main.PageTypeId

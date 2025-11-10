@@ -16,14 +16,14 @@
         <!-- 左：註冊表單 -->
         <section class="card form-card">
           <!-- 表單主標題 -->
-          <h2 class="form-title">註冊或建立帳戶</h2>
+          <h2 class="form-title">註冊帳戶</h2>
           <p class="form-subtitle">請填寫以下資料以建立您的帳戶。</p>
 
           <!-- 「或」分隔（保留空間，未接社群登入也可用） -->
           <div class="or-sep" aria-hidden="true">
             <span class="line"></span>
-            <span class="label">或</span>
-            <span class="line"></span>
+            <!-- <span class="label">或</span>
+            <span class="line"></span> -->
           </div>
 
           <!-- 表單欄位（保留你所有 inputs 與 v-model） -->
@@ -37,7 +37,6 @@
                 @input="touch('lastName')" @blur="touch('lastName')"
                 :class="{ 'is-invalid': touched.lastName && lastNameError }" />
                 <div class="field-error" v-if="touched.lastName && lastNameError">{{ lastNameError }}</div>
-                  
               </div>
               <div class="field">
                 <label class="label">名字 <span class="req">*</span></label>
@@ -165,7 +164,7 @@
         <aside class="card promo-card">
           <h3 class="promo-title">為什麼選擇我們</h3>
           <ul class="promo-list">
-            <li>嚴選正貨｜全球直送</li>
+            <li>嚴選正貨｜廠商直送</li>
             <li>會員專屬｜生日禮金</li>
             <li>快速結帳｜多元支付</li>
             <li>訂單追蹤｜即時客服</li>
@@ -177,9 +176,8 @@
     :disabled="busy"
     @click="quickRegister"
   >
-    一鍵註冊（測試）
+    一鍵註冊
   </button>
-  <small class="muted">將自動填入測試資料並送出</small>
 </div>
           <div class="promo-badge">
             <div class="stars" aria-label="5 星評價">★★★★★</div>

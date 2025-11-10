@@ -1,9 +1,11 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.PROD.ord;
+using tHerdBackend.Core.DTOs.PROD.sup;
 using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace tHerdBackend.Services.PROD.API
 {
@@ -11,15 +13,17 @@ namespace tHerdBackend.Services.PROD.API
 	{
         private readonly IProdProductRepository _repo;
 		private readonly IShoppingCartRepository _srepo;
+        private readonly IProdProductFilterRepository _frepo;
 
-		// 伺服器端「單頁最大筆數」卡控
-		private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
+        // 伺服器端「單頁最大筆數」卡控
+        private const int MaxPageSize = 20;        // 每頁最多回 20 筆（自行調整）
 
-        public ProductsForApiService(IProdProductRepository repo, IShoppingCartRepository srepo)
+        public ProductsForApiService(IProdProductRepository repo, IShoppingCartRepository srepo, IProdProductFilterRepository frepo)
         {
             _repo = repo;
 			_srepo = srepo;
-		}
+            _frepo = frepo;
+        }
 
         /// <summary>
         /// 前台: 依傳入條件，取得產品清單
@@ -137,6 +141,53 @@ namespace tHerdBackend.Services.PROD.API
                 var item = await _srepo.GetCartSummaryAsync(userNumberId, sessionId, ct);
 
                 return item;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 取得所有啟用品牌清單（前台使用）
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<SupBrandsDto>> GetBrandsAll()
+        {
+            try
+            {
+                return await _frepo.GetBrandsAll();
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 搜尋品牌名稱（關鍵字）
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<SupBrandsDto>> SearchBrands(string keyword)
+        {
+            try
+            {
+                return await _frepo.SearchBrands(keyword);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        public async Task<List<AttributeWithOptionsDto>> GetFilterAttributesAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                return await _frepo.GetFilterAttributesAsync(ct);
             }
             catch (Exception ex)
             {

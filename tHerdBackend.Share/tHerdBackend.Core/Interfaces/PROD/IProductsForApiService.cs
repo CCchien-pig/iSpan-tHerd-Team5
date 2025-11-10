@@ -1,6 +1,8 @@
-﻿using tHerdBackend.Core.DTOs.Common;
+﻿using Microsoft.AspNetCore.Mvc;
+using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.PROD.ord;
+using tHerdBackend.Core.DTOs.PROD.sup;
 
 namespace tHerdBackend.Core.Interfaces.PROD
 {
@@ -12,5 +14,10 @@ namespace tHerdBackend.Core.Interfaces.PROD
         Task<IEnumerable<ProductTypeTreeDto>> GetProductTypeTreeAsync(int? id, CancellationToken ct = default);
         Task<int> AddShoppingCartAsync(AddToCartDto dto, CancellationToken ct = default);
         Task<dynamic?> GetCartSummaryAsync(int? userNumberId, string? sessionId, CancellationToken ct = default);
+
+        Task<List<SupBrandsDto>> GetBrandsAll();
+        Task<List<SupBrandsDto>> SearchBrands(string keyword);
+
+        Task<List<AttributeWithOptionsDto>> GetFilterAttributesAsync(CancellationToken ct = default);
     }
 }
