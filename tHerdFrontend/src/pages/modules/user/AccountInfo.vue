@@ -12,7 +12,6 @@
       </aside>
 
       <main class="content">
-        <h2 class="title">帳號資訊</h2>
 
         <!-- 會員編號（唯讀） -->
         <el-card shadow="never" class="card">
@@ -271,25 +270,67 @@ onMounted(loadDetail)
 </script>
 
 <style scoped>
+ /* ===== 外層容器與麵包屑（對齊 UserMe） ===== */
 .account-page { max-width: 1200px; }
-.breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px; }
+.breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px; transform: translateX(100px);}
 .breadcrumb a { color:#4183c4; }
-.layout { display:grid; grid-template-columns: 300px 1fr; gap:20px; }
-.sidebar { min-width:0; }
-.content { min-width:0; }
-.title { font-size:22px; font-weight:700; margin-bottom:12px; }
 
-.card { margin-bottom:16px; }
+/* ===== 版面：與 UserMe 相同（300px + 1fr，gap 20） ===== */
+.layout {
+  display:grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  /* 與 UserMe 同步的高度基準，供等高與區域滾動使用 */
+  min-height: calc(100vh - 160px);
+}
+
+/* ===== Sidebar：與 UserMe 相同的等高與縮距（右移 2/3 gap） ===== */
+.sidebar {
+  min-width: 0;
+  display: flex; /* 讓內部 .myaccount-sidebar 能 height:100% */
+  transform: translateX(100px); /* 2/3 of 20px ≈ 13.33px */
+}
+/* 使 Sidebar 吃滿 aside 高度，達到與主內容等高 */
+.sidebar :deep(.myaccount-sidebar) {
+  height: 100%;
+}
+/* ===== 右側主內容：區域滾動（只滾內容，不滾整頁） ===== */
+.content {
+  min-width: 0;
+  overflow: auto;
+  max-height: calc(100vh - 160px); 
+  /* 與 .layout 的基準對齊 */
+  padding-right: 4px; /* 讓捲軸不壓文字 */
+}
+
+/* ===== 標題與卡片：色票/邊線完全沿用 Sidebar 的青綠系 ===== */
+.title { font-size:22px; font-weight:700; margin-bottom:12px; color:#2c3e50; }
+
+.card {
+  margin-bottom:16px;
+  border: 1px solid rgb(77, 180, 193);
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* 卡片內部排版（與 UserMe 一致的字階與灰度） */
 .row { display:flex; align-items:flex-start; gap:16px; }
-.icon { width:36px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#666; }
-.field .label { font-weight:700; margin-bottom:4px; }
+.icon {
+  width:36px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; color:#4a5568;
+}
+.field .label { font-weight:700; margin-bottom:4px; color:#2c3e50; }
 .value { color:#333; }
 
 .delete-link { color:#d9534f; }
 .mt-2 { margin-top:8px; }
 .mt-3 { margin-top:12px; }
 
+/* ===== RWD：手機改單欄，移除位移與區域滾動（與 UserMe 一致） ===== */
 @media (max-width: 992px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  .sidebar { transform: none; }
+  .content { max-height: none; overflow: visible; }
 }
 </style>

@@ -33,7 +33,7 @@
         </div>
 
         <!-- 篩選列 -->
-        <el-card shadow="never" class="toolbar">
+        <el-card shadow="never" class="toolbar card">
           <div class="toolbar-row">
             <el-select v-model="filters.status" placeholder="全部狀態" clearable @change="onFilterChange" style="width: 180px">
               <el-option label="全部" value="" />
@@ -56,7 +56,7 @@
         <!-- 列表 -->
         <el-skeleton :loading="loading" animated :count="3">
           <template #template>
-            <el-card class="mb-2" />
+            <el-card class="mb-2 card" />
           </template>
           <template #default>
             <div v-if="rows.length === 0" class="empty">
@@ -204,7 +204,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.rewards-page { max-width: 1200px; }
+/* .rewards-page { max-width: 1200px; }
 .breadcrumb { display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px; }
 .breadcrumb a { color:#4183c4; }
 
@@ -232,5 +232,92 @@ onMounted(async () => {
 
 @media (max-width: 992px) {
   .layout { grid-template-columns: 1fr; }
+} */
+ <style scoped>
+/* ===== 外層容器與麵包屑：對齊 UserMe（寬 1200、breadcrumb 位移） ===== */
+.rewards-page { max-width: 1200px; }
+.breadcrumb {
+  display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px;
+  transform: translateX(100px);
+}
+.breadcrumb a { color:#4183c4; }
+
+/* ===== 版面：與 UserMe 相同（300px + 1fr，gap 20）＋ 固定高度提供區域滾動 ===== */
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: calc(100vh - 160px);  /* 固定高度容器，內容才滾得起來 */
+}
+
+/* ===== Sidebar：與 UserMe 相同（右移 2/3 gap）、等高 ===== */
+.sidebar {
+  min-width: 0;
+  min-height: 0;               /* 讓 Grid 子項可縮，避免擠掉滾動 */
+  display: flex;               /* 讓內部 .myaccount-sidebar 吃滿高度 */
+  transform: translateX(100px);
+}
+.sidebar :deep(.myaccount-sidebar) {
+  height: 100%;
+}
+
+/* ===== 右側內容：區域滾動（只滾主內容，不滾整頁） ===== */
+.content {
+  min-width: 0;
+  min-height: 0;               /* Grid 子項滾動關鍵 */
+  height: 100%;
+  overflow: auto;
+  padding-right: 4px;          /* 捲軸避免壓文字 */
+}
+
+/* ===== 標題/字色：與 UserMe 一致 ===== */
+.title { font-size:22px; font-weight:700; color:#2c3e50; }
+
+/* Header 區（標題 + chips） */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px; gap:12px; flex-wrap:wrap;
+}
+
+/* 摘要 chips：跟 userme 的灰階一致 */
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.chip {
+  background: rgba(77, 180, 193, 0.06);
+  border: 1px dashed rgba(77, 180, 193, 0.5);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color:#2c3e50;
+}
+
+/* 工具列卡片與通用卡片：沿用青綠邊線樣式（和 UserMe 同色） */
+.card {
+  border: 1px solid rgb(77, 180, 193);
+  border-radius: 6px;
+  background: #fff;
+  /* 內側左緣加入與 sidebar active 類似的細線意象（可保留/移除） */
+  box-shadow: inset 3px 0 0 0 rgba(0, 112, 131, 0.12);
+}
+
+.toolbar { margin-bottom:12px; }
+.toolbar-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ml-1 { margin-left: 6px; }
+
+/* 列表容器間距 */
+.list { display:flex; flex-direction:column; gap:12px; }
+.mb-2 { margin-bottom: 12px; }
+
+/* 分頁區塊 */
+.pager { display:flex; justify-content:center; margin-top:16px; }
+
+/* 空狀態：字階與連結色呼應 */
+.empty { padding:40px 16px; text-align:center; color:#4a5568; }
+.empty .link { display:inline-block; margin-top:6px; color:#4183c4; }
+
+/* ===== RWD：手機改單欄，移除位移與區域滾動（與 UserMe 一致） ===== */
+@media (max-width: 992px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; height: auto; }
+  .sidebar { transform: none; }
+  .content { height: auto; overflow: visible; }
 }
 </style>

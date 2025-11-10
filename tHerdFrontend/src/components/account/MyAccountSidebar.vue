@@ -122,7 +122,7 @@ function safeTo(name) {
   .sm-only { display: block; }
 } */
  /* === Sidebar：套用與樣板一致的色票與排版 === */
-.myaccount-sidebar {
+.omyaccount-sidebar {
   /* 固定在視窗內（可依你的 header 高度微調 top） */
   position: sticky;
   top: 92px;
@@ -137,6 +137,26 @@ function safeTo(name) {
   max-width: 160px;
 
   /* 視覺：邊線與背景呼應樣板 panel */
+  border: 1px solid rgb(77, 180, 193);
+  border-radius: 6px;
+  background: #fff;
+  padding: 12px 14px;
+}
+
+.myaccount-sidebar {
+  /* 仍保留貼齊視窗上緣的 sticky 行為 */
+  position: sticky;
+  top: 92px;
+
+  /* 改：高度跟著父層（UserMe 的 aside）走，與主內容等高 */
+  height: 100%;
+  min-height: unset;
+
+  /* 既有排版 */
+  display: flex;
+  flex-direction: column;
+  max-width: 160px;
+
   border: 1px solid rgb(77, 180, 193);
   border-radius: 6px;
   background: #fff;
