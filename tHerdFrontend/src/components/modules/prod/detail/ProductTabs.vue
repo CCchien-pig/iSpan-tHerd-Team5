@@ -111,7 +111,7 @@
           <h4>商品屬性</h4>
           <table
             class="table table-bordered align-middle text-center"
-            v-if="product.attributes && product.attributes.length > 0"
+            v-if="groupedAttributes.length > 0"
           >
             <thead class="table-light">
               <tr>
@@ -120,13 +120,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="attr in product.attributes" :key="attr.attributeId">
-                <td><strong>{{ attr.attributeName }}</strong></td>
+              <tr v-for="attr in groupedAttributes" :key="attr.name">
+                <td><strong>{{ attr.name }}</strong></td>
                 <td>
-                  <!-- 若有選項名稱則顯示選項，否則顯示屬性值 -->
-                  <span v-if="attr.optionName">{{ attr.optionName }}</span>
-                  <span v-else-if="attr.attributeValue">{{ attr.attributeValue }}</span>
-                  <span v-else class="text-muted">—</span>
+                  <!-- 多個值用逗號或換行顯示 -->
+                  <span v-for="(val, idx) in attr.values" :key="idx">
+                    {{ val }}<span v-if="idx < attr.values.length - 1">、</span>
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -158,14 +158,36 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ProductQA from './ProductQA.vue'
 import ProductReviews from './ProductReviews.vue'
 
-defineProps({
+const props = defineProps({
   product: {
     type: Object,
     required: true,
   },
+})
+
+// 🔹 將相同屬性名稱分組
+const groupedAttributes = computed(() => {
+  if (!props.product.attributes) return []
+
+  const groups = {}
+
+  for (const attr of props.product.attributes) {
+    const name = attr.attributeName || '未命名屬性'
+    const value = attr.optionName || attr.attributeValue || '—'
+
+    if (!groups[name]) groups[name] = []
+    groups[name].push(value)
+  }
+
+  // 回傳 [{ name: '功效', values: ['抗老', '美白'] }, ...]
+  return Object.entries(groups).map(([name, values]) => ({
+    name,
+    values,
+  }))
 })
 </script>
 

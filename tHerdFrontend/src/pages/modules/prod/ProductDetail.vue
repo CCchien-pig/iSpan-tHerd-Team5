@@ -125,10 +125,19 @@ const isFavorited = computed(() =>
 const breadcrumbs = computed(() => {
   if (!product.value) return []
 
+  // 將品牌名稱轉 slug（例如空白換成連字號）
+  const slug = product.value.brandName
+    ? product.value.brandName.replace(/\s+/g, '-')
+    : 'brand'
+
   return [
     { name: '首頁', path: '/' },
     { name: '品牌 A-Z', path: '/brands' },
-    { name: product.value.brandName || 'California Gold Nutrition', path: '#' },
+    {
+      name: product.value.brandName || 'California Gold Nutrition',
+      // 導向品牌詳細頁
+      path: `/brands/${slug}-${product.value.brandId}`,
+    },
     { name: product.value.productName, path: null },
   ]
 })
