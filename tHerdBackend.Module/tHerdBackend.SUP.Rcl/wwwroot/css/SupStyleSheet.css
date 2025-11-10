@@ -657,9 +657,9 @@ button.dt-paging-button.current:not(:disabled):hover {
     #brandLayoutModal .modal-dialog.custom-fullscreen .modal-content.container {
         /* 寬高用百分比+px限制 */
         width: calc(100vw - 40px);
-        height: 80vh;
+/*        height: 80vh;*/
         max-width: 100vw;
-        max-height: 80vh;
+        max-height: 98vh;
         border-radius: 10px;
         background: #fff;
         box-sizing: border-box;
@@ -675,6 +675,12 @@ button.dt-paging-button.current:not(:disabled):hover {
     max-width: 100vw !important;
     max-height: 100vh !important;
 }
+    /* TinyMCE 編輯器在全螢幕（Modal 放大）時自動放大 */
+    #brandLayoutModal.custom-fullscreen .tox-tinymce,
+    #brandLayoutModal .modal-dialog.custom-fullscreen .tox-tinymce {
+        height: calc(100vh - 250px) !important; /* 視需要微調 */
+        transition: height 0.3s ease;
+    }
 
 
 /*TinyMCE 雙欄佈局 模板*/
