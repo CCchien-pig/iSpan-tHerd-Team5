@@ -179,6 +179,8 @@ public partial class tHerdDBContext : DbContext
 
     public virtual DbSet<SupLogisticsRate> SupLogisticsRates { get; set; }
 
+    public virtual DbSet<SupOrderLogistic> SupOrderLogistics { get; set; }
+
     public virtual DbSet<SupStockBatch> SupStockBatches { get; set; }
 
     public virtual DbSet<SupStockHistory> SupStockHistories { get; set; }
@@ -797,11 +799,11 @@ public partial class tHerdDBContext : DbContext
 
             entity.HasIndex(e => e.CreatedDate, "IX_CNT_Purchase_CreatedDate");
 
-            entity.HasIndex(e => e.PageId, "IX_CNT_Purchase_PageId");
+            entity.HasIndex(e => new { e.UserNumberId, e.PageId }, "IX_Purchase_User_Page_Paid")
+                .IsUnique()
+                .HasFilter("([IsPaid]=(1))");
 
-            entity.HasIndex(e => e.UserNumberId, "IX_CNT_Purchase_UserNumberId");
-
-            entity.HasIndex(e => new { e.UserNumberId, e.PageId }, "UQ_CNT_Purchase_UserNumberId_PageId").IsUnique();
+            entity.HasIndex(e => new { e.UserNumberId, e.IsPaid, e.CreatedDate }, "IX_Purchase_User_Paid_Date").IsDescending(false, false, true);
 
             entity.Property(e => e.PurchaseId).HasComment("購買紀錄 ID");
             entity.Property(e => e.CreatedDate)
@@ -2423,6 +2425,9 @@ public partial class tHerdDBContext : DbContext
             entity.HasIndex(e => e.ProductName, "UQ_PROD_Product_ProductName").IsUnique();
 
             entity.Property(e => e.ProductId).HasComment("商品ID");
+            entity.Property(e => e.AvgRating)
+                .HasComment("星星平均")
+                .HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Badge)
                 .HasMaxLength(10)
                 .IsUnicode(false)
@@ -2444,6 +2449,7 @@ public partial class tHerdDBContext : DbContext
                 .IsRequired()
                 .HasMaxLength(200)
                 .HasComment("商品名稱");
+            entity.Property(e => e.ReviewCount).HasComment("評價總數");
             entity.Property(e => e.RevisedDate).HasComment("異動時間");
             entity.Property(e => e.Reviser).HasComment("異動人員");
             entity.Property(e => e.SeoId).HasComment("Seo設定");
@@ -2627,7 +2633,7 @@ public partial class tHerdDBContext : DbContext
             entity.Property(e => e.OrderSeq).HasComment("顯示順序");
             entity.Property(e => e.Percentage)
                 .HasComment("百分比或含量（單位可於前台說明）")
-                .HasColumnType("decimal(6, 3)");
+                .HasColumnType("decimal(20, 3)");
             entity.Property(e => e.Unit)
                 .HasMaxLength(10)
                 .IsUnicode(false)
@@ -3248,6 +3254,57 @@ public partial class tHerdDBContext : DbContext
                 .HasForeignKey(d => d.LogisticsId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_LogisticsRate_LogisticsId");
+        });
+
+        modelBuilder.Entity<SupOrderLogistic>(entity =>
+        {
+            entity.HasKey(e => e.OrderLogisticsId).HasName("PK__SUP_Orde__FE32F57340A7A67F");
+
+            entity.ToTable("SUP_OrderLogistics", tb => tb.HasComment("供應商物流資料"));
+
+            entity.HasIndex(e => e.AllPayLogisticsId, "IX_SUP_OrderLogistics_AllPayLogisticsID");
+
+            entity.HasIndex(e => e.OrderId, "UQ_SUP_OrderLogistics_OrderId").IsUnique();
+
+            entity.Property(e => e.OrderLogisticsId).HasComment("物流紀錄 ID");
+            entity.Property(e => e.AllPayLogisticsId)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasComment("綠界物流交易編號")
+                .HasColumnName("AllPayLogisticsID");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(sysdatetime())")
+                .HasComment("建立時間 (UTC)");
+            entity.Property(e => e.Creator).HasComment("建立者 ID");
+            entity.Property(e => e.Cvsaddress)
+                .HasMaxLength(200)
+                .HasComment("超商門市地址")
+                .HasColumnName("CVSAddress");
+            entity.Property(e => e.CvsstoreId)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("超商門市代號")
+                .HasColumnName("CVSStoreID");
+            entity.Property(e => e.CvsstoreName)
+                .HasMaxLength(50)
+                .HasComment("超商門市名稱")
+                .HasColumnName("CVSStoreName");
+            entity.Property(e => e.DeliveryMethod)
+                .IsRequired()
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasComment("配送方式：HOME / CVS");
+            entity.Property(e => e.LogisticsSubType)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasComment("綠界子類型 (UNIMARTC2C, TCAT...)");
+            entity.Property(e => e.OrderId).HasComment("訂單 ID (對應 ORD_Order)");
+            entity.Property(e => e.RevisedDate).HasComment("異動時間 (UTC)");
+            entity.Property(e => e.Reviser).HasComment("異動人員 ID");
+
+            entity.HasOne(d => d.Order).WithOne(p => p.SupOrderLogistic)
+                .HasForeignKey<SupOrderLogistic>(d => d.OrderId)
+                .HasConstraintName("FK_SUP_OrderLogistics_Order");
         });
 
         modelBuilder.Entity<SupStockBatch>(entity =>

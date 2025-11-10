@@ -232,22 +232,38 @@ namespace tHerdBackend.Infra.Repository.PROD
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try
 			{
-				var parameters = new
-				{
-					Skip = (query.PageIndex - 1) * query.PageSize,
-					Take = query.PageSize,
-					query.ProductId,
-					query.Keyword,
-					query.BrandId,
-					query.ProductTypeId,
-					query.MinPrice,
-					query.MaxPrice,
-					query.IsPublished,
-                    query.Badge,
-                    query.ProductIdList
-                };
+                // 改成 DynamicParameters，支援多屬性傳值
+                var parameters = new DynamicParameters();
+                parameters.Add("Skip", (query.PageIndex - 1) * query.PageSize);
+                parameters.Add("Take", query.PageSize);
+                parameters.Add("ProductId", query.ProductId);
+                parameters.Add("Keyword", query.Keyword);
+                parameters.Add("BrandId", query.BrandId);
+                parameters.Add("ProductTypeId", query.ProductTypeId);
+                parameters.Add("MinPrice", query.MinPrice);
+                parameters.Add("MaxPrice", query.MaxPrice);
+                parameters.Add("IsPublished", query.IsPublished);
+                parameters.Add("Badge", query.Badge);
+                parameters.Add("ProductIdList", query.ProductIdList);
+                parameters.Add("BrandIds", query.BrandIds);
+                parameters.Add("Rating", query.Rating); // ✅ 改成多選評價
 
-				using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+                // 展開多層屬性篩選參數
+                if (query.AttributeFilters != null && query.AttributeFilters.Any())
+                {
+                    int i = 0;
+                    foreach (var attr in query.AttributeFilters)
+                    {
+                        for (int j = 0; j < attr.ValueNames.Count; j++)
+                        {
+                            parameters.Add($"Attr{i}_{j}", attr.ValueNames[j]);
+                        }
+                        i++;
+                    }
+                }
+
+
+                using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
 				var list = await multi.ReadAsync<ProdProductSearchDto>();
 				var total = await multi.ReadSingleAsync<int>();
 

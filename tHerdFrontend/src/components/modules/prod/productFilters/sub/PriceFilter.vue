@@ -1,31 +1,38 @@
 <template>
   <div class="filter-section mb-4">
     <h6 class="fw-bold">價格</h6>
-    <div v-for="range in priceRanges" :key="range.label" class="form-check small">
+
+    <div class="d-flex align-items-center mt-2">
       <input
-        class="form-check-input"
-        type="checkbox"
-        :id="range.label"
-        v-model="selectedRanges"
-        :value="range"
-        @change="emitChange"
+        type="number"
+        class="form-control form-control-sm me-1"
+        placeholder="最低價"
+        v-model.number="modelValue.min"
+        min="0"
       />
-      <label class="form-check-label" :for="range.label">
-        {{ range.label }} ({{ range.count }})
-      </label>
+      <span>–</span>
+      <input
+        type="number"
+        class="form-control form-control-sm ms-1"
+        placeholder="最高價"
+        v-model.number="modelValue.max"
+        min="0"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-
 const props = defineProps({
-  priceRanges: { type: Array, required: true }
+  modelValue: { type: Object, default: () => ({ min: null, max: null }) }
 })
-const emit = defineEmits(['update:prices'])
+const emit = defineEmits(['update:modelValue'])
 
-const selectedRanges = ref([])
-
-const emitChange = () => emit('update:prices', selectedRanges.value)
+// 監聽雙向綁定
+function updatePrice(key, value) {
+  const updated = { ...props.modelValue, [key]: value }
+  // 防呆檢查
+  if (updated.max && updated.min && updated.max < updated.min) return
+  emit('update:modelValue', updated)
+}
 </script>
