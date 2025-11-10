@@ -56,7 +56,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				trackingNumber = o.TrackingNumber,
 				hasRmaRequest = rmaOrderIds.Contains(o.OrderId),
 				canReturn = o.DeliveredDate.HasValue &&
-							(DateTime.Now - o.DeliveredDate.Value).Days <= 7 &&
+							(DateTime.Now - o.DeliveredDate.Value).TotalDays < 7 &&
 							!rmaOrderIds.Contains(o.OrderId)
 			});
 
@@ -93,7 +93,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 					revisedDate = o.RevisedDate,     
 					deliveredDate = o.DeliveredDate,
 					canReturn = o.DeliveredDate.HasValue &&
-								EF.Functions.DateDiffDay(o.DeliveredDate.Value, DateTime.Now) <= 7 &&
+								EF.Functions.DateDiffDay(o.DeliveredDate.Value, DateTime.Now) < 7 &&
 								!_db.OrdReturnRequests.Any(r => r.OrderId == o.OrderId)
 				})
 				.FirstOrDefaultAsync();
@@ -137,7 +137,7 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 			if (!order.DeliveredDate.HasValue)
 				throw new ArgumentException("訂單尚未送達");
 
-			var daysSinceDelivery = (DateTime.Now - order.DeliveredDate.Value).Days;
+			var daysSinceDelivery = (DateTime.Now - order.DeliveredDate.Value).TotalDays;
 			if (daysSinceDelivery > 7)
 				throw new ArgumentException("已超過7天鑑賞期");
 
@@ -194,11 +194,11 @@ namespace tHerdBackend.ORD.Rcl.Areas.ORD.ApiControllers
 				.Select(r => new
 				{
 					returnRequestId = r.ReturnRequestId,
-					orderId = r.OrderId,              // ✅ 新增這行
+					orderId = r.OrderId,              
 					rmaId = r.RmaId,
 					orderNo = r.Order.OrderNo,
 					requestType = r.RequestType,
-					scope = r.RefundScope,            // ✅ 改這行（原本是 refundScope）
+					scope = r.RefundScope,            
 					status = r.Status,
 					reasonText = r.ReasonText,
 					createdDate = r.CreatedDate,
