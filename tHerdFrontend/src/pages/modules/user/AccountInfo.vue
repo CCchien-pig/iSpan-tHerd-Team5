@@ -281,7 +281,7 @@ onMounted(loadDetail)
   grid-template-columns: 300px 1fr;
   gap: 20px;
   /* 與 UserMe 同步的高度基準，供等高與區域滾動使用 */
-  min-height: calc(100vh - 160px);
+  /* min-height: calc(100vh - 160px); */
 }
 
 /* ===== Sidebar：與 UserMe 相同的等高與縮距（右移 2/3 gap） ===== */
@@ -297,8 +297,10 @@ onMounted(loadDetail)
 /* ===== 右側主內容：區域滾動（只滾內容，不滾整頁） ===== */
 .content {
   min-width: 0;
+  /* overflow: visible;  */
   overflow: auto;
-  max-height: calc(100vh - 160px); 
+  /* max-height: none; */
+  max-height: 600px; 
   /* 與 .layout 的基準對齊 */
   padding-right: 4px; /* 讓捲軸不壓文字 */
 }

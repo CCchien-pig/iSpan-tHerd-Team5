@@ -400,6 +400,7 @@ onBeforeUnmount(() => {
   height: 100%;
   overflow: auto;
   padding-right: 4px;          /* 捲軸避免壓文字 */
+  max-height: 600px; 
 }
 
 /* ===== 標題與工具列：字級與色票一致 ===== */
