@@ -340,26 +340,32 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   // ==================== 按讚功能 ====================
 
   /**
-   * 按讚商品
-   * @param {Object} data - 按讚資料
-   * @param {number} data.productId - 商品 ID
-   * @returns {Promise} API 回應
-   * @example
-   * const result = await productsApi.likeProduct({ productId: 85180 })
+   * 檢查指定商品是否被目前登入者按讚
+   * 對應後端：GET /api/prod/Products/check/{productId}
    */
-  async likeProduct(data) {
-    return await baseApi.post(`${this.path}/like`, data)
+  async checkLikeStatus(productId) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/check/${productId}`)
+      return res.data // { isLiked: true/false }
+    } catch (error) {
+      console.error('❌ 檢查按讚狀態失敗:', error)
+      throw error
+    }
   }
 
   /**
-   * 取消按讚商品
+   * 切換按讚狀態（按讚 / 取消讚）
+   * 對應後端：POST /api/prod/Products/toggle
    * @param {number} productId - 商品 ID
-   * @returns {Promise} API 回應
-   * @example
-   * const result = await productsApi.unlikeProduct(85180)
    */
-  async unlikeProduct(productId) {
-    return await baseApi.delete(`${this.path}/like/${productId}`)
+  async toggleLike(productId) {
+    try {
+      const res = await baseApi.post(`${this.path}/Products/toggle`, { productId })
+      return res.data // { isLiked, message }
+    } catch (error) {
+      console.error('❌ 按讚切換失敗:', error)
+      throw error
+    }
   }
 }
 
