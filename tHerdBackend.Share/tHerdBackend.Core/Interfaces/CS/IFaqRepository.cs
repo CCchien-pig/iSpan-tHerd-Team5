@@ -11,5 +11,7 @@ namespace tHerdBackend.Core.Interfaces.CS
         Task<FaqDetailDto?> GetDetailAsync(int id);
 		// 給工單使用的 FAQ 分類清單
 		Task<IEnumerable<FaqCategoryDto>> GetActiveCategoriesAsync();
+		Task<FaqSearchDto?> SearchByKeywordAsync(string keyword);
+
 	}
 }

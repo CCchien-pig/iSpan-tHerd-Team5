@@ -18,6 +18,7 @@ using tHerdBackend.Infra.Repository.PROD.Assemblers;
 using tHerdBackend.Infra.Repository.PROD.Builders;
 using tHerdBackend.Infra.Repository.PROD.Services;
 using static Dapper.SqlMapper;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -79,9 +80,35 @@ namespace tHerdBackend.Infra.Repository.PROD
 		public async Task<(IEnumerable<ProdProductSearchDto> list, int totalCount)> GetAllFrontAsync(
 			ProductFrontFilterQueryDto query, CancellationToken ct = default)
 		{
-			// === Step 1. 組 SQL：條件 + 排序 + 分頁 ===
-			var sql = new StringBuilder(@"
-                ;WITH TypeHierarchy (ProductId, ProductTypeId, ParentId, ProductTypeName, FullPath) AS (
+            var sql = new StringBuilder();
+            var includeHotRank = query.Other == "Hot";
+
+            // === Step 1. 若為熱銷模式，建立 HotRank CTE ===
+            if (includeHotRank)
+            {
+                var hotList = (await GetOtherFilter(query.PageSize)).ToList();
+                if (hotList.Any())
+                {
+                    // 生成 HotRank 暫存表
+                    var tempValues = string.Join(",", hotList.Select(x => $"({x.ProductId}, {x.Rank})"));
+                    sql.AppendLine($@"
+                        ;WITH HotRank(ProductId, RankNo) AS (
+                            SELECT * FROM (VALUES {tempValues}) AS T(ProductId, RankNo)
+                        ),");
+                }
+                else
+                {
+                    // 若查無熱銷，仍保留正常結構
+                    sql.AppendLine(";WITH");
+                }
+            }
+            else
+            {
+                sql.AppendLine(";WITH");
+            }
+
+            // === Step 2. TypeHierarchy 與 CategoryPaths CTE ===
+            sql.AppendLine(@"TypeHierarchy (ProductId, ProductTypeId, ParentId, ProductTypeName, FullPath) AS (
                     SELECT 
                         pt.ProductId,
                         ptc.ProductTypeId,
@@ -117,39 +144,43 @@ namespace tHerdBackend.Infra.Repository.PROD
                 SELECT 
                     p.ProductId, p.ProductName,
                     p.BrandId, s.BrandName,
-                    p.SeoId, p.Badge,
-                    p.MainSkuId,
+                    p.SeoId, p.Badge, sc.CodeDesc BadgeName,
+                    p.MainSkuId, p.AvgRating, p.ReviewCount,
                     af.FileUrl AS ImageUrl,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice,
                     cp.ProductTypePath
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
+                LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
                 LEFT JOIN PROD_ProductImage i ON i.ProductId = p.ProductId AND i.IsMain = 1
                 LEFT JOIN SYS_AssetFile af ON af.FileId = i.ImgId
                 LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
+                " + (includeHotRank ? "JOIN HotRank hr ON hr.ProductId = p.ProductId" : "") + @"
                 WHERE 1 = 1
                 ");
 
-			// === Step 2. 條件過濾 ===
-			ProductFrontQueryBuilder.AppendFilters(sql, query);
+            // === Step 2. 條件過濾 ===
+            ProductFrontQueryBuilder.AppendFilters(sql, query);
 
 			sql.AppendLine(@"
                 GROUP BY 
-                    p.ProductId, p.ProductName,
-                    p.BrandId, s.BrandName,
-                    p.SeoId, p.Badge,
-                    p.MainSkuId, af.FileUrl, 
+                    p.ProductId, p.ProductName, p.CreatedDate,
+                    p.BrandId, s.BrandName, 
+                    p.SeoId, p.Badge, sc.CodeDesc,
+                    p.MainSkuId, af.FileUrl, p.AvgRating, p.ReviewCount,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice, 
                     cp.ProductTypePath
-                ");
+                " + (includeHotRank ? ", hr.RankNo" : ""));
 
-			// === Step 3. 排序與分頁 ===
-			var orderByClause = ProductFrontQueryBuilder.BuildOrderClause(query);
-			if (string.IsNullOrWhiteSpace(orderByClause) || !orderByClause.TrimStart().StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
-				orderByClause = " ORDER BY p.ProductId DESC";
+            // === Step 3. 排序與分頁 ===
+            var orderByClause = ProductFrontQueryBuilder.BuildOrderClause(query);
+            if (string.IsNullOrWhiteSpace(orderByClause) || !orderByClause.TrimStart().StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+            {
+                orderByClause = includeHotRank ? " ORDER BY hr.RankNo ASC" : " ORDER BY p.ProductId DESC";
+            }
 
-			sql.AppendLine(orderByClause);
+            sql.AppendLine(orderByClause);
 			sql.AppendLine(" OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;");
 
 			// === Step 4. 統計筆數 ===
@@ -201,20 +232,38 @@ namespace tHerdBackend.Infra.Repository.PROD
 			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
 			try
 			{
-				var parameters = new
-				{
-					Skip = (query.PageIndex - 1) * query.PageSize,
-					Take = query.PageSize,
-					query.ProductId,
-					query.Keyword,
-					query.BrandId,
-					query.ProductTypeId,
-					query.MinPrice,
-					query.MaxPrice,
-					query.IsPublished
-				};
+                // 改成 DynamicParameters，支援多屬性傳值
+                var parameters = new DynamicParameters();
+                parameters.Add("Skip", (query.PageIndex - 1) * query.PageSize);
+                parameters.Add("Take", query.PageSize);
+                parameters.Add("ProductId", query.ProductId);
+                parameters.Add("Keyword", query.Keyword);
+                parameters.Add("BrandId", query.BrandId);
+                parameters.Add("ProductTypeId", query.ProductTypeId);
+                parameters.Add("MinPrice", query.MinPrice);
+                parameters.Add("MaxPrice", query.MaxPrice);
+                parameters.Add("IsPublished", query.IsPublished);
+                parameters.Add("Badge", query.Badge);
+                parameters.Add("ProductIdList", query.ProductIdList);
+                parameters.Add("BrandIds", query.BrandIds);
+                parameters.Add("Rating", query.Rating); // ✅ 改成多選評價
 
-				using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
+                // 展開多層屬性篩選參數
+                if (query.AttributeFilters != null && query.AttributeFilters.Any())
+                {
+                    int i = 0;
+                    foreach (var attr in query.AttributeFilters)
+                    {
+                        for (int j = 0; j < attr.ValueNames.Count; j++)
+                        {
+                            parameters.Add($"Attr{i}_{j}", attr.ValueNames[j]);
+                        }
+                        i++;
+                    }
+                }
+
+
+                using var multi = await conn.QueryMultipleAsync($"{sql} {countSql}", parameters, tx);
 				var list = await multi.ReadAsync<ProdProductSearchDto>();
 				var total = await multi.ReadSingleAsync<int>();
 
@@ -231,13 +280,49 @@ namespace tHerdBackend.Infra.Repository.PROD
 			}
 		}
 
-		/// <summary>
-		/// 查詢商品清單
-		/// </summary>
-		/// <param name="query"></param>
-		/// <param name="ct"></param>
-		/// <returns></returns>
-		public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
+        /// <summary>
+        /// 熱銷商品
+        /// </summary>
+        /// <param name="size"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<(int ProductId, int Rank)>> GetOtherFilter(int size, CancellationToken ct = default)
+        {
+            var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+            try
+            {
+                var sql = @"
+                    SELECT TOP (@Size)
+                        oi.ProductId,
+                        RANK() OVER (ORDER BY COUNT(1) DESC) AS RankNo
+                    FROM ORD_Order o
+                    INNER JOIN ORD_OrderItem oi ON oi.OrderId = o.OrderId
+                    INNER JOIN PROD_Product p ON p.ProductId = oi.ProductId AND p.IsPublished = 1
+                    WHERE o.CreatedDate >= DATEADD(YEAR, -1, GETDATE())
+                    GROUP BY oi.ProductId
+                    ORDER BY COUNT(1) DESC;
+                ";
+
+                return await conn.QueryAsync<(int ProductId, int Rank)>(sql, new { Size = size }, transaction: tx);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ [GetOtherFilter] {ex}");
+                return Enumerable.Empty<(int, int)>();
+            }
+            finally
+            {
+                if (needDispose) conn.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 查詢商品清單
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task<(IEnumerable<ProdProductDto> list, int totalCount)> GetAllAsync(
 			ProductFilterQueryDto query, CancellationToken ct = default)
 		{
 
@@ -245,10 +330,10 @@ namespace tHerdBackend.Infra.Repository.PROD
 			var sql = new StringBuilder(@"
                 SELECT p.ProductId, p.ProductName, su.SupplierId, su.SupplierName,
                        p.BrandId, s.BrandName, p.SeoId, p.ProductCode,
-                       p.ShortDesc, p.FullDesc, p.IsPublished, p.badge,
+                       p.ShortDesc, p.FullDesc, p.IsPublished, p.Badge, 
                        p.Weight, p.VolumeCubicMeter, p.VolumeUnit, p.Creator,
                        p.CreatedDate, p.Reviser, p.RevisedDate, 
-                       p.mainSkuId, af.FileUrl ImageUrl,
+                       p.mainSkuId, af.FileUrl ImageUrl, 
                        ps.ListPrice, ps.UnitPrice, ps.SalePrice, tc.ProductTypeName
                   FROM PROD_Product p
                   JOIN SUP_Brand s ON s.BrandId=p.BrandId
@@ -367,13 +452,14 @@ namespace tHerdBackend.Infra.Repository.PROD
         {
             var sql = @"SELECT p.ProductId, p.BrandId, b.BrandName, b.BrandCode, p.SeoId,
                            s.SupplierId, s.SupplierName, p.ProductCode, p.ProductName,
-                           p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight,
-                           p.badge, p.MainSkuId, 
+                           p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight, 
+                           p.badge, sc.CodeDesc BadgeName, p.MainSkuId, p.AvgRating, p.ReviewCount,
                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
                            p.CreatedDate, p.Reviser, p.RevisedDate
                       FROM PROD_Product p
                       JOIN SUP_Brand b ON b.BrandId=p.BrandId
                       JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
+                      LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                      WHERE p.ProductId=@ProductId;";
 
             var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
@@ -611,6 +697,8 @@ namespace tHerdBackend.Infra.Repository.PROD
 			// === SKU處理邏輯 ===
 			foreach (var sku in dto.Skus ?? new())
 			{
+				sku.IsActive = true;
+
 				// 需要新建 SkuCode
 				if (sku.SkuId == 0)
 				{
@@ -987,5 +1075,65 @@ namespace tHerdBackend.Infra.Repository.PROD
                 if (needDispose) conn.Dispose();
             }
         }
-    }
+
+		/// <summary>
+		/// 按讚或取消讚（由 API 傳入使用者ID）
+		/// </summary>
+		public async Task<(bool IsLiked, string Message)> ToggleLikeAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			if (productId <= 0 || userNumberId <= 0)
+				throw new ArgumentException("商品 ID 或 使用者 ID 錯誤");
+
+			var (conn, _, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				// 檢查是否已經按讚過
+				var exists = await conn.ExecuteScalarAsync<bool>(
+					"SELECT COUNT(1) FROM PROD_ProductLike WHERE ProductId = @ProductId AND UserNumberId = @UserId",
+					new { ProductId = productId, UserId = userNumberId });
+
+				if (exists)
+				{
+					await conn.ExecuteAsync(
+						"DELETE FROM PROD_ProductLike WHERE ProductId = @ProductId AND UserNumberId = @UserId",
+						new { ProductId = productId, UserId = userNumberId });
+					return (false, "已取消按讚");
+				}
+				else
+				{
+					await conn.ExecuteAsync(
+						"INSERT INTO PROD_ProductLike (ProductId, UserNumberId) VALUES (@ProductId, @UserId)",
+						new { ProductId = productId, UserId = userNumberId });
+					return (true, "已按讚");
+				}
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+
+		/// <summary>
+		/// 檢查使用者是否對指定商品按讚過
+		/// </summary>
+		public async Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default)
+		{
+			if (userNumberId <= 0 || productId <= 0)
+				return false;
+
+			var (conn, tx, needDispose) = await DbConnectionHelper.GetConnectionAsync(_db, _factory, ct);
+			try
+			{
+				var sql = @"SELECT COUNT(1) 
+                    FROM PROD_ProductLike 
+                    WHERE ProductId = @ProductId AND UserNumberId = @UserId";
+				var count = await conn.ExecuteScalarAsync<int>(sql, new { ProductId = productId, UserId = userNumberId }, tx);
+				return count > 0;
+			}
+			finally
+			{
+				if (needDispose) conn.Dispose();
+			}
+		}
+	}
 }

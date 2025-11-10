@@ -76,7 +76,7 @@ export default {
       this.timer = setInterval(() => {
         this.currentIndex = (this.currentIndex + 1) % this.promoList.length
         this.currentColor = this.getRandomColor()
-      }, 15000)
+      }, 10000)
     },
 
     // ⏱ 每 60 秒自動重新抓取資料

@@ -8,6 +8,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tHerdBackend.StyleMain", "tHerdBackend.StyleMain", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tHerdBackend.Share", "tHerdBackend.Share", "{9FF153ED-5BD2-4161-A7BC-0758E5993E6F}"
+	ProjectSection(SolutionItems) = preProject
+		tHerdBackend.Share\tHerdBackend.Core\DTOs\PROD\user\ToggleLikeDto.cs = tHerdBackend.Share\tHerdBackend.Core\DTOs\PROD\user\ToggleLikeDto.cs
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tHerdBackend.Module", "tHerdBackend.Module", "{B8CF0AB5-AB76-451A-9A5B-5B06E59DC85A}"
 EndProject

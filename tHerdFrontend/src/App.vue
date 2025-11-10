@@ -35,7 +35,7 @@ import { NotificationGroup, Notification } from 'notiwind'
             <div
               class="flex items-center justify-center w-12 rounded-l-lg"
               :class="{
-                'bg-main-color-green': notification.type === 'success',
+                'bg-[rgb(0,112,131)]': notification.type === 'success',
                 'bg-yellow-400': notification.type === 'error',
                 'bg-blue-400': notification.type === 'info',
               }"
@@ -93,7 +93,7 @@ import { NotificationGroup, Notification } from 'notiwind'
                 <span
                   class="font-semibold"
                   :class="{
-                    'main-color-green-text': notification.type === 'success',
+                    'text-[rgb(0,112,131)]': notification.type === 'success',
                     'text-yellow-500': notification.type === 'error',
                     'text-blue-500': notification.type === 'info',
                   }"
@@ -118,16 +118,4 @@ import { NotificationGroup, Notification } from 'notiwind'
   </NotificationGroup>
 </template>
 
-<style>
-.main-color-green-bg {
-  background-color: rgb(0, 112, 131) !important;
-}
-
-.main-color-white-text {
-  color: rgb(248, 249, 250) !important;
-}
-
-.main-color-green-text {
-  color: rgb(0, 112, 131) !important;
-}
-</style>
+<style></style>

@@ -4,9 +4,25 @@
 -->
 <template>
   <div class="product-info">
+    <!-- 品牌優惠跑馬燈 -->
+    <div v-if="brandPromotion" class="brand-promo-marquee">
+      <div class="promo-track">
+        <div class="promo-content">
+          <i class="bi bi-megaphone-fill text-success me-2"></i>
+          <strong class="me-2">{{ brandPromotion.title }}</strong>
+          <span class="promo-desc">{{ brandPromotion.desc }}</span>
+        </div>
+        <div class="promo-content">
+          <i class="bi bi-megaphone-fill text-success me-2"></i>
+          <strong class="me-2">{{ brandPromotion.title }}</strong>
+          <span class="promo-desc">{{ brandPromotion.desc }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 商品標籤 -->
     <div class="brand-badge mb-3">
-      <span class="badge bg-success">{{ product.badge }}</span>
+      <span class="badge bg-warning text-dark">{{ product.badgeName }}</span>
     </div>
 
     <!-- 商品標題 -->
@@ -35,9 +51,15 @@
       >
     </div>
 
-    <!-- 有庫存標籤 -->
+    <!-- 即時庫存顯示 -->
     <div class="stock-status mb-3">
-      <span class="badge bg-success">有庫存</span>
+      <span v-if="selectedSpec?.stockQty > 20" class="badge bg-success">
+        庫存 {{ selectedSpec.stockQty }} 件
+      </span>
+      <span v-else-if="selectedSpec?.stockQty > 0" class="badge bg-warning text-dark">
+        庫存緊張：僅剩 {{ selectedSpec.stockQty }} 件
+      </span>
+      <span v-else class="badge bg-danger">暫無庫存</span>
     </div>
 
     <!-- 促銷訊息 : 暫時不放，要跟MKT串 -->
@@ -59,8 +81,12 @@
           v-show="spec.isActive"
           :key="spec.skuId"
           class="spec-button"
-          :class="{ active: selectedSpec?.skuId === spec.skuId }"
-          @click="selectSpec(spec)"
+          :class="{
+            active: selectedSpec?.skuId === spec.skuId,
+            disabled: !spec.hasStock,
+          }"
+          :disabled="!spec.hasStock"
+          @click="spec.hasStock && selectSpec(spec)"
         >
 
           <!-- 規格名稱：黃底 -->
@@ -94,9 +120,9 @@
     <div class="product-meta mb-4">
       <ul class="list-unstyled small">
         <!--li><strong>包裝規格：</strong>{{ selectedSpec?.optionName || product.PackageType }}</li-->
-        <li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li>
+        <!--li><strong>效期：</strong>{{ formatDate(product.expiryDate) }}</li-->
         <li v-if="product.dimensions">
-          <strong>約尺寸：</strong>{{ product.weight }}公克，{{ product.dimensions }}
+          <strong>約尺寸：</strong>{{ product.weight / 10 }}公克，{{ product.dimensions }}
         </li>
         <li><strong>商品編號：</strong>{{ product.productId }}</li>
         <li><strong>產品代碼：</strong>{{ product.productCode }}</li>
@@ -127,19 +153,12 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 
 const props = defineProps({
-  product: {
-    type: Object,
-    required: true,
-  },
-  selectedSpec: {
-    type: Object,
-    default: null,
-  },
+  product: Object,
+  selectedSpec: Object
 })
-
 const emit = defineEmits(['spec-selected'])
 
 /**
@@ -159,6 +178,28 @@ onMounted(() => {
       selectSpec(mainSpec)
     }
   }
+})
+
+/**
+ * 品牌優惠顯示設定（可擴充）
+ */
+const brandPromotion = computed(() => {
+  const brand = props.product?.brandName
+  if (!brand) return null
+
+  if (brand === 'Optimum Nutrition') {
+    return {
+      title: 'Optimum Nutrition 品牌週🔥',
+      desc: '滿 1000 折 100，再享會員 95 折優惠！限時活動中 ⏰',
+    }
+  }
+  if (brand === 'NOW Foods') {
+    return {
+      title: 'NOW Foods 滿額贈活動 🎁',
+      desc: '全館滿 1200 贈維生素 B 群隨身包！',
+    }
+  }
+  return null
 })
 
 /**
@@ -317,6 +358,52 @@ const formatDate = (dateString) => {
   box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.3);
 }
 
+/* ✅ 品牌跑馬燈樣式 */
+.brand-promo-marquee {
+  background: #e9f8ec;
+  border-left: 5px solid #28a745;
+  height: 30px;
+  overflow: hidden;
+  position: relative;
+}
+
+.promo-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 7s linear infinite;
+  will-change: transform;
+}
+
+.promo-content {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  padding-right: 4rem; /* 兩段之間的間距 */
+  color: #155724;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* 無縫滾動動畫：移動半段寬度 */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* 讓描述文字有對比感 */
+.promo-desc {
+  color: #0d6e27;
+}
+
+/* hover 暫停滾動 */
+.brand-promo-marquee:hover .promo-track {
+  animation-play-state: paused;
+}
+
 /* 響應式設計 */
 @media (max-width: 768px) {
   .spec-options {
@@ -346,6 +433,24 @@ const formatDate = (dateString) => {
 
   .price-old {
     font-size: 0.65rem;
+  }
+
+    /* 無庫存按鈕樣式 */
+  .spec-button.disabled,
+  .spec-button:disabled {
+    background-color: #f5f5f5;
+    border-color: #ddd;
+    color: #aaa;
+    cursor: not-allowed;
+    opacity: 0.6;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* 無庫存時禁止 hover 效果 */
+  .spec-button.disabled:hover {
+    border-color: #ddd;
+    box-shadow: none;
   }
 }
 </style>

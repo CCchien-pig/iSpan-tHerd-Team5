@@ -111,6 +111,44 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
                     ?? item.Images.Select(x => x.FileUrl).FirstOrDefault()
                     ?? "/images/no-image.png";
             }
+
+            // 6️. 成分資訊
+            const string ingredientSql = @"
+                SELECT 
+                    i.IngredientId,
+                    i.IngredientName,
+                    i.Alias,
+                    i.Description,
+                    pi.Percentage,
+                    pi.Note
+                FROM PROD_ProductIngredient AS pi
+                INNER JOIN PROD_Ingredient AS i ON pi.IngredientId = i.IngredientId
+                WHERE pi.ProductId = @ProductId
+                ORDER BY i.IngredientName;";
+
+            var ingCmd = new CommandDefinition(ingredientSql, new { item.ProductId }, tx, cancellationToken: ct);
+            var ingredients = await conn.QueryAsync<ProductIngredientDto>(ingCmd);
+
+            item.Ingredients = ingredients.ToList();
+
+            // 7️. 商品屬性（Attributes）
+            const string attrSql = @"
+                SELECT 
+                    pa.AttributeId,
+                    a.AttributeName,
+                    a.DataType,
+                    pa.AttributeOptionId,
+                    ao.OptionName,
+                    pa.AttributeValue
+                FROM PROD_ProductAttribute AS pa
+                INNER JOIN PROD_Attribute AS a ON pa.AttributeId = a.AttributeId
+                LEFT JOIN PROD_AttributeOption AS ao ON pa.AttributeOptionId = ao.AttributeOptionId
+                WHERE pa.ProductId = @ProductId
+                ORDER BY a.AttributeName;";
+
+            var attrCmd = new CommandDefinition(attrSql, new { item.ProductId }, tx, cancellationToken: ct);
+            var attrs = await conn.QueryAsync<ProductAttributeDto>(attrCmd);
+            item.Attributes = attrs.ToList();
         }
 
         private ProdProductSkuDto MapSku(ProdProductSku sku) => new()

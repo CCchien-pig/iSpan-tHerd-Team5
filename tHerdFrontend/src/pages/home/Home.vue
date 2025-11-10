@@ -16,7 +16,8 @@ import ProductShowcase from '@/components/modules/prod/list/ProductShowcase.vue'
 // 導入頁面區塊組件 - 每個區塊都是獨立的組件
 import HeroSection from '@/components/sections/HeroSection.vue' // 英雄區塊
 import CategorySection from '@/components/sections/CategorySection.vue' // 分類區塊
-import BrandSection from '@/components/sections/BrandSection.vue' // 品牌展示
+import HotBrandsCarousel from '@/components/modules/sup/brands/HotBrandsCarousel.vue'
+// 品牌展示
 import TestimonialSection from '@/components/sections/TestimonialSection.vue' // 客戶評價
 import FeatureSection from '@/components/sections/FeatureSection.vue' // 服務特色
 
@@ -114,17 +115,17 @@ const handleQuickView = (product) => {
       功能：展示網站主要價值主張和行動按鈕
       事件：支持Loading測試功能
     -->
-      <!-- <HeroCarousel /> -->
+    <!-- <HeroCarousel /> -->
     <HeroSection @test-loading="testLoading" @custom-loading="handleCustomLoading" />
 
     <!--
   優惠券區塊 - 展示可領取的優惠券
   功能：顯示使用者可領取的各種活動券
   -->
-  <div class="container py-4">
-    <h3 class="mb-3 fw-bold text-center main-color-green-text">熱門優惠券</h3>
-    <CouponList />
-  </div>
+    <div class="container py-4">
+      <h3 class="mb-3 fw-bold text-center main-color-green-text">熱門優惠券</h3>
+      <CouponList />
+    </div>
     <!--
       特色分類區塊 - 展示產品分類
       功能：幫助用戶快速找到感興趣的產品類別
@@ -152,9 +153,11 @@ const handleQuickView = (product) => {
       功能：建立品牌信任度，展示合作夥伴
       數據：brands數組，包含品牌名稱和Logo
     -->
-    <BrandSection :brands="brands" />
-
-  
+    <!-- 熱門品牌（銷量Top10輪播） -->
+    <section class="container py-5">
+      <h3 class="mb-3 fw-bold text-center main-color-green-text">銷量 Top10 品牌</h3>
+      <HotBrandsCarousel :itemWidth="160" :stepCount="1" :interval="2500" />
+    </section>
 
     <!--
       客戶評價區塊 - 展示用戶評價
@@ -193,7 +196,7 @@ export default {
       categories: [
         {
           id: 1,
-          name: '維生素與礦物質',
+          name: '維生素',
           description: '支持免疫系統和整體健康',
           icon: 'bi bi-heart-pulse',
         },
@@ -205,7 +208,7 @@ export default {
         },
         {
           id: 3,
-          name: '美容護膚',
+          name: '美容美妝',
           description: '天然有機的美容產品',
           icon: 'bi bi-flower1',
         },
@@ -231,7 +234,7 @@ export default {
         {
           id: 2,
           title: '快速配送',
-          description: '訂單滿 NT$1,000 免運費',
+          description: '訂單滿 NT$1,500 免運費',
           icon: 'bi bi-truck',
         },
         {
@@ -242,8 +245,8 @@ export default {
         },
         {
           id: 4,
-          title: '30天退貨',
-          description: '不滿意可於30天內退貨',
+          title: '7天退貨',
+          description: '不滿意可於7天內退貨',
           icon: 'bi bi-arrow-clockwise',
         },
       ],

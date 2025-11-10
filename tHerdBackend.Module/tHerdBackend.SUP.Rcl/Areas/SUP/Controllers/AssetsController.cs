@@ -53,7 +53,9 @@ public class AssetsController : ControllerBase
 				File = dto.File,
 				AltText = dto.AltText,
 				Caption = dto.Caption,
-				IsActive = dto.IsActive
+				//IsActive = dto.IsActiveBool
+				IsActive = true
+
 			};
 
 			var uploadDto = new AssetFileUploadDto
@@ -65,6 +67,7 @@ public class AssetsController : ControllerBase
 
 			// ✅ 呼叫 AddFilesAsync，內部仍會拿到 List，但只含單一元素
 			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
+			Console.WriteLine($"[UploadForTinyMce] IsActive(raw) = '{dto.IsActive}', IsActiveBool = {dto.IsActiveBool}");
 
 			return ParseUploadResult(resultObject);
 		}
@@ -89,7 +92,7 @@ public class AssetsController : ControllerBase
 
 		try
 		{
-            // 1. 從 URL 下載圖片
+			// 1. 從 URL 下載圖片
 			var client = _httpClientFactory.CreateClient();
 			var response = await client.GetAsync(dto.ImageUrl);
 			if (!response.IsSuccessStatusCode)
@@ -100,7 +103,7 @@ public class AssetsController : ControllerBase
 			await using var imageStream = await response.Content.ReadAsStreamAsync();
 			var fileName = Path.GetFileName(new Uri(dto.ImageUrl).AbsolutePath);
 
-            // 2. 模擬 IFormFile
+			// 2. 模擬 IFormFile
 			var formFile = new FormFile(imageStream, 0, imageStream.Length, "file", fileName)
 			{
 				Headers = new HeaderDictionary(),
@@ -118,21 +121,24 @@ public class AssetsController : ControllerBase
 				ModuleId = "SUP",
 				ProgId = dto.BlockType,
 				Meta = new List<AssetFileDetailsDto>
-			{
-				new AssetFileDetailsDto
 				{
-					File = formFile,
-					AltText = dto.AltText,
-					Caption = dto.Caption,
-					IsActive = dto.IsActive
+					new AssetFileDetailsDto
+					{
+						File = formFile,
+						AltText = dto.AltText,
+						Caption = dto.Caption,
+						//IsActive = dto.IsActiveBool
+						IsActive = true
+
+					}
 				}
-			}
 			};
 
 			// 5. 呼叫現有的上傳服務
 			object resultObject = await _assetFileService.AddFilesAsync(uploadDto);
-			
-            // 6. 解析結果並回傳
+			Console.WriteLine($"[UploadByUrl] IsActive(raw) = '{dto.IsActive}', IsActiveBool = {dto.IsActiveBool}");
+
+			// 6. 解析結果並回傳
 			return ParseUploadResult(resultObject);
 		}
 		catch (Exception ex)

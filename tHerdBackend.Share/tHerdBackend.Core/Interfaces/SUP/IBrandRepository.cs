@@ -34,6 +34,20 @@ namespace tHerdBackend.Core.Interfaces.SUP
 		Task<List<BrandButtonDto>> GetBrandButtonsAsync(int brandId, CancellationToken ct);
 		Task<List<(string contentKey, BrandAccordionItemDto item)>> GetBrandAccordionRawAsync(int brandId, CancellationToken ct);
 
+		Task<BrandOverviewDto> GetBrandOverviewAsync(int brandId);
+
+		Task<BrandAccordionContentDto?> GetAccordionByIdAsync(int contentId, CancellationToken ct);
+		Task<BrandArticleDto?> GetArticleByIdAsync(int contentId, CancellationToken ct);
+
+		Task<int?> GetBrandImgIdAsync(int brandId, CancellationToken ct);
+		Task<BannerDto?> GetAssetFileAsBannerAsync(int fileId, CancellationToken ct); // 依 FileId 取 FileUrl/AltText/Caption...
+
+		/// <summary>
+		/// 取得品牌銷量 Top N 排行
+		/// </summary>
+		Task<List<BrandSalesRankingDto>> GetTopBrandsBySalesAsync(int topN = 10);
+
+
 		#endregion
 
 	}

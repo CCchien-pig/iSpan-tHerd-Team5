@@ -23,4 +23,10 @@ export default [
     props: true, // 讓 params 自動傳進組件
     meta: { title: '商品分類搜尋' },
   },
+  {
+    path: '/prod/products/hot',
+    name: 'product-hot-rank',
+    component: () => import('@/pages/modules/prod/ProductHotRank.vue'),
+    meta: { title: '暢銷排名' },
+  },
 ]

@@ -218,7 +218,14 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			{
 				var layout = await _layoutService.GetActiveLayoutAsync(brandId);
 				if (layout == null)
-					return NotFound(new { success = false, message = "該品牌目前沒有任何啟用中的版面設定。" });
+				{
+					return Ok(new
+					{
+						success = true,
+						message = "目前沒有啟用中的版面設定。",
+						orderedBlocks = new string[0]
+					});
+				}
 
 				return Ok(layout);
 			}
@@ -558,6 +565,137 @@ namespace tHerdBackend.SharedApi.Controllers.Module.SUP
 			}
 		}
 
+
+		/// <summary>
+		/// 取得品牌綜合資訊（商品數、被收藏數、建立時間->距今天數、供應商名稱、產品總銷量）
+		/// </summary>
+		/// <param name="brandId">品牌 Id</param>
+		/// <returns>品牌資訊</returns>
+		[AllowAnonymous]
+		[HttpGet("{brandId}/overview")]
+		public async Task<IActionResult> GetBrandOverviewAsync(int brandId)
+		{
+			try
+			{
+				var dto = await _service.GetBrandOverviewAsync(brandId);
+				if (dto == null)
+				{
+					return NotFound(new { success = false, message = "找不到該品牌" });
+				}
+				return Ok(ApiResponse<object>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetTopBrandsBySales error");
+				return BadRequest(ApiResponse<string>.Fail(ex.Message));
+			}
+
+		}
+
+		/// <summary>
+		/// 取得品牌銷售Top10排行榜
+		/// </summary>
+		[AllowAnonymous]
+		[HttpGet("top-sales")]
+		public async Task<IActionResult> GetTopBrandsBySales()
+		{
+			try
+			{
+				var data = await _service.GetTopBrandsBySalesAsync(10);
+				return Ok(ApiResponse<List<BrandSalesRankingDto>>.Ok(data, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetTopBrandsBySales error");
+				return BadRequest(ApiResponse<string>.Fail(ex.Message));
+			}
+		}
+
+
+		#region 取單一區塊內容
+		/// <summary>取得單一 Accordion 內容（依 contentId）</summary>
+		[HttpGet("{brandId:int}/accordion/{contentId:int}")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandAccordionContentDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetAccordion(int brandId, int contentId, CancellationToken ct)
+		{
+			try
+			{
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
+				var dto = await _service.GetAccordionAsync(brandId, contentId, ct);
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("找不到該 Accordion 內容"));
+
+				return Ok(ApiResponse<BrandAccordionContentDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetAccordion failed. brandId={BrandId}, contentId={ContentId}", brandId, contentId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
+
+		/// <summary>取得單一 Article 內容（依 contentId）</summary>
+		[HttpGet("{brandId:int}/article/{contentId:int}")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BrandArticleDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetArticle(int brandId, int contentId, CancellationToken ct)
+		{
+			try
+			{
+				if (!await _service.CheckBrandExistsAsync(brandId))
+					return NotFound(ApiResponse<object>.Fail("品牌不存在或已停用"));
+
+				var dto = await _service.GetArticleAsync(brandId, contentId, ct);
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("找不到該文章內容"));
+
+				return Ok(ApiResponse<BrandArticleDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetArticle failed. brandId={BrandId}, contentId={ContentId}", brandId, contentId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
+
+		/// <summary>取得品牌 Banner（SUP_Brand.ImgId → SYS_AssetFile.FileUrl），可附 linkUrl</summary>
+		[HttpGet("{brandId:int}/banner")]
+		[AllowAnonymous]
+		[ProducesResponseType(typeof(ApiResponse<BannerDto>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetBrandBanner(int brandId, [FromQuery] string? linkUrl, CancellationToken ct)
+		{
+			try
+			{
+				// 先檢查品牌是否存在
+				var brandExists = await _service.CheckBrandExistsAsync(brandId);
+				if (!brandExists)
+					return NotFound(ApiResponse<object>.Fail("找不到該品牌"));
+
+				// 再查 Banner
+				var dto = await _service.GetBannerAsync(brandId, linkUrl, ct);
+				if (dto == null)
+					return NotFound(ApiResponse<object>.Fail("該品牌目前沒有 Banner"));
+
+				return Ok(ApiResponse<BannerDto>.Ok(dto, ""));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "GetBrandBanner failed. brandId={BrandId}", brandId);
+				return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Fail(ex.Message));
+			}
+		}
+
+
+		#endregion
 
 		#endregion
 

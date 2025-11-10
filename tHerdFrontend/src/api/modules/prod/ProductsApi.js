@@ -17,7 +17,40 @@ import { useCartStore } from '@/composables/modules/prod/cartStore'
 class productsApi {
   path = '/prod'
 
-    // ==================== 購物車 ====================
+  // ==================== 品牌相關 ====================
+
+  /**
+   * 取得所有啟用品牌清單
+   * 對應後端：GET /api/prod/brands/get-brands-all
+   * @returns {Promise<Object[]>} 品牌列表 [{id, name, code, discountRate, ...}]
+   */
+  async getBrandList() {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/get-brands-all`)
+      return res.data // ✅ 回傳 { success, data, message }
+    } catch (error) {
+      console.error('❌ 取得品牌清單失敗:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 搜尋品牌（支援前端搜尋框）
+   * 對應後端：GET /api/prod/brands/search-brands?keyword=xxx
+   * @param {string} keyword 關鍵字
+   * @returns {Promise<Object[]>} 篩選後品牌
+   */
+  async searchBrand(keyword) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/search-brands?keyword=${encodeURIComponent(keyword)}`)
+      return res.data
+    } catch (error) {
+      console.error('❌ 搜尋品牌失敗:', error)
+      throw error
+    }
+  }
+
+  // ==================== 購物車 ====================
 
   /**
    * 加入購物車 + 立即刷新購物車數量
@@ -77,10 +110,13 @@ class productsApi {
    * @param {number} params.brandId - 品牌 ID
    * @param {number} params.minPrice - 最小價錢
    * @param {number} params.maxPrice - 最大價錢
-  //  * @param {number} params.attrId - 篩選屬性 ID
+   * @param {number} params.attrId - 篩選屬性 ID
    * @param {string} params.sortBy - 排序方式 (price, rating, date)
    * @param {boolean} params.sortDesc - 降幕
-
+   * @param {boolean} params.IsPublished - 是否發佈
+   * @param {string} params.Badge - 標籤代號
+   * @param {list} params.ProductIdList - 多商品編號
+   * @param {string} params.Other - 其他 EX. 熱銷
    * @returns {Promise} API 回應
    * @example
    * const result = await productsApi.getProductList({
@@ -102,7 +138,10 @@ class productsApi {
       sortBy: 'date',
       sortDesc: false,
       isPublished: true,
-      IsFrontEnd: true
+      isFrontEnd: true,
+      badge: '',
+      productIdList: [],
+      other: ''
     }
 
     const finalParams = { ...defaultParams, ...params }
@@ -150,13 +189,20 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   // ==================== 屬性與成分 ====================
 
   /**
-   * 查詢商品屬性清單
-   * @returns {Promise} API 回應，包含所有屬性分類（功效、性別、年齡等）
-   * @example
-   * const result = await productsApi.getAttributes()
+   * 查詢商品屬性清單（含屬性與選項）
+   * 對應後端：GET /api/prod/Products/get-att
+   * @returns {Promise<Object[]>} 屬性列表 [{attributeId, attributeName, options: [{optionName, ...}]}]
    */
-  async getAttributes() {
-    return await baseApi.get(`${this.path}/attributes`)
+  async getFilterAttributes() {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/get-att`)
+      // 若後端回傳格式為 ApiResponse<T>
+      // 例如 { success: true, data: [...] }，則回傳 data
+      return res?.data?.data || res?.data
+    } catch (error) {
+      console.error('❌ 取得屬性清單失敗:', error)
+      throw error
+    }
   }
 
   /**
@@ -294,26 +340,32 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   // ==================== 按讚功能 ====================
 
   /**
-   * 按讚商品
-   * @param {Object} data - 按讚資料
-   * @param {number} data.productId - 商品 ID
-   * @returns {Promise} API 回應
-   * @example
-   * const result = await productsApi.likeProduct({ productId: 85180 })
+   * 檢查指定商品是否被目前登入者按讚
+   * 對應後端：GET /api/prod/Products/check/{productId}
    */
-  async likeProduct(data) {
-    return await baseApi.post(`${this.path}/like`, data)
+  async checkLikeStatus(productId) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/check/${productId}`)
+      return res.data // { isLiked: true/false }
+    } catch (error) {
+      console.error('❌ 檢查按讚狀態失敗:', error)
+      throw error
+    }
   }
 
   /**
-   * 取消按讚商品
+   * 切換按讚狀態（按讚 / 取消讚）
+   * 對應後端：POST /api/prod/Products/toggle
    * @param {number} productId - 商品 ID
-   * @returns {Promise} API 回應
-   * @example
-   * const result = await productsApi.unlikeProduct(85180)
    */
-  async unlikeProduct(productId) {
-    return await baseApi.delete(`${this.path}/like/${productId}`)
+  async toggleLike(productId) {
+    try {
+      const res = await baseApi.post(`${this.path}/Products/toggle`, { productId })
+      return res.data // { isLiked, message }
+    } catch (error) {
+      console.error('❌ 按讚切換失敗:', error)
+      throw error
+    }
   }
 }
 

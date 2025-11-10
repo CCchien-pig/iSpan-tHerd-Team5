@@ -158,10 +158,15 @@ public partial class ProdProductDetailDto : ProdProductDto
     [Display(Name = "商品標籤")]
     public override string Badge { get; set; } = string.Empty;
 
-	/// <summary>
-	/// 分類敘述
-	/// </summary>
-	public override List<string> ProductTypeDesc { get; set; }
+    /// <summary>
+    /// 商品狀態標籤
+    /// </summary>
+    public override string BadgeName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 分類敘述
+    /// </summary>
+    public override List<string> ProductTypeDesc { get; set; }
 
     /// <summary>
     /// 分類敘述
@@ -174,6 +179,10 @@ public partial class ProdProductDetailDto : ProdProductDto
 	public List<ProdSpecificationConfigDto> SpecConfigs { get; set; } = new();
 
 	public List<ProductImageDto>? Images { get; set; } = new();
+
+    public List<ProductIngredientDto>? Ingredients { get; set; } = new();
+
+    public List<ProductAttributeDto>? Attributes { get; set; } = new();
 
     /// <summary>
     /// 計算總數
@@ -230,4 +239,12 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 主商品優惠價
     /// </summary>
     public override decimal? SalePrice { get; set; }
+
+	/// <summary>
+	/// 結帳單價
+	/// </summary>
+	private static decimal? FirstPositive(params decimal?[] prices)
+=> prices.FirstOrDefault(p => p.HasValue && p.Value > 0);
+
+	public decimal? BillingPrice => FirstPositive(SalePrice, UnitPrice, ListPrice);
 }
