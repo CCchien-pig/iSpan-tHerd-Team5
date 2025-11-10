@@ -429,7 +429,7 @@
               </div>
               
               <div class="mb-4">
-                <label class="form-label fw-bold mb-3 fs-5">上傳照片（選填）</label>
+                <label class="form-label fw-bold mb-3 fs-5">上傳照片(選填)</label>
                 <div class="photo-upload-area border rounded p-3">
                   <input 
                     type="file" 
@@ -600,15 +600,12 @@ export default {
         alert('載入詳情失敗');
       }
     },
-    // 計算商品原價
     calculateOriginalPrice(orderDetail) {
       if (!orderDetail || !orderDetail.items) return 0;
       return orderDetail.items.reduce((total, item) => {
         return total + (item.unitPrice * item.qty);
       }, 0);
     },
-    
-    // 計算商品優惠金額
     calculateProductDiscount(orderDetail) {
       const originalPrice = this.calculateOriginalPrice(orderDetail);
       const subtotal = orderDetail.order.subtotal;
@@ -749,11 +746,11 @@ export default {
     },
     getLogisticsName(logisticsId) {
       const map = {
-        1000: '宅配到府（順豐速運）',
-        1001: '低溫宅配（黑貓宅急便）',
-        1002: '超商店到店（7-ELEVEN）',
-        1003: 'i郵箱（中華郵政）',
-        1004: '掛號包裹（中華郵政）'
+        1000: '宅配到府(順豐速運)',
+        1001: '低溫宅配(黑貓宅急便)',
+        1002: '超商店到店(7-ELEVEN)',
+        1003: 'i郵箱(中華郵政)',
+        1004: '掛號包裹(中華郵政)'
       };
       return map[logisticsId] || '宅配到府';
     },
@@ -836,6 +833,7 @@ export default {
         pending: '待審核',
         review: '審核中',
         refunding: '退款中',
+        reshipping: '補寄中',
         done: '已完成',
         rejected: '已拒絕'
       };
@@ -845,7 +843,8 @@ export default {
       const map = {
         pending: 'badge orange-badge',
         review: 'badge bg-info',
-        refunding: 'badge main-color-green',
+        refunding: 'badge badge-teal',
+        reshipping: 'badge badge-cyan',
         done: 'badge bg-success',
         rejected: 'badge bg-danger'
       };
@@ -872,6 +871,18 @@ export default {
 .orange-badge {
   background-color: rgb(255, 193, 7);
   color: #000;
+}
+
+/* 退款中 - 使用 main.css 的 main-color-green */
+.badge-teal {
+  background-color: rgb(0, 112, 131);
+  color: white;
+}
+
+/* 補寄中 - 使用 main.css 的 main-color-cyanblue */
+.badge-cyan {
+  background-color: rgb(0, 147, 171);
+  color: white;
 }
 
 .orange-submit-btn {
