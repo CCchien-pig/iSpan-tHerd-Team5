@@ -36,11 +36,12 @@ export function useAddToCart() {
 
       // 組 payload
       const payload = {
+        productId: product.productId,
         skuId: selectedSpec.skuId,
         qty,
-        unitPrice: selectedSpec.billingPrice,
+        unitPrice: selectedSpec.billingPrice || selectedSpec.unitPrice || 0,
         userNumberId: isLogin.value && user.value ? user.value.userNumberId : null,
-        sessionId, // 訪客也有 sessionId
+        sessionId,
       }
 
       // 呼叫 API

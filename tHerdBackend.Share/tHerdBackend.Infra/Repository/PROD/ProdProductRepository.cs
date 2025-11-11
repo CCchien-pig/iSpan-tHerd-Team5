@@ -11,7 +11,6 @@ using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Models;
-using tHerdBackend.Core.ValueObjects;
 using tHerdBackend.Infra.DBSetting;
 using tHerdBackend.Infra.Helpers;
 using tHerdBackend.Infra.Models;
@@ -20,7 +19,6 @@ using tHerdBackend.Infra.Repository.PROD.Assemblers;
 using tHerdBackend.Infra.Repository.PROD.Builders;
 using tHerdBackend.Infra.Repository.PROD.Services;
 using static Dapper.SqlMapper;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -150,13 +148,26 @@ namespace tHerdBackend.Infra.Repository.PROD
                     p.MainSkuId, p.AvgRating, p.ReviewCount,
                     af.FileUrl AS ImageUrl,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice,
-                    cp.ProductTypePath
+                    cp.ProductTypePath,
+                    ISNULL(fav.FavoriteCount, 0) AS FavoriteCount,
+                    ISNULL(lk.LikeCount, 0) AS LikeCount
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
                 LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
                 LEFT JOIN PROD_ProductImage i ON i.ProductId = p.ProductId AND i.IsMain = 1
                 LEFT JOIN SYS_AssetFile af ON af.FileId = i.ImgId
+                LEFT JOIN (
+                    SELECT ProductId, COUNT(*) AS FavoriteCount
+                    FROM PROD_ProductFavorite
+                    GROUP BY ProductId
+                ) fav ON fav.ProductId = p.ProductId
+
+                LEFT JOIN (
+                    SELECT ProductId, COUNT(*) AS LikeCount
+                    FROM PROD_ProductLike
+                    GROUP BY ProductId
+                ) lk ON lk.ProductId = p.ProductId
                 LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
                 " + (includeHotRank ? "JOIN HotRank hr ON hr.ProductId = p.ProductId" : "") + @"
                 WHERE 1 = 1
@@ -172,7 +183,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                     p.SeoId, p.Badge, sc.CodeDesc,
                     p.MainSkuId, af.FileUrl, p.AvgRating, p.ReviewCount,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice, 
-                    cp.ProductTypePath
+                    cp.ProductTypePath,
+                    fav.FavoriteCount, lk.LikeCount
                 " + (includeHotRank ? ", hr.RankNo" : ""));
 
             // === Step 3. 排序與分頁 ===
@@ -1138,15 +1150,20 @@ namespace tHerdBackend.Infra.Repository.PROD
 			}
 		}
 
-		public async Task<object> GetProductStats(int productId)
+        /// <summary>
+        /// 取得商品統計數據（按讚數、收藏數）
+        /// </summary>
+        /// <param name="productId"></param>
+        /// <returns></returns>
+		public async Task<ProductStatsDto> GetProductStats(int productId)
 		{
 			var favoriteCount = await _db.ProdProductFavorites.CountAsync(f => f.ProductId == productId);
 			var likeCount = await _db.ProdProductLikes.CountAsync(l => l.ProductId == productId);
 
-			return new
-			{
-				favoriteCount,
-				likeCount
+			return new ProductStatsDto
+            {
+				FavoriteCount = favoriteCount,
+				LikeCount = likeCount
 			};
 		}
 	}

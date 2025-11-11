@@ -221,7 +221,7 @@ namespace tHerdBackend.Services.PROD.API
 			}
 		}
 
-		public async Task<object> GetProductStats(int productId)
+		public async Task<ProductStatsDto> GetProductStats(int productId)
 		{
 			try
 			{

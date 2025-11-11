@@ -294,11 +294,12 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// </summary>
         /// <param name="productId"></param>
         /// <returns></returns>
-		[HttpGet("stats/{productId}")]
-		public async Task<IActionResult> GetProductStats(int productId)
-		{
-			var stats = await _service.GetProductStats(productId);
-			return Ok(new ApiResponse(stats)); // ApiResponse 會包成 { success, data, message }
-		}
-	}
+		[HttpPost("stats/{productId}")]
+        public async Task<IActionResult> GetProductStats(int productId)
+        {
+            var stats = await _service.GetProductStats(productId);
+
+            return Ok(ApiResponse<ProductStatsDto>.Ok(stats));
+        }
+    }
 }

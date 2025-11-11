@@ -30,8 +30,8 @@ namespace tHerdBackend.Core.Interfaces.Products
 
         Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
 
-        Task<object> GetProductStats(int productId);
-	}
+        Task<ProductStatsDto> GetProductStats(int productId);
+    }
 
 	// 簡化的查詢模型與分頁結果
 	public sealed class ProductQuery

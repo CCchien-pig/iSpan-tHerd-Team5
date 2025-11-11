@@ -1,3 +1,4 @@
+<!--RecentlyViewedCard.vue-->>
 <template>
   <div class="product-card d-flex flex-column">
   <!-- 讓整張卡片可點擊進入商品詳細 -->
@@ -36,13 +37,14 @@
           <!-- 評分 + 評價數 -->
           <div class="rating d-flex align-items-center mb-1">
             <span v-for="i in 5" :key="i" class="star">
-              <i
-                class="bi"
-                :class="
-                  i <= Math.round(avgRating) ? 'bi-star-fill text-warning' : 'bi-star text-warning'
-                "
-              >
-              </i>
+                <i
+                    :class="[
+                    'bi', 
+                    i <= Math.round(avgRating) 
+                        ? 'bi-star-fill text-warning' 
+                        : 'bi-star text-warning'
+                    ]"
+                ></i>
             </span>
             <span class="reviews text-primary ms-1">{{ reviewCount }}</span>
           </div>
@@ -51,16 +53,6 @@
           <div class="price">
             <span class="current-price">NT${{ currentPrice }}</span>
             <span v-if="hasDiscount" class="original-price">NT${{ originalPrice }}</span>
-          </div>
-
-          <!-- ❤️ 收藏與 👍 按讚 統計列 -->
-          <div class="stats d-flex justify-content-center align-items-center gap-3 mt-1 text-muted small">
-            <span class="favorite d-flex align-items-center">
-              <i class="bi bi-heart-fill text-danger me-1"></i>{{ product.favoriteCount || 0 }}
-            </span>
-            <span class="like d-flex align-items-center">
-              <i class="bi bi-hand-thumbs-up-fill text-primary me-1"></i>{{ product.likeCount || 0 }}
-            </span>
           </div>
         </div>
   </div>
@@ -138,7 +130,7 @@ async function handleAddToCart() {
 .product-card {
   width: 100%;
   max-width: 300px;
-  height: 460px; /* 固定卡片總高度 */
+  height: 350px; /* 固定卡片總高度 */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
