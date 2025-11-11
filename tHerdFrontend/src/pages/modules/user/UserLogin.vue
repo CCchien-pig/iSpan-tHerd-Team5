@@ -527,5 +527,20 @@ onBeforeUnmount(() => {
   margin: 1.25rem 0;
 }
 .quickfill .btn { min-width: 190px; }
+
+.quickfill :deep(.btn-outline-primary) {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: var(--bs-primary) !important;
+  background-color: transparent !important;
+  color: var(--bs-primary) !important;
+}
+
+.quickfill :deep(.btn-outline-primary:hover),
+.quickfill :deep(.btn-outline-primary:focus) {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #fff !important;
+}
 </style>
 

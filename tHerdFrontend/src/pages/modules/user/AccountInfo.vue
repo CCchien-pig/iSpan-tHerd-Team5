@@ -38,7 +38,7 @@
                   <el-input v-model="form.firstName" placeholder="請輸入名字" />
                 </el-form-item>
                 <el-form-item label="電子郵件" prop="email">
-                  <el-input v-model="form.email" placeholder="email" disabled />
+                  <el-input v-model="form.email" placeholder="email" />
                 </el-form-item>
                 <el-form-item label="手機號碼" prop="phoneNumber">
                   <el-input v-model="form.phoneNumber" placeholder="0912-345-678" />
@@ -280,6 +280,7 @@ onMounted(loadDetail)
   display:grid;
   grid-template-columns: 300px 1fr;
   gap: 20px;
+  position: relative;
   /* 與 UserMe 同步的高度基準，供等高與區域滾動使用 */
   /* min-height: calc(100vh - 160px); */
 }
@@ -289,6 +290,7 @@ onMounted(loadDetail)
   min-width: 0;
   display: flex; /* 讓內部 .myaccount-sidebar 能 height:100% */
   transform: translateX(100px); /* 2/3 of 20px ≈ 13.33px */
+  position: relative; z-index: 0;
 }
 /* 使 Sidebar 吃滿 aside 高度，達到與主內容等高 */
 .sidebar :deep(.myaccount-sidebar) {
@@ -303,6 +305,7 @@ onMounted(loadDetail)
   max-height: 600px; 
   /* 與 .layout 的基準對齊 */
   padding-right: 4px; /* 讓捲軸不壓文字 */
+  position: relative; z-index: 2; 
 }
 
 /* ===== 標題與卡片：色票/邊線完全沿用 Sidebar 的青綠系 ===== */
