@@ -20,47 +20,71 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
-        const chatId = "chat-demo-001"; // 可用會員ID或訂單號當作聊天室代碼
-        const user = "客服人員";
+        const chatId = "chat-demo-001";
         const chatArea = document.getElementById("chatArea");
         const status = document.getElementById("connectionStatus");
+              const msgInput = document.getElementById("msg");
+        const sendBtn  = document.getElementById("sendBtn");
 
+                const hubBase = "https://localhost:7103";
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://localhost:7103/chatHub?user=" + encodeURIComponent(user))
-            .withAutomaticReconnect()
-            .build();
+          .withUrl(`${hubBase}/chatHub?from=admin`, {
+            // 後台不帶 token，改用 from=admin 讓 Hub 寫死名稱
+            withCredentials: false
+          })
+          .withAutomaticReconnect()
+          .build();
 
         connection.on("ReceiveMessage", (sender, message) => {
-            const div = document.createElement("div");
-            div.innerHTML = `<b>${sender}：</b> ${message}`;
-            chatArea.appendChild(div);
-            chatArea.scrollTop = chatArea.scrollHeight;
+          const div = document.createElement("div");
+          div.innerHTML = `<b>${sender}：</b> ${message}`;
+          chatArea.appendChild(div);
+          chatArea.scrollTop = chatArea.scrollHeight;
         });
 
         async function startConnection() {
-            try {
-                await connection.start();
-                status.textContent = "✅ 已連線";
-                await connection.invoke("JoinChat", chatId);
-                console.log("SignalR 已連線至聊天室");
-            } catch (err) {
-                console.error("❌ 連線失敗：", err);
-                status.textContent = "❌ 連線失敗，請檢查 Hub";
-                setTimeout(startConnection, 3000);
-            }
+          try {
+            await connection.start();
+            status.textContent = "✅ 已連線";
+            await connection.invoke("JoinChat", chatId);
+          } catch (err) {
+            console.error("❌ 連線失敗：", err);
+            status.textContent = "❌ 連線失敗";
+            setTimeout(startConnection, 2000);
+          }
         }
 
         document.getElementById("sendBtn").addEventListener("click", async () => {
-            const msg = document.getElementById("msg").value.trim();
-            if (!msg) return;
-            if (connection.state !== signalR.HubConnectionState.Connected) {
-                alert("尚未連線，請稍候再試");
-                return;
-            }
-            await connection.invoke("SendMessage", chatId, user, msg);
-            document.getElementById("msg").value = "";
+          const msg = document.getElementById("msg").value.trim();
+          if (!msg) return;
+          if (connection.state !== signalR.HubConnectionState.Connected) {
+            alert("尚未連線，請稍候再試");
+            return;
+          }
+          // ★ 只傳兩個參數：chatId, message
+          await connection.invoke("SendMessage", chatId, msg);
+          document.getElementById("msg").value = "";
+        });
+
+               document.getElementById("msg").addEventListener("keydown", async (e) => {
+          if (e.isComposing) return;        // 輸入法組字中不送
+          if (e.key !== "Enter") return;    // 只在 Enter 才送
+          e.preventDefault();
+
+          const msg = e.target.value.trim();
+          if (!msg) return;
+
+          if (connection.state !== signalR.HubConnectionState.Connected) {
+            alert("尚未連線，請稍候再試");
+            return;
+          }
+
+          // ★ 只傳兩個參數：chatId, message
+          await connection.invoke("SendMessage", chatId, msg);
+          e.target.value = "";
         });
 
         startConnection();
     </script>
 }
+
