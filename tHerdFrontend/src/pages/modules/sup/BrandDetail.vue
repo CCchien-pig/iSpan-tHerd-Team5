@@ -110,7 +110,7 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { Vibrant } from 'node-vibrant/browser'
 import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
@@ -126,6 +126,7 @@ import ProductList from '@/components/modules/prod/list/ProductList.vue'
 
 // === 狀態 ===
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const imagesRight = ref([])
 const layoutBlocks = ref([])
@@ -368,6 +369,12 @@ watch(
 
 const onFilter = (btn) => {
   console.log('[BrandDetail] click filter btn =', btn)
+
+  router.push({
+    name: 'product-type-search',
+    params: { slug: btn.slug },
+    query: { title: btn.text },
+  })
 }
 </script>
 

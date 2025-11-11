@@ -1,6 +1,7 @@
 ﻿using tHerdBackend.Core.ValueObjects;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace tHerdBackend.Core.DTOs.PROD;
 
@@ -55,6 +56,38 @@ public partial class ProdProductDetailDto : ProdProductDto
     /// 品牌簡碼，唯一，非空，英文
     /// </summary>
     public string BrandCode { get; set; }
+
+    /// <summary>
+    /// 品牌折扣率（例如 0.9 = 9折）
+    /// </summary>
+    public decimal? BrandDiscountRate { get; set; }
+
+    /// <summary>
+    /// 品牌折扣開始日期
+    /// </summary>
+    public DateTime? BrandDiscountStart { get; set; }
+
+    /// <summary>
+    /// 品牌折扣結束日期
+    /// </summary>
+    public DateTime? BrandDiscountEnd { get; set; }
+
+    /// <summary>
+    /// 品牌折扣活動標題（非資料庫欄位，僅顯示用）
+    /// </summary>
+    [NotMapped]
+    public string BrandDiscountTitle
+    {
+        get
+        {
+            if (BrandDiscountRate.HasValue && BrandDiscountRate.Value > 0)
+            {
+                var rate = (BrandDiscountRate.Value * 10).ToString("0.#");
+                return $"全館 {rate} 折優惠";
+            }
+            return string.Empty;
+        }
+    }
 
     /// <summary>
     /// Seo設定

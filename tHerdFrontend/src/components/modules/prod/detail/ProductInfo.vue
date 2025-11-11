@@ -11,11 +11,17 @@
           <i class="bi bi-megaphone-fill text-success me-2"></i>
           <strong class="me-2">{{ brandPromotion.title }}</strong>
           <span class="promo-desc">{{ brandPromotion.desc }}</span>
+          <span v-if="brandPromotion.daysLeft > 0" class="countdown ms-3 text-danger fw-bold">
+            ⏰ 剩 {{ brandPromotion.daysLeft }} 天
+          </span>
         </div>
         <div class="promo-content">
           <i class="bi bi-megaphone-fill text-success me-2"></i>
           <strong class="me-2">{{ brandPromotion.title }}</strong>
           <span class="promo-desc">{{ brandPromotion.desc }}</span>
+          <span v-if="brandPromotion.daysLeft > 0" class="countdown ms-3 text-danger fw-bold">
+            ⏰ 剩 {{ brandPromotion.daysLeft }} 天
+          </span>
         </div>
       </div>
     </div>
@@ -181,25 +187,37 @@ onMounted(() => {
 })
 
 /**
- * 品牌優惠顯示設定（可擴充）
+ * 品牌優惠顯示設定（過期自動隱藏）
  */
 const brandPromotion = computed(() => {
-  const brand = props.product?.brandName
-  if (!brand) return null
+  const p = props.product
+  if (!p) return null
 
-  if (brand === 'Optimum Nutrition') {
-    return {
-      title: 'Optimum Nutrition 品牌週🔥',
-      desc: '滿 1000 折 100，再享會員 95 折優惠！限時活動中 ⏰',
-    }
+  // 無折扣率或 >= 1（無優惠）
+  if (!p.brandDiscountRate || p.brandDiscountRate >= 1) return null
+
+  // 沒有日期也不顯示
+  if (!p.brandDiscountStart || !p.brandDiscountEnd) return null
+
+  const now = new Date()
+  const start = new Date(p.brandDiscountStart)
+  const end = new Date(p.brandDiscountEnd)
+
+  // ✅ 若未開始或已結束 → 不顯示
+  if (now < start || now > end) return null
+
+  // ✅ 活動進行中 → 顯示跑馬燈
+  const rate = (p.brandDiscountRate * 10).toFixed(1).replace(/\.0$/, '') // 0.9 → 9
+  const startText = formatDate(p.brandDiscountStart)
+  const endText = formatDate(p.brandDiscountEnd)
+
+  const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24))
+
+  return {
+    title: `${p.brandName} 全館 ${rate} 折優惠 🔥`,
+    desc: `活動期間：${startText} ～ ${endText}`,
+    daysLeft
   }
-  if (brand === 'NOW Foods') {
-    return {
-      title: 'NOW Foods 滿額贈活動 🎁',
-      desc: '全館滿 1200 贈維生素 B 群隨身包！',
-    }
-  }
-  return null
 })
 
 /**

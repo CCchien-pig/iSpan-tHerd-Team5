@@ -470,7 +470,27 @@ namespace tHerdBackend.Infra.Repository.PROD
                            p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight, 
                            p.badge, sc.CodeDesc BadgeName, p.MainSkuId, p.AvgRating, p.ReviewCount,
                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
-                           p.CreatedDate, p.Reviser, p.RevisedDate
+                           p.CreatedDate, p.Reviser, p.RevisedDate,
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.DiscountRate
+                                ELSE NULL
+                            END AS BrandDiscountRate,
+
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.StartDate
+                                ELSE NULL
+                            END AS BrandDiscountStart,
+
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.EndDate
+                                ELSE NULL
+                            END AS BrandDiscountEnd
                       FROM PROD_Product p
                       JOIN SUP_Brand b ON b.BrandId=p.BrandId
                       JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
