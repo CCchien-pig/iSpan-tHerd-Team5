@@ -82,8 +82,8 @@ const router = useRouter()
 const activeTab = ref('info')
 const titleMap = {
   info: { title: '配送資訊', desc: '各物流方式、到貨時間與限制說明' },
-  fee: { title: '運費計算', desc: '依條件估算運費與區間費率' },
-  map: { title: '門市地圖查詢', desc: '搜尋鄰近門市據點與取貨服務' },
+  fee: { title: '運費計算', desc: '選擇配送方式，依包裹重量試算運費' },
+  map: { title: '門市地圖查詢', desc: '搜尋門市據點與查詢鄰近門市' },
 }
 
 // 依 URL 查詢參數同步頁籤（進場與路由變更時）

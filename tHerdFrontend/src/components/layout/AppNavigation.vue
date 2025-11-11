@@ -498,7 +498,7 @@ const brandGroups = [
 const recommendedBrands = [
   { name: 'Animal', url: '/brands/allmax-1002' },
   { name: 'Frontier Co-op', url: '/brands/frontier-co-op-1017' },
-  { name: 'Life Extension', url: '/brands/life-extension-1033' },
+  { name: 'FUEN43', url: '/brands/fuen43-1085' },
 ]
 
 // ==================== 手機選單 ====================

@@ -94,11 +94,7 @@
         >
           聖德基督學院
         </button>
-        <button
-          class="example-btn"
-          type="button"
-          @click="fillExampleAddress('臺北市中正區黎明里北平西路3號')"
-        >
+        <button class="example-btn" type="button" @click="fillExampleAddress('台北車站')">
           北車
         </button>
       </div>
