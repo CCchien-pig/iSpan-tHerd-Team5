@@ -61,7 +61,12 @@
       <!-- 📜 商品詳細描述 -->
       <div class="row mt-5">
         <div class="col-12">
-          <ProductTabs :product="product" />
+          <ProductTabs
+            :product="product"
+            :reviews="product.reviews"
+            :questions="product.questions"
+            @refresh="loadProduct"
+          />
         </div>
       </div>
 

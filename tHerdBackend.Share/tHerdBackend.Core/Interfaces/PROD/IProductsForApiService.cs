@@ -3,6 +3,7 @@ using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.PROD.ord;
 using tHerdBackend.Core.DTOs.PROD.sup;
+using tHerdBackend.Core.DTOs.PROD.user;
 
 namespace tHerdBackend.Core.Interfaces.PROD
 {
@@ -25,5 +26,9 @@ namespace tHerdBackend.Core.Interfaces.PROD
         Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
 
         Task<ProductStatsDto> GetProductStats(int productId);
+
+        Task<bool> HasUserPurchasedProductAsync(int userNumberId, int productId, CancellationToken ct);
+
+        Task<(bool Success, string Message)> SubmitReviewAsync(int userNumberId, SubmitReviewDto dto, CancellationToken ct);
     }
 }

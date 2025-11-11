@@ -184,6 +184,10 @@ public partial class ProdProductDetailDto : ProdProductDto
 
     public List<ProductAttributeDto>? Attributes { get; set; } = new();
 
+    public List<ProductReviewDto>? Reviews { get; set; }
+
+    public List<ProductQuestionDto>? Questions { get; set; }
+
     /// <summary>
     /// 計算總數
     /// </summary>

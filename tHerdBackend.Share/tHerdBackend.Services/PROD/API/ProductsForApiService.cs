@@ -2,6 +2,7 @@
 using tHerdBackend.Core.DTOs.PROD;
 using tHerdBackend.Core.DTOs.PROD.ord;
 using tHerdBackend.Core.DTOs.PROD.sup;
+using tHerdBackend.Core.DTOs.PROD.user;
 using tHerdBackend.Core.Exceptions;
 using tHerdBackend.Core.Interfaces.PROD;
 using tHerdBackend.Core.Interfaces.Products;
@@ -233,5 +234,31 @@ namespace tHerdBackend.Services.PROD.API
 				throw;
 			}
 		}
-	}
+
+        public async Task<bool> HasUserPurchasedProductAsync(int userNumberId, int productId, CancellationToken ct)
+        {
+            try
+            {
+                return await _repo.HasUserPurchasedProductAsync(userNumberId, productId, ct);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+
+        public async Task<(bool Success, string Message)> SubmitReviewAsync(int userNumberId, SubmitReviewDto dto, CancellationToken ct)
+        {
+            try
+            {
+                return await _repo.SubmitReviewAsync(userNumberId, dto, ct);
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.HandleErrorMsg(ex);
+                throw;
+            }
+        }
+    }
 }

@@ -287,6 +287,25 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   }
 
   // ==================== 評價系統 ====================
+  /**
+   * 檢查目前登入者是否能撰寫商品評價
+   * 對應後端：GET /api/prod/Products/check-can-review/{productId}
+   * @param {number} productId - 商品 ID
+   * @returns {Promise<Object>} { hasPurchased: boolean, message: string }
+   * @example
+   * const res = await ProductsApi.checkCanReview(85180)
+   * if (res.hasPurchased) console.log('✅ 可以撰寫評價')
+   */
+  async checkCanReview(productId) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/check-can-review/${productId}`)
+      // 假設後端回傳格式為 ApiResponse<object>
+      return res?.data?.data || res?.data
+    } catch (error) {
+      console.error('❌ 檢查撰寫評價資格失敗:', error)
+      throw error
+    }
+  }
 
   /**
    * 查詢商品評價列表

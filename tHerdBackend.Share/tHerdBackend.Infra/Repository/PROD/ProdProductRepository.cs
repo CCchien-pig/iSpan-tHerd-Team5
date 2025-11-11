@@ -8,6 +8,7 @@ using System.Text;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.user;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Models;
@@ -490,6 +491,11 @@ namespace tHerdBackend.Infra.Repository.PROD
                 resolver.Apply(item);
 
                 return item;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [GetAllAsync] " + ex);
+                return null;
             }
             finally
             {
@@ -1166,5 +1172,61 @@ namespace tHerdBackend.Infra.Repository.PROD
 				LikeCount = likeCount
 			};
 		}
-	}
+
+        public async Task<bool> HasUserPurchasedProductAsync(int userNumberId, int productId, CancellationToken ct)
+        {
+            var completedStatus = new[] { "completed" };
+            return await _db.OrdOrders
+                .AsNoTracking()
+                .Where(o => o.UserNumberId == userNumberId)
+                .Where(o => completedStatus.Contains(o.OrderStatusId))
+                .AnyAsync(o => _db.OrdOrderItems
+                    .Any(i => i.OrderId == o.OrderId && i.ProductId == productId), ct);
+        }
+
+        public async Task<(bool Success, string Message)> SubmitReviewAsync(int userNumberId, SubmitReviewDto dto, CancellationToken ct)
+        {
+            // 1 先確認商品存在
+            var product = await _db.ProdProducts
+                .FirstOrDefaultAsync(p => p.ProductId == dto.ProductId, ct);
+            if (product == null)
+                return (false, "找不到商品");
+
+            // 2 建立新評價紀錄
+            var review = new ProdProductReview
+            {
+                ProductId = dto.ProductId,
+                UserNumberId = userNumberId,
+                Rating = (byte)dto.Rating,
+                Title = dto.Title.Trim(),
+                Content = dto.Content.Trim(),
+                CreatedDate = DateTime.UtcNow,
+                IsApproved = true // 預設通過審核
+            };
+
+            _db.ProdProductReviews.Add(review);
+            await _db.SaveChangesAsync(ct);
+
+            // 3 重新計算平均評分與評價數
+            var ratings = await _db.ProdProductReviews
+                .Where(r => r.ProductId == dto.ProductId)
+                .Select(r => (int)r.Rating)
+                .ToListAsync(ct);
+
+            if (ratings.Count > 0)
+            {
+                var avgRating = ratings.Average();
+                var reviewCount = ratings.Count;
+
+                product.AvgRating = (decimal?)Math.Round(avgRating, 1); // 四捨五入至 1 位小數
+                product.ReviewCount = reviewCount;
+                product.RevisedDate = DateTime.UtcNow;
+
+                _db.ProdProducts.Update(product);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            return (true, "評價提交成功");
+        }
+    }
 }

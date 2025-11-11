@@ -149,6 +149,112 @@ namespace tHerdBackend.Infra.Repository.PROD.Assemblers
             var attrCmd = new CommandDefinition(attrSql, new { item.ProductId }, tx, cancellationToken: ct);
             var attrs = await conn.QueryAsync<ProductAttributeDto>(attrCmd);
             item.Attributes = attrs.ToList();
+
+            // 8️. 商品評價（Reviews）
+            const string reviewSql = @"
+                SELECT 
+                    r.ReviewId,
+                    r.ProductId,
+                    r.SkuId,
+                    r.UserNumberId,
+                    CONCAT(u.LastName,'',u.FirstName) UserName,
+                    r.Rating,
+                    r.Title,
+                    r.Content,
+                    r.CreatedDate,
+                    r.IsApproved,
+                    r.RevisedDate,
+                    r.HelpfulCount,
+                    r.UnhelpfulCount
+                FROM PROD_ProductReview AS r
+                INNER JOIN AspNetUsers AS u ON r.UserNumberId = u.UserNumberId
+                WHERE r.ProductId = @ProductId AND r.IsApproved = 1
+                ORDER BY r.CreatedDate DESC;";
+
+            var reviewCmd = new CommandDefinition(reviewSql, new { item.ProductId }, tx, cancellationToken: ct);
+            var reviews = (await conn.QueryAsync<ProductReviewDto>(reviewCmd)).ToList();
+
+            if (reviews.Any())
+            {
+                // 取得附圖
+                const string reviewImgSql = @"
+                    SELECT 
+                        ri.ReviewImageId,
+                        ri.ReviewId,
+                        ri.ImgId,
+                        af.FileUrl AS ImageUrl,
+                        ri.OrderSeq
+                    FROM PROD_ProductReviewImage AS ri
+                    LEFT JOIN SYS_AssetFile AS af ON ri.ImgId = af.FileId
+                    WHERE ri.ReviewId IN @ReviewIds
+                    ORDER BY ri.OrderSeq;";
+
+                var reviewImgs = await conn.QueryAsync<ProductReviewImageDto>(
+                    reviewImgSql,
+                    new { ReviewIds = reviews.Select(r => r.ReviewId).ToList() },
+                    tx
+                );
+
+                // 附圖歸屬回對應的 Review
+                foreach (var review in reviews)
+                    review.Images = reviewImgs.Where(i => i.ReviewId == review.ReviewId).ToList();
+            }
+
+            item.Reviews = reviews; // ✅ 加進 ProductDetailDto
+
+
+            // 9️. 商品問與答（QA）
+            const string qaSql = @"
+                SELECT 
+                    q.QuestionId,
+                    q.ProductId,
+                    q.UserNumberId,
+                    uq.UserName AS QuestionUserName,
+                    q.QuestionContent,
+                    q.CreatedDate AS QuestionDate,
+                    a.AnswerId,
+                    a.AnswerContent,
+                    a.CreatedDate AS AnswerDate,
+                    ua.UserName AS AnswerUserName,
+                    a.IsOfficial
+                FROM PROD_ProductQuestion AS q
+                INNER JOIN AspNetUsers AS uq ON q.UserNumberId = uq.UserNumberId
+                LEFT JOIN PROD_ProductAnswer AS a ON a.QuestionId = q.QuestionId AND a.IsApproved = 1
+                LEFT JOIN AspNetUsers AS ua ON a.UserNumberId = ua.UserNumberId
+                WHERE q.ProductId = @ProductId AND q.IsApproved = 1
+                ORDER BY q.CreatedDate DESC, a.CreatedDate ASC;";
+
+            var qaCmd = new CommandDefinition(qaSql, new { item.ProductId }, tx, cancellationToken: ct);
+            var qaResult = await conn.QueryAsync<ProductQAFlatDto>(qaCmd);
+
+            // Group by 問題
+            var questions = qaResult
+                .GroupBy(q => new {
+                    q.QuestionId,
+                    q.QuestionUserName,
+                    q.QuestionContent,
+                    q.QuestionDate
+                })
+                .Select(g => new ProductQuestionDto
+                {
+                    QuestionId = g.Key.QuestionId,
+                    UserName = g.Key.QuestionUserName,
+                    QuestionContent = g.Key.QuestionContent,
+                    CreatedDate = g.Key.QuestionDate,
+                    Answers = g
+                        .Where(x => x.AnswerId != null)
+                        .Select(x => new ProductAnswerDto
+                        {
+                            AnswerId = x.AnswerId ?? 0,
+                            UserName = x.AnswerUserName,
+                            AnswerContent = x.AnswerContent,
+                            IsOfficial = x.IsOfficial,
+                            CreatedDate = x.AnswerDate ?? DateTime.MinValue
+                        }).ToList()
+                })
+                .ToList();
+
+            item.Questions = questions; // ✅ 加進 ProductDetailDto
         }
 
         private ProdProductSkuDto MapSku(ProdProductSku sku) => new()
