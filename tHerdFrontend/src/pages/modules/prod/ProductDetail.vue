@@ -95,7 +95,6 @@ import ProductTabs from '@/components/modules/prod/detail/ProductTabs.vue'
 import RecentlyViewedHero from '@/components/modules/prod/list/RecentlyViewedHero.vue'
 import { http } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
-import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 
 // 加入購物車
 import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
