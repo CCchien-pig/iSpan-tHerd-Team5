@@ -70,6 +70,9 @@ const textColor = computed(() => couponColor.value === 'rgb(242, 201, 76)' ? 'bl
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  max-width: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 .ticket-coupon:hover {
@@ -84,16 +87,23 @@ const textColor = computed(() => couponColor.value === 'rgb(242, 201, 76)' ? 'bl
 
 /* 左側內容 */
 .ticket-info {
-  flex: 1;
+  flex: 1 1 auto;   
+  min-width: 0; 
   padding: 16px 20px;
   border-right: 2px dashed #ccc;
 }
 .ticket-info .fw-bold { font-weight: 700; }
 .ticket-info .text-muted { color:#4a5568; }
 .ticket-info .text-secondary { color:#6b7280; }
+.ticket-info h5,
+.ticket-info p,
+.ticket-info small {
+  overflow-wrap: anywhere;   /* 或 word-break: break-word; */
+}
 
 /* 右側色塊區 */
 .ticket-price {
+  flex: 0 0 auto; 
   min-width: 140px;
   display: flex;
   flex-direction: column;

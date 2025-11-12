@@ -1,6 +1,6 @@
 <!-- /src/pages/modules/user/UserRewards.vue -->
 <template>
-  <div class="container py-4 rewards-page">
+  <div class="myaccount container py-4 rewards-page">
     <!-- 麵包屑 -->
     <div class="breadcrumb">
       <router-link :to="{ name: 'userme' }">我的帳戶</router-link>
@@ -235,7 +235,7 @@ onMounted(async () => {
 } */
  <style scoped>
 /* ===== 外層容器與麵包屑：對齊 UserMe（寬 1200、breadcrumb 位移） ===== */
-.rewards-page { max-width: 1200px; }
+.myaccount, .rewards-page { max-width: 1200px; }
 .breadcrumb {
   display:flex; gap:8px; color:#666; font-size:14px; margin-bottom:12px;
   transform: translateX(100px);
