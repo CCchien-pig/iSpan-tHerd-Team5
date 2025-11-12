@@ -43,16 +43,25 @@
               >
             </li>
            
+            <li><a href="#" class="text-light text-decoration-none">會員制度</a></li>
+            <li><a href="#" class="text-light text-decoration-none">退貨政策</a></li>
             <!-- <li><a href="#" class="text-light text-decoration-none">追蹤訂單</a></li> -->
           </ul>
         </div>
 
         <!-- 購物指南 -->
         <div class="col-lg-3 col-md-6 mb-4">
-          <h5 class="mb-3 main-color-white-text">購物指南</h5>
+          <h5 class="mb-3 main-color-white-text">配送指南</h5>
           <ul class="list-unstyled">
             <!-- <li><a href="#" class="text-light text-decoration-none">如何訂購</a></li>
             <li><a href="#" class="text-light text-decoration-none">付款方式</a></li> -->
+            <li>
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'info' } }"
+                class="text-light text-decoration-none"
+                >配送資訊</router-link
+              >
+            </li>
             <li>
               <router-link
                 :to="{ path: '/sup/logistics-info', query: { tab: 'fee' } }"
@@ -60,7 +69,13 @@
                 >運費計算</router-link
               >
             </li>
-            <li><a href="#" class="text-light text-decoration-none">會員制度</a></li>
+            <li>
+              <router-link
+                :to="{ path: '/sup/logistics-info', query: { tab: 'map' } }"
+                class="text-light text-decoration-none"
+                >門市地圖查詢</router-link
+              >
+            </li>
             <!-- <li><a href="#" class="text-light text-decoration-none">優惠券使用</a></li> -->
           </ul>
         </div>
