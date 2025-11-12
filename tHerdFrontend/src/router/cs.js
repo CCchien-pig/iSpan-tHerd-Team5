@@ -42,5 +42,18 @@ export default [
   component: () => import('@/pages/modules/cs/LiveChat.vue'),
   meta: { title: '即時聊天室客服' }
 },
+ {
+    path: '/about',
+    name: 'AboutTHerd',
+    component: () => import('@/pages/modules/cs/AboutTHerd.vue'),
+    meta: { title: '關於我們 - tHerd' } 
+  },
+  {
+  path: '/return-policy',
+  name: 'ReturnPolicy',
+  component: () => import('@/pages/modules/cs/ReturnPolicy.vue'),
+  meta: { title: '退貨政策 - tHerd' }
+},
+
 
 ];

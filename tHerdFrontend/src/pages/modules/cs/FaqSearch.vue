@@ -150,7 +150,7 @@
       </div>
       <div class="text-start">
         <div class="fw-semibold fs-5">聊天和 24/7 電子郵件幫助</div>
-        <div class="text-muted small">即時消息不可用</div>
+        <div class="text-muted small"></div>
       </div>
     </div>
 
