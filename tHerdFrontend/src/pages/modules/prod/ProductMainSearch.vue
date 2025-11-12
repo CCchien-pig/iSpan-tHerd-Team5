@@ -10,12 +10,10 @@
     <div class="product-page-layout">
       
       <!-- 🧭 側邊欄 -->
-      <div class="sidebar-fixed">
-        <ProductSidebar
-          :reset-key="sidebarResetKey"
-          @filter-change="onFilterChange"
-        />
-      </div>
+      <ProductSidebar
+        :reset-key="sidebarResetKey"
+      @filter-change="onFilterChange"
+      />
 
       <!-- 🛒 商品內容區 -->
       <main class="main-content">
