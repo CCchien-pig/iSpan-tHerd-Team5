@@ -52,9 +52,9 @@
           ></i>
         </span>
       </div>
-      <a href="#reviews" class="reviews-link"
-        >{{ product.reviewCount || 0 }} 則評價</a
-      >
+      <a href="#reviews" class="reviews-link" @click.prevent="scrollToReviews">
+        {{ product.reviewCount || 0 }} 則評價
+      </a>
     </div>
 
     <!-- 即時庫存顯示 -->
@@ -160,6 +160,7 @@
 
 <script setup>
 import { onMounted, computed } from 'vue'
+import * as bootstrap from 'bootstrap'
 
 const props = defineProps({
   product: Object,
@@ -185,6 +186,26 @@ onMounted(() => {
     }
   }
 })
+
+function scrollToReviews() {
+  // 切換到顧客評價分頁
+  const reviewsTab = document.querySelector('[data-bs-target="#reviews"]')
+  if (!reviewsTab) return console.warn('找不到 reviews 分頁按鈕')
+
+  const tab = new bootstrap.Tab(reviewsTab)
+  tab.show()
+
+  // 延遲滾動，確保 Tab 動畫已完成
+  setTimeout(() => {
+    const section = document.querySelector('#reviews')
+    if (section) {
+      const headerOffset = 80 // 若有固定導覽列，可調整高度
+      const elementPosition = section.getBoundingClientRect().top + window.scrollY
+      const offsetPosition = elementPosition - headerOffset
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' })
+    }
+  }, 200)
+}
 
 /**
  * 品牌優惠顯示設定（過期自動隱藏）

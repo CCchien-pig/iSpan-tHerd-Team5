@@ -29,6 +29,7 @@
                 :product="product"
                 :selected-spec="selectedSpec"
                 @spec-selected="handleSpecSelected"
+                @go-reviews="activeTab = 'reviews'"
               />
             </div>
 
