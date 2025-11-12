@@ -202,13 +202,15 @@ public class BrandRepository : IBrandRepository
 		try
 		{
 			var sql = @"
-SELECT
-    Id     = bptf.[BrandProductTypeFilterId],  -- int
-    Text   = bptf.[ButtonText],               -- nvarchar
-    [Order]= bptf.[ButtonOrder]               -- int
-FROM SUP_BrandProductTypeFilter bptf
-WHERE bptf.BrandId = @brandId AND bptf.IsActive = 1
-ORDER BY bptf.[ButtonOrder] ASC;";
+				SELECT
+					Id     = bptf.[BrandProductTypeFilterId],   -- int
+					Text   = bptf.[ButtonText],                 -- nvarchar
+					[Order]= bptf.[ButtonOrder],                -- int
+					Slug   = CONCAT(LOWER(ptc.ProductTypeCode), '-', bptf.ProductTypeId)
+				FROM SUP_BrandProductTypeFilter bptf
+				LEFT JOIN PROD_ProductTypeConfig ptc ON ptc.ProductTypeId = bptf.ProductTypeId
+				WHERE bptf.BrandId = @brandId AND bptf.IsActive = 1
+				ORDER BY bptf.[ButtonOrder] ASC;";
 
 			var rows = await conn.QueryAsync<BrandButtonDto>(
 					new CommandDefinition(sql, new { brandId }, tx, cancellationToken: ct));

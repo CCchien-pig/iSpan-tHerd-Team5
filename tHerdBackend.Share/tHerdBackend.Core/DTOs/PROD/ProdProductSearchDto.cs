@@ -60,5 +60,8 @@
         /// 分類名稱
         /// </summary>
         public virtual string? ProductTypeName { get; set; }
+
+        public int FavoriteCount { get; set; }
+        public int LikeCount { get; set; }
     }
 }

@@ -1,12 +1,14 @@
 ﻿//using CsvHelper;
 using Dapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text;
 using tHerdBackend.Core.Abstractions;
 using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.user;
 using tHerdBackend.Core.DTOs.USER;
 using tHerdBackend.Core.Interfaces.Products;
 using tHerdBackend.Core.Models;
@@ -18,7 +20,6 @@ using tHerdBackend.Infra.Repository.PROD.Assemblers;
 using tHerdBackend.Infra.Repository.PROD.Builders;
 using tHerdBackend.Infra.Repository.PROD.Services;
 using static Dapper.SqlMapper;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace tHerdBackend.Infra.Repository.PROD
 {
@@ -148,13 +149,26 @@ namespace tHerdBackend.Infra.Repository.PROD
                     p.MainSkuId, p.AvgRating, p.ReviewCount,
                     af.FileUrl AS ImageUrl,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice,
-                    cp.ProductTypePath
+                    cp.ProductTypePath,
+                    ISNULL(fav.FavoriteCount, 0) AS FavoriteCount,
+                    ISNULL(lk.LikeCount, 0) AS LikeCount
                 FROM PROD_Product p
                 JOIN SUP_Brand s ON s.BrandId = p.BrandId
                 LEFT JOIN SYS_Code sc ON sc.ModuleId = 'PROD' AND sc.CodeId = '02' AND sc.CodeNo=p.Badge
                 LEFT JOIN PROD_ProductSku ps ON ps.SkuId = p.MainSkuId
                 LEFT JOIN PROD_ProductImage i ON i.ProductId = p.ProductId AND i.IsMain = 1
                 LEFT JOIN SYS_AssetFile af ON af.FileId = i.ImgId
+                LEFT JOIN (
+                    SELECT ProductId, COUNT(*) AS FavoriteCount
+                    FROM PROD_ProductFavorite
+                    GROUP BY ProductId
+                ) fav ON fav.ProductId = p.ProductId
+
+                LEFT JOIN (
+                    SELECT ProductId, COUNT(*) AS LikeCount
+                    FROM PROD_ProductLike
+                    GROUP BY ProductId
+                ) lk ON lk.ProductId = p.ProductId
                 LEFT JOIN CategoryPaths cp ON cp.ProductId = p.ProductId
                 " + (includeHotRank ? "JOIN HotRank hr ON hr.ProductId = p.ProductId" : "") + @"
                 WHERE 1 = 1
@@ -170,7 +184,8 @@ namespace tHerdBackend.Infra.Repository.PROD
                     p.SeoId, p.Badge, sc.CodeDesc,
                     p.MainSkuId, af.FileUrl, p.AvgRating, p.ReviewCount,
                     ps.ListPrice, ps.UnitPrice, ps.SalePrice, 
-                    cp.ProductTypePath
+                    cp.ProductTypePath,
+                    fav.FavoriteCount, lk.LikeCount
                 " + (includeHotRank ? ", hr.RankNo" : ""));
 
             // === Step 3. 排序與分頁 ===
@@ -455,7 +470,27 @@ namespace tHerdBackend.Infra.Repository.PROD
                            p.ShortDesc, p.FullDesc, p.IsPublished, p.Weight, 
                            p.badge, sc.CodeDesc BadgeName, p.MainSkuId, p.AvgRating, p.ReviewCount,
                            p.VolumeCubicMeter, p.VolumeUnit, p.Creator, 
-                           p.CreatedDate, p.Reviser, p.RevisedDate
+                           p.CreatedDate, p.Reviser, p.RevisedDate,
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.DiscountRate
+                                ELSE NULL
+                            END AS BrandDiscountRate,
+
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.StartDate
+                                ELSE NULL
+                            END AS BrandDiscountStart,
+
+                            CASE 
+                                WHEN b.DiscountRate IS NOT NULL 
+                                     AND GETDATE() BETWEEN b.StartDate AND b.EndDate
+                                THEN b.EndDate
+                                ELSE NULL
+                            END AS BrandDiscountEnd
                       FROM PROD_Product p
                       JOIN SUP_Brand b ON b.BrandId=p.BrandId
                       JOIN SUP_Supplier s ON s.SupplierId=b.SupplierId
@@ -476,6 +511,11 @@ namespace tHerdBackend.Infra.Repository.PROD
                 resolver.Apply(item);
 
                 return item;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [GetAllAsync] " + ex);
+                return null;
             }
             finally
             {
@@ -1135,5 +1175,78 @@ namespace tHerdBackend.Infra.Repository.PROD
 				if (needDispose) conn.Dispose();
 			}
 		}
-	}
+
+        /// <summary>
+        /// 取得商品統計數據（按讚數、收藏數）
+        /// </summary>
+        /// <param name="productId"></param>
+        /// <returns></returns>
+		public async Task<ProductStatsDto> GetProductStats(int productId)
+		{
+			var favoriteCount = await _db.ProdProductFavorites.CountAsync(f => f.ProductId == productId);
+			var likeCount = await _db.ProdProductLikes.CountAsync(l => l.ProductId == productId);
+
+			return new ProductStatsDto
+            {
+				FavoriteCount = favoriteCount,
+				LikeCount = likeCount
+			};
+		}
+
+        public async Task<bool> HasUserPurchasedProductAsync(int userNumberId, int productId, CancellationToken ct)
+        {
+            var completedStatus = new[] { "completed" };
+            return await _db.OrdOrders
+                .AsNoTracking()
+                .Where(o => o.UserNumberId == userNumberId)
+                .Where(o => completedStatus.Contains(o.OrderStatusId))
+                .AnyAsync(o => _db.OrdOrderItems
+                    .Any(i => i.OrderId == o.OrderId && i.ProductId == productId), ct);
+        }
+
+        public async Task<(bool Success, string Message)> SubmitReviewAsync(int userNumberId, SubmitReviewDto dto, CancellationToken ct)
+        {
+            // 1 先確認商品存在
+            var product = await _db.ProdProducts
+                .FirstOrDefaultAsync(p => p.ProductId == dto.ProductId, ct);
+            if (product == null)
+                return (false, "找不到商品");
+
+            // 2 建立新評價紀錄
+            var review = new ProdProductReview
+            {
+                ProductId = dto.ProductId,
+                UserNumberId = userNumberId,
+                Rating = (byte)dto.Rating,
+                Title = dto.Title.Trim(),
+                Content = dto.Content.Trim(),
+                CreatedDate = DateTime.UtcNow,
+                IsApproved = true // 預設通過審核
+            };
+
+            _db.ProdProductReviews.Add(review);
+            await _db.SaveChangesAsync(ct);
+
+            // 3 重新計算平均評分與評價數
+            var ratings = await _db.ProdProductReviews
+                .Where(r => r.ProductId == dto.ProductId)
+                .Select(r => (int)r.Rating)
+                .ToListAsync(ct);
+
+            if (ratings.Count > 0)
+            {
+                var avgRating = ratings.Average();
+                var reviewCount = ratings.Count;
+
+                product.AvgRating = (decimal?)Math.Round(avgRating, 1); // 四捨五入至 1 位小數
+                product.ReviewCount = reviewCount;
+                product.RevisedDate = DateTime.UtcNow;
+
+                _db.ProdProducts.Update(product);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            return (true, "評價提交成功");
+        }
+    }
 }

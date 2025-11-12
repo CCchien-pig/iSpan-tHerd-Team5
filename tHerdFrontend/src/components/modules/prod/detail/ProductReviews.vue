@@ -47,7 +47,7 @@
           </div>
 
           <!-- 撰寫評價按鈕 -->
-          <button class="btn btn-primary w-100 mt-3" @click="showReviewForm = true">
+          <button class="btn btn-primary w-100 mt-3" @click="handleWriteReview">
             <i class="bi bi-pencil-square me-2"></i>
             撰寫評價
           </button>
@@ -194,6 +194,7 @@
               <div class="review-date text-muted small">{{ formatDate(review.createdDate) }}</div>
             </div>
           </div>
+          <!--
           <div class="review-actions">
             <button class="btn btn-sm btn-link text-muted" @click="reportReview(review.reviewId)">
               報告濫用行為
@@ -202,7 +203,7 @@
               <i class="bi bi-share"></i>
               分享
             </button>
-          </div>
+          </div>-->
         </div>
 
         <!-- 評分 -->
@@ -233,6 +234,7 @@
         </div>
 
         <!-- 評價操作 -->
+         <!--
         <div class="review-footer d-flex align-items-center gap-3">
           <button class="btn btn-sm btn-outline-secondary" @click="likeReview(review.reviewId)">
             <i class="bi bi-hand-thumbs-up me-1"></i>
@@ -242,7 +244,7 @@
             <i class="bi bi-hand-thumbs-down me-1"></i>
             {{ review.unhelpfulCount || 0 }}
           </button>
-        </div>
+        </div>-->
       </div>
 
       <!-- 載入更多 -->
@@ -260,29 +262,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import ProductsApi from '@/api/modules/prod/ProductsApi'
+import { ref, computed, watch } from 'vue'
 import { toast, success, error as showError } from '@/utils/sweetalert'
+import { http } from '@/api/http'
+
+const emit = defineEmits(['refresh'])
 
 const props = defineProps({
-  productId: {
-    type: Number,
-    required: true,
-  },
-  avgRating: {
-    type: Number,
-    default: 0,
-  },
-  reviewCount: {
-    type: Number,
-    default: 0,
-  },
+  productId: { type: Number, required: true },
+  reviews: { type: Array, default: () => [] },
+  avgRating: { type: Number, default: 0 },
+  reviewCount: { type: Number, default: 0 }
 })
 
 // 狀態
 const loading = ref(false)
 const submitting = ref(false)
-const reviews = ref([])
+const reviews = ref(props.reviews || [])
 const showReviewForm = ref(false)
 const hoverRating = ref(0)
 const selectedTags = ref([])
@@ -297,14 +293,13 @@ const newReview = ref({
 })
 
 // 篩選標籤
-const filterTags = ['有幫助', '真實感', '物超所值', '含純度', '心血管健康', '減少炎症']
-
+//const filterTags = ['有幫助', '真實感', '物超所值', '含純度', '心血管健康', '減少炎症']
 // 客戶評論亮點
-const customerHighlight = computed(() => {
-  if (reviews.value.length === 0) return ''
-  // 從評價中提取最常見的評論
-  return '這款800倍高濃縮Omega-3魚油很有感，對心血管保健、減少炎症都有幫助，有真實感覺心臟更強壯有力，還可以搭配其他產品，沒有反式脂肪，很好吞服！'
-})
+// const customerHighlight = computed(() => {
+//   if (reviews.value.length === 0) return ''
+//   // 從評價中提取最常見的評論
+//   return '這款800倍高濃縮Omega-3魚油很有感，對心血管保健、減少炎症都有幫助，有真實感覺心臟更強壯有力，還可以搭配其他產品，沒有反式脂肪，很好吞服！'
+// })
 
 // 評分分布數據
 const ratingDistribution = computed(() => {
@@ -322,6 +317,87 @@ const getRatingPercentage = (star) => {
   if (reviews.value.length === 0) return 0
   return ((ratingDistribution.value[star] / reviews.value.length) * 100).toFixed(1)
 }
+
+/**
+ * ✨ 自動生成篩選標籤（filterTags）
+ * 根據所有評論內容進行關鍵詞出現統計，挑出熱門詞
+ */
+const filterTags = computed(() => {
+  if (!reviews.value || reviews.value.length === 0) return []
+
+  const text = reviews.value.map(r => (r.content || '') + ' ' + (r.title || '')).join(' ')
+  const lower = text.toLowerCase()
+
+  // 定義候選關鍵詞與主題分類
+  const tagMap = {
+    效果顯著: ['有效', '有感', '改善', '幫助', '明顯'],
+    物超所值: ['便宜', '划算', '超值', 'cp值', '實惠'],
+    味道不錯: ['好吃', '味道', '香', '口感', '不苦'],
+    使用方便: ['方便', '容易吞', '好吸收', '好吃', '包裝'],
+    健康改善: ['健康', '心臟', '炎症', '免疫', '保健'],
+    品質優良: ['品質', '純度', '成分', '穩定', '信任']
+  }
+
+  // 統計命中次數
+  const counts = Object.entries(tagMap).map(([tag, words]) => {
+    const count = words.reduce((sum, w) => sum + (lower.includes(w) ? 1 : 0), 0)
+    return { tag, count }
+  })
+
+  // 過濾出有命中的標籤（至少出現一次）
+  const hotTags = counts.filter(c => c.count > 0)
+
+  // 排序取前幾個熱門標籤（例如最多 6 個）
+  hotTags.sort((a, b) => b.count - a.count)
+  return hotTags.slice(0, 6).map(c => c.tag)
+})
+
+/**
+ * ✨ 客戶評論亮點（從資料中動態生成）
+ * - 根據關鍵詞與字詞出現次數進行統計
+ * - 簡單摘要主要正面回饋方向
+ */
+const customerHighlight = computed(() => {
+  if (!reviews.value || reviews.value.length === 0) return '目前尚無顧客評論'
+
+  // 抽取所有內容
+  const allText = reviews.value.map(r => (r.content || '') + ' ' + (r.title || '')).join(' ')
+  const lower = allText.toLowerCase()
+
+  // 定義一些常見關鍵詞
+  const keywords = {
+    效果: ['有效', '改善', '幫助', '有感', '明顯'],
+    價值: ['便宜', '划算', '超值', '物超所值'],
+    味道: ['好吃', '不錯', '味道', '苦', '香', '口感'],
+    健康: ['健康', '身體', '心臟', '免疫力', '炎症'],
+    使用感: ['方便', '吸收快', '容易吞', '包裝好', '質感']
+  }
+
+  // 統計關鍵詞出現次數
+  const stats = {}
+  for (const [cat, list] of Object.entries(keywords)) {
+    stats[cat] = list.reduce((sum, k) => sum + (lower.includes(k) ? 1 : 0), 0)
+  }
+
+  // 找出主要特點
+  const top = Object.entries(stats).sort((a, b) => b[1] - a[1])[0]
+  const key = top?.[0]
+
+  switch (key) {
+    case '效果':
+      return '多數顧客表示產品「效果明顯」，使用後有明顯改善與實感。'
+    case '價值':
+      return '大家普遍認為這款商品「物超所值」，價格與品質都令人滿意。'
+    case '味道':
+      return '顧客提到「口感好」與「味道不錯」，食用體驗佳。'
+    case '健康':
+      return '許多評論提到「健康改善」與「心血管有幫助」，是養生族群推薦的產品。'
+    case '使用感':
+      return '大家覺得「使用方便」、「容易吞服」，整體包裝質感良好。'
+    default:
+      return '顧客整體評價良好，普遍滿意這款商品的品質與體驗。'
+  }
+})
 
 // 獲取評分數量
 const getRatingCount = (star) => {
@@ -351,6 +427,28 @@ const filteredReviews = computed(() => {
   return result
 })
 
+/**
+ * 📝 撰寫評價前的檢查
+ */
+const handleWriteReview = async () => {
+  try {
+    const { data } = await http.get(`/prod/Products/check-can-review/${props.productId}`)
+    const hasPurchased = data?.data?.hasPurchased ?? data?.hasPurchased
+
+    // 若尚未購買 → 提示
+    if (!hasPurchased) {
+      toast('請先購買此商品後才能撰寫評價', 'warning')
+      return
+    }
+
+    // 通過檢查 → 開啟評價表單
+    showReviewForm.value = true
+  } catch (err) {
+    console.error('檢查評價資格錯誤:', err)
+    showError('檢查失敗，請稍後再試')
+  }
+}
+
 // 顯示的評價
 const displayedReviews = computed(() => {
   return filteredReviews.value.slice(0, displayCount.value)
@@ -371,50 +469,70 @@ const isReviewValid = computed(() => {
 /**
  * 載入評價列表
  */
-const loadReviews = async () => {
-  try {
-    loading.value = true
-    const response = await ProductsApi.getReviews(props.productId)
-
-    if (response.success) {
-      reviews.value = response.data || []
-    }
-  } catch (err) {
-    console.error('載入評價錯誤:', err)
-  } finally {
-    loading.value = false
-  }
-}
+watch(
+  () => props.reviews,
+  (newVal) => {
+    reviews.value = newVal || []
+  },
+  { immediate: true }
+)
 
 /**
  * 提交評價
  */
 const handleSubmitReview = async () => {
-  if (!isReviewValid.value) return
+  if (!isReviewValid.value) {
+    toast('請完整填寫評價內容', 'warning')
+    return
+  }
 
   try {
     submitting.value = true
-    const response = await ProductsApi.submitReview({
+
+    // 呼叫後端 API
+    const { data } = await http.post('/prod/Products/submit-review', {
       productId: props.productId,
-      skuId: 1, // TODO: 從選中的規格獲取
+      skuId: null, // TODO: 若有規格可再接
       rating: newReview.value.rating,
-      title: newReview.value.title,
-      content: newReview.value.content,
+      title: newReview.value.title.trim(),
+      content: newReview.value.content.trim(),
     })
 
-    if (response.success) {
+    // 後端成功回傳
+    if (data?.success) {
       success('評價提交成功！', '感謝您的分享')
-      // 重置表單
+
+      // ✅ 重新查詢商品詳細（更新評價列表與星等）
+      emit('refresh')
+
+      // 即時新增到畫面頂部（不必重整）
+      reviews.value.unshift({
+        reviewId: Date.now(),
+        userName: '您',
+        rating: newReview.value.rating,
+        title: newReview.value.title,
+        content: newReview.value.content,
+        createdDate: new Date().toISOString(),
+        helpfulCount: 0,
+        unhelpfulCount: 0,
+        images: [],
+      })
+
+      // 清空表單
       newReview.value = { rating: 0, title: '', content: '' }
       showReviewForm.value = false
-      // 重新載入評價
-      await loadReviews()
     } else {
-      showError(response.message || '提交失敗')
+      // ❌ 後端回傳失敗
+      showError(data?.message || '提交失敗，請稍後再試')
     }
   } catch (err) {
+    // 🧯 例外處理（如 401、500）
     console.error('提交評價錯誤:', err)
-    showError('提交失敗，請稍後再試')
+    if (err.response?.status === 401) {
+      toast('請先登入後再撰寫評價', 'info')
+    } else {
+      showError('伺服器發生錯誤，請稍後再試')
+    }
   } finally {
     submitting.value = false
   }
@@ -504,11 +622,6 @@ const formatDate = (dateString) => {
   const day = date.getDate()
   return `${year}年${month}月${day}日`
 }
-
-// 生命週期
-onMounted(() => {
-  loadReviews()
-})
 </script>
 
 <style scoped>

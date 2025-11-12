@@ -194,9 +194,6 @@ async function searchProducts(page = 1) {
     products.value = []
     totalCount.value = 0
 
-    const badgeQuery = (route.query.badge ?? "").toString().trim()
-    const otherQuery = (route.query.other ?? "").toString().trim()
-
     const query = {
       pageIndex: 1,
       pageSize: 40,

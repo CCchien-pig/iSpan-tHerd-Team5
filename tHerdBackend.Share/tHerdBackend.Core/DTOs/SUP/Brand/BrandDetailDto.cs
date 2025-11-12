@@ -21,7 +21,8 @@
 		public int Id { get; set; }
 		public string Text { get; set; } = string.Empty;
 		public int Order { get; set; }
-	}
+        public string Slug { get; set; } = "";
+    }
 
 	public class BrandAccordionGroupDto
 	{

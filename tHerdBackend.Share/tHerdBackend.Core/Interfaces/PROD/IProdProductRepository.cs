@@ -1,5 +1,6 @@
 ﻿using tHerdBackend.Core.DTOs.Common;
 using tHerdBackend.Core.DTOs.PROD;
+using tHerdBackend.Core.DTOs.PROD.user;
 using tHerdBackend.Core.Models;
 
 namespace tHerdBackend.Core.Interfaces.Products
@@ -30,10 +31,15 @@ namespace tHerdBackend.Core.Interfaces.Products
 
         Task<bool> HasUserLikedProductAsync(int userNumberId, int productId, CancellationToken ct = default);
 
-	}
+        Task<ProductStatsDto> GetProductStats(int productId);
 
-	// 簡化的查詢模型與分頁結果
-	public sealed class ProductQuery
+        Task<bool> HasUserPurchasedProductAsync(int userNumberId, int productId, CancellationToken ct);
+
+        Task<(bool Success, string Message)> SubmitReviewAsync(int userNumberId, SubmitReviewDto dto, CancellationToken ct);
+    }
+
+    // 簡化的查詢模型與分頁結果
+    public sealed class ProductQuery
     {
         public string? Keyword { get; set; }
         public bool? IsPublished { get; set; }
