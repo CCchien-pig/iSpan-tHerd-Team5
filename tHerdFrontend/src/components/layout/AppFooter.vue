@@ -36,11 +36,11 @@
               <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
             </li>
             <li>
-              <router-link
+              <!-- <router-link
                 :to="{ path: '/sup/logistics-info', query: { tab: 'info' } }"
                 class="text-light text-decoration-none"
                 >配送資訊</router-link
-              >
+              > -->
             </li>
            
             <li><a href="#" class="text-light text-decoration-none">會員制度</a></li>
