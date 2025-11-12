@@ -149,6 +149,32 @@ class productsApi {
     return await baseApi.post(`${this.path}/Products/search`, finalParams)
   }
 
+  // ==================== 商品統計查詢 ====================
+
+  /**
+   * 查詢指定商品的收藏與按讚數
+   * 對應後端：GET /api/prod/Products/stats/{productId}
+   * @param {number} productId - 商品 ID
+   * @returns {Promise<Object>} 包含 favoriteCount, likeCount
+   * @example
+   * const stats = await ProductsApi.getProductStats(85180)
+   * console.log(stats.favoriteCount, stats.likeCount)
+   */
+async getProductStats(productId) {
+  try {
+    const res = await baseApi.post(`${this.path}/Products/stats/${productId}`) // ✅ 改 POST
+    if (res.success && res.data) {
+      return res.data
+    } else {
+      console.warn('⚠️ 無法取得商品統計資料:', res.message)
+      return { favoriteCount: 0, likeCount: 0 }
+    }
+  } catch (error) {
+    console.error('❌ 查詢商品統計資料失敗:', error)
+    return { favoriteCount: 0, likeCount: 0 }
+  }
+}
+
     // ==================== 商品分類 ====================
 
 /**
@@ -261,6 +287,25 @@ async getProductCategoriesByTypeId(productTypeId = null) {
   }
 
   // ==================== 評價系統 ====================
+  /**
+   * 檢查目前登入者是否能撰寫商品評價
+   * 對應後端：GET /api/prod/Products/check-can-review/{productId}
+   * @param {number} productId - 商品 ID
+   * @returns {Promise<Object>} { hasPurchased: boolean, message: string }
+   * @example
+   * const res = await ProductsApi.checkCanReview(85180)
+   * if (res.hasPurchased) console.log('✅ 可以撰寫評價')
+   */
+  async checkCanReview(productId) {
+    try {
+      const res = await baseApi.get(`${this.path}/Products/check-can-review/${productId}`)
+      // 假設後端回傳格式為 ApiResponse<object>
+      return res?.data?.data || res?.data
+    } catch (error) {
+      console.error('❌ 檢查撰寫評價資格失敗:', error)
+      throw error
+    }
+  }
 
   /**
    * 查詢商品評價列表

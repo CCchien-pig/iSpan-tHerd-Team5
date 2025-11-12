@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-// ✅ 宣告 emits
+// 宣告 emits
 const emit = defineEmits([
   'add-to-cart',
   'toggle-favorite',
@@ -100,7 +100,7 @@ const emit = defineEmits([
   'update:quantity'
 ])
 
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 
 // 接收父層傳入的 props
 const props = defineProps({
@@ -114,6 +114,7 @@ const props = defineProps({
   productId: { type: Number, required: true },
   isFavorited: { type: Boolean, default: false },
   favoriteCount: { type: Number, default: 0 }, // ❤️ 收藏數
+  togglingFavorite: { type: Boolean, default: false },
   isLiked: { type: Boolean, default: false },
   togglingLike: { type: Boolean, default: false },
   likeCount: { type: Number, default: 0 } // 👍 按讚數

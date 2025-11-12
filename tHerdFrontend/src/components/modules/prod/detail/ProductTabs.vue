@@ -50,11 +50,13 @@
           顧客評價 ({{ product.reviewCount || 0 }})
         </button>
       </li>
+      <!--
       <li class="nav-item" role="presentation">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#qa" type="button" role="tab">
           問與答
         </button>
       </li>
+      -->
     </ul>
 
     <!-- Tabs 內容 -->
@@ -141,18 +143,23 @@
         <div class="p-4">
           <ProductReviews
             :product-id="product.productId"
-            :avg-rating="product.avgRating || 0"
-            :review-count="product.reviewCount || 0"
+            :reviews="product.reviews"
+            :avg-rating="product.avgRating"
+            :review-count="product.reviewCount"
+            @refresh="emit('refresh')"
           />
         </div>
       </div>
 
       <!-- 問與答 -->
+       <!--
       <div class="tab-pane fade" id="qa" role="tabpanel">
         <div class="p-4">
-          <ProductQA :product-id="product.productId" />
+          <ProductQA 
+          :questions="questions"
+          :product-id="product.productId" />
         </div>
-      </div>
+      </div>-->
     </div>
   </div>
 </template>
@@ -162,11 +169,18 @@ import { computed } from 'vue'
 import ProductQA from './ProductQA.vue'
 import ProductReviews from './ProductReviews.vue'
 
+const emit = defineEmits(['refresh'])
+
 const props = defineProps({
-  product: {
-    type: Object,
-    required: true,
+  product: Object,
+  reviews: {
+    type: Array,
+    default: () => []
   },
+  questions: {
+    type: Array,
+    default: () => []
+  }
 })
 
 // 🔹 將相同屬性名稱分組

@@ -36,20 +36,35 @@ namespace tHerdBackend.Infra.Repository.PROD.Builders
                 }
             }
 
-            // 品牌篩選（單選 / 多選兩者兼容）
-            if (query.BrandIds != null && query.BrandIds.Any())
+            // 新邏輯：同時具備 BrandId + ProductTypeId 時
+            if (query.BrandId.HasValue && query.ProductTypeId.HasValue)
             {
-                sql.Append(" AND p.BrandId IN @BrandIds ");
+                sql.Append(@"
+			            AND p.BrandId = @BrandId
+			            AND EXISTS (
+				            SELECT 1
+				            FROM TypeHierarchy t2
+				            WHERE t2.ProductId = p.ProductId
+				              AND t2.ProductTypeId = @ProductTypeId
+			            )
+		            ");
             }
-            else if (query.BrandId.HasValue)
+            else
             {
-                sql.Append(" AND p.BrandId = @BrandId ");
+                // 品牌篩選（單選 / 多選兩者兼容）
+                if (query.BrandIds != null && query.BrandIds.Any())
+                {
+                    sql.Append(" AND p.BrandId IN @BrandIds ");
+                }
+                else if (query.BrandId.HasValue)
+                {
+                    sql.Append(" AND p.BrandId = @BrandId ");
+                }
+
+                // 類別
+                if (query.ProductTypeId.HasValue)
+                    sql.Append(" AND EXISTS (SELECT 1 FROM TypeHierarchy t2 WHERE t2.ProductId = p.ProductId AND t2.ProductTypeId = @ProductTypeId)");
             }
-
-            // 類別
-            if (query.ProductTypeId.HasValue)
-				sql.Append(" AND EXISTS (SELECT 1 FROM TypeHierarchy t2 WHERE t2.ProductId = p.ProductId AND t2.ProductTypeId = @ProductTypeId)");
-
             // 價格篩選 — 使用與排序相同的 COALESCE 優先順序
             if (query.MinPrice.HasValue)
             {

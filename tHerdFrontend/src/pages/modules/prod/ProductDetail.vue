@@ -61,15 +61,18 @@
       <!-- 📜 商品詳細描述 -->
       <div class="row mt-5">
         <div class="col-12">
-          <ProductTabs :product="product" />
+          <ProductTabs
+            :product="product"
+            :reviews="product.reviews"
+            :questions="product.questions"
+            @refresh="loadProduct"
+          />
         </div>
       </div>
 
       <!-- 🕒 最近瀏覽商品 -->
       <RecentlyViewedHero class="mt-5"
         @add-to-cart="handleAddToCart"
-        @toggle-wishlist="handleToggleWishlist"
-        @quick-view="handleQuickView"
        />
     </div>
   </div>
@@ -90,9 +93,11 @@ import ProductTabs from '@/components/modules/prod/detail/ProductTabs.vue'
 import RecentlyViewedHero from '@/components/modules/prod/list/RecentlyViewedHero.vue'
 import { http } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
-import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 
+// 加入購物車
+import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 const { addToCart } = useAddToCart()
+
 const route = useRoute()
 const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
@@ -148,7 +153,11 @@ const loadProduct = async () => {
     if (response.success) {
       product.value = response.data
       if (product.value.Specs?.length > 0) selectedSpec.value = product.value.Specs[0]
+
+       // 儲存近期瀏覽到快取
       saveRecentlyViewed(product.value)
+
+      await refreshProductStats(); // 顯示按讚狀態
     } else {
       error.value = response.message || '載入商品失敗'
     }
@@ -165,17 +174,32 @@ function saveRecentlyViewed(p) {
   if (!p) return
   const key = 'recently_viewed_products'
   let list = JSON.parse(localStorage.getItem(key)) || []
+
+  // 移除重複
   list = list.filter(x => x.productId !== p.productId)
+
+  // 儲存完整資料
   list.unshift({
     productId: p.productId,
+    mainSkuId: p.mainSkuId || p.productId, // ✅ 主 SKU
     productName: p.productName,
     brandName: p.brandName,
     imageUrl: p.imageUrl || '',
     avgRating: p.avgRating || 0,
     reviewCount: p.reviewCount || 0,
-    currentPrice: p.billingPrice || 0
+    billingPrice: p.billingPrice || p.salePrice || 0, // 售價
+    listPrice: p.listPrice || p.unitPrice || 0,       // 原價
+    salePrice: p.salePrice || 0,                      // 折扣價
+    badgeName: p.badgeName || null,                   // 顯示標章
+
+    // 新增：即時同步收藏 / 按讚數
+    favoriteCount: p.favoriteCount || 0,
+    likeCount: p.likeCount || 0
   })
+
+  // 最多只留 10 筆
   if (list.length > 10) list = list.slice(0, 10)
+
   localStorage.setItem(key, JSON.stringify(list))
   window.dispatchEvent(new CustomEvent('recently-viewed-updated'))
 }
@@ -206,9 +230,67 @@ async function checkLikeStatus() {
   }
 }
 
-/* 🛒 加入購物車 */
-async function handleAddToCart(selectedSku, qty) {
-  await addToCart(product.value, selectedSku, qty)
+function updateRecentlyViewedStats(updatedProduct) {
+  const key = 'recently_viewed_products'
+  let list = JSON.parse(localStorage.getItem(key)) || []
+  const idx = list.findIndex(x => x.productId === updatedProduct.productId)
+
+  if (idx !== -1) {
+    list[idx].favoriteCount = updatedProduct.favoriteCount || 0
+    list[idx].likeCount = updatedProduct.likeCount || 0
+    localStorage.setItem(key, JSON.stringify(list))
+    window.dispatchEvent(new CustomEvent('recently-viewed-updated'))
+  }
+}
+
+/**
+ * 加入購物車事件
+ * - 支援：目前商品（selectedSpec）或最近瀏覽商品（product 物件）
+ */
+async function handleAddToCart(fromSkuOrProduct = null, qty = quantity.value) {
+  try {
+    let productToAdd = product.value
+    let skuToAdd = null
+
+    // Case 1：從最近瀏覽傳來的整個商品物件
+    // e.g. RecentlyViewedHero @add-to-cart="handleAddToCart(product)"
+    if (fromSkuOrProduct?.productId && !fromSkuOrProduct?.skuId) {
+      productToAdd = fromSkuOrProduct
+      skuToAdd = {
+        skuId: fromSkuOrProduct.mainSkuId || fromSkuOrProduct.productId,
+        optionName: fromSkuOrProduct.productName,
+        billingPrice: fromSkuOrProduct.billingPrice || fromSkuOrProduct.salePrice || 0,
+        unitPrice: fromSkuOrProduct.listPrice || 0,
+      }
+    }
+
+    // Case 2：從購買卡片（有 selectedSku）
+    else if (fromSkuOrProduct?.skuId) {
+      skuToAdd = fromSkuOrProduct
+    }
+
+    // Case 3：沒傳任何東西，使用目前頁面選中的規格
+    else {
+      skuToAdd = selectedSpec.value || {
+        skuId: productToAdd.mainSkuId || productToAdd.productId,
+        optionName: productToAdd.productName,
+        billingPrice: productToAdd.billingPrice || productToAdd.salePrice || 0,
+        unitPrice: productToAdd.listPrice || 0,
+      }
+    }
+
+    // 防呆
+    if (!productToAdd || !skuToAdd?.skuId) {
+      showError('請選擇有效的商品或規格')
+      return
+    }
+
+    // 調用共用 composable
+    await addToCart(productToAdd, skuToAdd, qty)
+  } catch (err) {
+    console.error('❌ 加入購物車錯誤:', err)
+    showError('加入購物車失敗，請稍後再試')
+  }
 }
 
 /* ❤️ 收藏切換 */
@@ -229,6 +311,7 @@ const handleToggleFavorite = async () => {
     const { data } = await http.post('/user/favorites/toggle', { productId: pid })
     toast(data?.isFavorited ? '已加入我的最愛' : '已取消收藏', data?.isFavorited ? 'success' : 'info')
     window.dispatchEvent(new CustomEvent('favorite-changed'))
+    await refreshProductStats()
   } catch {
     showError('操作失敗，請稍後再試')
   } finally {
@@ -266,6 +349,8 @@ const handleToggleLike = async () => {
 
     // 觸發全域狀態變化（可有可無）
     window.dispatchEvent(new CustomEvent('like-changed'))
+
+    await refreshProductStats()
   } catch (err) {
     // 復原 UI 狀態
     likedIds.value = originallyLiked
@@ -276,6 +361,19 @@ const handleToggleLike = async () => {
   } finally {
     togglingLike.value = false
   }
+}
+
+// 更新總讚、收藏數
+async function refreshProductStats() {
+  if (!product.value?.productId) return
+  const stats = await ProductsApi.getProductStats(product.value.productId)
+
+  if (stats) {
+    product.value.favoriteCount = stats.favoriteCount
+    product.value.likeCount = stats.likeCount
+  }
+  
+  updateRecentlyViewedStats(product.value)
 }
 
 /* 🧩 規格選擇 */

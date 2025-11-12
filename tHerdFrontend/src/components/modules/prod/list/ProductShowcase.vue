@@ -28,11 +28,9 @@
         >
           {{ viewAllText }}
         </a>
-
-        <p v-if="products">共 {{ products.length }} 筆商品</p>
       </div>
       <!-- 🔹 商品卡片區 -->
-      <div v-if="products && products.length > 0" class="row g-4">
+      <div v-if="products && products.length > 0" class="row g-4 product-row mx-auto">
         <div
           v-for="product in products"
           :key="product.productId"
@@ -142,7 +140,7 @@ export default {
      */
     goToSearch() {
       this.$router.push({
-        name: 'product-main-search', // 對應 router 的 name
+        name: 'product-hot-rank', // ✅ 導向 /prod/products/hot
       })
     },
 
@@ -186,5 +184,11 @@ export default {
   color: #999;
   pointer-events: none;
   background-color: #f8f9fa;
+}
+
+.product-row {
+  max-width: 1200px;   /* 控制整排寬度（可依實際調整 1000～1200px） */
+  margin: 0 auto;      /* 置中 */
+  justify-content: center;
 }
 </style>

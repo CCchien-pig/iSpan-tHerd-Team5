@@ -23,7 +23,7 @@
       >
         <ProductCard
           :product="p"
-          @add-to-cart="$emit('add-to-cart', p)"
+          @add-to-cart="handleAddToCart(p)"
           @toggle-wishlist="$emit('toggle-wishlist', p)"
           @quick-view="$emit('quick-view', p)"
         />
@@ -34,11 +34,22 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import ProductCard from '@/components/modules/prod/card/ProductCard.vue'
+import ProductCard from '@/components/modules/prod/card/RecentlyViewedCard.vue'
 
 const STORAGE_KEY = 'recently_viewed_products'
 const rawRecentProducts = ref([])
 const scrollContainer = ref(null)
+
+const emit = defineEmits(['add-to-cart', 'toggle-wishlist', 'quick-view'])
+
+function handleAddToCart(product) {
+  // 統一由這裡往上發送
+  // 讓 ProductDetail.vue 的 @add-to-cart 正確接收到商品物件
+  if (product) {
+    console.log('🛒 最近瀏覽點擊加入購物車:', product.productName)
+    emit('add-to-cart', product)
+  }
+}
 
 const recentProducts = computed(() =>
   rawRecentProducts.value.slice(0, 12).map(p => ({
@@ -51,6 +62,7 @@ const recentProducts = computed(() =>
     avgRating: p.avgRating ?? p.rating ?? 0,
     reviewCount: p.reviewCount ?? p.reviews ?? 0,
     badgeName: p.badgeName ?? p.badge ?? null,
+    mainSkuId: p.mainSkuId ?? p.productId
   }))
 )
 

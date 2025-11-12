@@ -294,11 +294,82 @@ namespace tHerdBackend.SharedApi.Controllers.Module.PROD
         /// </summary>
         /// <param name="productId"></param>
         /// <returns></returns>
-		[HttpGet("stats/{productId}")]
-		public async Task<IActionResult> GetProductStats(int productId)
-		{
-			var stats = await _service.GetProductStats(productId);
-			return Ok(new ApiResponse(stats)); // ApiResponse 會包成 { success, data, message }
-		}
-	}
+		[HttpPost("stats/{productId}")]
+        public async Task<IActionResult> GetProductStats(int productId)
+        {
+            var stats = await _service.GetProductStats(productId);
+
+            return Ok(ApiResponse<ProductStatsDto>.Ok(stats));
+        }
+
+        /// <summary>
+        /// 檢查目前登入的使用者是否有資格撰寫商品評價
+        /// 條件：已登入 + 曾購買過該商品
+        /// </summary>
+        [HttpGet("check-can-review/{productId:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckCanReview(int productId, CancellationToken ct)
+        {
+            if (productId <= 0)
+                return BadRequest(ApiResponse<string>.Fail("商品 ID 錯誤"));
+
+            try
+            {
+                var numberId = await GetCurrentUserNumberIdAsync();
+                bool hasPurchased = await _service.HasUserPurchasedProductAsync(numberId, productId, ct);
+
+                return Ok(ApiResponse<object>.Ok(new
+                {
+                    hasPurchased,
+                    message = hasPurchased
+                        ? "您可撰寫此商品評價"
+                        : "請先購買後才能撰寫評價"
+                }));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Ok(ApiResponse<object>.Ok(new
+                {
+                    hasPurchased = false,
+                    message = "請先登入再撰寫評價"
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"檢查評價資格時發生錯誤：{ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// 前台：提交商品評價
+        /// </summary>
+        [HttpPost("submit-review")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> SubmitReview([FromBody] SubmitReviewDto dto, CancellationToken ct)
+        {
+            if (dto == null || dto.ProductId <= 0)
+                return BadRequest(ApiResponse<string>.Fail("商品資訊錯誤"));
+
+            try
+            {
+                var numberId = await GetCurrentUserNumberIdAsync();
+
+                // 呼叫 service 寫入資料庫
+                var result = await _service.SubmitReviewAsync(numberId, dto, ct);
+
+                if (!result.Success)
+                    return BadRequest(ApiResponse<string>.Fail(result.Message));
+
+                return Ok(ApiResponse<string>.Ok("評價提交成功"));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(ApiResponse<string>.Fail("請先登入再撰寫評價"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.Fail($"提交評價時發生錯誤：{ex.Message}"));
+            }
+        }
+    }
 }
