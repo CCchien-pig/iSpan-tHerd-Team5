@@ -66,7 +66,7 @@ function resetFilters() {
 }
 
 const attributes = ref([])
-const topOffset = ref(300)
+const topOffset = ref(200)
 
 onMounted(async () => {
   try {
@@ -95,6 +95,7 @@ function applyFilters() {
 <style scoped>
 .product-sidebar {
   position: fixed;
+  top: 100px; /* 跟導覽列對齊 */
   left: 0;
   width: 300px;
   height: calc(100vh - 100px);
