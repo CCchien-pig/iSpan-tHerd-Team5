@@ -3,7 +3,7 @@
     <!-- 搜尋框（保持不動） -->
     <div class="center-narrow">
       <h3 class="text-center mb-4">常見問題搜尋</h3>
-      <div id="faq-searchbox" class="position-relative mb-5">
+      <div id="faq-searchbox" class="position-relative mb-3">
   <div class="input-group">
     <input v-model.trim="q"
            @input="_debouncedFetch"
@@ -61,13 +61,7 @@
 
   </div>
 </div>
-
     </div>
-
-    <!-- 搜尋結果（保持不動） -->
-    <div class="center-narrow" v-if="q && searched">
-      <!-- ... -->
-</div>
 
     <!-- ✅ 精選答案卡（點建議後顯示；右上角 X 可關閉） -->
 <div v-if="featuredOpen" class="center-narrow" id="featured-ans">
@@ -358,6 +352,7 @@ _onDocClick(e) {
     this.loading = false
     this.searched = true
     this.open = false // 關閉下拉
+    this.q = '' // ✅ 清空搜尋框
   }
 },
 
@@ -372,6 +367,7 @@ async openFeatured(faqId) {
     this.featuredOpen = true
     this.open = false        // ✅ 點下建議時立刻關閉建議下拉
     this.searched = false    // ✅ 若想同時清空舊搜尋結果
+    this.q = '' 
 
     // 正確取 data
     const res = await getFaqDetail(faqId)

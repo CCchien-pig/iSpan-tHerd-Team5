@@ -38,7 +38,7 @@
                   <el-input v-model="form.firstName" placeholder="請輸入名字" />
                 </el-form-item>
                 <el-form-item label="電子郵件" prop="email">
-                  <el-input v-model="form.email" placeholder="email" disabled />
+                  <el-input v-model="form.email" placeholder="email" />
                 </el-form-item>
                 <el-form-item label="手機號碼" prop="phoneNumber">
                   <el-input v-model="form.phoneNumber" placeholder="0912-345-678" />
@@ -58,7 +58,7 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button type="primary" :loading="saving" @click="saveProfile">儲存變更</el-button>
+                  <el-button  :loading="saving" class="teal-reflect-button" @click="saveProfile">儲存變更</el-button>
                 </el-form-item>
               </el-form>
             </div>
@@ -83,7 +83,7 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button type="primary" :loading="changing" @click="changePassword">變更密碼</el-button>
+                  <el-button class="teal-reflect-button" :loading="changing" @click="changePassword">變更密碼</el-button>
                 </el-form-item>
               </el-form>
             </div>
@@ -280,8 +280,9 @@ onMounted(loadDetail)
   display:grid;
   grid-template-columns: 300px 1fr;
   gap: 20px;
+  position: relative;
   /* 與 UserMe 同步的高度基準，供等高與區域滾動使用 */
-  min-height: calc(100vh - 160px);
+  /* min-height: calc(100vh - 160px); */
 }
 
 /* ===== Sidebar：與 UserMe 相同的等高與縮距（右移 2/3 gap） ===== */
@@ -289,6 +290,7 @@ onMounted(loadDetail)
   min-width: 0;
   display: flex; /* 讓內部 .myaccount-sidebar 能 height:100% */
   transform: translateX(100px); /* 2/3 of 20px ≈ 13.33px */
+  position: relative; z-index: 0;
 }
 /* 使 Sidebar 吃滿 aside 高度，達到與主內容等高 */
 .sidebar :deep(.myaccount-sidebar) {
@@ -297,10 +299,13 @@ onMounted(loadDetail)
 /* ===== 右側主內容：區域滾動（只滾內容，不滾整頁） ===== */
 .content {
   min-width: 0;
+  /* overflow: visible;  */
   overflow: auto;
-  max-height: calc(100vh - 160px); 
+  /* max-height: none; */
+  max-height: 600px; 
   /* 與 .layout 的基準對齊 */
   padding-right: 4px; /* 讓捲軸不壓文字 */
+  position: relative; z-index: 2; 
 }
 
 /* ===== 標題與卡片：色票/邊線完全沿用 Sidebar 的青綠系 ===== */
@@ -334,3 +339,4 @@ onMounted(loadDetail)
   .content { max-height: none; overflow: visible; }
 }
 </style>
+<style src="@/assets/main.css"></style>

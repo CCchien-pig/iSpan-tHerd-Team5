@@ -42,7 +42,7 @@
       <div class="category-title"><span class="b">客服服務</span></div>
       <ul class="category-links">
         <!-- <li><router-link class="publicprofile" :to="safeTo('publicprofile')">我的地盤</router-link></li> -->
-        <li><router-link class="publicprofile" :to="safeTo('FaqSearch')">聯絡我們</router-link></li>
+        <li><router-link class="publicprofile" :to="safeTo('TicketList')">客服紀錄</router-link></li>
         <!-- <li><router-link class="reviews" :to="safeTo('myreviews')">我的產品評論</router-link></li>
         <li>
           <router-link class="questions" :to="safeTo('myquestions')">我的問題</router-link>

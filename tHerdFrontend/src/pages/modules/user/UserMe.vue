@@ -30,7 +30,7 @@
             </div>
 
             <div class="avatar-actions">
-              <el-button size="small" type="primary" @click="openFileDialog" :loading="uploading" :disabled="uploading">
+              <el-button size="small" class="teal-reflect-button" @click="openFileDialog" :loading="uploading" :disabled="uploading">
                 {{ uploading ? '上傳中…' : '上傳/更換大頭貼' }}
               </el-button>
               <el-button size="small" type="danger" plain @click="removeAvatar" :disabled="!avatarUrl || removing" :loading="removing">
@@ -52,8 +52,8 @@
           </div>
           <div>- - - - - - - - -</div>
           <div class="base-card__right">
-            <el-button class="me-2" @click="goHome" plain>回首頁</el-button>
-            <el-button type="danger" @click="doLogout">登出</el-button>
+            <el-button class="me-2 silver-reflect-button" @click="goHome" plain>回首頁</el-button>
+            <el-button class="silver-reflect-button" @click="doLogout">登出</el-button>
           </div>
         </el-card>
 
@@ -75,7 +75,7 @@
 
             <div class="claim">
               <el-button
-                type="primary"
+                class="teal-reflect-button"
                 :disabled="!profile?.usedReferralCode || claiming"
                 :loading="claiming"
                 @click="claimReferralCoupon"
@@ -441,10 +441,11 @@ async function doLogout() {
   padding:24px; text-align:center; color:#4a5568;
 }
 
-/* RWD：維持你原本行為（行動裝置改單欄），並移除位移避免壓到內容 */
 @media (max-width: 992px) {
   .layout { grid-template-columns: 1fr; gap: 16px; }
   .sidebar { order:2; transform: none; }
   .content { order:1; }
 }
+
 </style>
+<style src="@/assets/main.css"></style>

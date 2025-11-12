@@ -3,8 +3,8 @@
 
 <template>
   <section class="featured">
-    <h2 class="h5 mb-3 text-center">精選品牌</h2>
-
+    <!-- <h2 class="h5 mb-3 text-center">精選品牌</h2> -->
+    <h5 class="mb-2 fw-bold text-center main-color-green-text me-5 pe-5">精選品牌</h5>
     <div v-if="loading" class="text-muted small text-center">載入中…</div>
     <div v-else-if="brands.length === 0" class="text-muted small text-center">目前沒有精選品牌</div>
 
@@ -105,7 +105,7 @@ const recalc = () => {
 }
 
 // 播放控制
-const autoplayInterval = 3000
+const autoplayInterval = 2500
 let timer = null
 
 const move = (dir = 1) => {

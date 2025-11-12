@@ -350,9 +350,9 @@ function goLogin() {
 
 // ✅ 自動填入你指定的註冊資料
 function quickFillRegister() {
-  lastName.value = '測試'
-  firstName.value = '人員10'
-  email.value = '126130@g.nccu.edu.tw'
+  lastName.value = '簡'
+  firstName.value = '郡逸'
+  email.value = 'therd9513@gmail.com'
   password.value = 'iSpan0919~'
   phoneNumber.value = '0900000007'
   usedReferralCode.value = 'REF-C68D52B4'

@@ -73,6 +73,8 @@
       <!-- 🕒 最近瀏覽商品 -->
       <RecentlyViewedHero class="mt-5"
         @add-to-cart="handleAddToCart"
+        @toggle-wishlist="handleToggleWishlist"
+        @quick-view="handleQuickView"
        />
     </div>
   </div>
@@ -93,11 +95,11 @@ import ProductTabs from '@/components/modules/prod/detail/ProductTabs.vue'
 import RecentlyViewedHero from '@/components/modules/prod/list/RecentlyViewedHero.vue'
 import { http } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
+import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 
 // 加入購物車
 import { useAddToCart } from '@/composables/modules/prod/useAddToCart'
 const { addToCart } = useAddToCart()
-
 const route = useRoute()
 const router = useRouter()
 const { showLoading, hideLoading } = useLoading()
