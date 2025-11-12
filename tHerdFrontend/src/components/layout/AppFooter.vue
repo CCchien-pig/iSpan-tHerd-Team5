@@ -8,13 +8,16 @@
           <h5 class="mb-3 main-color-white-text">關於 tHerd</h5>
           <ul class="list-unstyled">
             <li>
-              <RouterLink to="/cs/ticket" class="text-light text-decoration-none"
-                >聯絡我們</RouterLink
+              <RouterLink to="/about" class="text-light text-decoration-none"
+                >關於我們</RouterLink
               >
             </li>
-            <li>
-              <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
-            </li>
+             <li>
+  <RouterLink to="/return-policy" class="text-light text-decoration-none">
+    退貨政策
+  </RouterLink>
+</li>
+           
 
             <!-- <li><a href="#" class="text-light text-decoration-none">職業機會</a></li>
             <li><a href="#" class="text-light text-decoration-none">新聞中心</a></li>
@@ -29,6 +32,9 @@
             <li>
               <RouterLink to="/cs/faq" class="text-light text-decoration-none">聯絡我們</RouterLink>
             </li>
+             <li>
+              <RouterLink to="/cs/faq" class="text-light text-decoration-none">常見問題</RouterLink>
+            </li>
             <li>
               <router-link
                 :to="{ path: '/sup/logistics-info', query: { tab: 'info' } }"
@@ -36,7 +42,7 @@
                 >配送資訊</router-link
               >
             </li>
-            <li><a href="#" class="text-light text-decoration-none">退貨政策</a></li>
+           
             <!-- <li><a href="#" class="text-light text-decoration-none">追蹤訂單</a></li> -->
           </ul>
         </div>
