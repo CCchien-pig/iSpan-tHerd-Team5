@@ -99,7 +99,10 @@ const recalc = () => {
     cardWidth.value = 130
     visibleCount.value = 2
   }
-  resetPosition()
+  // resetPosition()//
+  // *** 修改點 1: 呼叫新的函式 ***
+  // 在響應式寬度變化時，重新計算起始位置
+  setInitialPosition()
 }
 
 async function fetchTopBrands() {
@@ -111,13 +114,13 @@ async function fetchTopBrands() {
       brands.value = Array.isArray(res.data.data) ? res.data.data.slice(0, 10) : []
     } else {
       brands.value = [
-        { brandId: 1, brandName: 'Optimum Nutrition', logoUrl: '' },
-        { brandId: 2, brandName: 'MuscleTech', logoUrl: '' },
-        { brandId: 3, brandName: 'BSN', logoUrl: '' },
-        { brandId: 4, brandName: 'MyProtein', logoUrl: '' },
-        { brandId: 5, brandName: 'Dymatize', logoUrl: '' },
-        { brandId: 6, brandName: 'Cellucor', logoUrl: '' },
-        { brandId: 7, brandName: 'Now Foods', logoUrl: '' },
+        { brandId: 1, brandName: 'Hairtamin', logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 2, brandName: 'Allmax', logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 3, brandName: 'Zahler', logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 4, brandName: "Doctor's Best", logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 5, brandName: "Nature's Way", logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 6, brandName: 'Pure Encapsulations', logoUrl: '/homePageIcon/tHerd-header.png' },
+        { brandId: 7, brandName: 'Xyloburst', logoUrl: '/homePageIcon/tHerd-header.png' },
       ]
     }
   } catch (e) {
@@ -153,12 +156,37 @@ function step(dir) {
   slide(dir > 0 ? props.stepCount : -props.stepCount)
 }
 
-function resetPosition() {
-  noTransition.value = true
-  offset.value = 0
-  setTimeout(() => {
-    noTransition.value = false
-  }, 50)
+/**
+ * 設定輪播的初始位置。
+ * 預設會將 "Rank 1" (即 looped 陣列中第二組的第一個) 定位到可視區域的中間。
+ */
+function setInitialPosition() {
+  noTransition.value = true // 立即跳轉，不要動畫
+
+  if (brands.value.length === 0 || brands.value.length <= visibleCount.value) {
+    // 如果沒有資料，或資料不夠多（不需要輪播），則從 0 開始
+    offset.value = 0
+  } else {
+    // 1. 計算 "Rank 1 (copy)" 在 looped 陣列中的起始 offset
+    //    (即第一組資料的總寬度)
+    const maxOffset = itemTotalWidth.value * brands.value.length
+
+    // 2. 計算中間位置的索引 (例如 6 個可見，中間是 index 2 或 3)
+    //    我們取 floor((6-1)/2) = 2。
+    const centerIndex = Math.floor(visibleCount.value / 2)
+
+    // 3. 計算將 "Rank 1 (copy)" 推到 centerIndex 所需的偏移量
+    const centerShift = itemTotalWidth.value * centerIndex
+
+    // 4. 最終 offset = "Rank 1 (copy)" 的位置 - 推到中間的偏移量
+    //    這會讓我們從 [Brand 9, Brand 10, Brand 1(copy), Brand 2(copy)...] 開始顯示
+    offset.value = maxOffset - centerShift
+  }
+
+  // 使用 nextTick 確保 DOM 更新後再恢復 transition
+  nextTick(() => {
+    setTimeout(() => (noTransition.value = false), 50)
+  })
 }
 
 function slide(n) {
@@ -187,10 +215,21 @@ function slide(n) {
 }
 
 onMounted(async () => {
+  // *** 修改點 3: 調整 onMounted 流程 ***
+
+  // 1. 先呼叫一次 recalc，設定 RWD 寬度 (此時 offset = 0)
   recalc()
   window.addEventListener('resize', recalc)
+
+  // 2. 取得資料
   await fetchTopBrands()
-  if (brands.value.length > 0) play()
+
+  // 3. 取得資料後 (brands.value.length > 0)，
+  //    *再次* 呼叫 recalc，這次 setInitialPosition() 才能正確計算 centered offset
+  if (brands.value.length > 0) {
+    recalc()
+    play()
+  }
 })
 
 onBeforeUnmount(() => {

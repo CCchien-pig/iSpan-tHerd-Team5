@@ -58,6 +58,8 @@ let connection = null
 onMounted(async () => {
   // ✅ 從登入後的 auth store 取 Token
   const token = auth.accessToken
+  console.log('目前 Token:', token)
+
 
   // ✅ 用 accessTokenFactory 傳給 Hub
   connection = new signalR.HubConnectionBuilder()

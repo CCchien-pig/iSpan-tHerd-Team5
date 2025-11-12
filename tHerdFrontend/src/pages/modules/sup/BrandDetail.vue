@@ -2,8 +2,30 @@
 <template>
   <section class="container py-3">
     <div class="content-wrap">
-      <header class="d-flex align-items-center gap-2 mb-3">
+      <header class="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <!-- 左側：品牌名稱 -->
         <h1 class="h4 m-0">{{ vm.brandName || '品牌' }}</h1>
+
+        <!-- 右側：收藏按鈕 -->
+        <button
+          class="fav-btn"
+          :aria-pressed="isFav"
+          @click.stop="toggleFav"
+          :title="isFav ? '已收藏' : '加入收藏'"
+        >
+          <svg v-if="isFav" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12.1 21.55 12 21.65l-.1-.1C7.14 17.24 4 14.39 4 11.5 4 9.5 5.5 8 7.5 8c1.54 0 3.04.99 3.57 2.36h1.87C13.46 8.99 14.96 8 16.5 8 18.5 8 20 9.5 20 11.5c0 2.89-3.14 5.74-7.9 10.05Z"
+            />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3Zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5 18.5 5 20 6.5 20 8.5c0 2.89-3.14 5.74-7.9 10.05Z"
+            />
+          </svg>
+        </button>
       </header>
 
       <!-- 🔸 折扣活動條 -->
@@ -12,7 +34,7 @@
         class="discount-bar text-center py-2 px-3 fw-semibold"
         :style="barStyle"
       >
-        <span class="me-2"> {{ displayRate }} 特惠中 </span>
+        <span class="me-2"> {{ displayRate }} 品牌特惠中 </span>
         <span v-if="discountInfo.endDate">
           至 {{ new Date(discountInfo.endDate).toLocaleDateString() }}
         </span>
@@ -31,7 +53,7 @@
       <!-- 固定第二排 分類按鈕 -->
       <BrandButtons
         v-if="vm.buttons?.length"
-        class="mb-3"
+        class="mb-3 mt-1"
         :buttons="vm.buttons"
         :bg-rgb="vm.mainColor"
         @tap="onFilter"
@@ -70,7 +92,11 @@
                 :content="blk.data"
                 :accent-rgb="vm.mainColor"
               />
-              <BrandArticleBlock v-else-if="blk.type === 'Article'" :content="blk.data" />
+              <BrandArticleBlock
+                v-else-if="blk.type === 'Article'"
+                :content="blk.data"
+                :accent-rgb="vm.mainColor"
+              />
             </section>
           </template>
 
@@ -114,6 +140,8 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { Vibrant } from 'node-vibrant/browser'
 import { getBrandDetail, getBrandContentImages } from '@/core/api/modules/sup/supBrands'
+import { useAuthStore } from '@/stores/auth'
+import { notify } from 'notiwind'
 
 // 子元件
 import BrandBanner from '@/components/modules/sup/brands/BrandBanner.vue'
@@ -147,6 +175,9 @@ const products = ref([])
 const totalCount = ref(0)
 const currentPage = ref(1)
 const pageSize = 40
+
+const auth = useAuthStore()
+const isFav = ref(false)
 
 // 色彩分析
 const getLuma = ({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -263,6 +294,61 @@ const fetchDetail = async () => {
   }
 
   await fetchBrandDiscount(vm.value.brandId)
+  await loadFavoriteStatus()
+}
+
+// 🔸 載入收藏狀態
+async function loadFavoriteStatus() {
+  if (!auth.isAuthenticated) return
+  try {
+    const res = await axios.get('/api/sup/BrandFavorites/my', {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    })
+    if (res.data.success && Array.isArray(res.data.data)) {
+      const myFavs = res.data.data.map((f) => f.brandId)
+      isFav.value = myFavs.includes(vm.value.brandId)
+    }
+  } catch (err) {
+    console.error('[BrandDetail] 載入收藏狀態失敗', err)
+  }
+}
+
+// 🔸 切換收藏
+async function toggleFav() {
+  if (!auth.isAuthenticated) {
+    notify({ text: '請先登入會員', type: 'error', group: 'bottom-center' })
+    return
+  }
+
+  try {
+    if (isFav.value) {
+      const res = await axios.delete(`/api/sup/BrandFavorites/${vm.value.brandId}`, {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      })
+      if (res.data.success) {
+        isFav.value = false
+        notify({ text: '已移除收藏', type: 'success', group: 'bottom-center' })
+      }
+    } else {
+      const res = await axios.post(
+        '/api/sup/BrandFavorites',
+        { brandId: vm.value.brandId },
+        {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        },
+      )
+      if (res.data.success) {
+        isFav.value = true
+        notify({ text: '已加入收藏', type: 'success', group: 'bottom-center' })
+      }
+    }
+  } catch (err) {
+    notify({
+      text: err.response?.data?.message || '操作失敗',
+      type: 'error',
+      group: 'bottom-center',
+    })
+  }
 }
 
 // 商品清單
@@ -427,5 +513,34 @@ const onFilter = (btn) => {
   border-radius: 4px;
   /* margin-bottom: 12px; */
   font-size: 0.95rem;
+}
+
+.fav-btn {
+  width: 25px;
+  height: 25px;
+  border-radius: 9999px;
+  border: 2px solid #ffd6f3;
+  background: #fff;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.fav-btn:hover {
+  background: #fff1f2;
+  border-color: #fecaca;
+}
+.fav-btn[aria-pressed='true'] {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+.fav-btn:active {
+  transform: none;
 }
 </style>
